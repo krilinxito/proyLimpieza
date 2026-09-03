@@ -52,7 +52,10 @@ function cmdDoctor(cfg) {
     execFileSync('gh', ['auth', 'status'], { stdio: ['ignore', 'pipe', 'pipe'] });
     gh = { ok: true, value: 'gh autenticado' };
   } catch (err) {
-    gh = { ok: false, value: err.status === undefined ? 'gh no está instalado' : 'gh instalado pero no autenticado (corre: gh auth login)' };
+    // ENOENT = el binario no existe. `err.status` no sirve para distinguirlo:
+    // en ese caso Node lo deja en null, no en undefined.
+    const missing = err.code === 'ENOENT';
+    gh = { ok: false, value: missing ? 'gh no está instalado (instálalo: https://cli.github.com)' : 'gh instalado pero no autenticado (corre: gh auth login)' };
   }
   add('gh', gh.ok, gh.value, false); // solo /spec-finish lo necesita
 
