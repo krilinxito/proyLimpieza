@@ -93,7 +93,7 @@ function* walk(dir, root) {
     return;
   }
   for (const e of entries) {
-    if (e.name.startsWith('.') && e.name !== '.claude') continue;
+    if (e.name.startsWith('.')) continue;
     const full = path.join(dir, e.name);
     if (e.isDirectory()) {
       if (IGNORED_DIRS.has(e.name)) continue;
@@ -109,8 +109,14 @@ export function looksLikeTest(rel) {
   const base = path.basename(rel);
   const ext = path.extname(base);
   if (!TEST_EXTS.has(ext)) return false;
-  if (/(^|[._-])(test|spec)s?([._-]|$)/i.test(base.slice(0, base.length - ext.length))) return true;
-  return rel.split('/').slice(0, -1).some((seg) => TEST_DIR_NAMES.has(seg.toLowerCase()));
+  const stem = base.slice(0, base.length - ext.length);
+  const inTestDir = rel.split('/').slice(0, -1).some((seg) => TEST_DIR_NAMES.has(seg.toLowerCase()));
+  // `tests.py` on its own is a real suite (Django), but a file called just
+  // `spec.ts` or `specs.mjs` is almost always a module about specs, not a suite.
+  // Those only count when they live in a test directory.
+  if (/^specs?$/i.test(stem)) return inTestDir;
+  if (/(^|[._-])(test|spec)s?([._-]|$)/i.test(stem)) return true;
+  return inTestDir;
 }
 
 /**
