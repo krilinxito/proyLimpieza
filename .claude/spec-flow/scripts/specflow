@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# specflow — deterministic engine behind /spec-new, /spec-code and /spec-finish.
+# Run from anywhere inside the repo; paths resolve against the git root.
+set -euo pipefail
+HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "specflow: necesita node (viene con Claude Code) y no lo encuentro en el PATH" >&2
+  exit 127
+fi
+
+exec node "$HERE/lib/cli.mjs" "$@"
