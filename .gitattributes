@@ -1,0 +1,40 @@
+# ============================================================
+#  Finales de línea del proyecto
+#
+#  Este repo se trabaja desde Linux y desde Windows. El instalador
+#  de Git para Windows deja core.autocrlf=true por defecto, así que
+#  sin esto los archivos llegarían al disco con CRLF y romperían
+#  cosas de formas difíciles de diagnosticar:
+#
+#   · bash no ejecuta un script con CRLF: falla con
+#     "$'\r': command not found", que no señala la causa real.
+#     Usar Git Bash no cambia nada — da bash, pero no cambia el
+#     checkout.
+#   · los archivos que se montan dentro de los contenedores Linux
+#     (el schema, la config de PowerSync) se leen tal cual están.
+#
+#  Con esto, en el disco de todos quedan LF, sea cual sea su sistema.
+#
+#  El motor de spec-flow trae su propio .gitattributes en
+#  .claude/spec-flow/, que viaja con la skill.
+#
+#  OJO: si alguien ya clonó con CRLF, este archivo no le arregla lo
+#  que tiene en disco. Tiene que renormalizar:
+#      git rm --cached -r . && git reset --hard
+#  o directamente volver a clonar.
+# ============================================================
+
+* text=auto eol=lf
+
+# Los que no admiten CRLF bajo ninguna circunstancia.
+*.sh   text eol=lf
+*.sql  text eol=lf
+*.yaml text eol=lf
+*.yml  text eol=lf
+
+# Binarios: que git no intente normalizarlos.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.pdf  binary
+*.ico  binary

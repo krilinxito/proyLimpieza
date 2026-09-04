@@ -1,0 +1,21 @@
+# ============================================================
+#  Finales de línea del motor spec-flow
+#
+#  Este archivo viaja con la skill: install.sh copia
+#  .claude/spec-flow/ entera al proyecto destino, así que cada
+#  repo que instale spec-flow hereda esta protección sin que
+#  nadie tenga que configurar nada.
+#
+#  Por qué hace falta: Git para Windows convierte a CRLF al
+#  clonar (core.autocrlf=true es el default del instalador), y
+#  bash no ejecuta un script con CRLF. Falla con
+#
+#      specflow: line 2: $'\r': command not found
+#
+#  que no dice nada del problema real. Git Bash tampoco salva:
+#  da bash, pero no cambia los finales de línea del checkout.
+# ============================================================
+
+scripts/specflow    text eol=lf
+scripts/lib/*.mjs   text eol=lf
+templates/*.tmpl    text eol=lf
