@@ -1,0 +1,76 @@
+# ============================================================
+#  Entorno de desarrollo de proyLimpieza
+#
+#    docker compose up
+#
+#  Levanta Postgres (con el schema ya cargado) y el servicio de
+#  PowerSync que replica esa base hacia los dispositivos.
+#
+#  PowerSync guarda su propio estado en la base `powersync_storage`,
+#  separada de la del negocio pero en el mismo Postgres: un motor
+#  menos que operar, respaldar y aprender.
+#  El backend y el frontend NO corren aquí: van en el host con
+#  `npm run dev`, para tener recarga en caliente.
+#
+#  Copiá .env.example a .env antes del primer arranque.
+# ============================================================
+
+services:
+
+  # ----------------------------------------------------------
+  #  Base de datos del negocio
+  # ----------------------------------------------------------
+  postgres:
+    image: postgres:16
+    container_name: lavanderia-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    # wal_level=logical es el requisito innegociable de PowerSync:
+    # sin él no hay replicación lógica y el servicio no arranca.
+    command: >
+      postgres
+      -c wal_level=logical
+      -c max_replication_slots=10
+      -c max_wal_senders=10
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      # El schema se ejecuta solo la PRIMERA vez, cuando el volumen
+      # está vacío. Para recargarlo: docker compose down -v && up.
+      - ./context/lavanderia_schema.sql:/docker-entrypoint-initdb.d/00-schema.sql:ro
+      - ./docker/postgres/01-powersync-storage.sql:/docker-entrypoint-initdb.d/01-powersync-storage.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ----------------------------------------------------------
+  #  PowerSync Service
+  # ----------------------------------------------------------
+  powersync:
+    image: journeyapps/powersync-service:${POWERSYNC_TAG}
+    container_name: lavanderia-powersync
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PS_PORT: 8080
+      PS_DATA_SOURCE_URI: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      PS_STORAGE_URI: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/powersync_storage
+      PS_JWT_SECRET_B64: ${PS_JWT_SECRET_B64}
+      PS_JWT_AUDIENCE: ${PS_JWT_AUDIENCE}
+    ports:
+      - "${POWERSYNC_PORT}:8080"
+    volumes:
+      - ./docker/powersync:/home/config:ro
+    # -c es necesario: por defecto el servicio busca /app/powersync.yaml
+    command: ["start", "-r", "unified", "-c", "/home/config/powersync.yaml"]
+
+volumes:
+  postgres-data:

@@ -1,0 +1,25 @@
+# Secretos
+.env
+.env.local
+.env.*.local
+
+# Dependencias
+node_modules/
+
+# Builds
+dist/
+build/
+*.tsbuildinfo
+
+# Logs
+*.log
+npm-debug.log*
+
+# Cobertura de tests
+coverage/
+
+# Editores y sistema
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json

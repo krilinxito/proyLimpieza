@@ -1,0 +1,54 @@
+# ============================================================
+#  SYNC RULES — qué datos baja cada dispositivo
+#
+#  Esto no es una capa de comodidad: es control de acceso real.
+#  Lo que no aparece acá no llega nunca al dispositivo.
+#
+#  Tres reglas que NO se tocan sin discutirlo:
+#
+#   1. `password_hash` no se sincroniza jamás. Por eso `usuarios`
+#      se replica con lista explícita de columnas, nunca SELECT *.
+#   2. `auditoria` no se sincroniza a ningún dispositivo. Se
+#      consulta por API y solo el rol ADMIN puede verla.
+#   3. El ADMIN no descarga el histórico. Su dashboard es online y
+#      agrega en Postgres; bajarle años de órdenes al navegador
+#      sería trabajo puro sin beneficio.
+#
+#  Limitación a tener presente: las consultas de `data` no admiten
+#  JOINs ni subconsultas. Por eso `entregas` y `pagos` cargan su
+#  propio `sucursal_id` duplicado — ver el comentario en el schema.
+# ============================================================
+
+bucket_definitions:
+
+  # ----------------------------------------------------------
+  #  El trabajo de mi sucursal.
+  #  El parámetro sale del usuario dueño del token: un empleado
+  #  solo puede recibir las órdenes de la sucursal que tiene
+  #  asignada en la base. Un ADMIN tiene sucursal_id NULL, así que
+  #  este bucket le queda vacío — es lo que queremos.
+  # ----------------------------------------------------------
+  sucursal:
+    parameters: |
+      SELECT sucursal_id FROM usuarios
+      WHERE id = request.user_id()
+        AND sucursal_id IS NOT NULL
+    data:
+      - SELECT * FROM ordenes  WHERE sucursal_id = bucket.sucursal_id
+      - SELECT * FROM entregas WHERE sucursal_id = bucket.sucursal_id
+      - SELECT * FROM pagos    WHERE sucursal_id = bucket.sucursal_id
+
+  # ----------------------------------------------------------
+  #  Catálogos que todo dispositivo necesita.
+  #
+  #  Los clientes son globales a propósito: alguien puede dejar la
+  #  ropa en una sucursal y pasar a recogerla por otra, y el alta
+  #  automática por teléfono tiene que encontrarlo desde cualquiera.
+  # ----------------------------------------------------------
+  global:
+    data:
+      - SELECT * FROM clientes
+      - SELECT id, nombre, direccion, telefono, activa FROM sucursales
+      # Sin password_hash. Sirve para mostrar "recibido por María"
+      # sin tener que pedirlo a la API.
+      - SELECT id, nombre_completo, username, rol, sucursal_id, activo FROM usuarios

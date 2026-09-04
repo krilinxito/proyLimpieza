@@ -1,0 +1,51 @@
+# ============================================================
+#  Configuración del PowerSync Service (desarrollo)
+#
+#  Se monta en /home/config dentro del contenedor.
+#  Los valores sensibles llegan por variables de entorno desde .env;
+#  `!env` es la etiqueta que el servicio entiende para leerlas.
+# ============================================================
+
+# De dónde saca los datos: la base del negocio, por replicación lógica.
+replication:
+  connections:
+    - type: postgresql
+      uri: !env PS_DATA_SOURCE_URI
+      # En desarrollo Postgres y PowerSync están en la misma red de
+      # Docker, así que no hay TLS entre ellos. En producción: verify-full.
+      sslmode: disable
+
+# Dónde guarda PowerSync sus propios buckets (no es la base del negocio).
+storage:
+  type: postgresql
+  uri: !env PS_STORAGE_URI
+  sslmode: disable
+
+port: !env PS_PORT
+
+sync_rules:
+  path: /home/config/sync-rules.yaml
+
+# ------------------------------------------------------------
+#  Autenticación
+#
+#  El cliente le presenta a PowerSync un JWT emitido por nuestro
+#  backend Express. Aquí se declara con qué clave verificarlo.
+#
+#  DESARROLLO: secreto compartido HS256, para poder probar el
+#  servicio antes de que exista el backend (spec de auth).
+#  PRODUCCIÓN: cambiar a RS256 y exponer un `jwks_uri` en el
+#  backend, para no repartir el secreto de firma.
+# ------------------------------------------------------------
+client_auth:
+  jwks:
+    keys:
+      - kty: oct
+        alg: HS256
+        kid: lavanderia-dev
+        k: !env PS_JWT_SECRET_B64
+  audience:
+    - !env PS_JWT_AUDIENCE
+
+telemetry:
+  disable_telemetry_sharing: true
