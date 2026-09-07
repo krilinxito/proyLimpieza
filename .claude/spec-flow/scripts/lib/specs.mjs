@@ -7,7 +7,7 @@ import { scopeOverlaps } from './paths.mjs';
 import { whoami } from './identity.mjs';
 
 export const FRONTMATTER_ORDER = [
-  'id', 'name', 'status', 'owner', 'created', 'scope', 'priority', 'depends_on', 'tests',
+  'id', 'name', 'slug', 'status', 'owner', 'created', 'scope', 'priority', 'depends_on', 'tests',
 ];
 export const STATUSES = ['draft', 'approved', 'in-progress', 'finished'];
 export const ACTIVE_STATUSES = STATUSES.filter((s) => s !== 'finished');
@@ -29,6 +29,11 @@ export function slugify(name) {
     .slice(0, 60) || 'spec';
 }
 
+/** The slug part of `SPEC-003-auth-backend.md` — '' if the file has none. */
+function slugFromFilename(file) {
+  return path.basename(file).replace(/\.md$/i, '').replace(/^SPEC-\d+-?/i, '');
+}
+
 export function listSpecs(cfg) {
   const dir = specsDir(cfg);
   if (!fs.existsSync(dir)) return [];
@@ -41,6 +46,11 @@ export function listSpecs(cfg) {
       return {
         id: data.id ?? normalizeId(f),
         name: data.name ?? '',
+        // `slug` decide el nombre del archivo y el de la rama; va aparte de `name` para
+        // que el título pueda ser descriptivo sin alargar los dos. Las specs anteriores a
+        // este campo no lo traen: ahí el nombre del archivo es la fuente de verdad —
+        // coincide con la rama que /spec-code ya creó— y `name` el último recurso.
+        slug: data.slug || slugFromFilename(f) || slugify(data.name ?? ''),
         status: data.status ?? 'draft',
         owner: data.owner ?? '',
         created: data.created ?? '',
@@ -97,10 +107,12 @@ export function createSpec(cfg, payload) {
   const id = payload.id ? normalizeId(payload.id) : nextId(cfg);
   const name = String(payload.name ?? '').trim();
   if (!name) throw new Error('a spec needs a name');
+  const slug = slugify(payload.slug ?? name);
 
   const data = {
     id,
     name,
+    slug,
     status: 'draft',                       // /spec-new never approves; the human does
     // Falls back to the git identity that will sign the commits. An explicit ''
     // still means "sin asignar", so the skill can leave it open on purpose.
@@ -112,7 +124,7 @@ export function createSpec(cfg, payload) {
     tests: [],                             // filled by /spec-finish, never by hand
   };
 
-  const file = path.join(dir, `${id}-${slugify(payload.slug ?? name)}.md`);
+  const file = path.join(dir, `${id}-${slug}.md`);
   if (fs.existsSync(file)) throw new Error(`${path.relative(cfg.__root, file)} already exists`);
 
   fs.writeFileSync(file, `${serialize(data, FRONTMATTER_ORDER)}\n\n${renderBody(cfg, payload)}`, 'utf8');
@@ -139,7 +151,7 @@ export function setTests(cfg, idish, tests) {
 
 export function branchName(cfg, idish) {
   const spec = findSpec(cfg, idish);
-  return `${cfg.branch_prefix}${spec.id}-${slugify(spec.name)}`;
+  return `${cfg.branch_prefix}${spec.id}-${spec.slug}`;
 }
 
 /** Pull one `## Heading` section out of a spec body. */

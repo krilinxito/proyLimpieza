@@ -1,7 +1,7 @@
 ---
 name: spec-new
-description: "Slash command /spec-new <nombre> — crea una nueva spec en specs/SPEC-XXX-<nombre>.md. Revisa CLAUDE.md y el código para proponer un scope realista, pregunta solo lo que no puede inferir, avisa si el scope se solapa con una spec activa, y deja la spec en status draft para que la apruebes a mano."
-argument-hint: <nombre-corto-de-la-spec>
+description: "Slash command /spec-new <slug> [descripción] — crea una nueva spec en specs/SPEC-XXX-<slug>.md. Revisa CLAUDE.md y el código para proponer un scope realista, pregunta solo lo que no puede inferir, avisa si el scope se solapa con una spec activa, y deja la spec en status draft para que la apruebes a mano."
+argument-hint: <slug-corto> [descripción libre de qué resuelve]
 disable-model-invocation: true
 allowed-tools:
   - Read
@@ -18,7 +18,13 @@ allowed-tools:
 
 # /spec-new — crear una spec
 
-Nombre pedido por el usuario: **$ARGUMENTS**
+Lo que pidió el usuario: **$ARGUMENTS**
+
+`$ARGUMENTS` es texto libre. La primera palabra —si viene en forma de slug:
+`auth-backend`, `ordenes_api`— es el **slug**; todo lo demás es lo que el usuario te está
+contando de la spec, y es material para la descripción, no para el nombre del archivo.
+Si viene una sola frase suelta ("login con JWT"), trátala como descripción y propón tú el
+slug. Nunca le pidas que repita algo que ya está en `$ARGUMENTS`.
 
 Tu trabajo es producir una spec que otra persona pueda implementar sin volver a preguntar
 nada. El motor determinista (numeración, frontmatter, detección de solapes) lo hace
@@ -33,7 +39,7 @@ SF="bash .claude/spec-flow/scripts/specflow"
 Corre `$SF doctor`. Crear una spec no necesita `gh` ni la rama base, así que **solo avisa**
 de lo que esté mal — no te detengas por ello. Si `specs/` no existe todavía, se creará sola.
 
-Si el usuario no dio nombre en `$ARGUMENTS`, pregúntaselo antes de seguir.
+Si `$ARGUMENTS` viene vacío, pregúntale de qué va la spec antes de seguir.
 
 ## 2. Investiga ANTES de preguntar
 
@@ -55,6 +61,17 @@ Usa **AskUserQuestion**, agrupando en pocas rondas. Lo que necesitas cerrar:
 
 - **Qué problema resuelve** — el "por qué", no el "cómo". Si el nombre ya lo insinúa,
   propón tu lectura y pide confirmación.
+- **Nombre y slug**, que son dos cosas distintas y conviene no confundirlas:
+  - `name` es el **título legible**, y puede ser descriptivo: "Login con JWT y roles".
+    Es lo que se ve en `$SF list` y encabeza el cuerpo del PR.
+  - `slug` es el **identificador corto**, y de él salen el nombre del archivo
+    (`SPEC-003-auth-backend.md`) **y el de la rama** (`feature/SPEC-003-auth-backend`).
+    Dos o tres palabras en kebab-case; nadie quiere escribir a mano una rama de ochenta
+    caracteres.
+
+  Propón los dos a partir de `$ARGUMENTS` y deja que los corrija. Si omites `slug`, el
+  motor lo deriva de `name`, y entonces un título largo se convierte en un archivo y una
+  rama largos — que es justo lo que este campo evita.
 - **Scope**: archivos, módulos o globs que la spec va a tocar. **Propón tú una lista**
   basada en la estructura real del repo y deja que la corrija. Un scope en blanco es
   una pregunta mal hecha.
@@ -112,6 +129,7 @@ El payload:
 ```json
 {
   "name": "User model",
+  "slug": "user-model",
   "owner": "max",
   "priority": "high",
   "scope": ["src/models/user.js", "tests/models/**"],
@@ -120,6 +138,10 @@ El payload:
   "criteria": ["Rechaza email con formato inválido", "Hashea la contraseña antes de guardar"]
 }
 ```
+
+`slug` es opcional (por defecto se deriva de `name`) pero **mándalo siempre**: es lo que
+mantiene cortos el archivo y la rama. El motor lo normaliza, así que no hace falta que se
+lo pases ya en kebab-case.
 
 `status` queda en `draft` y `tests` en `[]` — eso lo fija el motor, no lo mandes tú.
 
