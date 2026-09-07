@@ -1,6 +1,6 @@
 ---
 name: spec-finish
-description: "Slash command /spec-finish <id> — cierra una spec implementada. Corre la suite completa detectando el framework, revisa el código contra los criterios de aceptación, rellena el campo tests: buscando el id de la spec, pasa el status a finished, hace rebase sobre dev resolviendo conflictos contigo paso a paso, y abre el PR contra dev."
+description: "Slash command /spec-finish <id> — cierra una spec implementada. Corre la suite completa detectando el framework, revisa el código contra los criterios de aceptación, rellena el campo tests: buscando el id de la spec, comprueba que la bitácora esté escrita, pasa el status a finished, hace rebase sobre dev resolviendo conflictos contigo paso a paso, y abre el PR contra dev."
 argument-hint: <id-de-spec, p.ej. 001>
 disable-model-invocation: true
 allowed-tools:
@@ -75,6 +75,11 @@ criterio → dónde está implementado → qué test lo cubre.
 Si algún criterio no está cumplido, dilo claramente y pregunta si completarlo ahora o si el
 usuario prefiere ajustar la spec. No lo des por bueno.
 
+Comprueba también la bitácora (`$SF notes-path $ARGUMENTS`), salvo que `notes` sea `false`
+en `$SF config`. Si falta, **avisa pero no bloquees**: el PR se puede abrir igual, pero
+quien lo revise se queda sin la explicación de por qué el código es así. Ofrece escribirla
+antes de seguir.
+
 ## 4. Rellena la trazabilidad
 
 ```
@@ -147,8 +152,9 @@ Si la rama ya se había pusheado y el rebase reescribió su historia, hará falt
 Si ya existe un PR abierto para esta rama, no crees otro: muestra el existente
 (`gh pr view`) y menciona que el push ya lo actualizó.
 
-`$SF pr-body` arma el cuerpo con la descripción, los criterios de aceptación y la lista de
-tests que cubren la spec.
+`$SF pr-body` arma el cuerpo con la descripción, los criterios de aceptación, la lista de
+tests que cubren la spec y —si existe— la bitácora, para que quien revise lea el recorrido
+del código y el porqué de cada decisión sin abrir otro archivo.
 
 ## 8. Cierra el turno
 

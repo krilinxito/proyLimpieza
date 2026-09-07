@@ -9,6 +9,7 @@ import {
   listSpecs, findSpec, nextId, createSpec, setStatus, setTests,
   branchName, prBody, findOverlaps, normalizeId, ACTIVE_STATUSES,
 } from './specs.mjs';
+import { notesRelPath, noteExists, conceptIndex, setConcepts } from './notes.mjs';
 
 const out = (v) => console.log(typeof v === 'string' ? v : JSON.stringify(v, null, 2));
 
@@ -35,7 +36,10 @@ const USAGE = `specflow — motor determinista de las skills /spec-new, /spec-co
   set-tests <id> [rutas...]     rellena tests: (sin rutas, usa scan-tests)
   test-cmd                      comando de tests detectado para este repo
   branch-name <id>              feature/SPEC-XXX-<slug>
-  pr-body <id>                  cuerpo del PR a partir de la spec`;
+  pr-body <id>                  cuerpo del PR a partir de la spec
+  notes-path <id>               ruta de la bitácora de la spec
+  notes-index                   qué concepto explicó qué spec, y dónde
+  notes-explains <id> a,b,c     declara qué conceptos explica esa bitácora`;
 
 function cmdDoctor(cfg) {
   const report = { ok: true, checks: [] };
@@ -143,6 +147,16 @@ function main() {
     case 'test-cmd':  return out(detectTestCommand(cfg));
     case 'branch-name': return out(branchName(cfg, argv[0]));
     case 'pr-body':   return out(prBody(cfg, argv[0]));
+    case 'notes-path': {
+      const spec = findSpec(cfg, argv[0]);
+      return out({ path: notesRelPath(cfg, spec), exists: noteExists(cfg, spec) });
+    }
+    case 'notes-index': return out(conceptIndex(cfg));
+    case 'notes-explains': {
+      const spec = findSpec(cfg, argv[0]);
+      const conceptos = (argv[1] ?? '').split(',');
+      return out(setConcepts(cfg, spec, conceptos));
+    }
     default:
       throw new Error(`subcomando desconocido: ${cmd}\n\n${USAGE}`);
   }

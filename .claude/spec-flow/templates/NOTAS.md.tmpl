@@ -1,0 +1,67 @@
+---
+id: {{ID}}
+spec: {{SPEC_PATH}}
+explica: []
+---
+
+# {{ID}} — {{NAME}}
+
+<!--
+  Esto lo lee alguien que sabe leer código pero no conoce todavía los patrones del
+  proyecto. Después de leerlo tiene que poder: seguir el recorrido en el repo, saber
+  qué capa es cada pieza, y entender los conceptos nuevos que aparecieron.
+
+  Lo que NO va aquí: la lista de archivos tocados (eso ya lo dice el diff) ni un
+  concepto que otra bitácora ya explicó (eso se referencia).
+
+  Borra las secciones que de verdad no apliquen. Mejor corto y cierto que largo.
+-->
+
+## Qué se construyó
+
+<!-- Dos o tres líneas en lenguaje del negocio, no técnico. -->
+
+## Cómo funciona, paso a paso
+
+<!--
+  El recorrido REAL de un caso concreto, de punta a punta, citando `archivo:línea` en
+  cada salto. Sigue un dato: qué entra, por dónde pasa, en qué se convierte, qué sale.
+  Nada de describir módulos en abstracto — el objetivo es que quien lo lea sepa después
+  navegar el repo por su cuenta.
+-->
+
+## Dónde encaja en la arquitectura
+
+<!--
+  Qué capa es cada pieza y por qué el proyecto está partido así. Incluye qué NO le toca
+  hacer a esa capa y qué se rompe si se salta la regla. Átalo a lo que ya declara el
+  CLAUDE.md o el README del repo; si no documentan la arquitectura, describe la que se
+  deduce del código y di que es una lectura, no una regla.
+-->
+
+## Fundamentos
+
+<!--
+  Los conceptos que aparecen por PRIMERA VEZ en el proyecto. Cada uno: qué es, por qué
+  existe, qué pasaría sin él, y el ejemplo real de este repo (`archivo:línea`) en vez de
+  uno de manual. Se explican una sola vez en todo el proyecto y luego se referencian, así
+  que vale la pena hacerlo bien.
+
+  Los que declares aquí van al campo `explica:` con `specflow notes-explains`.
+-->
+
+**Ya explicado antes:**
+
+<!-- - **Concepto** → SPEC-XXX (`ruta/de/la/bitacora.md`) -->
+
+## Decisiones y por qué
+
+<!-- Cada decisión con la alternativa que se descartó y el motivo. Ahí está el aprendizaje. -->
+
+## Los tests
+
+<!-- Qué helper se reusó, cuál se creó y por qué. Cómo lo usará la próxima spec. -->
+
+## Si mañana tenés que tocar esto
+
+<!-- Por dónde empezar a leer, y con qué tener cuidado. -->

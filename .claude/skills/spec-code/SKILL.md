@@ -1,6 +1,6 @@
 ---
 name: spec-code
-description: "Slash command /spec-code <id> — implementa una spec aprobada. Actualiza dev, crea la rama feature/SPEC-XXX-<nombre>, pasa la spec a in-progress y codea con commits incrementales, escribiendo los tests de cada criterio de aceptación en el mismo trabajo y reutilizando o creando helpers de test compartidos. No cierra la spec ni abre PR."
+description: "Slash command /spec-code <id> — implementa una spec aprobada. Actualiza dev, crea la rama feature/SPEC-XXX-<nombre>, pasa la spec a in-progress y codea con commits incrementales, escribiendo los tests de cada criterio de aceptación en el mismo trabajo y reutilizando o creando helpers de test compartidos. Deja una bitácora que explica cómo funciona lo implementado y por qué, para que alguien que está aprendiendo entienda el código y la arquitectura leyéndola. No cierra la spec ni abre PR."
 argument-hint: <id-de-spec, p.ej. 001>
 disable-model-invocation: true
 allowed-tools:
@@ -150,7 +150,74 @@ es un test que el flujo pierde.
 Corre los tests mientras avanzas (`$SF test-cmd` te dice el comando de este repo). No
 dejes la primera ejecución para el final.
 
-## 7. Cierra el turno
+## 7. Escribe la bitácora
+
+Si `notes` es `false` en `$SF config`, sáltate este paso entero.
+
+Todo lo que explicaste en el chat mientras implementabas se pierde en cuanto se cierra la
+sesión: el compañero que hace `pull` no lo ve, y dentro de un mes nadie recuerda por qué el
+código es así. La bitácora es eso mismo, por escrito y versionado.
+
+**Para quién se escribe:** alguien que sabe leer código pero todavía no conoce los patrones
+de este proyecto. Al terminar de leerla tiene que poder seguir el recorrido en el repo por
+su cuenta, saber qué capa es cada pieza, y entender los conceptos nuevos que aparecieron.
+
+### Antes de escribir, mira qué está ya explicado
+
+```
+$SF notes-index
+```
+
+Te devuelve el glosario del proyecto: qué concepto explicó qué spec y en qué bitácora.
+**Un concepto se explica a fondo una sola vez en todo el proyecto.** Si ya está en el
+índice, va en "Ya explicado antes" como una línea con su enlace, y no lo vuelves a contar.
+Si no está, es tuyo: explícalo bien, porque las bitácoras siguientes van a apuntar a la
+tuya.
+
+### Escríbela
+
+La ruta te la da el motor, y la estructura la plantilla:
+
+```
+$SF notes-path $ARGUMENTS
+cat .claude/spec-flow/templates/NOTAS.md.tmpl
+```
+
+Las tres secciones que cargan el peso:
+
+- **Cómo funciona, paso a paso** — el recorrido real de un caso concreto, de punta a punta,
+  citando `archivo:línea` en cada salto. Sigue un dato: qué entra, por dónde pasa, en qué se
+  convierte, qué sale. Nunca una descripción abstracta de módulos: lo que enseña a leer un
+  repo es ver a alguien recorrerlo.
+- **Dónde encaja en la arquitectura** — qué capa es cada pieza, por qué el proyecto está
+  partido así, y **qué no le toca hacer** a esa capa. Átalo a las reglas que el `CLAUDE.md`
+  o el `README` ya declaran, y di qué se rompe si se saltan. Si el repo no documenta su
+  arquitectura, describe la que se deduce del código y **deja claro que es tu lectura**, no
+  una regla del proyecto.
+- **Fundamentos** — los conceptos nuevos, desde cero y sin dar nada por sabido: qué es, por
+  qué existe el patrón, qué pasaría sin él, y el ejemplo **de este repo** con su
+  `archivo:línea` en vez de uno de manual.
+
+Cuando la termines, declara los conceptos que explicaste:
+
+```
+$SF notes-explains $ARGUMENTS "middleware, jwt, hash de contraseña"
+```
+
+Commitea la bitácora junto al trabajo, para que viaje en el diff del PR.
+
+Si retomas una spec que ya estaba `in-progress` y su bitácora existe, **amplíala**; no la
+sobrescribas.
+
+### Lo que no va en la bitácora
+
+- **La lista de archivos tocados.** Eso ya lo dice el diff, y repetirlo la vuelve ilegible.
+- **Un concepto que ya está en el índice.** Se referencia, no se reexplica.
+- **Relleno.** Si la spec no tuvo ninguna decisión interesante, dos líneas honestas valen
+  más que tres párrafos de paja. El presupuesto de longitud se lo llevan el recorrido y los
+  fundamentos nuevos; lo demás va corto.
+
+## 8. Cierra el turno
 
 **No** cambies el status a `finished`. **No** abras PR. **No** hagas push salvo que el
 usuario lo pida. Eso es trabajo de `/spec-finish`.
@@ -162,6 +229,8 @@ Termina con un resumen que incluya:
 - **Qué helpers de test reusaste y cuáles creaste, y por qué** — explicado en lenguaje
   llano. Si creaste un shared example, muestra cómo lo usará la próxima spec. Esta parte
   no es relleno: es la que le enseña el patrón al equipo.
+- **La bitácora**: su ruta, y qué conceptos nuevos quedaron explicados ahí. No repitas su
+  contenido en el chat — apunta a ella, que para eso se escribió.
 - Estado de la suite de tests.
 - Cualquier cosa que quedó fuera de scope y merece su propia spec.
 - Que el siguiente paso es revisar el trabajo o correr `/spec-finish <id>`.

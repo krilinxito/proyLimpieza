@@ -5,6 +5,11 @@ import { parse, serialize, setScalar, setList } from './frontmatter.mjs';
 import { specsDir } from './config.mjs';
 import { scopeOverlaps } from './paths.mjs';
 import { whoami } from './identity.mjs';
+import { slugify } from './text.mjs';
+import { noteBody } from './notes.mjs';
+
+// Reexportada para no romper a quien la importaba desde aquí.
+export { slugify };
 
 export const FRONTMATTER_ORDER = [
   'id', 'name', 'slug', 'status', 'owner', 'created', 'scope', 'priority', 'depends_on', 'tests',
@@ -18,15 +23,6 @@ export function normalizeId(input) {
   const m = raw.match(/(\d+)\s*$/);
   if (!m) throw new Error(`cannot read a spec number out of "${raw}"`);
   return `SPEC-${m[1].padStart(3, '0')}`;
-}
-
-export function slugify(name) {
-  return String(name)
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // strip accents
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 60) || 'spec';
 }
 
 /** The slug part of `SPEC-003-auth-backend.md` — '' if the file has none. */
@@ -173,6 +169,17 @@ export function prBody(cfg, idish) {
     ? spec.tests.map((t) => `- \`${t}\``).join('\n')
     : '_Ningún archivo de test referencia esta spec._';
 
+  // La bitácora, sin su título (el PR ya lleva el suyo) y sin los comentarios de la
+  // plantilla, que son instrucciones para quien la escribe y no tienen nada que hacer en un
+  // PR. Quien revisa lee aquí el porqué de cada decisión sin abrir otro archivo.
+  const notas = cfg.notes === false
+    ? ''
+    : noteBody(cfg, spec)
+      .replace(/^#\s+.*\n+/, '')
+      .replace(/<!--[\s\S]*?-->\n?/g, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+
   return [
     `## ${spec.id} — ${spec.name}`,
     '',
@@ -186,6 +193,7 @@ export function prBody(cfg, idish) {
     '',
     tests,
     '',
+    ...(notas ? ['## Cómo se implementó', '', notas, ''] : []),
     '---',
     '',
     `Spec: \`${spec.path}\` · prioridad **${spec.priority}** · owner **${spec.owner || 'sin asignar'}**`,

@@ -9,6 +9,8 @@ export const DEFAULTS = {
   branch_prefix: 'feature/',
   test_command: null,
   test_paths: ['test', 'tests', 'spec', '__tests__', 'src'],
+  notes: true,
+  notes_dir: null,
 };
 
 /** Repo root via git, falling back to cwd when we are not inside a repo. */
@@ -47,4 +49,14 @@ export function loadConfig(root = repoRoot()) {
 
 export function specsDir(cfg) {
   return path.join(cfg.__root, cfg.specs_dir);
+}
+
+/**
+ * Donde viven las bitácoras. Por defecto cuelga de specs_dir en vez de ser una ruta fija:
+ * un repo que guarda sus specs en docs/specs/ no quiere las notas en otro sitio.
+ */
+export function notesDir(cfg) {
+  return cfg.notes_dir
+    ? path.join(cfg.__root, cfg.notes_dir)
+    : path.join(specsDir(cfg), 'notas');
 }
