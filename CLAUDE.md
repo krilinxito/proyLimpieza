@@ -23,9 +23,11 @@ conexión no puede dejar de recibir ropa.
 
 ## 2. Estado actual
 
-Fase inicial. `backend/` y `frontend/` están vacíos; lo único que existe es el modelo de
-datos (`context/lavanderia_schema.sql`) y el entorno Docker. El desarrollo avanza spec a
-spec con el flujo de la sección 12.
+Fase inicial. `frontend/` todavía no existe. `backend/` tiene el esqueleto que dejó
+SPEC-001: arranca, se conecta a Postgres, responde `GET /api/health` y tiene suite de
+tests — pero ningún endpoint del negocio. Además existen el modelo de datos
+(`context/lavanderia_schema.sql`) y el entorno Docker. El desarrollo avanza spec a spec
+con el flujo de la sección 12.
 
 ---
 
@@ -344,11 +346,16 @@ Nada se implementa sin una spec aprobada.
 
 ## 13. Deuda conocida y pendientes
 
-- **La rama `dev` todavía no existe** (solo hay `main`), y spec-flow la espera como base.
-  Hay que crearla antes del primer `/spec-code`.
 - **Los puertos por defecto (5432 y 8080) pueden chocar** con otros contenedores en la
   máquina de cada uno. Están parametrizados en `.env` (`POSTGRES_PORT`, `POWERSYNC_PORT`)
   justamente para eso; si algo no levanta, revisá ahí antes de buscar más lejos.
+  Ya pasó una vez, y el síntoma no es obvio: si tenés un **Postgres instalado en Windows**,
+  ocupa el 5432 y el contenedor no puede publicar el suyo. Docker no falla — el contenedor
+  arranca igual y `docker ps` lo muestra `healthy`—, pero `localhost:5432` es el Postgres
+  nativo, así que el backend se conecta a la base equivocada y da un 503 sin explicación.
+  Se detecta con `docker port lavanderia-postgres`: si no lista nada, es esto. Se arregla
+  moviendo `POSTGRES_PORT` (y el puerto de `DATABASE_URL`) a uno libre, p. ej. 5434, y
+  recreando con `docker compose up -d --force-recreate postgres`.
 - **La autenticación de PowerSync usa un secreto compartido HS256**, pensado para poder
   probar el servicio antes de que exista el backend. En producción va RS256 con un
   `jwks_uri` servido por la API.
