@@ -211,8 +211,28 @@ en silencio.
 
 **La sesión sobrevive sin conexión.** Hay dos credenciales: el JWT de nuestra API y el
 token que PowerSync verifica. Que a un empleado se le cierre la sesión a mitad del turno
-porque se cayó internet no es aceptable — la duración de los tokens y su renovación se
-diseñan con eso como requisito, no como detalle.
+porque se cayó internet no es aceptable.
+
+El mecanismo, ya decidido:
+
+- **El token vive en el dispositivo y es el comprobante.** Se emite en un login online y a
+  partir de ahí la app funciona sola: sin conexión no hay servidor al que enseñárselo, así
+  que no hay nada que verificar. Offline las lecturas salen de SQLite y las escrituras van
+  a la cola; el token solo hace falta para hablar con un servidor.
+- **Dura 2 o 3 días.** Es el presupuesto de trabajo sin internet, no una medida de
+  seguridad: se ajustará según lo que aguante de verdad cada sucursal.
+- **En cada reconexión se verifica el estado contra el servidor** y se renueva el token,
+  reiniciando el plazo. Ese es el único momento en que se puede decir que no, así que es
+  donde se comprueba que el usuario sigue `activo`.
+- **La contraseña solo se pide cuando esa renovación falla.** Pedirla en cada reconexión
+  haría la app inusable en un mostrador con wifi flojo, y lo primero que pasaría es que la
+  contraseña acabaría anotada en un papel al lado de la caja.
+
+Lo que este diseño **no** puede hacer, y hay que saberlo: un dispositivo que nunca se
+vuelve a conectar conserva legibles los datos que ya bajó. No podrá escribir nada nunca
+más, pero las órdenes de su sucursal y la tabla de clientes completa siguen ahí. Revocar
+es una operación de servidor: sin reconexión no hay forma de alcanzarlo. Cuando el
+dispositivo sí reconecta y recibe el rechazo, la app borra la base local.
 
 ---
 
@@ -347,6 +367,17 @@ Nada se implementa sin una spec aprobada.
 ---
 
 ## 13. Deuda conocida y pendientes
+
+- **Las sync rules no comprueban `activo`.** El bucket `sucursal` filtra por
+  `request.user_id()` pero no mira `usuarios.activo`, así que dar de baja a un empleado no
+  le corta la sincronización mientras su token siga vivo. Falta `AND activo = true` en los
+  `parameters` de `docker/powersync/sync-rules.yaml`. Es una línea y es la que hace efectiva
+  la baja lógica.
+- **Qué hacer con la cola de un usuario revocado.** Al reconectar, un dispositivo dado de
+  baja puede traer trabajo real sin subir — ropa que entró de verdad, de clientes que van a
+  volver a buscarla. Rechazarlo entero pierde ese trabajo. La decisión tomada es
+  **aceptarlo y marcarlo para que el admin lo revise**, nunca descartarlo en silencio. El
+  mecanismo se cierra en la spec de PowerSync.
 
 - **El monorepo tiene DOS versiones de TypeScript, y la raíz fija una a propósito.**
   El frontend usa TypeScript 7 y el backend 5.9. Al instalar, npm hoistea a la raíz una
