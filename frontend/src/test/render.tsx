@@ -1,5 +1,5 @@
 /**
- * Helper de test compartido — SPEC-001
+ * Helper de test compartido — SPEC-KRILINXI-001
  *
  * Casi toda pantalla de este proyecto usa enlaces o lee la ruta actual, y eso revienta si
  * se renderiza suelta: React Router necesita un Router por encima. `MemoryRouter` es uno

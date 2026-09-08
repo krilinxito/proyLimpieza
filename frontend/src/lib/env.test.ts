@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { leerEntorno } from './env';
 
-describe('Entorno — SPEC-001', () => {
+describe('Entorno — SPEC-KRILINXI-001', () => {
   it('devuelve la dirección de la API cuando la variable está definida', () => {
     expect(leerEntorno({ VITE_API_URL: 'http://localhost:4000' })).toEqual({
       apiUrl: 'http://localhost:4000',

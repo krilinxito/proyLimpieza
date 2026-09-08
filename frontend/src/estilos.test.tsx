@@ -26,7 +26,7 @@ function extraerCss(resultado: Awaited<ReturnType<typeof build>>): string {
   return '';
 }
 
-describe('Estilos con Tailwind — SPEC-001', () => {
+describe('Estilos con Tailwind — SPEC-KRILINXI-001', () => {
   let css = '';
 
   beforeAll(async () => {

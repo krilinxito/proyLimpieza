@@ -1,6 +1,6 @@
 ---
-id: SPEC-001
-spec: specs/SPEC-001-frontend-scaffold.md
+id: SPEC-KRILINXI-001
+spec: specs/SPEC-KRILINXI-001-frontend-scaffold.md
 explica:
   - bundler
   - css por utilidades
@@ -13,7 +13,7 @@ explica:
   - variables de entorno en el navegador
 ---
 
-# SPEC-001 — Scaffolding del frontend
+# SPEC-KRILINXI-001 — Scaffolding del frontend
 
 ## Qué se construyó
 

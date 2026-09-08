@@ -4,7 +4,7 @@ import { App } from './App';
 import { RUTAS } from './pages/rutas';
 import { renderEnRuta } from './test/render';
 
-describe('App — SPEC-001', () => {
+describe('App — SPEC-KRILINXI-001', () => {
   it('muestra el menú del mostrador en la ruta raíz', () => {
     renderEnRuta(<App />, '/');
     expect(screen.getByRole('heading', { name: 'Lavandería' })).toBeInTheDocument();

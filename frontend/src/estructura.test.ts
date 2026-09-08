@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
  * lo montó. Git no versiona carpetas vacías, así que cada una lleva un README que explica
  * qué va dentro: sirve de ancla para git y de guía para quien llega nuevo.
  */
-describe('Estructura de carpetas — SPEC-001', () => {
+describe('Estructura de carpetas — SPEC-KRILINXI-001', () => {
   it.each(['components', 'features', 'hooks', 'lib', 'pages'])(
     'existe src/%s/ y sobrevive a un clone',
     (carpeta) => {

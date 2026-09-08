@@ -1,5 +1,5 @@
 ---
-id: SPEC-001
+id: SPEC-KRILINXI-001
 name: Scaffolding del frontend
 slug: frontend-scaffold
 status: in-progress
@@ -36,9 +36,9 @@ Dos decisiones que esta spec cierra a propósito. **No instala el SDK web de Pow
 Convención de trazabilidad: todo test relacionado con esta spec debe llevar su id
 en el nombre del describe/bloque, por ejemplo:
 
-    describe('User model — SPEC-001', () => { ... })
+    describe('User model — SPEC-KRILINXI-001', () => { ... })
 
-Así un `grep SPEC-001` encuentra spec y tests en ambas direcciones, aunque el
+Así un `grep SPEC-KRILINXI-001` encuentra spec y tests en ambas direcciones, aunque el
 campo `tests:` del frontmatter se quede desactualizado.
 
 El campo `tests:` lo rellena /spec-finish automáticamente — no lo edites a mano.
