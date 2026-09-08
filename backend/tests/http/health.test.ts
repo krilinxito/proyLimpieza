@@ -11,7 +11,7 @@ vi.mock('../../src/models/health.model.js', () => ({
 const { estaDisponible } = await import('../../src/models/health.model.js');
 const estaDisponibleMock = vi.mocked(estaDisponible);
 
-describe('GET /api/health — SPEC-001', () => {
+describe('GET /api/health — SPEC-ALE186-001', () => {
   beforeEach(() => {
     estaDisponibleMock.mockReset();
   });

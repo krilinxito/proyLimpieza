@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../../src/utils/ApiError.js';
 import { appThatThrows, expectApiError, testApi } from '../helpers/api.js';
 
-describe('Formato de error uniforme — SPEC-001', () => {
+describe('Formato de error uniforme — SPEC-ALE186-001', () => {
   it('responde 404 con el formato uniforme para una ruta que no existe', async () => {
     const res = await testApi().get('/api/no-existe');
 

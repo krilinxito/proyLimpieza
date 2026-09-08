@@ -1,5 +1,5 @@
 ---
-id: SPEC-001
+id: SPEC-ALE186-001
 name: Esqueleto del backend y dependencias
 slug: backend-bootstrap
 status: in-progress

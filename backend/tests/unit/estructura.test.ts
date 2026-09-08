@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 // o mueve las rutas de sitio, conviene que salte acá y no en una revisión.
 const src = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../src');
 
-describe('Estructura del backend — SPEC-001', () => {
+describe('Estructura del backend — SPEC-ALE186-001', () => {
   it.each(['models', 'controllers', 'routes', 'middleware', 'services', 'db', 'utils'])(
     'existe la carpeta %s/',
     (carpeta) => {

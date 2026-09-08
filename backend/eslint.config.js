@@ -1,4 +1,4 @@
-// El criterio 5 de SPEC-001 pide que un `any` explícito rompa la verificación.
+// El criterio 5 de SPEC-ALE186-001 pide que un `any` explícito rompa la verificación.
 // `tsc` no tiene ninguna opción para eso —`strict` impide que el compilador
 // INFIERA `any`, pero no que alguien lo escriba a mano—, así que esa mitad de
 // la regla la sostiene ESLint. Las dos cosas juntas son `npm run check`.

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { formatear, parse, restar, sumar } from '../../src/utils/money.js';
 
-describe('money — SPEC-001', () => {
+describe('money — SPEC-ALE186-001', () => {
   describe('parse', () => {
     it('convierte a centavos el string que devuelve pg para un NUMERIC(10,2)', () => {
       expect(parse('12.50')).toBe(1250);

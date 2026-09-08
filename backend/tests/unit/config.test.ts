@@ -4,7 +4,7 @@ import { readConfig } from '../../src/config.js';
 // `readConfig` recibe el entorno como argumento justamente para esto: se le
 // pasa un objeto de mentira y se comprueba qué hace, sin tocar process.env
 // ni arrancar el servidor.
-describe('config — SPEC-001', () => {
+describe('config — SPEC-ALE186-001', () => {
   it('lee DATABASE_URL del entorno', () => {
     const config = readConfig({ DATABASE_URL: 'postgresql://u:p@localhost:5432/lavanderia' });
 

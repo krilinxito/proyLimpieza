@@ -1,4 +1,4 @@
-// Helpers de test para la API HTTP — creados en SPEC-001.
+// Helpers de test para la API HTTP — creados en SPEC-ALE186-001.
 //
 // Qué cubren y cuándo usarlos:
 //

@@ -1,6 +1,6 @@
 ---
-id: SPEC-001
-spec: specs/SPEC-001-backend-bootstrap.md
+id: SPEC-ALE186-001
+spec: specs\SPEC-ALE186-001-backend-bootstrap.md
 explica:
   - dinero en centavos enteros
   - dobles de prueba (mocks)

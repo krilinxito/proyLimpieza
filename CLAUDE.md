@@ -24,7 +24,7 @@ conexión no puede dejar de recibir ropa.
 ## 2. Estado actual
 
 Fase inicial. `frontend/` todavía no existe. `backend/` tiene el esqueleto que dejó
-SPEC-001: arranca, se conecta a Postgres, responde `GET /api/health` y tiene suite de
+SPEC-ALE186-001: arranca, se conecta a Postgres, responde `GET /api/health` y tiene suite de
 tests — pero ningún endpoint del negocio. Además existen el modelo de datos
 (`context/lavanderia_schema.sql`) y el entorno Docker. El desarrollo avanza spec a spec
 con el flujo de la sección 12.
@@ -330,14 +330,16 @@ Nada se implementa sin una spec aprobada.
 - Rama base **`dev`**; `main` es producción. El merge de `dev` a `main` es un proceso de
   release aparte, manual.
 - **La aprobación de una spec es humana.** Claude nunca pone `status: approved`.
-- **Todo test lleva el id de su spec en el nombre del bloque:**
+- **Todo test lleva el id COMPLETO de su spec en el nombre del bloque**, con el prefijo de
+  quien la escribió:
 
   ```ts
-  describe('Orden model — SPEC-001', () => { ... })
+  describe('Orden model — SPEC-ALE186-001', () => { ... })
   ```
 
-  Es lo que permite que `grep SPEC-001` encuentre la spec desde el test y al revés. Un
-  test sin etiquetar es un test que el flujo pierde.
+  Es lo que permite que `grep SPEC-ALE186-001` encuentre la spec desde el test y al revés.
+  El prefijo no es decorativo: cada uno numera su propia serie, así que sin él `SPEC-001`
+  aparecería en las specs de los dos. Un test sin etiquetar es un test que el flujo pierde.
 - Los tests se escriben **mientras** se implementa, no después. Antes de crear un helper
   de test nuevo, buscá si ya hay uno aplicable y reusalo o generalizalo.
 - Specs chicas. Si una toca medio repositorio, partila en varias con `depends_on`.
