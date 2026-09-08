@@ -1,0 +1,12 @@
+{
+  "name": "lavanderia",
+  "private": true,
+  "description": "Sistema de gestión de lavandería — raíz del monorepo",
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  }
+}
