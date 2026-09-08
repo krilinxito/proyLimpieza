@@ -1,7 +1,20 @@
 ---
 id: SPEC-001
 spec: specs/SPEC-001-backend-bootstrap.md
-explica: []
+explica:
+  - dinero en centavos enteros
+  - dobles de prueba (mocks)
+  - formato de error uniforme
+  - funciones puras testeables
+  - manejador de errores de cuatro parametros
+  - middleware
+  - modulos ESM y extension .js en imports
+  - orden de la cadena de middlewares
+  - pool de conexiones
+  - punto flotante
+  - separacion app/server
+  - type parser de pg
+  - workspaces de npm
 ---
 
 # SPEC-001 — Esqueleto del backend y dependencias
