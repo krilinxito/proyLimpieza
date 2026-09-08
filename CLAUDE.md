@@ -348,6 +348,17 @@ Nada se implementa sin una spec aprobada.
 
 ## 13. Deuda conocida y pendientes
 
+- **El monorepo tiene DOS versiones de TypeScript, y la raíz fija una a propósito.**
+  El frontend usa TypeScript 7 y el backend 5.9. Al instalar, npm hoistea a la raíz una
+  sola de las dos, y `ts-api-utils` —que está en la cadena de typescript-eslint— resuelve
+  su `typescript` desde ahí. Si en la raíz queda el 7, el ESLint del backend muere con
+  `Cannot read properties of undefined (reading 'Intrinsic')`: **ninguna versión de
+  typescript-eslint soporta todavía TypeScript 7** (la 8.70 declara `>=4.8.4 <6.1.0`).
+  Por eso el `package.json` de la raíz declara `typescript: 5.9.3` — no lo borres pensando
+  que sobra: es lo que mantiene vivo `npm run check`. El frontend conserva su 7 anidado y
+  compila con él.
+  El arreglo de verdad es que el monorepo tenga **una sola** versión de TypeScript. Mientras
+  haya dos majors, este tipo de choque va a volver por otro lado.
 - **Los puertos por defecto (5432 y 8080) pueden chocar** con otros contenedores en la
   máquina de cada uno. Están parametrizados en `.env` (`POSTGRES_PORT`, `POWERSYNC_PORT`)
   justamente para eso; si algo no levanta, revisá ahí antes de buscar más lejos.
