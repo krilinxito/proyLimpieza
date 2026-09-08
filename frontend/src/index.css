@@ -1,0 +1,3 @@
+/* Tailwind v4 se carga con un único @import; la configuración vive en el plugin de Vite,
+   no en un tailwind.config.js. */
+@import 'tailwindcss';
