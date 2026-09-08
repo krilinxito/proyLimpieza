@@ -1,0 +1,33 @@
+{
+  // TypeScript en modo estricto: la sección 10 del CLAUDE.md prohíbe `any`,
+  // y para eso lo primero es que el compilador no lo infiera solo por su cuenta.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023"],
+
+    // NodeNext = el sistema de módulos real de Node para ESM. Obliga a escribir
+    // la extensión en los imports relativos (`./app.js`, aunque el archivo sea
+    // `app.ts`); es lo que hace que el mismo código corra con tsx, con vitest
+    // y con `node dist/` sin trucos de configuración.
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+
+    "rootDir": ".",
+    "outDir": "dist",
+    "sourceMap": true,
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts", "tests/**/*.ts", "*.config.ts"],
+  "exclude": ["dist", "node_modules"]
+}
