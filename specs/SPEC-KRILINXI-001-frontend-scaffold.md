@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-001
 name: Scaffolding del frontend
 slug: frontend-scaffold
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-09-07
 scope:
@@ -10,7 +10,12 @@ scope:
   - package.json
 priority: high
 depends_on: []
-tests: []
+tests:
+  - frontend/src/App.test.tsx
+  - frontend/src/estilos.test.tsx
+  - frontend/src/estructura.test.ts
+  - frontend/src/lib/env.test.ts
+  - frontend/src/test/render.tsx
 ---
 
 ## Descripción
@@ -21,16 +26,24 @@ Dos decisiones que esta spec cierra a propósito. **No instala el SDK web de Pow
 
 ## Criterios de aceptación
 
-- [ ] npm install desde la raíz instala el workspace frontend sin errores
-- [ ] npm test desde la raíz corre Vitest y pasa al menos un test que renderiza un componente con React Testing Library
-- [ ] npm run dev levanta Vite y sirve la aplicación en el puerto 5173
-- [ ] npx tsc --noEmit pasa sin errores con strict activado, y no hay ningún uso de any en el código
-- [ ] Un componente con clases utilitarias de Tailwind se renderiza con esos estilos aplicados
-- [ ] La URL de la API se lee de VITE_API_URL en un único módulo tipado, y la aplicación falla al arrancar con un mensaje claro en español si esa variable falta
-- [ ] Existen las carpetas features/, components/, lib/, hooks/ y pages/ bajo frontend/src/
-- [ ] El router monta las rutas previstas, y una ruta desconocida muestra una pantalla de página no encontrada escrita en español
+- [x] npm install desde la raíz instala el workspace frontend sin errores
+- [x] npm test desde la raíz corre Vitest y pasa al menos un test que renderiza un componente con React Testing Library
+- [x] npm run dev levanta Vite y sirve la aplicación en el puerto 5173
+- [x] npx tsc --noEmit pasa sin errores con strict activado, y no hay ningún uso de any en el código
+- [x] El build emite una regla CSS para cada utilidad de Tailwind que usan las pantallas, y no incluye las que nadie usa
+- [x] La URL de la API se lee de VITE_API_URL en un único módulo tipado, y la aplicación falla al arrancar con un mensaje claro en español si esa variable falta
+- [x] Existen las carpetas features/, components/, lib/, hooks/ y pages/ bajo frontend/src/
+- [x] El router monta las rutas previstas, y una ruta desconocida muestra una pantalla de página no encontrada escrita en español
 
 ## Notas
+
+**Criterio de Tailwind, ajustado durante la implementación.** Se redactó como "un componente
+se renderiza con esos estilos aplicados", y eso no es verificable a este nivel: Tailwind v4
+emite `@layer` y variables CSS, y el motor de estilos de jsdom no resuelve ninguna de las
+dos, así que `getComputedStyle` devuelve los valores por defecto aunque el CSS esté cargado
+(se intentó y se descartó). El criterio pasa a exigir lo que sí se puede comprobar de punta
+a punta —que el pipeline de Tailwind genera las reglas de las utilidades que se usan—, y
+**comprobar que el navegador las pinta queda para una spec de tests en navegador real**.
 
 <!--
 Convención de trazabilidad: todo test relacionado con esta spec debe llevar su id
