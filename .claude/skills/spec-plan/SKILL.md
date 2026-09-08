@@ -143,7 +143,9 @@ sin releer el repo — pero sin convertirlo en la spec entera: los criterios de 
 se redactan en el paso siguiente, solo para las elegidas.
 
 Los ids son tentativos: `$SF next-id` solo te da el primero, y el resto depende del orden
-real de creación. Dilo así, no numeres como si ya existieran.
+real de creación. Dilo así, no numeres como si ya existieran. Llevan el prefijo de dev de
+quien las cree, así que si el owner propuesto es otra persona, el id real será el suyo y no
+el que te devuelva `next-id`.
 
 Cierra con dos cosas que valen más que la tabla:
 

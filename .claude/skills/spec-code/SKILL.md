@@ -66,6 +66,30 @@ Si `git pull` falla (sin remoto, sin red), muestra el error y pregunta si seguir
 base local o parar. No lo ignores en silencio: ramificar de una base vieja es la causa
 número uno de rebases dolorosos después.
 
+### Comprueba que el id no choque con la base
+
+```
+$SF check-ids --against origin/<base_branch>
+```
+
+Este es **el mejor momento del flujo para descubrir un choque de ids**: acabas de traerte
+la base y todavía no has escrito una línea de código, así que renumerar cuesta un archivo.
+Más adelante cuesta también las etiquetas de todos los tests.
+
+Si `choques` no está vacío, significa que esa misma spec ya existe en la base con otro
+archivo — dos personas eligieron el mismo id. **Detente y díselo**, con los dos archivos.
+Ofrece renumerar la de aquí:
+
+```
+$SF rename-id <id-viejo> <id-nuevo>
+```
+
+Devuelve lo que ha renombrado y lo que queda por hacer a mano: las etiquetas de los tests
+y el nombre de la rama. Ocúpate de esos dos pasos también.
+
+Si `duplicados` no está vacío, el choque ya está dentro de tu rama y hay que resolverlo
+igual antes de seguir.
+
 ## 3. Crea la rama de la spec
 
 ```
@@ -129,19 +153,23 @@ Busca por nombre de archivo (`helper`, `factory`, `fixture`, `support`, `shared`
 
 ### Trazabilidad: etiqueta SIEMPRE con el id
 
-Todo test —o el `describe`/bloque que lo agrupa— debe llevar el id de la spec en su nombre:
+Todo test —o el `describe`/bloque que lo agrupa— debe llevar el id **completo** de la spec,
+con su prefijo de dev, tal como lo devuelve `$SF show`:
 
 ```js
-describe('User model — SPEC-001', () => { ... })
+describe('User model — SPEC-ANA-001', () => { ... })
 ```
 
 ```python
-class TestUserModel:  # SPEC-001
+class TestUserModel:  # SPEC-ANA-001
 ```
+
+El prefijo no es decorativo: es lo que hace que la búsqueda encuentre solo tus tests. Sin
+él, dos specs con el mismo número mezclarían sus tests, porque la búsqueda es por texto.
 
 Si creas un helper compartido, menciona el id en su comentario de cabecera también.
 
-Esto es lo que permite que `grep SPEC-001` encuentre spec y tests en ambas direcciones,
+Esto es lo que permite que `grep SPEC-ANA-001` encuentre spec y tests en ambas direcciones,
 y es de donde `/spec-finish` saca el campo `tests:` del frontmatter. Un test sin etiquetar
 es un test que el flujo pierde.
 

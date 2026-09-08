@@ -87,7 +87,7 @@ $SF scan-tests $ARGUMENTS
 ```
 
 Escanea los archivos de test buscando el id de la spec (la convención de
-`describe('... — SPEC-001')`). Enséñale al usuario lo que encontró.
+`describe('... — SPEC-ANA-001')`, con el id completo). Enséñale al usuario lo que encontró.
 
 Si no encuentra nada pero sí escribiste tests, es que faltó etiquetarlos: **añade el id**
 al `describe`/bloque correspondiente y vuelve a escanear. Ese campo es lo que permite ir
@@ -137,6 +137,16 @@ gana es una decisión del equipo, no tuya.
 
 Después del rebase, **vuelve a correr la suite**: el código de `dev` es nuevo y puede
 romper esta rama aunque el rebase haya sido limpio.
+
+Y corre `$SF check-ids`. Es la última red antes del push: el rebase acaba de meter en tu
+rama las specs de la base, así que si alguien eligió el mismo id que tú, **ahora es cuando
+se ve** — y es la última vez, porque después del merge los dos archivos conviven en `dev`
+sin dar conflicto y nadie vuelve a mirar.
+
+Si hay duplicados, detente. `$SF rename-id <viejo> <nuevo>` renumera la spec y su bitácora;
+las etiquetas de los tests y el nombre de la rama los cambias tú con lo que te devuelva, y
+después hay que volver a correr `$SF scan-tests` y `$SF set-tests`, porque el campo
+`tests:` se rellenó con el id viejo.
 
 ## 7. Push y PR
 

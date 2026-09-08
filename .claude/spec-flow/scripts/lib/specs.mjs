@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { parse, serialize, setScalar, setList } from './frontmatter.mjs';
 import { specsDir } from './config.mjs';
 import { scopeOverlaps } from './paths.mjs';
-import { whoami } from './identity.mjs';
+import { whoami, devPrefix } from './identity.mjs';
 import { slugify } from './text.mjs';
 import { noteBody } from './notes.mjs';
 
@@ -17,30 +17,60 @@ export const FRONTMATTER_ORDER = [
 export const STATUSES = ['draft', 'approved', 'in-progress', 'finished'];
 export const ACTIVE_STATUSES = STATUSES.filter((s) => s !== 'finished');
 
-/** Accepts `1`, `001`, `SPEC-001`, `spec-001` — always yields `SPEC-001`. */
+/** Un id de spec, ya sea `SPEC-KRI-001` o el `SPEC-001` de antes del prefijo de dev. */
+const ID_RE = /^SPEC-(?:([A-Za-z][A-Za-z0-9]{0,7})-)?(\d+)$/i;
+
+/**
+ * Parte un id en sus dos piezas. `prefix` es `null` en las specs creadas antes de que los
+ * ids llevaran prefijo de dev — siguen siendo válidas y se resuelven igual.
+ */
+export function parseId(id) {
+  const m = String(id ?? '').trim().match(ID_RE);
+  if (!m) return { prefix: null, numero: null };
+  return { prefix: m[1] ? m[1].toUpperCase() : null, numero: Number(m[2]) };
+}
+
+/**
+ * Acepta `1`, `001`, `SPEC-001`, `kri-001`, `SPEC-KRI-001` y devuelve la forma canónica.
+ *
+ * El `SPEC-` inicial se quita ANTES de buscar el prefijo: si no, en `SPEC-001` el parser
+ * leería `SPEC` como prefijo de dev y el número se perdería.
+ */
 export function normalizeId(input) {
   const raw = String(input ?? '').trim();
-  const m = raw.match(/(\d+)\s*$/);
-  if (!m) throw new Error(`cannot read a spec number out of "${raw}"`);
-  return `SPEC-${m[1].padStart(3, '0')}`;
+  const sinSpec = raw.replace(/^spec[-_\s]*/i, '');
+  const m = sinSpec.match(/^(?:([A-Za-z][A-Za-z0-9]{0,7})[-_\s]+)?(\d+)\s*$/);
+  if (!m) throw new Error(`no encuentro un número de spec en "${raw}"`);
+  const numero = m[2].padStart(3, '0');
+  return m[1] ? `SPEC-${m[1].toUpperCase()}-${numero}` : `SPEC-${numero}`;
+}
+
+/** El id que lleva el propio nombre del archivo, o null si no lo lleva. */
+function idFromFilename(archivo) {
+  const m = archivo.match(/^(SPEC-(?:[A-Za-z][A-Za-z0-9]{0,7}-)?\d+)/i);
+  return m ? normalizeId(m[1]) : null;
 }
 
 /** The slug part of `SPEC-003-auth-backend.md` — '' if the file has none. */
 function slugFromFilename(file) {
-  return path.basename(file).replace(/\.md$/i, '').replace(/^SPEC-\d+-?/i, '');
+  return path.basename(file)
+    .replace(/\.md$/i, '')
+    .replace(/^SPEC-(?:[A-Za-z][A-Za-z0-9]{0,7}-)?\d+-?/i, '');
 }
 
 export function listSpecs(cfg) {
   const dir = specsDir(cfg);
   if (!fs.existsSync(dir)) return [];
   return fs.readdirSync(dir)
-    .filter((f) => /^SPEC-\d+.*\.md$/i.test(f))
+    .filter((f) => /^SPEC-(?:[A-Za-z][A-Za-z0-9]{0,7}-)?\d+.*\.md$/i.test(f))
     .map((f) => {
       const file = path.join(dir, f);
       const text = fs.readFileSync(file, 'utf8');
       const { data, body } = parse(text);
+      const id = data.id ?? idFromFilename(f) ?? '';
       return {
-        id: data.id ?? normalizeId(f),
+        id,
+        ...parseId(id),
         name: data.name ?? '',
         // `slug` decide el nombre del archivo y el de la rama; va aparte de `name` para
         // que el título pueda ser descriptivo sin alargar los dos. Las specs anteriores a
@@ -61,17 +91,55 @@ export function listSpecs(cfg) {
     .sort((a, b) => a.id.localeCompare(b.id));
 }
 
+/**
+ * La spec con ese id. Un `001` a secas vale mientras no haya dos specs con ese número.
+ *
+ * Cuando las hay, esto **falla** en vez de elegir una: operar en silencio sobre la spec
+ * equivocada es justo el fallo que el prefijo de dev vino a evitar, y un error molesto se
+ * arregla en un minuto mientras que una trazabilidad cruzada no se ve hasta mucho después.
+ */
 export function findSpec(cfg, idish) {
   const id = normalizeId(idish);
-  const spec = listSpecs(cfg).find((s) => s.id === id);
-  if (!spec) throw new Error(`no spec found with id ${id} in ${cfg.specs_dir}/`);
-  return spec;
+  const { prefix, numero } = parseId(id);
+  const todas = listSpecs(cfg);
+  const candidatas = prefix
+    ? todas.filter((s) => s.id === id)
+    : todas.filter((s) => s.numero === numero);
+
+  if (candidatas.length === 1) return candidatas[0];
+  if (candidatas.length === 0) throw new Error(`no hay ninguna spec con id ${id} en ${cfg.specs_dir}/`);
+
+  throw new Error(
+    `"${idish}" es ambiguo: ${candidatas.length} specs comparten ese número.\n`
+    + candidatas.map((s) => `  ${s.id}  ${s.path}`).join('\n')
+    + `\nUsá el id completo, por ejemplo: ${candidatas[0].id}`,
+  );
 }
 
+/**
+ * El siguiente id libre **de esta persona**: cuenta solo las specs con su prefijo.
+ *
+ * Que cada dev numere su propia serie es lo que hace imposible la colisión. Con una serie
+ * global habría que leer las specs del otro para saber el siguiente número, y dos personas
+ * creando una spec a la vez —sin haber pusheado— volverían a llevarse el mismo.
+ */
 export function nextId(cfg) {
-  const nums = listSpecs(cfg).map((s) => Number(s.id.match(/(\d+)/)?.[1] ?? 0));
+  const mio = devPrefix();
+  const nums = listSpecs(cfg).filter((s) => s.prefix === mio).map((s) => s.numero ?? 0);
   const max = nums.length ? Math.max(...nums) : 0;
-  return `SPEC-${String(max + 1).padStart(3, '0')}`;
+  return `SPEC-${mio}-${String(max + 1).padStart(3, '0')}`;
+}
+
+/** Ids que aparecen en más de un archivo. Vacío es lo sano. */
+export function duplicateIds(cfg) {
+  const porId = new Map();
+  for (const s of listSpecs(cfg)) {
+    if (!porId.has(s.id)) porId.set(s.id, []);
+    porId.get(s.id).push(s.path);
+  }
+  return [...porId.entries()]
+    .filter(([, rutas]) => rutas.length > 1)
+    .map(([id, rutas]) => ({ id, rutas }));
 }
 
 /** Active specs (status !== finished) whose scope collides with the proposed one. */
@@ -82,7 +150,7 @@ export function findOverlaps(cfg, proposedScope, { excludeId = null } = {}) {
     .filter((r) => r.matches.length > 0);
 }
 
-function renderBody(cfg, { description, criteria }) {
+function renderBody(cfg, { description, criteria, id }) {
   // Resolved from this module, so it works no matter where the repo root is.
   const tmpl = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../templates/SPEC.md.tmpl');
   const fallback = '## Descripción\n\n{{DESCRIPTION}}\n\n## Criterios de aceptación\n\n{{CRITERIA}}\n';
@@ -92,7 +160,8 @@ function renderBody(cfg, { description, criteria }) {
     : '- [ ] (pendiente de definir)';
   return raw
     .replace('{{DESCRIPTION}}', (description ?? '').trim() || '(pendiente de definir)')
-    .replace('{{CRITERIA}}', checklist);
+    .replace('{{CRITERIA}}', checklist)
+    .replaceAll('{{ID}}', id ?? 'SPEC-XXX');
 }
 
 /** Write a brand-new spec file. Returns its repo-relative path. */
@@ -123,8 +192,10 @@ export function createSpec(cfg, payload) {
   const file = path.join(dir, `${id}-${slug}.md`);
   if (fs.existsSync(file)) throw new Error(`${path.relative(cfg.__root, file)} already exists`);
 
-  fs.writeFileSync(file, `${serialize(data, FRONTMATTER_ORDER)}\n\n${renderBody(cfg, payload)}`, 'utf8');
-  return path.relative(cfg.__root, file);
+  fs.writeFileSync(file, `${serialize(data, FRONTMATTER_ORDER)}\n\n${renderBody(cfg, { ...payload, id })}`, 'utf8');
+  // Devuelve el id además de la ruta: sacarlo del nombre del archivo obliga a mantener un
+  // regex en sincronía con el formato del id, y ese regex ya se quedó atrás una vez.
+  return { path: path.relative(cfg.__root, file), id };
 }
 
 export function setStatus(cfg, idish, status) {

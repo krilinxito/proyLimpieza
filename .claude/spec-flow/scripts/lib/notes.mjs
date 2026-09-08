@@ -49,13 +49,13 @@ export function conceptIndex(cfg) {
   if (!fs.existsSync(dir)) return { conceptos, duplicados };
 
   const notas = fs.readdirSync(dir)
-    .filter((f) => /^SPEC-\d+.*\.md$/i.test(f))
+    .filter((f) => /^SPEC-(?:[A-Za-z][A-Za-z0-9]{0,7}-)?\d+.*\.md$/i.test(f))
     .sort();
 
   for (const f of notas) {
     const file = path.join(dir, f);
     const { data } = parse(fs.readFileSync(file, 'utf8'));
-    const id = data.id ?? f.match(/^(SPEC-\d+)/i)?.[1] ?? f;
+    const id = data.id ?? f.match(/^(SPEC-(?:[A-Za-z][A-Za-z0-9]{0,7}-)?\d+)/i)?.[1] ?? f;
     const nota = path.relative(cfg.__root, file);
     for (const raw of Array.isArray(data.explica) ? data.explica : []) {
       const concepto = String(raw).trim();

@@ -7,9 +7,10 @@ import { grepSpecId } from './paths.mjs';
 import { whoami } from './identity.mjs';
 import {
   listSpecs, findSpec, nextId, createSpec, setStatus, setTests,
-  branchName, prBody, findOverlaps, normalizeId, ACTIVE_STATUSES,
+  branchName, prBody, findOverlaps, normalizeId, parseId, duplicateIds, ACTIVE_STATUSES,
 } from './specs.mjs';
 import { notesRelPath, noteExists, conceptIndex, setConcepts } from './notes.mjs';
+import { renameId, checkIds } from './rename.mjs';
 
 const out = (v) => console.log(typeof v === 'string' ? v : JSON.stringify(v, null, 2));
 
@@ -39,7 +40,9 @@ const USAGE = `specflow — motor determinista de las skills /spec-new, /spec-co
   pr-body <id>                  cuerpo del PR a partir de la spec
   notes-path <id>               ruta de la bitácora de la spec
   notes-index                   qué concepto explicó qué spec, y dónde
-  notes-explains <id> a,b,c     declara qué conceptos explica esa bitácora`;
+  notes-explains <id> a,b,c     declara qué conceptos explica esa bitácora
+  check-ids [--against <ref>]   ids duplicados aquí, y choques con esa rama
+  rename-id <viejo> <nuevo>     renumera una spec y su bitácora`;
 
 function cmdDoctor(cfg) {
   const report = { ok: true, checks: [] };
@@ -82,6 +85,15 @@ function cmdDoctor(cfg) {
   const hasSpecs = fs.existsSync(`${cfg.__root}/${cfg.specs_dir}`);
   add(`carpeta ${cfg.specs_dir}/`, hasSpecs, hasSpecs ? `${listSpecs(cfg).length} spec(s)` : 'no existe todavía (se crea sola en /spec-new)', false);
 
+  // Dos specs con el mismo id no dan conflicto de merge —los archivos se llaman distinto—,
+  // así que sin este aviso la colisión entra en dev sin que nadie la vea.
+  const dups = hasSpecs ? duplicateIds(cfg) : [];
+  add('ids de spec', dups.length === 0,
+    dups.length === 0
+      ? 'sin duplicados'
+      : dups.map((d) => `${d.id} en ${d.rutas.join(' y ')} — renumerá una con: rename-id`).join('; '),
+    false);
+
   const t = detectTestCommand(cfg);
   add('framework de tests', Boolean(t.command),
     t.command ? `${t.framework} → ${t.command} (${t.reason})` : t.reason, false);
@@ -119,8 +131,8 @@ function main() {
     case 'next-id':   return out(nextId(cfg));
     case 'create': {
       const payload = readJsonArg(flag(argv, '--json') ?? '-');
-      const file = createSpec(cfg, payload);
-      return out({ created: file, id: payload.id ? normalizeId(payload.id) : file.match(/SPEC-\d+/)[0], status: 'draft' });
+      const creada = createSpec(cfg, payload);
+      return out({ created: creada.path, id: creada.id, status: 'draft' });
     }
     case 'overlap': {
       const scope = (flag(argv, '--scope') ?? '').split(',').map((s) => s.trim()).filter(Boolean);
@@ -152,6 +164,8 @@ function main() {
       return out({ path: notesRelPath(cfg, spec), exists: noteExists(cfg, spec) });
     }
     case 'notes-index': return out(conceptIndex(cfg));
+    case 'check-ids':   return out(checkIds(cfg, flag(argv, '--against')));
+    case 'rename-id':   return out(renameId(cfg, argv[0], argv[1]));
     case 'notes-explains': {
       const spec = findSpec(cfg, argv[0]);
       const conceptos = (argv[1] ?? '').split(',');

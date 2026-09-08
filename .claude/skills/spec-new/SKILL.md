@@ -139,6 +139,11 @@ El payload:
 }
 ```
 
+El **id no lo mandas tú**: lo asigna el motor y lleva tu prefijo de dev
+(`SPEC-KRILINXI-001`), sacado de tu `git config user.name`. No hay nada que configurar, y
+es lo que permite que tu compañero y tú creéis una spec a la vez sin llevaros el mismo
+número. Cada uno numera su propia serie.
+
 `slug` es opcional (por defecto se deriva de `name`) pero **mándalo siempre**: es lo que
 mantiene cortos el archivo y la rama. El motor lo normaliza, así que no hace falta que se
 lo pases ya en kebab-case.
