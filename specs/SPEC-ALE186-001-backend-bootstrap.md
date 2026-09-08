@@ -2,7 +2,7 @@
 id: SPEC-ALE186-001
 name: Esqueleto del backend y dependencias
 slug: backend-bootstrap
-status: in-progress
+status: finished
 owner: ale186
 created: 2026-09-08
 scope:
@@ -11,7 +11,12 @@ scope:
   - .env.example
 priority: medium
 depends_on: []
-tests: []
+tests:
+  - backend\tests\http\errores.test.ts
+  - backend\tests\http\health.test.ts
+  - backend\tests\unit\config.test.ts
+  - backend\tests\unit\estructura.test.ts
+  - backend\tests\unit\money.test.ts
 ---
 
 ## Descripción
