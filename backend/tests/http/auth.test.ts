@@ -15,7 +15,7 @@ const { buscarPorUsername, buscarPorId } = await import('../../src/models/usuari
 const buscarPorUsernameMock = vi.mocked(buscarPorUsername);
 const buscarPorIdMock = vi.mocked(buscarPorId);
 
-function login(body: unknown) {
+function login(body: Record<string, unknown>) {
   return testApi().post('/api/auth/login').send(body);
 }
 
