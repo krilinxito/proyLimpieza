@@ -2,7 +2,7 @@
 id: SPEC-ALE186-002
 name: Autenticación, usuarios y semilla inicial
 slug: auth-backend
-status: in-progress
+status: finished
 owner: ale186
 created: 2026-09-24
 scope:
@@ -18,7 +18,12 @@ scope:
   - backend/tests/**
 priority: high
 depends_on: []
-tests: []
+tests:
+  - backend\tests\http\auth.test.ts
+  - backend\tests\http\sesion.test.ts
+  - backend\tests\unit\authConfig.test.ts
+  - backend\tests\unit\jwt.test.ts
+  - backend\tests\unit\seed.test.ts
 ---
 
 ## Descripción
