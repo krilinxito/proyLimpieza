@@ -5,17 +5,18 @@
 // le toca a cada uno, para que el orden no dependa de quién llegue primero.
 import { Router } from 'express';
 import { authRouter } from './auth.routes.js';
+import { clientesRouter } from './clientes.routes.js';
 import { healthRouter } from './health.routes.js';
 
 export const apiRouter = Router();
 
 apiRouter.use('/auth', authRouter);
+apiRouter.use('/clientes', clientesRouter);
 apiRouter.use('/health', healthRouter);
 
 // Pendientes, en el orden del flujo del negocio (CLAUDE.md, sección 3).
 // Descomentar en la spec que implemente cada uno:
 //
-// apiRouter.use('/clientes', clientesRouter);          // SPEC de clientes
 // apiRouter.use('/ordenes', ordenesRouter);            // SPEC de órdenes
 // apiRouter.use('/entregas', entregasRouter);          // SPEC de entregas
 // apiRouter.use('/pagos', pagosRouter);                // SPEC de pagos
