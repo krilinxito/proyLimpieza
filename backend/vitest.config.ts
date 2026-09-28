@@ -12,6 +12,13 @@ export default defineConfig({
     env: {
       DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
       NODE_ENV: 'test',
+
+      // Mismo motivo, para la config de autenticación (SPEC-ALE186-002).
+      // Este secreto es de mentira y es público: son 32 bytes de texto legible
+      // en base64url, lo justo para que la validación lo acepte. El de verdad
+      // vive en el .env de cada máquina y no está en el repositorio.
+      PS_JWT_SECRET_B64: 'c2VjcmV0by1kZS1wcnVlYmEtZGUtbGEtc3VpdGUtMzI',
+      PS_JWT_AUDIENCE: 'lavanderia-test',
     },
   },
 });

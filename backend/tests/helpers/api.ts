@@ -18,11 +18,18 @@
 //                             le pases. Sirve para probar el manejador central
 //                             sin depender de ningún endpoint real.
 //
+//   appConCapas(...capas)     Una app mínima con GET /probar protegido por los
+//                             middlewares que le pases. Es la forma de probar
+//                             un middleware por lo que HACE —deja pasar o
+//                             corta— sin inventarse un endpoint de negocio que
+//                             después haya que mantener. Cuando deja pasar,
+//                             responde 200 con la sesión que quedó en `req`.
+//
 // Ejemplo de uso en una spec futura:
 //
 //   const res = await testApi().post('/api/ordenes').send({ numero_boleta: '001' });
 //   expectApiError(res, { status: 409, codigo: 'BOLETA_DUPLICADA' });
-import express, { type Express } from 'express';
+import express, { type Express, type RequestHandler } from 'express';
 import request from 'supertest';
 import { expect } from 'vitest';
 import { createApp } from '../../src/app.js';
@@ -31,6 +38,19 @@ import { errorHandler } from '../../src/middleware/errorHandler.js';
 /** Cliente HTTP contra la aplicación completa. No ocupa ningún puerto. */
 export function testApi() {
   return request(createApp());
+}
+
+/** App mínima con GET /probar detrás de los middlewares indicados. */
+export function appConCapas(...capas: RequestHandler[]): Express {
+  const app = express();
+
+  app.get('/probar', ...capas, (req, res) => {
+    res.json({ ok: true, usuario: req.usuario ?? null });
+  });
+
+  app.use(errorHandler);
+
+  return app;
 }
 
 /** App mínima cuya única ruta (GET /boom) lanza el error indicado. */

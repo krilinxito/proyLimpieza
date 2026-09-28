@@ -23,11 +23,19 @@ conexión no puede dejar de recibir ropa.
 
 ## 2. Estado actual
 
-Fase inicial. `frontend/` todavía no existe. `backend/` tiene el esqueleto que dejó
-SPEC-ALE186-001: arranca, se conecta a Postgres, responde `GET /api/health` y tiene suite de
-tests — pero ningún endpoint del negocio. Además existen el modelo de datos
-(`context/lavanderia_schema.sql`) y el entorno Docker. El desarrollo avanza spec a spec
-con el flujo de la sección 12.
+Fase inicial, con los dos workspaces en pie.
+
+`backend/` tiene el esqueleto de SPEC-ALE186-001 —arranca, se conecta a Postgres, responde
+`GET /api/health`— y la autenticación de SPEC-ALE186-002: `POST /api/auth/login` y
+`/api/auth/renovar`, los middlewares de sesión y de rol, y la semilla que crea el primer
+admin (`npm run seed --workspace backend`, que exige `SEED_ADMIN_PASSWORD`). Todavía no hay
+ningún endpoint del negocio: ni clientes, ni órdenes, ni entregas, ni pagos.
+
+`frontend/` tiene el scaffolding de SPEC-KRILINXI-001: Vite, Tailwind, rutas y su suite de
+tests, sin pantallas del negocio todavía.
+
+Además existen el modelo de datos (`context/lavanderia_schema.sql`) y el entorno Docker. El
+desarrollo avanza spec a spec con el flujo de la sección 12.
 
 ---
 
