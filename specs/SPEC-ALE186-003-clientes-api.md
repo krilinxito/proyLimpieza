@@ -2,7 +2,7 @@
 id: SPEC-ALE186-003
 name: Alta y edición de clientes
 slug: clientes-api
-status: in-progress
+status: finished
 owner: ale186
 created: 2026-09-28
 scope:
@@ -16,7 +16,10 @@ scope:
 priority: high
 depends_on:
   - SPEC-ALE186-002
-tests: []
+tests:
+  - backend\tests\http\clientes.test.ts
+  - backend\tests\unit\clientes.model.test.ts
+  - backend\tests\unit\validacion.test.ts
 ---
 
 ## Descripción
