@@ -28,8 +28,10 @@ Fase inicial, con los dos workspaces en pie.
 `backend/` tiene el esqueleto de SPEC-ALE186-001 —arranca, se conecta a Postgres, responde
 `GET /api/health`— y la autenticación de SPEC-ALE186-002: `POST /api/auth/login` y
 `/api/auth/renovar`, los middlewares de sesión y de rol, y la semilla que crea el primer
-admin (`npm run seed --workspace backend`, que exige `SEED_ADMIN_PASSWORD`). Todavía no hay
-ningún endpoint del negocio: ni clientes, ni órdenes, ni entregas, ni pagos.
+admin (`npm run seed --workspace backend`, que exige `SEED_ADMIN_PASSWORD`). SPEC-ALE186-003
+añadió el alta y la edición de clientes (`POST` y `PATCH /api/clientes`), que fija el patrón
+de escritura del resto: id generado por el dispositivo y reintento idempotente. Faltan
+órdenes, entregas y pagos.
 
 `frontend/` tiene el scaffolding de SPEC-KRILINXI-001: Vite, Tailwind, rutas y su suite de
 tests, sin pantallas del negocio todavía.
