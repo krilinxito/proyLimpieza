@@ -20,6 +20,10 @@ export const CODIGOS_ERROR = {
   CONFLICTO: 'CONFLICTO',
   SERVICIO_NO_DISPONIBLE: 'SERVICIO_NO_DISPONIBLE',
   ERROR_INTERNO: 'ERROR_INTERNO',
+
+  // De dominio. Van en esta misma lista y no repartidos por los controllers
+  // para que el frontend tenga un solo catálogo que consultar.
+  TELEFONO_DUPLICADO: 'TELEFONO_DUPLICADO', // SPEC-ALE186-003
 } as const;
 
 export interface CuerpoError {

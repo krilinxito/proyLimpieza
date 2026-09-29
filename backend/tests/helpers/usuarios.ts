@@ -53,3 +53,17 @@ export function tokenDePrueba(sesion: Partial<Sesion> = {}): string {
     ...sesion,
   }).token;
 }
+
+/**
+ * La cabecera de una petición autenticada, lista para `.set()` — SPEC-ALE186-003.
+ *
+ *   await testApi().post('/api/clientes').set(conSesion()).send({ ... });
+ *   await testApi().get('/api/x').set(conSesion({ rol: 'ADMIN', sucursalId: null }));
+ *
+ * Todo endpoint del negocio va detrás de `requireAuth`, así que cada test de
+ * recurso va a necesitar esto. Sin el helper, la misma línea de
+ * `Authorization: Bearer ...` se copiaba en cada test.
+ */
+export function conSesion(sesion: Partial<Sesion> = {}): { Authorization: string } {
+  return { Authorization: `Bearer ${tokenDePrueba(sesion)}` };
+}

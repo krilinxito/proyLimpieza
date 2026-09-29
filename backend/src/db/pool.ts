@@ -26,4 +26,13 @@ types.setTypeParser(types.builtins.NUMERIC, (valor: string) => valor);
 // DATE: que llegue tal cual está escrito en la base.
 types.setTypeParser(types.builtins.DATE, (valor: string) => valor);
 
+// TIMESTAMP (sin zona) -> string 'YYYY-MM-DD HH:MM:SS'. Mismo problema que DATE,
+// pero peor: por defecto `pg` lo lee como hora LOCAL de la máquina donde corre
+// Node, y al pasarlo a JSON lo convierte a UTC. En una máquina a -4 h, un
+// `fecha_registro` guardado como 20:00 salía por la API como 00:00Z del día
+// siguiente (SPEC-ALE186-003). Además, PowerSync le entrega al dispositivo el
+// string crudo: sin este parser la misma columna llegaría con dos valores
+// distintos según el camino. Una columna sin zona horaria se entrega tal cual.
+types.setTypeParser(types.builtins.TIMESTAMP, (valor: string) => valor);
+
 export const pool = new Pool({ connectionString: config.databaseUrl });
