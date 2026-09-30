@@ -10,6 +10,15 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
   },
+  // Lo que pide el SDK web de PowerSync (SPEC-KRILINXI-004), según su ejemplo oficial para
+  // Vite. El paquete trae web workers y un SQLite en WASM: si Vite lo pre-empaqueta en
+  // desarrollo, rompe las rutas a esos archivos. Y los workers tienen que ser módulos ES.
+  optimizeDeps: {
+    exclude: ['@powersync/web'],
+  },
+  worker: {
+    format: 'es',
+  },
   test: {
     environment: 'jsdom',
     globals: true,
