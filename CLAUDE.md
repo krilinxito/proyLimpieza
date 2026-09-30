@@ -34,7 +34,10 @@ de escritura del resto: id generado por el dispositivo y reintento idempotente. 
 órdenes, entregas y pagos.
 
 `frontend/` tiene el scaffolding de SPEC-KRILINXI-001: Vite, Tailwind, rutas y su suite de
-tests, sin pantallas del negocio todavía.
+tests. SPEC-KRILINXI-002 añadió las piezas que reutilizan todas las pantallas: `Boton`,
+`CampoTexto` y `ModalConfirmacion` en `components/`, `lib/money` (centavos enteros) y
+`lib/dominio` (los ENUM como constantes tipadas, con un test que los compara con el schema).
+Todavía no hay pantallas del negocio, ni PowerSync, ni login.
 
 Además existen el modelo de datos (`context/lavanderia_schema.sql`) y el entorno Docker. El
 desarrollo avanza spec a spec con el flujo de la sección 12.
