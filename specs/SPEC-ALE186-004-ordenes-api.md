@@ -2,7 +2,7 @@
 id: SPEC-ALE186-004
 name: Registro y avance de órdenes
 slug: ordenes-api
-status: in-progress
+status: finished
 owner: ale186
 created: 2026-09-30
 scope:
@@ -18,7 +18,11 @@ scope:
 priority: high
 depends_on:
   - SPEC-ALE186-003
-tests: []
+tests:
+  - backend\tests\http\ordenes.test.ts
+  - backend\tests\unit\dominio.test.ts
+  - backend\tests\unit\ordenes.model.test.ts
+  - backend\tests\unit\validacion.test.ts
 ---
 
 ## Descripción
