@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-003
 name: Ingresar al sistema y guardar la sesión
 slug: sesion-login
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-09-30
 scope:
@@ -17,7 +17,12 @@ scope:
   - frontend/src/test/**
 priority: high
 depends_on: []
-tests: []
+tests:
+  - frontend/src/App.test.tsx
+  - frontend/src/features/auth/api/almacen.test.ts
+  - frontend/src/features/auth/components/FormularioIngreso.test.tsx
+  - frontend/src/lib/api.test.ts
+  - frontend/src/test/arquitectura.test.ts
 ---
 
 ## Descripción
