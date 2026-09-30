@@ -29,10 +29,13 @@ bucket_definitions:
   #  este bucket le queda vacío — es lo que queremos.
   # ----------------------------------------------------------
   sucursal:
+    # `activo = true` es lo que hace efectiva la baja lógica: sin esta línea, un empleado
+    # dado de baja seguiría recibiendo las órdenes de su sucursal mientras su token viva.
     parameters: |
       SELECT sucursal_id FROM usuarios
       WHERE id = request.user_id()
         AND sucursal_id IS NOT NULL
+        AND activo = true
     data:
       - SELECT * FROM ordenes  WHERE sucursal_id = bucket.sucursal_id
       - SELECT * FROM entregas WHERE sucursal_id = bucket.sucursal_id

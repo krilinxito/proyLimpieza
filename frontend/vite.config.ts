@@ -16,6 +16,6 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     // Los tests no leen el .env del desarrollador: si dependieran de él, pasarían o
     // fallarían según la máquina. El módulo de entorno se prueba con valores explícitos.
-    env: { VITE_API_URL: 'http://localhost:4000' },
+    env: { VITE_API_URL: 'http://localhost:4000', VITE_POWERSYNC_URL: 'http://localhost:8080' },
   },
 });

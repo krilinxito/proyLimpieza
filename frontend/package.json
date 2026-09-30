@@ -11,12 +11,15 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@powersync/common": "^2.3.0",
+    "@powersync/web": "^2.4.1",
     "axios": "^1.20.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.18.0"
   },
   "devDependencies": {
+    "@powersync/node": "^1.1.0",
     "@tailwindcss/vite": "^4.3.0",
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.0",
@@ -24,6 +27,7 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^6.1.0",
+    "better-sqlite3": "^12.11.1",
     "jsdom": "^30.0.0",
     "tailwindcss": "^4.3.0",
     "typescript": "^7.0.0",
