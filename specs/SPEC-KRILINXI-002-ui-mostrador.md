@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-002
 name: Componentes del mostrador y dominio compartido
 slug: ui-mostrador
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-09-30
 scope:
@@ -13,7 +13,13 @@ scope:
   - frontend/src/lib/dominio.test.ts
 priority: high
 depends_on: []
-tests: []
+tests:
+  - frontend/src/components/Boton.test.tsx
+  - frontend/src/components/CampoTexto.test.tsx
+  - frontend/src/components/ModalConfirmacion.test.tsx
+  - frontend/src/components/sinDatos.test.ts
+  - frontend/src/lib/dominio.test.ts
+  - frontend/src/lib/money.test.ts
 ---
 
 ## Descripción
