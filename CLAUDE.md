@@ -37,7 +37,11 @@ de escritura del resto: id generado por el dispositivo y reintento idempotente. 
 tests. SPEC-KRILINXI-002 añadió las piezas que reutilizan todas las pantallas: `Boton`,
 `CampoTexto` y `ModalConfirmacion` en `components/`, `lib/money` (centavos enteros) y
 `lib/dominio` (los ENUM como constantes tipadas, con un test que los compara con el schema).
-Todavía no hay pantallas del negocio, ni PowerSync, ni login.
+SPEC-KRILINXI-003 añadió el ingreso: `lib/api` es el único cliente HTTP (pone el token y
+traduce los errores a `ErrorApi` / `ErrorSinConexion`), la sesión vive en `localStorage` y se
+lee con `useSession`, y las rutas declaran qué roles las abren. Para los tests hay un servidor
+falso (`test/apiFalsa.ts`) y `renderEnRuta` monta por defecto con un EMPLEADO adentro.
+Todavía no hay pantallas del negocio, ni PowerSync, ni renovación del token.
 
 Además existen el modelo de datos (`context/lavanderia_schema.sql`) y el entorno Docker. El
 desarrollo avanza spec a spec con el flujo de la sección 12.
