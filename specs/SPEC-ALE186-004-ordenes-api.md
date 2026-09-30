@@ -11,6 +11,8 @@ scope:
   - backend/src/routes/ordenes.routes.ts
   - backend/src/routes/index.ts
   - backend/src/utils/validacion.ts
+  - backend/src/utils/dominio.ts
+  - backend/src/models/sucursales.model.ts
   - backend/src/utils/ApiError.ts
   - backend/tests/**
 priority: high
