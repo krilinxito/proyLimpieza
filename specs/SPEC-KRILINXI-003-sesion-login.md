@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-003
 name: Ingresar al sistema y guardar la sesión
 slug: sesion-login
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-09-30
 scope:
