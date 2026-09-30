@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-002
 name: Componentes del mostrador y dominio compartido
 slug: ui-mostrador
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-09-30
 scope:
