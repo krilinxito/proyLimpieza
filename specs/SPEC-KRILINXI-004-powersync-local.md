@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-004
 name: Base local sincronizada con PowerSync
 slug: powersync-local
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-09-30
 scope:
@@ -17,7 +17,13 @@ scope:
   - docker/powersync/sync-rules.yaml
 priority: high
 depends_on: []
-tests: []
+tests:
+  - frontend/src/features/auth/SesionProvider.test.tsx
+  - frontend/src/lib/env.test.ts
+  - frontend/src/lib/powersync/conector.test.ts
+  - frontend/src/lib/powersync/control.test.ts
+  - frontend/src/lib/powersync/schema.test.ts
+  - frontend/src/test/arquitectura.test.ts
 ---
 
 ## Descripción
