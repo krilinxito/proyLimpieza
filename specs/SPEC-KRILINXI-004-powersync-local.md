@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-004
 name: Base local sincronizada con PowerSync
 slug: powersync-local
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-09-30
 scope:
