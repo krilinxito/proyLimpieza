@@ -2,7 +2,7 @@
 id: SPEC-ALE186-005
 name: Registro de cobros
 slug: pagos-api
-status: in-progress
+status: finished
 owner: ale186
 created: 2026-10-02
 scope:
@@ -16,7 +16,9 @@ scope:
 priority: high
 depends_on:
   - SPEC-ALE186-004
-tests: []
+tests:
+  - backend\tests\http\pagos.test.ts
+  - backend\tests\unit\pagos.model.test.ts
 ---
 
 ## Descripción
