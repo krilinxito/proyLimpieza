@@ -77,6 +77,15 @@ export function montoEnCentavos(valor: unknown): Centavos | null {
   }
 }
 
+/**
+ * El monto más alto que entra en una columna NUMERIC(10,2): 99.999.999,99.
+ *
+ * Pasarse no es un 400 para Postgres: es un error de desbordamiento que acabaría
+ * en 500, así que cada controller lo corta antes — SPEC-ALE186-005. (El de
+ * órdenes tiene todavía su propia copia, `PRECIO_MAXIMO`.)
+ */
+export const MONTO_MAXIMO: Centavos = 9_999_999_999;
+
 const FORMATO_FECHA = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 /**
