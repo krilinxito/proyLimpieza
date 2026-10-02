@@ -34,7 +34,9 @@ de escritura del resto: id generado por el dispositivo y reintento idempotente.
 SPEC-ALE186-004 añadió las órdenes (`POST` y `PATCH /api/ordenes`): los estados y cómo se
 avanza entre ellos viven en `utils/dominio.ts`, y la regla se comprueba dentro del mismo
 `UPDATE`. El ADMIN también registra, indicando la sucursal en el cuerpo. `fecha_entrada`
-la manda el dispositivo, en ISO 8601 con zona. Faltan entregas y pagos.
+la manda el dispositivo, en ISO 8601 con zona. SPEC-ALE186-005 añadió los cobros (`POST
+/api/pagos`, sin edición ni borrado): la sucursal del pago se copia de la orden en el mismo
+`INSERT … SELECT`, que también rechaza las órdenes anuladas. Faltan las entregas.
 
 `frontend/` tiene el scaffolding de SPEC-KRILINXI-001: Vite, Tailwind, rutas y su suite de
 tests. SPEC-KRILINXI-002 añadió las piezas que reutilizan todas las pantallas: `Boton`,
@@ -66,6 +68,7 @@ crea un diccionario mental que nadie mantiene.
 | **Entrega** | El retiro de esa ropa. Relación 1 a 1 con la orden. |
 | **Pago** | Un cobro contra una orden. Puede haber varios: `ADELANTO` y `PAGO_FINAL`. |
 | **Auditoría** | Registro de quién hizo qué. Solo lo ve el admin. |
+| **Moneda** | Bolivianos (Bs). Todos los montos —precios, pagos, saldos— están en Bs; no hay otras monedas. |
 
 ### Flujo del negocio
 
