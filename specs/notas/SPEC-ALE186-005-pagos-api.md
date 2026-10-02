@@ -21,7 +21,7 @@ Un cobro no se edita ni se borra. Si se cargó mal, se corrige con otro registro
 
 ## Cómo funciona, paso a paso
 
-Sigamos un caso: María, empleada de la sucursal Centro, cobra un adelanto de 20 en efectivo
+Sigamos un caso: María, empleada de la sucursal Centro, cobra un adelanto de Bs 20 en efectivo
 por la orden 001234. Su dispositivo sube:
 
 ```json
@@ -163,8 +163,8 @@ la misma solución.
 
 ### Registros inmutables: corregir agregando, no reescribiendo
 
-Un pago es un hecho: "el 2 de octubre María recibió 20". Si ese registro se
-pudiera editar, cambiarle el monto a 25 borraría la historia: ya nadie sabría que alguna
+Un pago es un hecho: "el 2 de octubre María recibió Bs 20". Si ese registro se
+pudiera editar, cambiarle el monto a Bs 25 borraría la historia: ya nadie sabría que alguna
 vez decía 20, ni quién lo cambió. Es el mismo principio que siguen los libros contables
 desde hace siglos: un asiento mal hecho no se tacha, se compensa con otro.
 
@@ -227,13 +227,20 @@ el error original siga a la vista.
   existe, la orden es esta".
 - **El test HTTP** (`tests/http/pagos.test.ts`) reemplaza el model entero, porque lo que se
   prueba es el controller: qué valida, qué le pasa al model y cómo traduce cada resultado.
-- **Lo que los dobles no podían probar** —que Postgres acepte la sentencia y que el
-  `INSERT … SELECT` se comporte como promete— se comprobó a mano contra el Postgres del
-  proyecto, dentro de una transacción con `ROLLBACK`: camino feliz, reintento, orden
-  anulada, orden ajena, admin y sobrepago. Lo que **no** se probó automáticamente es la
-  carrera con una anulación simultánea, que necesitaría dos conexiones a la vez. El
-  proyecto todavía no tiene tests contra una base real; cuando los tenga, ese es el
-  primero que vale la pena escribir.
+- **Lo que los dobles no pueden probar.** Que Postgres acepte la sentencia, que `pg` mande
+  los parámetros con el tipo correcto y que el `INSERT … SELECT` se comporte como promete
+  quedó fuera de `npm test`, porque la suite no levanta base. Se comprobó con un script de
+  punta a punta (fuera del repo) que usa la app real, el pool real y el Postgres de Docker,
+  crea sus propios datos y los borra al terminar. Recorrió los criterios por HTTP (camino
+  feliz, reintento, anulada, orden ajena, admin, sobrepago, validaciones, 401, PATCH y
+  DELETE) y además **la carrera**: con una anulación abierta sin confirmar, el cobro
+  quedó esperando y, al confirmarse la anulación, respondió 409 sin guardar nada. Como
+  control, la misma carrera **sin** `FOR SHARE` dejó colarse el cobro: el bloqueo no es
+  decorativo. Los 30 chequeos pasaron.
+
+  Ese script es una verificación de una vez, no un test del proyecto: el repo todavía no
+  tiene infraestructura de tests contra una base real. Cuando la tenga, la carrera es el
+  primer test que vale la pena llevar ahí.
 
 ## Si mañana tenés que tocar esto
 

@@ -68,6 +68,7 @@ crea un diccionario mental que nadie mantiene.
 | **Entrega** | El retiro de esa ropa. Relación 1 a 1 con la orden. |
 | **Pago** | Un cobro contra una orden. Puede haber varios: `ADELANTO` y `PAGO_FINAL`. |
 | **Auditoría** | Registro de quién hizo qué. Solo lo ve el admin. |
+| **Moneda** | Bolivianos (Bs). Todos los montos —precios, pagos, saldos— están en Bs; no hay otras monedas. |
 
 ### Flujo del negocio
 
