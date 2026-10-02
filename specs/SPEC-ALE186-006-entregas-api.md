@@ -2,7 +2,7 @@
 id: SPEC-ALE186-006
 name: Registro de entregas
 slug: entregas-api
-status: draft
+status: in-progress
 owner: ale186
 created: 2026-10-02
 scope:
