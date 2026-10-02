@@ -2,7 +2,10 @@ import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import {
   comoObjeto,
+  esFechaCalendario,
+  esInstanteConZona,
   esUuid,
+  montoEnCentavos,
   normalizarTelefono,
   textoConContenido,
 } from '../../src/utils/validacion.js';
@@ -49,5 +52,55 @@ describe('Validación de la entrada — SPEC-ALE186-003', () => {
     expect(comoObjeto('texto')).toEqual({});
     expect(comoObjeto(undefined)).toEqual({});
     expect(comoObjeto({ nombre: 'Ana' })).toEqual({ nombre: 'Ana' });
+  });
+});
+
+describe('Validación de montos y fechas — SPEC-ALE186-004', () => {
+  it.each([
+    ['"45.50"', '45.50', 4550],
+    ['un número', 45.5, 4550],
+    ['un entero', 45, 4500],
+    ['cero', '0', 0],
+    ['un negativo (el signo lo decide cada controller)', '-3', -300],
+  ])('convierte a centavos %s', (_caso, valor, esperado) => {
+    expect(montoEnCentavos(valor)).toBe(esperado);
+  });
+
+  it.each([
+    ['un float contaminado', 0.1 + 0.2],
+    ['tres decimales', '1.005'],
+    ['texto', 'veinte'],
+    ['vacío', ''],
+    ['null', null],
+    ['un objeto', { monto: 1 }],
+  ])('rechaza %s', (_caso, valor) => {
+    expect(montoEnCentavos(valor)).toBeNull();
+  });
+
+  it('acepta una fecha de calendario que existe', () => {
+    expect(esFechaCalendario('2026-10-03')).toBe(true);
+    expect(esFechaCalendario('2028-02-29')).toBe(true);
+  });
+
+  it.each(['2026-02-30', '2026-13-01', '03/10/2026', '2026-10-03T00:00:00Z', 20261003])(
+    'rechaza %s como fecha de calendario',
+    (valor) => {
+      expect(esFechaCalendario(valor)).toBe(false);
+    },
+  );
+
+  it('acepta un instante con zona, como el de new Date().toISOString()', () => {
+    expect(esInstanteConZona(new Date().toISOString())).toBe(true);
+    expect(esInstanteConZona('2026-09-30T14:00:00-04:00')).toBe(true);
+  });
+
+  it.each([
+    ['sin zona (no se puede interpretar sin adivinar)', '2026-09-30T14:00:00'],
+    ['con el formato de Postgres', '2026-09-30 14:00:00'],
+    ['una fecha sola', '2026-09-30'],
+    ['una hora imposible', '2026-09-30T25:00:00Z'],
+    ['un número', 1759240800000],
+  ])('rechaza un instante %s', (_caso, valor) => {
+    expect(esInstanteConZona(valor)).toBe(false);
   });
 });

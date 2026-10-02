@@ -1,5 +1,6 @@
-// Model de sucursales. Por ahora solo lo que necesita la semilla inicial
-// (SPEC-ALE186-002); la gestión de sucursales tendrá su propia spec.
+// Model de sucursales. Por ahora solo lo que necesitan la semilla inicial
+// (SPEC-ALE186-002) y el registro de órdenes (SPEC-ALE186-004); la gestión de
+// sucursales tendrá su propia spec.
 import { pool } from '../db/pool.js';
 
 export interface Sucursal {
@@ -19,6 +20,16 @@ interface FilaSucursal {
 }
 
 const COLUMNAS = 'id, nombre, direccion, telefono, activa';
+
+/** SPEC-ALE186-004: para validar la sucursal que indica un ADMIN al registrar. */
+export async function buscarPorId(id: string): Promise<Sucursal | null> {
+  const { rows } = await pool.query<FilaSucursal>(
+    `SELECT ${COLUMNAS} FROM sucursales WHERE id = $1`,
+    [id],
+  );
+
+  return rows[0] ?? null;
+}
 
 export async function buscarPorNombre(nombre: string): Promise<Sucursal | null> {
   const { rows } = await pool.query<FilaSucursal>(

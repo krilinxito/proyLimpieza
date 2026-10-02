@@ -30,8 +30,11 @@ Fase inicial, con los dos workspaces en pie.
 `/api/auth/renovar`, los middlewares de sesión y de rol, y la semilla que crea el primer
 admin (`npm run seed --workspace backend`, que exige `SEED_ADMIN_PASSWORD`). SPEC-ALE186-003
 añadió el alta y la edición de clientes (`POST` y `PATCH /api/clientes`), que fija el patrón
-de escritura del resto: id generado por el dispositivo y reintento idempotente. Faltan
-órdenes, entregas y pagos.
+de escritura del resto: id generado por el dispositivo y reintento idempotente.
+SPEC-ALE186-004 añadió las órdenes (`POST` y `PATCH /api/ordenes`): los estados y cómo se
+avanza entre ellos viven en `utils/dominio.ts`, y la regla se comprueba dentro del mismo
+`UPDATE`. El ADMIN también registra, indicando la sucursal en el cuerpo. `fecha_entrada`
+la manda el dispositivo, en ISO 8601 con zona. Faltan entregas y pagos.
 
 `frontend/` tiene el scaffolding de SPEC-KRILINXI-001: Vite, Tailwind, rutas y su suite de
 tests. SPEC-KRILINXI-002 añadió las piezas que reutilizan todas las pantallas: `Boton`,
