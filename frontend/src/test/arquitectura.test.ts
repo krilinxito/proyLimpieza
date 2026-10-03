@@ -20,6 +20,22 @@ const PROHIBIDOS = [
   { que: 'el almacén de la sesión', patron: /from\s+['"][^'"]*\/almacen['"]/ },
 ];
 
+describe('PowerSync encerrado en lib/powersync — SPEC-KRILINXI-004', () => {
+  // `test/` queda afuera a propósito: el doble de los tests necesita el SDK de Node.
+  const fuera = archivosFuente().filter(
+    ({ ruta }) => !ruta.startsWith('lib/powersync/') && !ruta.startsWith('test/'),
+  );
+
+  it('revisa el resto del código, no una lista vacía', () => {
+    expect(fuera.map(({ ruta }) => ruta)).toContain('features/auth/SesionProvider.tsx');
+  });
+
+  it('ningún archivo fuera de lib/powersync importa @powersync/*', () => {
+    const intrusos = fuera.filter(({ fuente }) => /from\s+['"]@powersync\//.test(fuente)).map(({ ruta }) => ruta);
+    expect(intrusos).toEqual([]);
+  });
+});
+
 describe('Pantallas sin acceso directo a datos — SPEC-KRILINXI-003', () => {
   it('hay pantallas que revisar', () => {
     expect(PANTALLAS.map(({ ruta }) => ruta)).toContain('features/auth/components/FormularioIngreso.tsx');

@@ -49,7 +49,12 @@ SPEC-KRILINXI-003 añadió el ingreso: `lib/api` es el único cliente HTTP (pone
 traduce los errores a `ErrorApi` / `ErrorSinConexion`), la sesión vive en `localStorage` y se
 lee con `useSession`, y las rutas declaran qué roles las abren. Para los tests hay un servidor
 falso (`test/apiFalsa.ts`) y `renderEnRuta` monta por defecto con un EMPLEADO adentro.
-Todavía no hay pantallas del negocio, ni PowerSync, ni renovación del token.
+SPEC-KRILINXI-004 añadió la base local: PowerSync abre un SQLite en el navegador al entrar
+(`useBaseLocal()` desde `lib/powersync`, el único que importa el SDK) y lo borra al salir o
+ante un 401; el schema local se testea contra las sync rules. Lo escrito queda en la cola:
+`uploadData` todavía no sube. Los tests usan la base real sobre SQLite de Node
+(`test/baseLocalDePrueba.ts`). Todavía no hay pantallas del negocio, ni subida, ni
+renovación del token.
 
 Además existen el modelo de datos (`context/lavanderia_schema.sql`) y el entorno Docker. El
 desarrollo avanza spec a spec con el flujo de la sección 12.
@@ -400,16 +405,11 @@ Nada se implementa sin una spec aprobada.
 
 ## 13. Deuda conocida y pendientes
 
-- **Las sync rules no comprueban `activo`.** El bucket `sucursal` filtra por
-  `request.user_id()` pero no mira `usuarios.activo`, así que dar de baja a un empleado no
-  le corta la sincronización mientras su token siga vivo. Falta `AND activo = true` en los
-  `parameters` de `docker/powersync/sync-rules.yaml`. Es una línea y es la que hace efectiva
-  la baja lógica.
 - **Qué hacer con la cola de un usuario revocado.** Al reconectar, un dispositivo dado de
   baja puede traer trabajo real sin subir — ropa que entró de verdad, de clientes que van a
   volver a buscarla. Rechazarlo entero pierde ese trabajo. La decisión tomada es
   **aceptarlo y marcarlo para que el admin lo revise**, nunca descartarlo en silencio. El
-  mecanismo se cierra en la spec de PowerSync.
+  mecanismo se cierra en la spec `cola-subida`, que es la que implementa `uploadData`.
 
 - **El monorepo tiene DOS versiones de TypeScript, y la raíz fija una a propósito.**
   El frontend usa TypeScript 7 y el backend 5.9. Al instalar, npm hoistea a la raíz una
@@ -437,10 +437,7 @@ Nada se implementa sin una spec aprobada.
   `jwks_uri` servido por la API.
 - **Marcar una orden como "pendiente de corrección"** cuando el servidor rechaza su
   `numero_boleta` se resuelve en el cliente, sobre la cola de subida de PowerSync, no con
-  una columna nueva en la base. El mecanismo concreto se cierra en la spec de PowerSync.
-- **No hay triggers.** El paso a `ENTREGADO` se resolvió en código (sección 6). La
-  auditoría está decidida pero sin implementar; cómo se registra se cierra en su spec.
-- **Dos comentarios todavía dicen que la ropa se puede recoger en otra sucursal**:
-  `context/lavanderia_schema.sql` (tabla `clientes`) y `docker/powersync/sync-rules.yaml`
-  (bucket `global`). No se corrigieron en SPEC-ALE186-006 porque los dos están atados a
-  SPEC-KRILINXI-004 y a su test de schema; van en ese PR o justo después.
+  una columna nueva en la base. El mecanismo concreto se cierra en la spec `cola-subida`:
+  SPEC-KRILINXI-004 dejó la base local y la cola, pero `uploadData` todavía no sube nada.
+- **No hay triggers todavía.** Auditoría y el paso automático a `ENTREGADO` están
+  decididos (sección 6) pero sin implementar.

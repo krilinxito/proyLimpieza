@@ -1,5 +1,5 @@
 /**
- * Helper de test compartido — SPEC-KRILINXI-001, ampliado en SPEC-KRILINXI-003
+ * Helper de test compartido — SPEC-KRILINXI-001, ampliado en SPEC-KRILINXI-003 y SPEC-KRILINXI-004
  *
  * Casi toda pantalla de este proyecto usa enlaces o lee la ruta actual, y eso revienta si
  * se renderiza suelta: React Router necesita un Router por encima. `MemoryRouter` es uno
@@ -12,6 +12,16 @@
  *     renderEnRuta(<App />, '/cobrar');                                        // empleado
  *     renderEnRuta(<App />, '/estadisticas', { sesion: sesionDePrueba({ rol: 'ADMIN' }) });
  *     renderEnRuta(<App />, '/cobrar', { sesion: null });                      // nadie adentro
+ *
+ * Desde SPEC-KRILINXI-004 también pone la base local. Por defecto, un `controlFalso()` que
+ * no guarda nada. Para mirar qué se le pidió, o para leer datos de verdad, se pasa uno:
+ *
+ *     const baseLocal = controlFalso();
+ *     renderEnRuta(<App />, '/', { baseLocal });
+ *     expect(baseLocal.conectar).toHaveBeenCalled();
+ *
+ *     const { control } = await baseLocalDePrueba();          // SQLite real
+ *     renderEnRuta(<App />, '/clientes', { baseLocal: control });
  */
 import type { ReactElement } from 'react';
 import { render } from '@testing-library/react';
@@ -19,19 +29,27 @@ import { MemoryRouter } from 'react-router-dom';
 import { borrarSesion, guardarSesion } from '../features/auth/api/almacen';
 import { SesionProvider } from '../features/auth/SesionProvider';
 import type { Sesion } from '../features/auth/types';
+import type { ControlBaseLocal } from '../lib/powersync';
+import { controlFalso } from './controlFalso';
 import { sesionDePrueba } from './sesion';
 
-type Opciones = { sesion?: Sesion | null };
+type Opciones = { sesion?: Sesion | null; baseLocal?: ControlBaseLocal };
 
-export function renderEnRuta(ui: ReactElement, ruta = '/', { sesion = sesionDePrueba() }: Opciones = {}) {
+export function renderEnRuta(
+  ui: ReactElement,
+  ruta = '/',
+  { sesion = sesionDePrueba(), baseLocal = controlFalso() }: Opciones = {},
+) {
   // Se guarda donde la guardaría un login de verdad: así el provider la encuentra igual que
   // al abrir la app, y el test no depende de cómo está hecho por dentro.
   if (sesion) guardarSesion(sesion);
   else borrarSesion();
 
+  const abrirBaseLocal = () => Promise.resolve(baseLocal);
+
   return render(
     <MemoryRouter initialEntries={[ruta]}>
-      <SesionProvider>{ui}</SesionProvider>
+      <SesionProvider abrirBaseLocal={abrirBaseLocal}>{ui}</SesionProvider>
     </MemoryRouter>,
   );
 }
