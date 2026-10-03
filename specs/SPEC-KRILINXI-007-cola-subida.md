@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-007
 name: Subir lo registrado y avisar qué falta guardar
 slug: cola-subida
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-03
 scope:
@@ -20,7 +20,15 @@ scope:
 priority: high
 depends_on:
   - SPEC-KRILINXI-006
-tests: []
+tests:
+  - frontend/src/components/AvisoConexion.test.tsx
+  - frontend/src/features/auth/SesionProvider.test.tsx
+  - frontend/src/features/pendientes/api/paraCorregirLocal.test.ts
+  - frontend/src/features/pendientes/components/PantallaParaCorregir.test.tsx
+  - frontend/src/lib/powersync/conector.test.ts
+  - frontend/src/lib/powersync/control.test.ts
+  - frontend/src/lib/powersync/schema.test.ts
+  - frontend/src/test/controlFalso.ts
 ---
 
 ## Descripción
