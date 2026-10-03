@@ -3,7 +3,7 @@ import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { App } from '../../App';
 import { api } from '../../lib/api';
 import { useBaseLocal } from '../../lib/powersync';
-import { cuerpoError, simularApi } from '../../test/apiFalsa';
+import { cuerpoError, simularApi, type RespuestaFalsa } from '../../test/apiFalsa';
 import { controlFalso } from '../../test/controlFalso';
 import { renderEnRuta } from '../../test/render';
 import { sesionDePrueba } from '../../test/sesion';
@@ -94,5 +94,59 @@ describe('Sesión y base local: borrar al irse — SPEC-KRILINXI-004', () => {
 
     await waitFor(() => expect(baseLocal.desconectarYBorrar).toHaveBeenCalledOnce());
     expect(await screen.findByRole('heading', { name: 'Ingresar al sistema' })).toBeInTheDocument();
+  });
+});
+
+describe('Sesión rechazada con trabajo sin subir — SPEC-KRILINXI-007', () => {
+  const VENCIDA = { status: 401, data: cuerpoError('NO_AUTENTICADO', 'Tu sesión venció.') };
+
+  it('con la cola vacía borra como siempre (lo prueba también el caso de SPEC-KRILINXI-004)', async () => {
+    simularApi(() => VENCIDA);
+    const baseLocal = controlFalso();
+    renderEnRuta(<App />, '/', { baseLocal });
+    await waitFor(() => expect(baseLocal.conectar).toHaveBeenCalled());
+
+    await act(() => api.get('/clientes').catch(() => {}));
+
+    await waitFor(() => expect(baseLocal.desconectarYBorrar).toHaveBeenCalledOnce());
+    expect(baseLocal.desconectar).not.toHaveBeenCalled();
+  });
+
+  it('con cambios sin subir NO borra: desconecta, pide ingresar y al volver se reconecta', async () => {
+    let respuesta: RespuestaFalsa = VENCIDA;
+    simularApi(() => respuesta);
+    const baseLocal = controlFalso();
+    baseLocal.hayCambiosSinSubir.mockResolvedValue(true);
+    renderEnRuta(<App />, '/', { baseLocal });
+    await waitFor(() => expect(baseLocal.conectar).toHaveBeenCalledOnce());
+
+    await act(() => api.get('/clientes').catch(() => {}));
+
+    await waitFor(() => expect(baseLocal.desconectar).toHaveBeenCalledOnce());
+    expect(baseLocal.desconectarYBorrar).not.toHaveBeenCalled();
+    expect(await screen.findByRole('heading', { name: 'Ingresar al sistema' })).toBeInTheDocument();
+
+    // Vuelve a ingresar: la misma base se abre y se conecta con la sesión nueva, y la cola
+    // que quedó sube con ese token.
+    respuesta = { status: 200, data: { ...sesionDePrueba(), tokenPowerSync: 'token-nuevo' } };
+    fireEvent.change(screen.getByLabelText('Usuario'), { target: { value: 'elena' } });
+    fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'secreta' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+
+    await waitFor(() => expect(baseLocal.conectar).toHaveBeenCalledTimes(2));
+    expect(tokenQueEntrega(baseLocal)).toBe('token-nuevo');
+    expect(baseLocal.desconectarYBorrar).not.toHaveBeenCalled();
+  });
+
+  it('salir por decisión propia borra igual: la regla nueva es solo para la sesión rechazada', async () => {
+    const baseLocal = controlFalso();
+    baseLocal.hayCambiosSinSubir.mockResolvedValue(true);
+    renderEnRuta(<App />, '/', { baseLocal });
+    await waitFor(() => expect(baseLocal.conectar).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Salir' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sí, salir' }));
+
+    await waitFor(() => expect(baseLocal.desconectarYBorrar).toHaveBeenCalledOnce());
   });
 });
