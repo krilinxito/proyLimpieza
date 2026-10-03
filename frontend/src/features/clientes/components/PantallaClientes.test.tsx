@@ -4,6 +4,7 @@ import { fireEvent, screen, within } from '@testing-library/react';
 import { App } from '../../../App';
 import { simularApi } from '../../../test/apiFalsa';
 import { baseLocalDePrueba } from '../../../test/baseLocalDePrueba';
+import { sinJerga } from '../../../test/jerga';
 import { renderEnRuta } from '../../../test/render';
 
 /**
@@ -12,8 +13,6 @@ import { renderEnRuta } from '../../../test/render';
  */
 const ROSA = { id: randomUUID(), nombre: 'Rosa Quispe', telefono: '70123456', carnet: '4455667' };
 
-// Palabras del sistema que no pueden aparecer en el mostrador (CLAUDE.md §9).
-const JERGA = /sincroniz|cach[eé]|token|\bAPI\b|servidor|base de datos|SQL|UUID/i;
 
 async function abrirClientes() {
   const servidor = simularApi(() => 'sin-conexion');
@@ -135,22 +134,22 @@ describe('Pantalla de clientes: el idioma del mostrador — SPEC-KRILINXI-005', 
     await abrirClientes();
     expect(screen.getByRole('heading', { name: 'Clientes' })).toBeInTheDocument();
     expect(screen.queryByText(/en construcción/i)).not.toBeInTheDocument();
-    expect(document.body.textContent).not.toMatch(JERGA);
+    sinJerga();
 
     await buscar('70123456');
     await screen.findByText('Rosa Quispe');
-    expect(document.body.textContent).not.toMatch(JERGA);
+    sinJerga();
 
     await buscar('71111111');
     fireEvent.click(await screen.findByRole('button', { name: 'Registrar cliente nuevo' }));
     await screen.findByRole('form', { name: 'Registrar cliente nuevo' });
     fireEvent.click(screen.getByRole('button', { name: 'Guardar cliente' }));
     await screen.findByText('Escribí el nombre del cliente.');
-    expect(document.body.textContent).not.toMatch(JERGA);
+    sinJerga();
 
     escribir('Nombre completo', 'Juan Mamani');
     fireEvent.click(screen.getByRole('button', { name: 'Guardar cliente' }));
     await screen.findByText('Cliente registrado.');
-    expect(document.body.textContent).not.toMatch(JERGA);
+    sinJerga();
   });
 });
