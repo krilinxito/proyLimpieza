@@ -78,8 +78,9 @@ CREATE TABLE usuarios (
 -- ------------------------------------------------------------
 -- 3. CLIENTES
 --    El teléfono es la clave de búsqueda para el alta automática.
---    Se sincronizan a todas las sucursales: un cliente puede dejar
---    ropa en una e ir a recogerla a otra.
+--    Se sincronizan a todas las sucursales: el mismo cliente puede
+--    dejar ropa en sucursales distintas en visitas distintas. La ropa
+--    de cada orden, eso sí, se retira donde se dejó.
 -- ------------------------------------------------------------
 CREATE TABLE clientes (
     id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),

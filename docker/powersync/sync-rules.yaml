@@ -44,9 +44,10 @@ bucket_definitions:
   # ----------------------------------------------------------
   #  Catálogos que todo dispositivo necesita.
   #
-  #  Los clientes son globales a propósito: alguien puede dejar la
-  #  ropa en una sucursal y pasar a recogerla por otra, y el alta
-  #  automática por teléfono tiene que encontrarlo desde cualquiera.
+  #  Los clientes son globales a propósito: el mismo cliente puede
+  #  dejar ropa en sucursales distintas en visitas distintas, y el
+  #  alta por teléfono tiene que encontrarlo desde cualquiera. La
+  #  ropa de cada orden, eso sí, se retira donde se dejó.
   # ----------------------------------------------------------
   global:
     data:
