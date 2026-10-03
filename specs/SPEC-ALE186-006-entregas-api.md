@@ -2,7 +2,7 @@
 id: SPEC-ALE186-006
 name: Registro de entregas
 slug: entregas-api
-status: in-progress
+status: finished
 owner: ale186
 created: 2026-10-02
 scope:
@@ -18,7 +18,9 @@ scope:
 priority: high
 depends_on:
   - SPEC-ALE186-005
-tests: []
+tests:
+  - backend\tests\http\entregas.test.ts
+  - backend\tests\unit\entregas.model.test.ts
 ---
 
 ## Descripción
