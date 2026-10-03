@@ -53,7 +53,10 @@ SPEC-KRILINXI-004 añadió la base local: PowerSync abre un SQLite en el navegad
 (`useBaseLocal()` desde `lib/powersync`, el único que importa el SDK) y lo borra al salir o
 ante un 401; el schema local se testea contra las sync rules. Lo escrito queda en la cola:
 `uploadData` todavía no sube. Los tests usan la base real sobre SQLite de Node
-(`test/baseLocalDePrueba.ts`). Todavía no hay pantallas del negocio, ni subida, ni
+(`test/baseLocalDePrueba.ts`). SPEC-KRILINXI-005 añadió la primera pantalla del negocio,
+`/clientes`: buscar por teléfono y dar de alta, todo en la base local. Fija el patrón de las
+demás: el SQL vive en `features/<x>/api/`, un hook lo pone al alcance de la pantalla, y el
+teléfono se normaliza con la misma regla que el backend. Todavía no hay subida ni
 renovación del token.
 
 Además existen el modelo de datos (`context/lavanderia_schema.sql`) y el entorno Docker. El
@@ -439,5 +442,5 @@ Nada se implementa sin una spec aprobada.
   `numero_boleta` se resuelve en el cliente, sobre la cola de subida de PowerSync, no con
   una columna nueva en la base. El mecanismo concreto se cierra en la spec `cola-subida`:
   SPEC-KRILINXI-004 dejó la base local y la cola, pero `uploadData` todavía no sube nada.
-- **No hay triggers todavía.** Auditoría y el paso automático a `ENTREGADO` están
-  decididos (sección 6) pero sin implementar.
+- **No hay triggers.** El paso a `ENTREGADO` se resolvió en código (sección 6). La
+  auditoría está decidida pero sin implementar; cómo se registra se cierra en su spec.

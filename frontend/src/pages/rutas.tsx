@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react';
 import { FormularioIngreso } from '../features/auth/components/FormularioIngreso';
+import { PantallaClientes } from '../features/clientes/components/PantallaClientes';
 import { ROLES, type Rol } from '../lib/dominio';
 import { EnConstruccion } from './EnConstruccion';
 import { Inicio } from './Inicio';
@@ -62,7 +63,11 @@ export const RUTAS: readonly Ruta[] = [
     titulo: 'Clientes',
     enMenu: true,
     acceso: TODOS,
-    elemento: <EnConstruccion titulo="Clientes" />,
+    elemento: (
+      <Pantalla titulo="Clientes">
+        <PantallaClientes />
+      </Pantalla>
+    ),
   },
   {
     camino: '/estadisticas',
