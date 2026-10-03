@@ -30,8 +30,16 @@ Fase inicial, con los dos workspaces en pie.
 `/api/auth/renovar`, los middlewares de sesión y de rol, y la semilla que crea el primer
 admin (`npm run seed --workspace backend`, que exige `SEED_ADMIN_PASSWORD`). SPEC-ALE186-003
 añadió el alta y la edición de clientes (`POST` y `PATCH /api/clientes`), que fija el patrón
-de escritura del resto: id generado por el dispositivo y reintento idempotente. Faltan
-órdenes, entregas y pagos.
+de escritura del resto: id generado por el dispositivo y reintento idempotente.
+SPEC-ALE186-004 añadió las órdenes (`POST` y `PATCH /api/ordenes`): los estados y cómo se
+avanza entre ellos viven en `utils/dominio.ts`, y la regla se comprueba dentro del mismo
+`UPDATE`. El ADMIN también registra, indicando la sucursal en el cuerpo. `fecha_entrada`
+la manda el dispositivo, en ISO 8601 con zona. SPEC-ALE186-005 añadió los cobros (`POST
+/api/pagos`, sin edición ni borrado): la sucursal del pago se copia de la orden en el mismo
+`INSERT … SELECT`, que también rechaza las órdenes anuladas. SPEC-ALE186-006 añadió las
+entregas (`POST /api/entregas`, sin edición ni borrado), que cierran el flujo: la entrega y
+el paso de la orden a ENTREGADO van en una sola sentencia. Con eso están todas las
+escrituras del negocio; faltan auditoría y estadísticas.
 
 `frontend/` tiene el scaffolding de SPEC-KRILINXI-001: Vite, Tailwind, rutas y su suite de
 tests. SPEC-KRILINXI-002 añadió las piezas que reutilizan todas las pantallas: `Boton`,
@@ -68,6 +76,7 @@ crea un diccionario mental que nadie mantiene.
 | **Entrega** | El retiro de esa ropa. Relación 1 a 1 con la orden. |
 | **Pago** | Un cobro contra una orden. Puede haber varios: `ADELANTO` y `PAGO_FINAL`. |
 | **Auditoría** | Registro de quién hizo qué. Solo lo ve el admin. |
+| **Moneda** | Bolivianos (Bs). Todos los montos —precios, pagos, saldos— están en Bs; no hay otras monedas. |
 
 ### Flujo del negocio
 
@@ -83,7 +92,7 @@ El cliente llega con ropa
 La ropa avanza:  RECIBIDO → EN_PROCESO → LISTO → ENTREGADO
                  (o ANULADO en cualquier punto)
 
-El cliente vuelve a recoger
+El cliente vuelve a recoger, a la misma sucursal donde dejó la ropa
   └─ se registra la ENTREGA
        · CON_BOLETA: trae el papel
        · SIN_BOLETA: no lo trae → nombre y carnet de quien retira son OBLIGATORIOS
@@ -99,6 +108,8 @@ Saldo de una orden = (precio_final o, si aún no hay entrega, precio_total) − 
 - El teléfono del cliente es único en todo el sistema.
 - `numero_boleta` es único **por sucursal**, no globalmente (ver sección 6).
 - Una entrega sin boleta exige nombre **y** carnet de quien retira.
+- La ropa se retira en la **misma sucursal** donde se dejó: la entrega lleva siempre la
+  sucursal de su orden, y un empleado solo entrega órdenes de la suya.
 - Los montos nunca son negativos; un pago siempre es mayor que cero.
 
 ---
@@ -218,10 +229,13 @@ decimal y JavaScript menos. Un helper `money` en `lib/` centraliza parseo, forma
 sumas, trabajando en centavos enteros. Sumar precios con `+` sobre números de punto
 flotante es un bug de contabilidad esperando su turno.
 
-**Los triggers son para lo que debe ser autoritativo del servidor** — auditoría, o marcar
-`ordenes.estado = 'ENTREGADO'` al registrarse una entrega. Toda validación de la que el
-empleado necesite respuesta inmediata va en TypeScript: un trigger no existe en el
-dispositivo y su efecto no se ve hasta que sincroniza.
+**Lo autoritativo del servidor se hace en el servidor, y no siempre con triggers.** Marcar
+`ordenes.estado = 'ENTREGADO'` al registrarse una entrega es del servidor, pero se hace en
+el model de entregas, en la misma sentencia que inserta la entrega (SPEC-ALE186-006): es
+igual de atómico y no exige migraciones, que el proyecto no tiene —un trigger nuevo
+obligaría a todos a recrear su base con `down -v`. Toda validación de la que el empleado
+necesite respuesta inmediata va en TypeScript: nada del servidor existe en el dispositivo,
+y su efecto no se ve hasta que sincroniza.
 
 **`numero_boleta` y sus conflictos.** El número no lo genera el sistema: el empleado lo
 copia de una boleta física preimpresa. Cada sucursal maneja su propio talonario, así que
@@ -264,9 +278,10 @@ Definidas en `docker/powersync/sync-rules.yaml`. No son una optimización: son *
 de acceso**. Lo que no está ahí no llega nunca al dispositivo.
 
 - **Bucket `sucursal`** — las `ordenes`, `entregas` y `pagos` de la sucursal del usuario.
-- **Bucket `global`** — `clientes` (un cliente puede dejar en una sucursal y recoger en
-  otra), más `sucursales` y `usuarios` **sin `password_hash`**, con lista explícita de
-  columnas.
+- **Bucket `global`** — `clientes` (el mismo cliente puede dejar ropa en sucursales
+  distintas en visitas distintas, y el alta por teléfono tiene que encontrarlo desde
+  cualquiera; la ropa de cada orden, eso sí, se retira donde se dejó), más `sucursales` y
+  `usuarios` **sin `password_hash`**, con lista explícita de columnas.
 - **`auditoria` no se sincroniza a ningún dispositivo.** Se consulta por API, solo admin.
 - **El admin no descarga el histórico**, porque su dashboard es online (sección 8).
 

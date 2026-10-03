@@ -24,6 +24,10 @@ export const CODIGOS_ERROR = {
   // De dominio. Van en esta misma lista y no repartidos por los controllers
   // para que el frontend tenga un solo catálogo que consultar.
   TELEFONO_DUPLICADO: 'TELEFONO_DUPLICADO', // SPEC-ALE186-003
+  BOLETA_DUPLICADA: 'BOLETA_DUPLICADA', // SPEC-ALE186-004
+  TRANSICION_INVALIDA: 'TRANSICION_INVALIDA', // SPEC-ALE186-004
+  ORDEN_ANULADA: 'ORDEN_ANULADA', // SPEC-ALE186-005
+  ORDEN_YA_ENTREGADA: 'ORDEN_YA_ENTREGADA', // SPEC-ALE186-006
 } as const;
 
 export interface CuerpoError {

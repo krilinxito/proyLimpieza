@@ -1,5 +1,5 @@
-import pg from 'pg';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { unicidadViolada } from '../helpers/postgres.js';
 
 // Acá el doble no es el model sino el POOL: lo que se prueba es el propio model
 // —qué SQL arma, con qué parámetros, cómo traduce los errores de Postgres—, así
@@ -27,14 +27,6 @@ const NUEVO = {
   carnet: null,
   sucursalRegistroId: FILA.sucursal_registro_id,
 };
-
-/** Un error como el que tira `pg` cuando se viola una restricción UNIQUE. */
-function unicidadViolada(restriccion: string): pg.DatabaseError {
-  const error = new pg.DatabaseError('duplicate key value violates unique constraint', 0, 'error');
-  error.code = '23505';
-  error.constraint = restriccion;
-  return error;
-}
 
 describe('Clientes model — SPEC-ALE186-003', () => {
   beforeEach(() => {
