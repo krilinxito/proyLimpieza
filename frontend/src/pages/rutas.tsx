@@ -2,6 +2,7 @@ import type { ReactElement } from 'react';
 import { FormularioIngreso } from '../features/auth/components/FormularioIngreso';
 import { AvisoSoloEmpleado } from '../features/auth/components/AvisoSoloEmpleado';
 import { PantallaClientes } from '../features/clientes/components/PantallaClientes';
+import { PantallaEntregar } from '../features/entregas/components/PantallaEntregar';
 import { PantallaRegistrarRopa } from '../features/ordenes/components/PantallaRegistrarRopa';
 import { PantallaRopa } from '../features/ordenes/components/PantallaRopa';
 import { PantallaParaCorregir } from '../features/pendientes/components/PantallaParaCorregir';
@@ -88,8 +89,13 @@ export const RUTAS: readonly Ruta[] = [
     camino: '/entregar',
     titulo: 'Entregar ropa',
     enMenu: true,
-    acceso: TODOS,
-    elemento: <EnConstruccion titulo="Entregar ropa" />,
+    acceso: SOLO_EMPLEADO,
+    elemento: (
+      <Pantalla titulo="Entregar ropa">
+        <PantallaEntregar />
+      </Pantalla>
+    ),
+    sinPermiso: soloEmpleado('Entregar ropa'),
   },
   {
     camino: '/cobrar',
