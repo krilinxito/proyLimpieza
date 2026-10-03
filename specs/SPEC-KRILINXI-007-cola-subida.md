@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-007
 name: Subir lo registrado y avisar qué falta guardar
 slug: cola-subida
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-03
 scope:
