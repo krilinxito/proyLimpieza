@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-008
 name: 'La ropa de la sucursal: ver, avanzar, anular y cobrar'
 slug: ordenes-sucursal
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-03
 scope:
