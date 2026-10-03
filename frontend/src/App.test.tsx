@@ -76,8 +76,9 @@ describe('App: menú por rol — SPEC-KRILINXI-003', () => {
 
   it('un ADMIN además ve Estadísticas, y no ve Registrar ropa (SPEC-KRILINXI-006)', () => {
     renderEnRuta(<App />, '/', { sesion: sesionDePrueba({ rol: 'ADMIN' }) });
-    // Ni Ropa en el local ni Cobrar: son del mostrador (SPEC-KRILINXI-008).
-    expect(nombresDelMenu()).toEqual(['Entregar ropa', 'Clientes', 'Estadísticas']);
+    // Ni Ropa en el local, ni Cobrar (SPEC-KRILINXI-008), ni Entregar ropa (SPEC-KRILINXI-009):
+    // son del mostrador.
+    expect(nombresDelMenu()).toEqual(['Clientes', 'Estadísticas']);
   });
 
   it('un EMPLEADO que escribe /estadisticas ve que esa parte es solo para el administrador', () => {

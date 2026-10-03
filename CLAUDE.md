@@ -71,7 +71,13 @@ SPEC-KRILINXI-008 añadió `/ropa` ("Ropa en el local") y `/cobrar`, la misma pa
 búsqueda por boleta o teléfono, detalle, avances, anular y cobrar. El **estado que se muestra**
 sale de `features/ordenes/estado.ts` (`estadoEfectivo`: si la orden tiene entrega en la base
 local, figura ENTREGADO aunque no haya sincronizado), y los avances permitidos repiten la tabla
-del backend con un test que la compara. Falta la renovación del token.
+del backend con un test que la compara. SPEC-KRILINXI-009 añadió `/entregar`: la misma
+pantalla con "Entregar la ropa" en el detalle (`accionesExtra`), con o sin boleta, precio final
+y pago final. Se puede entregar con saldo pendiente: la confirmación dice cuánto queda
+debiendo. **El frontend nunca escribe `ordenes.estado = 'ENTREGADO'`**: lo hace el servidor, y
+en la tablet se ve por `estadoEfectivo`. Con eso, el flujo del mostrador está completo
+(registrar → avanzar → cobrar → entregar). Las pantallas del mostrador son solo para EMPLEADO.
+Falta la renovación del token.
 
 Además existen el modelo de datos (`context/lavanderia_schema.sql`) y el entorno Docker. El
 desarrollo avanza spec a spec con el flujo de la sección 12.

@@ -105,6 +105,14 @@ export function DetalleOrden({ ordenId, alVolver, accionesExtra }: Props) {
         </p>
       )}
 
+      {cerrada && (
+        <p className="mt-6 rounded-lg bg-slate-100 p-4 text-xl text-slate-800">
+          {orden.estado === 'ANULADO'
+            ? 'Esta ropa fue anulada: no se puede entregar ni cobrar.'
+            : 'Esta ropa ya fue entregada.'}
+        </p>
+      )}
+
       {!cerrada && !cobrando && (
         <div className="mt-6 grid gap-3">
           {avancesDesde(orden.estado).map(({ destino, texto }) => (
