@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-008
 name: 'La ropa de la sucursal: ver, avanzar, anular y cobrar'
 slug: ordenes-sucursal
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-03
 scope:
@@ -15,7 +15,12 @@ scope:
   - CLAUDE.md
 priority: high
 depends_on: []
-tests: []
+tests:
+  - frontend/src/App.test.tsx
+  - frontend/src/features/ordenes/api/ropaLocal.test.ts
+  - frontend/src/features/ordenes/components/PantallaRopa.test.tsx
+  - frontend/src/features/ordenes/estado.test.ts
+  - frontend/src/test/filasDePrueba.ts
 ---
 
 ## Descripción
