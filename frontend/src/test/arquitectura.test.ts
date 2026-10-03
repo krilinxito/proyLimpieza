@@ -46,3 +46,30 @@ describe('Pantallas sin acceso directo a datos — SPEC-KRILINXI-003', () => {
     expect(encontrados).toEqual([]);
   });
 });
+
+/**
+ * Los componentes de las features no tocan la base local: piden lo que necesitan a un hook,
+ * que llama a `features/<x>/api` (CLAUDE.md §5). Nació en SPEC-KRILINXI-005 solo para
+ * clientes; con la segunda feature pasó aquí, para todas.
+ */
+const COMPONENTES_DE_FEATURES = PANTALLAS.filter(({ ruta }) => ruta.startsWith('features/'));
+
+const ACCESO_A_LA_BASE = [
+  { que: 'lib/powersync', patron: /from\s+['"][^'"]*lib\/powersync['"]/ },
+  { que: 'useBaseLocal', patron: /\buseBaseLocal\b/ },
+  { que: 'SQL (consultar/ejecutar)', patron: /\.(consultar|ejecutar)\(/ },
+  { que: 'una carpeta api/ (pasá por el hook)', patron: /from\s+['"][^'"]*\/api\/[^'"]*['"]/ },
+];
+
+describe('Componentes de features sin acceso a la base local — SPEC-KRILINXI-006', () => {
+  it('revisa los componentes de más de una feature', () => {
+    const rutas = COMPONENTES_DE_FEATURES.map(({ ruta }) => ruta);
+    expect(rutas).toContain('features/clientes/components/PantallaClientes.tsx');
+    expect(rutas).toContain('features/ordenes/components/PantallaRegistrarRopa.tsx');
+  });
+
+  it.each(COMPONENTES_DE_FEATURES.map((a) => [a.ruta, a.fuente]))('%s pasa por un hook', (_ruta, fuente) => {
+    const encontrados = ACCESO_A_LA_BASE.filter(({ patron }) => patron.test(fuente)).map(({ que }) => que);
+    expect(encontrados).toEqual([]);
+  });
+});

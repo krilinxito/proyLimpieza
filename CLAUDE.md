@@ -56,8 +56,13 @@ ante un 401; el schema local se testea contra las sync rules. Lo escrito queda e
 (`test/baseLocalDePrueba.ts`). SPEC-KRILINXI-005 añadió la primera pantalla del negocio,
 `/clientes`: buscar por teléfono y dar de alta, todo en la base local. Fija el patrón de las
 demás: el SQL vive en `features/<x>/api/`, un hook lo pone al alcance de la pantalla, y el
-teléfono se normaliza con la misma regla que el backend. Todavía no hay subida ni
-renovación del token.
+teléfono se normaliza con la misma regla que el backend. SPEC-KRILINXI-006 añadió
+`/registrar-ropa` (orden y adelanto opcional, solo para EMPLEADO: el ADMIN no tiene
+sucursal), el saldo en `features/pagos/saldo.ts` —el único lugar donde se calcula— y
+`aDecimal`/`desdeDecimal` en `lib/money`, que es como se guardan los montos en la base local
+("25.50"). Cada ruta puede declarar su propio `sinPermiso`. Para los tests: `sembrar()` carga
+filas "ya sincronizadas" y `sinJerga()` revisa que no haya palabras del sistema en pantalla.
+Todavía no hay subida ni renovación del token.
 
 Además existen el modelo de datos (`context/lavanderia_schema.sql`) y el entorno Docker. El
 desarrollo avanza spec a spec con el flujo de la sección 12.

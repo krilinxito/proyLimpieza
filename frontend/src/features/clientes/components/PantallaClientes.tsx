@@ -19,11 +19,19 @@ type Paso =
   | { tipo: 'registrado'; cliente: Cliente }
   | { tipo: 'telefono-ocupado'; cliente: Cliente };
 
+type Props = {
+  /**
+   * Para usar la búsqueda dentro de otra tarea, como registrar ropa (SPEC-KRILINXI-006):
+   * si viene, junto a cada cliente encontrado o registrado aparece "Es este cliente".
+   */
+  alElegir?: (cliente: Cliente) => void;
+};
+
 /**
  * Buscar un cliente por teléfono y, si no está, darlo de alta. Todo sobre la base local:
  * funciona igual con o sin internet (CLAUDE.md §6).
  */
-export function PantallaClientes() {
+export function PantallaClientes({ alElegir }: Props = {}) {
   const clientes = useClientes();
   const [telefono, setTelefono] = useState('');
   const [errorTelefono, setErrorTelefono] = useState<string | undefined>();
@@ -73,7 +81,12 @@ export function PantallaClientes() {
       )}
 
       <section aria-live="polite" className="mt-6">
-        {paso.tipo === 'encontrado' && <TarjetaCliente cliente={paso.cliente} />}
+        {paso.tipo === 'encontrado' && (
+          <>
+            <TarjetaCliente cliente={paso.cliente} />
+            <BotonElegir cliente={paso.cliente} alElegir={alElegir} />
+          </>
+        )}
 
         {paso.tipo === 'no-encontrado' && (
           <>
@@ -105,6 +118,7 @@ export function PantallaClientes() {
               Cliente registrado.
             </p>
             <TarjetaCliente cliente={paso.cliente} />
+            <BotonElegir cliente={paso.cliente} alElegir={alElegir} />
           </>
         )}
 
@@ -114,9 +128,20 @@ export function PantallaClientes() {
               Ese teléfono ya está registrado a nombre de {paso.cliente.nombre}. No hace falta registrarlo otra vez.
             </p>
             <TarjetaCliente cliente={paso.cliente} />
+            <BotonElegir cliente={paso.cliente} alElegir={alElegir} />
           </>
         )}
       </section>
+    </div>
+  );
+}
+
+/** "Es este cliente": solo aparece cuando la búsqueda se usa para elegir. */
+function BotonElegir({ cliente, alElegir }: { cliente: Cliente; alElegir: Props['alElegir'] }) {
+  if (!alElegir) return null;
+  return (
+    <div className="mt-4">
+      <Boton onClick={() => alElegir(cliente)}>Es este cliente</Boton>
     </div>
   );
 }

@@ -41,6 +41,35 @@ export function parsearMonto(texto: string): Centavos {
   return Number(enteros) * 100 + Number(decimales.padEnd(2, '0'));
 }
 
+// Lo que guarda la base local: punto decimal, sin miles, hasta dos decimales ("25.50").
+const MONTO_DECIMAL = /^(\d+)(?:\.(\d{1,2}))?$/;
+
+/**
+ * Centavos → el texto que se guarda en la base local: 2550 → "25.50" — SPEC-KRILINXI-006.
+ *
+ * Es el formato de `NUMERIC(10,2)` en Postgres, que es como PowerSync lo baja y lo sube
+ * (CLAUDE.md §6). No es para la pantalla: para eso está `formatearMonto`.
+ */
+export function aDecimal(centavos: Centavos): string {
+  if (!Number.isInteger(centavos) || centavos < 0) {
+    throw new Error(`Un monto guardado es un entero de centavos no negativo, y llegó ${centavos}.`);
+  }
+  return `${Math.trunc(centavos / 100)}.${String(centavos % 100).padStart(2, '0')}`;
+}
+
+/**
+ * El texto de la base local → centavos: "25.50" → 2550. Lo inverso de `aDecimal`.
+ *
+ * Distinto de `parsearMonto` a propósito: aquí no escribe una persona, así que no se admite
+ * coma. Un valor raro significa un dato roto, y se dice en vez de adivinar.
+ */
+export function desdeDecimal(texto: string): Centavos {
+  const partes = MONTO_DECIMAL.exec(texto);
+  if (!partes) throw new Error(`"${texto}" no es un monto guardado válido.`);
+  const [, enteros = '0', decimales = ''] = partes;
+  return Number(enteros) * 100 + Number(decimales.padEnd(2, '0'));
+}
+
 /** Suma montos. Enteros con enteros: exacto por construcción. */
 export function sumar(...montos: Centavos[]): Centavos {
   return montos.reduce((total, monto) => total + monto, 0);
@@ -55,9 +84,8 @@ export function restar(a: Centavos, b: Centavos): Centavos {
  * Centavos → texto para la pantalla, con coma decimal y punto de miles: 123456 → "1.234,56".
  *
  * Se arma a mano y no con `Intl.NumberFormat`: el resultado de Intl depende de los datos de
- * idioma que traiga cada navegador, y un monto no puede verse distinto según la tablet. El
- * símbolo de moneda no va aquí: nadie lo confirmó todavía, y cuando se decida lo pone la
- * pantalla.
+ * idioma que traiga cada navegador, y un monto no puede verse distinto según la tablet. Con
+ * el símbolo de la moneda, `formatearBs`.
  */
 export function formatearMonto(centavos: Centavos): string {
   if (!Number.isInteger(centavos)) {
@@ -70,4 +98,9 @@ export function formatearMonto(centavos: Centavos): string {
   const decimales = String(absoluto % 100).padStart(2, '0');
 
   return `${signo}${enteros},${decimales}`;
+}
+
+/** Un monto como lo lee el cliente: 2550 → "Bs 25,50". Todo está en bolivianos (CLAUDE.md §3) — SPEC-KRILINXI-006. */
+export function formatearBs(centavos: Centavos): string {
+  return `Bs ${formatearMonto(centavos)}`;
 }

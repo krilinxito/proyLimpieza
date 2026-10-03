@@ -1,6 +1,8 @@
 import type { ReactElement } from 'react';
 import { FormularioIngreso } from '../features/auth/components/FormularioIngreso';
+import { AvisoSoloEmpleado } from '../features/auth/components/AvisoSoloEmpleado';
 import { PantallaClientes } from '../features/clientes/components/PantallaClientes';
+import { PantallaRegistrarRopa } from '../features/ordenes/components/PantallaRegistrarRopa';
 import { ROLES, type Rol } from '../lib/dominio';
 import { EnConstruccion } from './EnConstruccion';
 import { Inicio } from './Inicio';
@@ -19,10 +21,14 @@ export type Ruta = {
    */
   acceso: 'publica' | readonly Rol[];
   elemento: ReactElement;
+  /** Lo que ve quien entró pero no tiene el rol. Si no se dice, el aviso de "solo administrador". */
+  sinPermiso?: ReactElement;
 };
 
 const TODOS = ROLES;
 const SOLO_ADMIN: readonly Rol[] = ['ADMIN'];
+// El mostrador registra en una sucursal, y el ADMIN no tiene ninguna (CLAUDE.md §3).
+const SOLO_EMPLEADO: readonly Rol[] = ['EMPLEADO'];
 
 /**
  * El registro de rutas del proyecto, en un solo sitio.
@@ -47,8 +53,17 @@ export const RUTAS: readonly Ruta[] = [
     camino: '/registrar-ropa',
     titulo: 'Registrar ropa',
     enMenu: true,
-    acceso: TODOS,
-    elemento: <EnConstruccion titulo="Registrar ropa" />,
+    acceso: SOLO_EMPLEADO,
+    elemento: (
+      <Pantalla titulo="Registrar ropa">
+        <PantallaRegistrarRopa />
+      </Pantalla>
+    ),
+    sinPermiso: (
+      <Pantalla titulo="Registrar ropa">
+        <AvisoSoloEmpleado />
+      </Pantalla>
+    ),
   },
   {
     camino: '/entregar',

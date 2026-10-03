@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatearMonto, parsearMonto, restar, sumar } from './money';
+import { aDecimal, desdeDecimal, formatearBs, formatearMonto, parsearMonto, restar, sumar } from './money';
 
 /**
  * Tests de tabla: `it.each` corre el mismo test una vez por fila. Para funciones puras como
@@ -72,5 +72,39 @@ describe('money: mostrar en pantalla — SPEC-KRILINXI-002', () => {
 
   it('lo que se muestra se vuelve a leer igual', () => {
     expect(parsearMonto(formatearMonto(1250))).toBe(1250);
+  });
+});
+
+describe('money: lo que guarda la base local — SPEC-KRILINXI-006', () => {
+  // Los montos que pide el criterio, y los bordes: cero, centavos sueltos y el máximo de
+  // NUMERIC(10,2). Ida y vuelta sin perder un centavo.
+  it.each([
+    [0, '0.00'],
+    [10, '0.10'],
+    [2550, '25.50'],
+    [9_999_999_999, '99999999.99'],
+  ])('%i centavos se guardan como "%s" y se leen igual', (centavos, texto) => {
+    expect(aDecimal(centavos)).toBe(texto);
+    expect(desdeDecimal(texto)).toBe(centavos);
+  });
+
+  it('lee también lo que Postgres podría mandar sin ceros a la derecha', () => {
+    expect(desdeDecimal('25.5')).toBe(2550);
+    expect(desdeDecimal('25')).toBe(2500);
+  });
+
+  it.each(['25,50', '-1.00', '1.234', '', 'abc'])('rechaza "%s": un dato guardado no se adivina', (texto) => {
+    expect(() => desdeDecimal(texto)).toThrow();
+  });
+
+  it.each([-1, 0.5, Number.NaN])('no guarda %s: solo enteros de centavos no negativos', (centavos) => {
+    expect(() => aDecimal(centavos)).toThrow();
+  });
+});
+
+describe('money: en bolivianos — SPEC-KRILINXI-006', () => {
+  it('pone el símbolo de la moneda delante del monto formateado', () => {
+    expect(formatearBs(123456)).toBe('Bs 1.234,56');
+    expect(formatearBs(0)).toBe('Bs 0,00');
   });
 });
