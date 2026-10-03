@@ -1,12 +1,7 @@
 import { Boton } from '../../../components/Boton';
 import { formatearBs } from '../../../lib/money';
 import type { RopaRegistrada } from '../types';
-
-/** "2026-10-10" → "10/10/2026", como se escribe a mano en la boleta. */
-function fechaComoEnLaBoleta(fecha: string): string {
-  const [anio, mes, dia] = fecha.split('-');
-  return `${dia}/${mes}/${anio}`;
-}
+import { fechaCorta } from './fechas';
 
 /** Lo que quedó registrado, para repasarlo con el cliente antes de que se vaya. */
 export function ResumenRopa({ ropa, alRegistrarOtra }: { ropa: RopaRegistrada; alRegistrarOtra: () => void }) {
@@ -17,7 +12,7 @@ export function ResumenRopa({ ropa, alRegistrarOtra }: { ropa: RopaRegistrada; a
     ['Precio', formatearBs(ropa.precioTotal)],
     ['Adelanto', ropa.adelanto > 0 ? formatearBs(ropa.adelanto) : 'No dejó'],
     ['Falta pagar', formatearBs(ropa.saldo)],
-    ['Estará lista', ropa.fechaEstimada ? fechaComoEnLaBoleta(ropa.fechaEstimada) : 'Sin fecha'],
+    ['Estará lista', ropa.fechaEstimada ? fechaCorta(ropa.fechaEstimada) : 'Sin fecha'],
   ];
 
   return (
