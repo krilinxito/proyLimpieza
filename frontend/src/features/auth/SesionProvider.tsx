@@ -38,20 +38,30 @@ export function SesionProvider({ children, abrirBaseLocal = abrirBaseLocalDelNav
   // La base abierta (o abriéndose), para poder borrarla al salir.
   const control = useRef<Promise<ControlBaseLocal> | null>(null);
 
-  const cambiarSesion = useCallback((nueva: Sesion | null) => {
+  const cambiarSesion = useCallback((nueva: Sesion | null, motivo: 'salir' | 'rechazada' = 'salir') => {
     actual.current = nueva;
     if (nueva) {
       guardarSesion(nueva);
     } else {
       borrarSesion();
-      // Salir borra los datos del dispositivo (CLAUDE.md §6): quien entre después en esta
-      // tablet no tiene por qué ver las órdenes del anterior.
       const abierta = control.current;
       control.current = null;
       setBase(null);
       abierta
-        ?.then((c) => c.desconectarYBorrar())
-        .catch((error: unknown) => console.error('No se pudo borrar la base local al salir.', error));
+        ?.then(async (c) => {
+          // Si el servidor rechazó la sesión con trabajo sin subir (un token que venció
+          // mientras no había internet), borrar sería perder ropa que entró de verdad
+          // (CLAUDE.md §13). Se desconecta y nada más: al volver a ingresar, la misma base
+          // se abre de nuevo y la subida sigue — SPEC-KRILINXI-007.
+          if (motivo === 'rechazada' && (await c.hayCambiosSinSubir())) {
+            await c.desconectar();
+            return;
+          }
+          // Salir borra los datos del dispositivo (CLAUDE.md §6): quien entre después en esta
+          // tablet no tiene por qué ver las órdenes del anterior.
+          await c.desconectarYBorrar();
+        })
+        .catch((error: unknown) => console.error('No se pudo cerrar la base local.', error));
     }
     setSesion(nueva);
   }, []);
@@ -60,7 +70,7 @@ export function SesionProvider({ children, abrirBaseLocal = abrirBaseLocalDelNav
     () =>
       conectarSesion({
         obtenerToken: () => actual.current?.token ?? null,
-        alRechazarSesion: () => cambiarSesion(null),
+        alRechazarSesion: () => cambiarSesion(null, 'rechazada'),
       }),
     [cambiarSesion],
   );

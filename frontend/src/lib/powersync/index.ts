@@ -4,7 +4,7 @@
  */
 import type { ControlBaseLocal } from './control';
 
-export type { BaseLocal, ControlBaseLocal, Fila } from './control';
+export type { BaseLocal, ControlBaseLocal, EstadoSubida, Fila } from './control';
 export { ContextoBaseLocal, useBaseLocal } from './contexto';
 
 /**

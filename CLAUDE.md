@@ -62,7 +62,12 @@ sucursal), el saldo en `features/pagos/saldo.ts` —el único lugar donde se cal
 `aDecimal`/`desdeDecimal` en `lib/money`, que es como se guardan los montos en la base local
 ("25.50"). Cada ruta puede declarar su propio `sinPermiso`. Para los tests: `sembrar()` carga
 filas "ya sincronizadas" y `sinJerga()` revisa que no haya palabras del sistema en pantalla.
-Todavía no hay subida ni renovación del token.
+SPEC-KRILINXI-007 cerró la subida: `uploadData` manda cada cambio de la cola a su `POST` o
+`PATCH` por `lib/api`. Lo rechazado (400/403/404/409/422) se copia a la tabla solo local
+`para_corregir` y la cola sigue; sin conexión, 5xx o 401 se reintenta. El aviso de conexión
+(`components/AvisoConexion`, con `hooks/useConexion`) está en todas las pantallas con sesión
+y lleva a `/para-corregir`. Un 401 con cambios sin subir ya no borra la base local. Falta la
+renovación del token.
 
 Además existen el modelo de datos (`context/lavanderia_schema.sql`) y el entorno Docker. El
 desarrollo avanza spec a spec con el flujo de la sección 12.
@@ -416,8 +421,15 @@ Nada se implementa sin una spec aprobada.
 - **Qué hacer con la cola de un usuario revocado.** Al reconectar, un dispositivo dado de
   baja puede traer trabajo real sin subir — ropa que entró de verdad, de clientes que van a
   volver a buscarla. Rechazarlo entero pierde ese trabajo. La decisión tomada es
-  **aceptarlo y marcarlo para que el admin lo revise**, nunca descartarlo en silencio. El
-  mecanismo se cierra en la spec `cola-subida`, que es la que implementa `uploadData`.
+  **aceptarlo y marcarlo para que el admin lo revise**, nunca descartarlo en silencio.
+  SPEC-KRILINXI-007 cubrió el lado del dispositivo: un 401 con la cola llena desconecta sin
+  borrar, y la cola sube con la siguiente sesión que entre. Falta el lado del servidor (hoy
+  rechazaría con 401 la cola de un usuario dado de baja), que va con `renovar-sesion`.
+- **La cola sube con la sesión de quien esté adentro.** Si después de un 401 entra OTRA
+  persona en la tablet, lo pendiente se sube con su token, y el backend anota a esa persona
+  como quien recibió o cobró (lo toma de la sesión). Se aceptó así en SPEC-KRILINXI-007: la
+  alternativa era perder el trabajo. Salir confirmando, en cambio, sigue borrando la base
+  aunque haya cosas sin subir: el aviso de salida debería decirlo, o impedirlo.
 
 - **El monorepo tiene DOS versiones de TypeScript, y la raíz fija una a propósito.**
   El frontend usa TypeScript 7 y el backend 5.9. Al instalar, npm hoistea a la raíz una
@@ -443,9 +455,9 @@ Nada se implementa sin una spec aprobada.
 - **La autenticación de PowerSync usa un secreto compartido HS256**, pensado para poder
   probar el servicio antes de que exista el backend. En producción va RS256 con un
   `jwks_uri` servido por la API.
-- **Marcar una orden como "pendiente de corrección"** cuando el servidor rechaza su
-  `numero_boleta` se resuelve en el cliente, sobre la cola de subida de PowerSync, no con
-  una columna nueva en la base. El mecanismo concreto se cierra en la spec `cola-subida`:
-  SPEC-KRILINXI-004 dejó la base local y la cola, pero `uploadData` todavía no sube nada.
+- **Corregir lo que el servidor rechazó.** SPEC-KRILINXI-007 lo guarda en `para_corregir`
+  (solo local, sin columna nueva en Postgres) y lo muestra en `/para-corregir`, pero
+  todavía no se puede editar y volver a enviar: hoy el empleado lee el motivo y avisa. Va en
+  una spec propia (`corregir-registros`).
 - **No hay triggers.** El paso a `ENTREGADO` se resolvió en código (sección 6). La
   auditoría está decidida pero sin implementar; cómo se registra se cierra en su spec.

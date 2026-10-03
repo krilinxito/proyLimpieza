@@ -3,6 +3,7 @@ import { FormularioIngreso } from '../features/auth/components/FormularioIngreso
 import { AvisoSoloEmpleado } from '../features/auth/components/AvisoSoloEmpleado';
 import { PantallaClientes } from '../features/clientes/components/PantallaClientes';
 import { PantallaRegistrarRopa } from '../features/ordenes/components/PantallaRegistrarRopa';
+import { PantallaParaCorregir } from '../features/pendientes/components/PantallaParaCorregir';
 import { ROLES, type Rol } from '../lib/dominio';
 import { EnConstruccion } from './EnConstruccion';
 import { Inicio } from './Inicio';
@@ -81,6 +82,18 @@ export const RUTAS: readonly Ruta[] = [
     elemento: (
       <Pantalla titulo="Clientes">
         <PantallaClientes />
+      </Pantalla>
+    ),
+  },
+  {
+    // Sin botón en el menú: se llega desde el aviso de conexión, cuando hay algo que revisar.
+    camino: '/para-corregir',
+    titulo: 'Registros para corregir',
+    enMenu: false,
+    acceso: TODOS,
+    elemento: (
+      <Pantalla titulo="Registros para corregir">
+        <PantallaParaCorregir />
       </Pantalla>
     ),
   },
