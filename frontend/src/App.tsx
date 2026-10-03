@@ -1,10 +1,18 @@
 import { Route, Routes } from 'react-router-dom';
+import { AvisoConexion } from './components/AvisoConexion';
 import { AvisoSoloAdministrador } from './features/auth/components/AvisoSoloAdministrador';
 import { BarraSesion } from './features/auth/components/BarraSesion';
 import { RutaProtegida } from './features/auth/components/RutaProtegida';
+import { useConexion } from './hooks/useConexion';
 import { NoEncontrada } from './pages/NoEncontrada';
 import { Pantalla } from './pages/Pantalla';
 import { RUTAS, type Ruta } from './pages/rutas';
+
+/** El aviso de conexión con los números de la base local (SPEC-KRILINXI-007). */
+function EstadoConexion() {
+  const estado = useConexion();
+  return estado && <AvisoConexion {...estado} />;
+}
 
 /** Lo que se monta para una ruta: tal cual si es pública, detrás del portero si no. */
 function elementoDe(ruta: Ruta) {
@@ -21,6 +29,7 @@ function elementoDe(ruta: Ruta) {
       }
     >
       <BarraSesion />
+      <EstadoConexion />
       {ruta.elemento}
     </RutaProtegida>
   );
