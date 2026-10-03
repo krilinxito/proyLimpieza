@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-005
 name: Buscar y dar de alta clientes en el mostrador
 slug: clientes-mostrador
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-03
 scope:
@@ -13,7 +13,12 @@ scope:
   - CLAUDE.md
 priority: high
 depends_on: []
-tests: []
+tests:
+  - frontend/src/features/clientes/api/clientesLocal.test.ts
+  - frontend/src/features/clientes/arquitectura.test.ts
+  - frontend/src/features/clientes/components/PantallaClientes.test.tsx
+  - frontend/src/features/clientes/telefono.test.ts
+  - frontend/src/test/baseLocalDePrueba.ts
 ---
 
 ## Descripción
@@ -31,7 +36,7 @@ Queda FUERA: editar clientes existentes (PATCH), subir la cola y mostrar rechazo
 ## Criterios de aceptación
 
 - [ ] El sistema muestra el nombre, teléfono y carnet del cliente cuando el empleado escribe un teléfono que existe en la base local, sin hacer ninguna petición a la API.
-- [ ] El sistema encuentra al cliente aunque el teléfono se escriba con espacios, guiones o prefijo distinto, normalizándolo con la misma regla que el backend.
+- [ ] El sistema encuentra al cliente aunque el teléfono se escriba con espacios, guiones o paréntesis, normalizándolo con la misma regla que el backend (el prefijo de país no se quita: "+591 70123456" y "70123456" son teléfonos distintos en los dos lados).
 - [ ] El sistema ofrece dar de alta al cliente, con el teléfono ya cargado, cuando el teléfono buscado no existe en la base local.
 - [ ] El sistema guarda el cliente nuevo en la base local con un id generado por crypto.randomUUID(), y el cambio queda en la cola de subida con nombre, teléfono y carnet.
 - [ ] El sistema no guarda y muestra un mensaje en español que dice qué hacer cuando falta el nombre o el teléfono; el carnet es opcional.
