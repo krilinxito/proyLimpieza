@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { TABLAS } from './schema';
+import { TABLAS, TABLAS_SOLO_LOCALES } from './schema';
 
 /**
  * El schema local tiene que coincidir con dos archivos que mandan sobre él:
@@ -94,5 +94,17 @@ describe('Sync rules: la baja de un empleado corta su sincronización — SPEC-K
     const [, parametros = ''] = /^\s{2}sucursal:[\s\S]*?parameters: \|([\s\S]*?)\n\s*data:/m.exec(SYNC_RULES) ?? [];
     expect(parametros).toMatch(/FROM usuarios/);
     expect(parametros).toMatch(/\bactivo = true\b/);
+  });
+});
+
+describe('Tablas solo del dispositivo — SPEC-KRILINXI-007', () => {
+  // Quedan fuera de la comparación con las sync rules A PROPÓSITO: no vienen de ahí.
+  it.each(Object.entries(TABLAS_SOLO_LOCALES))('%s es solo local: ni baja ni sube', (_nombre, tabla) => {
+    expect(tabla.localOnly).toBe(true);
+  });
+
+  it.each(Object.keys(TABLAS_SOLO_LOCALES))('%s no aparece en las sync rules ni en Postgres', (nombre) => {
+    expect(SYNC_RULES).not.toMatch(new RegExp(`\\b${nombre}\\b`));
+    expect(SCHEMA_SQL).not.toMatch(new RegExp(`\\b${nombre}\\b`));
   });
 });

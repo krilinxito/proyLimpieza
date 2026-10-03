@@ -77,4 +77,34 @@ export const TABLAS = {
   }),
 };
 
-export const SCHEMA_LOCAL = new Schema(TABLAS);
+/**
+ * Tablas que existen SOLO en el dispositivo — SPEC-KRILINXI-007. No bajan por las sync
+ * rules ni suben por la cola (`localOnly`): por eso van aparte de `TABLAS`, que es lo que
+ * `schema.test.ts` compara con las sync rules.
+ */
+export const TABLAS_SOLO_LOCALES = {
+  /**
+   * Lo que el servidor rechazó al subir (una boleta repetida, por ejemplo). Se guarda aquí
+   * porque, una vez dada por terminada la subida, PowerSync revierte la fila original en la
+   * siguiente sincronización: sin esta copia, la ropa desaparecería de la pantalla sin que
+   * nadie se entere (CLAUDE.md §6).
+   */
+  para_corregir: new Table(
+    {
+      /** La tabla de la fila rechazada: clientes, ordenes, pagos o entregas. */
+      tabla: text,
+      registro_id: text,
+      /** PUT, PATCH o DELETE, como lo anotó la cola. */
+      operacion: text,
+      /** Lo que se intentó subir, en JSON. */
+      datos: text,
+      codigo: text,
+      /** El mensaje del servidor, ya escrito para el mostrador. */
+      mensaje: text,
+      fecha: text,
+    },
+    { localOnly: true },
+  ),
+};
+
+export const SCHEMA_LOCAL = new Schema({ ...TABLAS, ...TABLAS_SOLO_LOCALES });
