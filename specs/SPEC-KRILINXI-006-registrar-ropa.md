@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-006
 name: 'Registrar ropa: la orden y su adelanto'
 slug: registrar-ropa
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-03
 scope:
