@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-005
 name: Buscar y dar de alta clientes en el mostrador
 slug: clientes-mostrador
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-03
 scope:
