@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-009
 name: 'Entregar la ropa: con o sin boleta, y el pago final'
 slug: entregar-ropa
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-03
 scope:
@@ -15,7 +15,10 @@ scope:
 priority: high
 depends_on:
   - SPEC-KRILINXI-008
-tests: []
+tests:
+  - frontend/src/App.test.tsx
+  - frontend/src/features/entregas/api/entregasLocal.test.ts
+  - frontend/src/features/entregas/components/PantallaEntregar.test.tsx
 ---
 
 ## Descripción
