@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-006
 name: 'Registrar ropa: la orden y su adelanto'
 slug: registrar-ropa
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-03
 scope:
@@ -16,7 +16,14 @@ scope:
   - CLAUDE.md
 priority: high
 depends_on: []
-tests: []
+tests:
+  - frontend/src/App.test.tsx
+  - frontend/src/features/ordenes/api/ordenesLocal.test.ts
+  - frontend/src/features/ordenes/components/PantallaRegistrarRopa.test.tsx
+  - frontend/src/features/pagos/saldo.test.ts
+  - frontend/src/lib/money.test.ts
+  - frontend/src/test/arquitectura.test.ts
+  - frontend/src/test/jerga.ts
 ---
 
 ## Descripción
