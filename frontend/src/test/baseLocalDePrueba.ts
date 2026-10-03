@@ -14,6 +14,16 @@
  *
  * Cada llamada crea una base nueva en una carpeta temporal y la borra al terminar el test.
  *
+ * Para partir de datos que "ya estaban en el servidor" —el cliente que el mostrador tiene
+ * que encontrar— está `sembrar` (SPEC-KRILINXI-005). Las filas quedan en la base pero NO
+ * en la cola, como si hubieran bajado por la sincronización:
+ *
+ *     const { control, sembrar } = await baseLocalDePrueba();
+ *     await sembrar('clientes', [{ id: randomUUID(), nombre: 'Rosa', telefono: '70123456' }]);
+ *
+ * Sembrá antes de escribir nada: si la cola ya tiene algo, `sembrar` falla en vez de darlo
+ * por subido sin que el test se entere.
+ *
  * Para una pantalla que no lee datos alcanza con `controlFalso()` (test/controlFalso.ts),
  * que es el que usa `renderEnRuta` por defecto.
  */
@@ -23,7 +33,7 @@ import { join } from 'node:path';
 import { PowerSyncDatabase } from '@powersync/node';
 import { onTestFinished } from 'vitest';
 import { envolver } from '../lib/powersync/control';
-import { SCHEMA_LOCAL } from '../lib/powersync/schema';
+import { SCHEMA_LOCAL, TABLAS } from '../lib/powersync/schema';
 
 export async function baseLocalDePrueba() {
   const carpeta = mkdtempSync(join(tmpdir(), 'lavanderia-test-'));
@@ -40,6 +50,24 @@ export async function baseLocalDePrueba() {
 
   // Una URL que no existe: si algún test conectara de verdad, que falle en vez de
   // hablarle a un PowerSync de desarrollo que alguien tenga levantado.
-  return { control: envolver(db, 'http://powersync.invalid'), db };
+  async function sembrar(tabla: keyof typeof TABLAS, filas: Record<string, unknown>[]): Promise<void> {
+    if (await db.getCrudBatch()) {
+      throw new Error('sembrar() va antes de cualquier escritura: la cola de subida ya tiene cambios.');
+    }
+    for (const fila of filas) {
+      const columnas = Object.keys(fila);
+      await db.execute(
+        `INSERT INTO ${tabla} (${columnas.join(', ')}) VALUES (${columnas.map(() => '?').join(', ')})`,
+        Object.values(fila),
+      );
+    }
+    // Lo que acaba de entrar en la cola se da por subido: es lo que hace PowerSync cuando el
+    // servidor acepta un cambio. La fila queda, la cola se vacía.
+    for (let lote = await db.getCrudBatch(1000); lote; lote = await db.getCrudBatch(1000)) {
+      await lote.complete();
+    }
+  }
+
+  return { control: envolver(db, 'http://powersync.invalid'), db, sembrar };
 }
 
