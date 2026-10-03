@@ -3,6 +3,7 @@ import { FormularioIngreso } from '../features/auth/components/FormularioIngreso
 import { AvisoSoloEmpleado } from '../features/auth/components/AvisoSoloEmpleado';
 import { PantallaClientes } from '../features/clientes/components/PantallaClientes';
 import { PantallaRegistrarRopa } from '../features/ordenes/components/PantallaRegistrarRopa';
+import { PantallaRopa } from '../features/ordenes/components/PantallaRopa';
 import { PantallaParaCorregir } from '../features/pendientes/components/PantallaParaCorregir';
 import { ROLES, type Rol } from '../lib/dominio';
 import { EnConstruccion } from './EnConstruccion';
@@ -30,6 +31,15 @@ const TODOS = ROLES;
 const SOLO_ADMIN: readonly Rol[] = ['ADMIN'];
 // El mostrador registra en una sucursal, y el ADMIN no tiene ninguna (CLAUDE.md §3).
 const SOLO_EMPLEADO: readonly Rol[] = ['EMPLEADO'];
+
+/** Lo que ve el ADMIN en una pantalla del mostrador. */
+function soloEmpleado(titulo: string): ReactElement {
+  return (
+    <Pantalla titulo={titulo}>
+      <AvisoSoloEmpleado />
+    </Pantalla>
+  );
+}
 
 /**
  * El registro de rutas del proyecto, en un solo sitio.
@@ -60,11 +70,19 @@ export const RUTAS: readonly Ruta[] = [
         <PantallaRegistrarRopa />
       </Pantalla>
     ),
-    sinPermiso: (
-      <Pantalla titulo="Registrar ropa">
-        <AvisoSoloEmpleado />
+    sinPermiso: soloEmpleado('Registrar ropa'),
+  },
+  {
+    camino: '/ropa',
+    titulo: 'Ropa en el local',
+    enMenu: true,
+    acceso: SOLO_EMPLEADO,
+    elemento: (
+      <Pantalla titulo="Ropa en el local">
+        <PantallaRopa />
       </Pantalla>
     ),
+    sinPermiso: soloEmpleado('Ropa en el local'),
   },
   {
     camino: '/entregar',
@@ -73,7 +91,19 @@ export const RUTAS: readonly Ruta[] = [
     acceso: TODOS,
     elemento: <EnConstruccion titulo="Entregar ropa" />,
   },
-  { camino: '/cobrar', titulo: 'Cobrar', enMenu: true, acceso: TODOS, elemento: <EnConstruccion titulo="Cobrar" /> },
+  {
+    camino: '/cobrar',
+    titulo: 'Cobrar',
+    enMenu: true,
+    acceso: SOLO_EMPLEADO,
+    // La misma pantalla que /ropa: para cobrar, primero se busca la boleta (SPEC-KRILINXI-008).
+    elemento: (
+      <Pantalla titulo="Cobrar">
+        <PantallaRopa />
+      </Pantalla>
+    ),
+    sinPermiso: soloEmpleado('Cobrar'),
+  },
   {
     camino: '/clientes',
     titulo: 'Clientes',

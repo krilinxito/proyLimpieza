@@ -1,19 +1,24 @@
+import { useId } from 'react';
 import { METODOS_PAGO, TEXTO_METODO_PAGO, type MetodoPago } from '../../../lib/dominio';
 
 type Props = {
   value: MetodoPago | null;
   onChange: (metodo: MetodoPago) => void;
   error?: string;
+  /** Lo que se pregunta arriba de las opciones. */
+  pregunta?: string;
 };
 
 /**
  * Cómo paga: cuatro opciones grandes, todas a la vista. Un desplegable obliga a abrirlo
  * para saber qué hay adentro, y en el mostrador eso es un paso de más (CLAUDE.md §9).
  */
-export function ElegirMetodo({ value, onChange, error }: Props) {
+export function ElegirMetodo({ value, onChange, error, pregunta = '¿Cómo paga el adelanto?' }: Props) {
+  // Un nombre propio por grupo: si hubiera dos en pantalla, no se pisarían las opciones.
+  const grupo = useId();
   return (
-    <fieldset className="mt-4" aria-describedby={error ? 'metodo-error' : undefined}>
-      <legend className="text-xl font-semibold text-slate-900">¿Cómo paga el adelanto?</legend>
+    <fieldset className="mt-4" aria-describedby={error ? `${grupo}-error` : undefined}>
+      <legend className="text-xl font-semibold text-slate-900">{pregunta}</legend>
       <div className="mt-2 grid grid-cols-2 gap-3">
         {METODOS_PAGO.map((metodo) => (
           <label
@@ -24,7 +29,7 @@ export function ElegirMetodo({ value, onChange, error }: Props) {
           >
             <input
               type="radio"
-              name="metodo-adelanto"
+              name={grupo}
               className="size-6"
               checked={value === metodo}
               onChange={() => onChange(metodo)}
@@ -34,7 +39,7 @@ export function ElegirMetodo({ value, onChange, error }: Props) {
         ))}
       </div>
       {error && (
-        <p id="metodo-error" className="mt-2 text-lg text-red-700">
+        <p id={`${grupo}-error`} className="mt-2 text-lg text-red-700">
           {error}
         </p>
       )}

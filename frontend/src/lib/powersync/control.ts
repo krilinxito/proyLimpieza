@@ -89,7 +89,10 @@ function observarEstado(db: CommonPowerSyncDatabase, alCambiar: (estado: EstadoS
   }
 
   const recalcular = () => {
-    calcular().catch((error: unknown) => console.error('No se pudo leer el estado de la subida.', error));
+    calcular().catch((error: unknown) => {
+      // Si ya nadie escucha (la pantalla se cerró, o la base se cerró al salir), no es un error.
+      if (vigente) console.error('No se pudo leer el estado de la subida.', error);
+    });
   };
 
   recalcular();

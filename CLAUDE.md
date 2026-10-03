@@ -66,8 +66,12 @@ SPEC-KRILINXI-007 cerró la subida: `uploadData` manda cada cambio de la cola a 
 `PATCH` por `lib/api`. Lo rechazado (400/403/404/409/422) se copia a la tabla solo local
 `para_corregir` y la cola sigue; sin conexión, 5xx o 401 se reintenta. El aviso de conexión
 (`components/AvisoConexion`, con `hooks/useConexion`) está en todas las pantallas con sesión
-y lleva a `/para-corregir`. Un 401 con cambios sin subir ya no borra la base local. Falta la
-renovación del token.
+y lleva a `/para-corregir`. Un 401 con cambios sin subir ya no borra la base local.
+SPEC-KRILINXI-008 añadió `/ropa` ("Ropa en el local") y `/cobrar`, la misma pantalla: lista,
+búsqueda por boleta o teléfono, detalle, avances, anular y cobrar. El **estado que se muestra**
+sale de `features/ordenes/estado.ts` (`estadoEfectivo`: si la orden tiene entrega en la base
+local, figura ENTREGADO aunque no haya sincronizado), y los avances permitidos repiten la tabla
+del backend con un test que la compara. Falta la renovación del token.
 
 Además existen el modelo de datos (`context/lavanderia_schema.sql`) y el entorno Docker. El
 desarrollo avanza spec a spec con el flujo de la sección 12.

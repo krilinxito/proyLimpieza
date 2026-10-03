@@ -1,5 +1,5 @@
 import type { Centavos } from '../../lib/money';
-import type { MetodoPago } from '../../lib/dominio';
+import type { EstadoOrden, MetodoPago, TipoPago } from '../../lib/dominio';
 import type { Cliente } from '../clientes/types';
 
 /** Lo que escribe el empleado al registrar ropa, tal cual, sin limpiar. */
@@ -38,3 +38,34 @@ export type RopaRegistrada = {
 };
 
 export type ResultadoRegistro = { tipo: 'registrada'; ropa: RopaRegistrada } | { tipo: 'invalida'; errores: ErroresRopa };
+
+/** Un pago tal como se muestra en el detalle — SPEC-KRILINXI-008. */
+export type PagoVisto = {
+  id: string;
+  tipo: TipoPago;
+  metodo: MetodoPago;
+  monto: Centavos;
+  fecha: string | null;
+};
+
+/** Una orden de la sucursal como la ve el mostrador — SPEC-KRILINXI-008. */
+export type OrdenVista = {
+  id: string;
+  numeroBoleta: string;
+  descripcion: string;
+  /** El estado efectivo: ENTREGADO si ya tiene entrega aunque no haya sincronizado. */
+  estado: EstadoOrden;
+  clienteNombre: string;
+  clienteTelefono: string;
+  fechaEntrada: string | null;
+  fechaEstimada: string | null;
+  precioTotal: Centavos;
+  /** El de la entrega; null si todavía no se entregó. */
+  precioFinal: Centavos | null;
+  pagado: Centavos;
+  saldo: Centavos;
+  pagos: PagoVisto[];
+};
+
+/** Cómo terminó una acción sobre una orden (avanzar, anular, cobrar). */
+export type ResultadoAccion = { tipo: 'hecho' } | { tipo: 'no-se-puede'; mensaje: string };
