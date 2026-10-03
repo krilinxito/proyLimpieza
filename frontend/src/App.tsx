@@ -13,9 +13,11 @@ function elementoDe(ruta: Ruta) {
     <RutaProtegida
       roles={ruta.acceso}
       sinPermiso={
-        <Pantalla titulo={ruta.titulo}>
-          <AvisoSoloAdministrador />
-        </Pantalla>
+        ruta.sinPermiso ?? (
+          <Pantalla titulo={ruta.titulo}>
+            <AvisoSoloAdministrador />
+          </Pantalla>
+        )
       }
     >
       <BarraSesion />

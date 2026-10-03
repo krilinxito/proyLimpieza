@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { aDecimal, desdeDecimal, formatearMonto, parsearMonto, restar, sumar } from './money';
+import { aDecimal, desdeDecimal, formatearBs, formatearMonto, parsearMonto, restar, sumar } from './money';
 
 /**
  * Tests de tabla: `it.each` corre el mismo test una vez por fila. Para funciones puras como
@@ -99,5 +99,12 @@ describe('money: lo que guarda la base local — SPEC-KRILINXI-006', () => {
 
   it.each([-1, 0.5, Number.NaN])('no guarda %s: solo enteros de centavos no negativos', (centavos) => {
     expect(() => aDecimal(centavos)).toThrow();
+  });
+});
+
+describe('money: en bolivianos — SPEC-KRILINXI-006', () => {
+  it('pone el símbolo de la moneda delante del monto formateado', () => {
+    expect(formatearBs(123456)).toBe('Bs 1.234,56');
+    expect(formatearBs(0)).toBe('Bs 0,00');
   });
 });

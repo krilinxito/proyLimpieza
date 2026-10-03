@@ -84,9 +84,8 @@ export function restar(a: Centavos, b: Centavos): Centavos {
  * Centavos → texto para la pantalla, con coma decimal y punto de miles: 123456 → "1.234,56".
  *
  * Se arma a mano y no con `Intl.NumberFormat`: el resultado de Intl depende de los datos de
- * idioma que traiga cada navegador, y un monto no puede verse distinto según la tablet. El
- * símbolo de moneda no va aquí: nadie lo confirmó todavía, y cuando se decida lo pone la
- * pantalla.
+ * idioma que traiga cada navegador, y un monto no puede verse distinto según la tablet. Con
+ * el símbolo de la moneda, `formatearBs`.
  */
 export function formatearMonto(centavos: Centavos): string {
   if (!Number.isInteger(centavos)) {
@@ -99,4 +98,9 @@ export function formatearMonto(centavos: Centavos): string {
   const decimales = String(absoluto % 100).padStart(2, '0');
 
   return `${signo}${enteros},${decimales}`;
+}
+
+/** Un monto como lo lee el cliente: 2550 → "Bs 25,50". Todo está en bolivianos (CLAUDE.md §3) — SPEC-KRILINXI-006. */
+export function formatearBs(centavos: Centavos): string {
+  return `Bs ${formatearMonto(centavos)}`;
 }
