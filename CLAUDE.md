@@ -39,9 +39,10 @@ la manda el dispositivo, en ISO 8601 con zona. SPEC-ALE186-005 añadió los cobr
 `INSERT … SELECT`, que también rechaza las órdenes anuladas. SPEC-ALE186-006 añadió las
 entregas (`POST /api/entregas`, sin edición ni borrado), que cierran el flujo: la entrega y
 el paso de la orden a ENTREGADO van en una sola sentencia. Con eso están todas las
-escrituras del negocio; faltan auditoría y estadísticas. SPEC-ALE186-007 añadió la suite
+escrituras del negocio; faltan auditoría y el resto de las estadísticas. SPEC-ALE186-007 añadió la suite
 de integración contra Postgres real (`npm run test:db`, sección 4), con la atomicidad y
-las carreras de pagos y entregas.
+las carreras de pagos y entregas. SPEC-ALE186-008 añadió las primeras estadísticas
+(`/api/estadisticas/ingresos`, `/saldos` y `/sin-recoger`, solo ADMIN; sección 8).
 
 `frontend/` tiene el scaffolding de SPEC-KRILINXI-001: Vite, Tailwind, rutas y su suite de
 tests. SPEC-KRILINXI-002 añadió las piezas que reutilizan todas las pantallas: `Boton`,
@@ -337,7 +338,15 @@ clara la razón: sincronizar años de órdenes y pagos a un navegador solo para 
 es caro y no aporta nada, porque el admin trabaja en la oficina, con conexión.
 
 - Endpoints `GET /api/estadisticas/*`, que agregan en Postgres con `SUM` y `GROUP BY`.
-  Todos aceptan `desde`, `hasta` y `sucursal_id` opcional.
+  Todos aceptan `desde`, `hasta` y `sucursal_id` opcional. Hechos: `/ingresos`, `/saldos`
+  y `/sin-recoger` (SPEC-ALE186-008, que fija la forma de cada respuesta campo por campo:
+  es el contrato de la pantalla). Falta volumen y productividad.
+- **Las fechas se miran en la hora de Bolivia** (`ZONA_NEGOCIO = 'America/La_Paz'`, en
+  `models/estadisticas.model.ts`). Las columnas `TIMESTAMP` guardan la hora de la sesión de
+  Postgres, que en el servidor es UTC: sin convertir, un cobro de las 21:00 caería en el día
+  siguiente. `desde`/`hasta` son días de Bolivia, y "hoy" también (`hoyEnElNegocio()`).
+- **Los montos se suman en Postgres y salen como texto** (`"125.50"`), incluidos los totales
+  por sucursal y el general. El frontend no suma: muestra.
 - Métricas de la primera versión:
   - **Ingresos** por período y sucursal, desglosados por `metodo_pago`.
   - **Saldos pendientes** de cobro, con antigüedad.
