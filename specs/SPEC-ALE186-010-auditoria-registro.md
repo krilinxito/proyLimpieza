@@ -2,7 +2,7 @@
 id: SPEC-ALE186-010
 name: Registro de auditoría en cada escritura
 slug: auditoria-registro
-status: approved
+status: in-progress
 owner: ale186
 created: 2026-10-05
 scope:
