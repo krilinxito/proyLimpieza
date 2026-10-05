@@ -2,7 +2,7 @@
 id: SPEC-ALE186-009
 name: Alta, edición y baja de empleados
 slug: usuarios-admin
-status: draft
+status: in-progress
 owner: ale186
 created: 2026-10-05
 scope:
