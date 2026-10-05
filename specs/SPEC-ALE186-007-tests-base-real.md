@@ -2,7 +2,7 @@
 id: SPEC-ALE186-007
 name: Tests contra una base real
 slug: tests-base-real
-status: draft
+status: in-progress
 owner: ale186
 created: 2026-10-04
 scope:
