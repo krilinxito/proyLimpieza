@@ -23,6 +23,8 @@
 //                           Es la carrera que pagos y entregas tienen que aguantar.
 //   leerOrden(id) / contar(sql, valores)
 //                           Para comprobar cómo quedó la base después.
+//   auditoriaDe(registroId) Las filas de `auditoria` de un registro, en orden —
+//                           SPEC-ALE186-010.
 //
 // Todo se crea con ids y valores únicos nuevos (teléfono, boleta, usuario), así
 // que los tests no chocan entre sí aunque corran en paralelo, y no hace falta
@@ -165,6 +167,34 @@ export async function leerOrden(id: string): Promise<{ estado: EstadoOrden; sucu
   const fila = rows[0];
   if (fila === undefined) throw new Error(`La orden ${id} no existe en la base de pruebas.`);
   return { estado: fila.estado, sucursalId: fila.sucursal_id };
+}
+
+export interface FilaAuditoria {
+  usuarioId: string;
+  accion: string;
+  tablaAfectada: string;
+  /** El JSONB tal cual lo devuelve `pg`, ya parseado; `null` si no hay. */
+  valoresAnteriores: Record<string, unknown> | null;
+}
+
+/** Lo que quedó anotado en `auditoria` sobre un registro, del más viejo al más nuevo. */
+export async function auditoriaDe(registroId: string): Promise<FilaAuditoria[]> {
+  const { rows } = await pool.query<{
+    usuario_id: string;
+    accion: string;
+    tabla_afectada: string;
+    valores_anteriores: Record<string, unknown> | null;
+  }>(
+    `SELECT usuario_id, accion, tabla_afectada, valores_anteriores
+       FROM auditoria WHERE registro_id = $1 ORDER BY fecha, accion`,
+    [registroId],
+  );
+  return rows.map((fila) => ({
+    usuarioId: fila.usuario_id,
+    accion: fila.accion,
+    tablaAfectada: fila.tabla_afectada,
+    valoresAnteriores: fila.valores_anteriores,
+  }));
 }
 
 /** `SELECT count(*) …` como número. */
