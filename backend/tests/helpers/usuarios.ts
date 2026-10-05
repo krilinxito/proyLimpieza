@@ -38,6 +38,7 @@ export async function usuarioDePrueba(opciones: Opciones = {}): Promise<UsuarioC
     username: 'maria',
     rol: 'EMPLEADO',
     sucursalId: '22222222-2222-2222-2222-222222222222',
+    telefono: null,
     activo: true,
     passwordHash: await hashDePrueba(contrasena),
     ...campos,
