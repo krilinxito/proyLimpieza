@@ -39,7 +39,9 @@ la manda el dispositivo, en ISO 8601 con zona. SPEC-ALE186-005 añadió los cobr
 `INSERT … SELECT`, que también rechaza las órdenes anuladas. SPEC-ALE186-006 añadió las
 entregas (`POST /api/entregas`, sin edición ni borrado), que cierran el flujo: la entrega y
 el paso de la orden a ENTREGADO van en una sola sentencia. Con eso están todas las
-escrituras del negocio; faltan auditoría y estadísticas.
+escrituras del negocio; faltan auditoría y estadísticas. SPEC-ALE186-007 añadió la suite
+de integración contra Postgres real (`npm run test:db`, sección 4), con la atomicidad y
+las carreras de pagos y entregas.
 
 `frontend/` tiene el scaffolding de SPEC-KRILINXI-001: Vite, Tailwind, rutas y su suite de
 tests. SPEC-KRILINXI-002 añadió las piezas que reutilizan todas las pantallas: `Boton`,
@@ -161,7 +163,20 @@ sincronización lo justifica, cambiar a MongoDB es editar el bloque `storage:` d
 aplicación depende de esa elección.
 
 **Tests** — Vitest en los dos lados: `supertest` en el backend, React Testing Library en
-el frontend. Un solo runner, un solo `npm test`.
+el frontend. Un solo runner y un solo `npm test`, que corre sin Docker.
+
+El backend tiene además una **suite de integración contra Postgres real**
+(`npm run test:db --workspace backend`, SPEC-ALE186-007), aparte porque necesita Docker. Usa
+la base `<nombre>_test` del mismo servidor, que se borra y se recrea desde el schema en cada
+corrida: nunca toca la base de desarrollo. Cuándo va un test en cada una:
+
+- **Con dobles (`npm test`)**: todo lo que se decide en TypeScript —qué valida un
+  controller, qué responde a cada caso, qué SQL y qué parámetros arma un model—. Es rápido y
+  corre en cualquier máquina.
+- **Contra la base real (`npm run test:db`)**: lo que solo Postgres puede garantizar —que
+  una sentencia sea atómica, que un bloqueo frene una carrera, que una agregación sume bien—.
+  Un doble del pool no puede probar nada de eso: solo devuelve lo que el test le dijo.
+  Los datos se crean con `tests/helpers/baseReal.ts`.
 
 ---
 
@@ -384,7 +399,8 @@ docker compose down -v      # parar y BORRAR los datos (recarga el schema al sub
 cd backend  && npm run dev  # API en :4000
 cd frontend && npm run dev  # Vite en :5173
 
-npm test                    # suite completa desde la raíz
+npm test                    # suite completa desde la raíz (no necesita Docker)
+npm run test:db --workspace backend   # tests contra Postgres real (necesita Docker)
 ```
 
 El schema se carga solo en el primer arranque, cuando el volumen de Postgres está vacío.
