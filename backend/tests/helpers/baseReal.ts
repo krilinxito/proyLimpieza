@@ -11,6 +11,10 @@
 //                           casi todo test: una orden necesita los tres.
 //   crearOrden(esc, {...})  Una orden de ese escenario (por defecto LISTO, de
 //                           Bs 45,50). Se retoca solo lo que el test necesita.
+//   crearPago(orden, esc, {...}) / crearEntrega(orden, esc, {...})
+//                           Un cobro o un retiro con la fecha que el test elija
+//                           (ISO con zona, como la manda el dispositivo) —
+//                           SPEC-ALE186-008, para las estadísticas.
 //   crearSucursal() / crearUsuario() / crearCliente()
 //                           Las piezas sueltas, para armar casos con dos
 //                           sucursales o un ADMIN.
@@ -29,7 +33,7 @@
 //   const resultado = await pagos.crear({ ...}, { sucursalId: esc.sucursalId });
 import { randomUUID } from 'node:crypto';
 import { pool } from '../../src/db/pool.js';
-import type { EstadoOrden } from '../../src/utils/dominio.js';
+import type { EstadoOrden, MetodoPago, TipoPago } from '../../src/utils/dominio.js';
 
 /** Un sufijo corto y único, para los campos que la base exige únicos. */
 function unico(): string {
@@ -86,14 +90,23 @@ export interface OrdenCreada {
 
 export async function crearOrden(
   esc: Escenario,
-  campos: { estado?: EstadoOrden; precioTotal?: string; sucursalId?: string } = {},
+  campos: {
+    estado?: EstadoOrden;
+    precioTotal?: string;
+    sucursalId?: string;
+    /** ISO 8601 con zona, como la manda el dispositivo; sin esto, ahora. */
+    fechaEntrada?: string;
+  } = {},
 ): Promise<OrdenCreada> {
   const id = randomUUID();
   const numeroBoleta = `B-${unico()}`;
+  // La fecha pasa por `timestamptz` igual que en el model de órdenes, para que
+  // quede guardada en la misma hora de referencia que el resto de las filas.
   await pool.query(
     `INSERT INTO ordenes (id, numero_boleta, cliente_id, sucursal_id, usuario_recepcion_id,
-                          descripcion, precio_total, estado)
-     VALUES ($1, $2, $3, $4, $5, 'Ropa de prueba', $6, $7)`,
+                          descripcion, precio_total, estado, fecha_entrada)
+     VALUES ($1, $2, $3, $4, $5, 'Ropa de prueba', $6, $7,
+             COALESCE($8::timestamptz::timestamp, LOCALTIMESTAMP))`,
     [
       id,
       numeroBoleta,
@@ -102,9 +115,46 @@ export async function crearOrden(
       esc.usuarioId,
       campos.precioTotal ?? '45.50',
       campos.estado ?? 'LISTO',
+      campos.fechaEntrada ?? null,
     ],
   );
   return { id, numeroBoleta };
+}
+
+/** Un cobro de la orden, en la sucursal de la orden. */
+export async function crearPago(
+  orden: OrdenCreada,
+  esc: Escenario,
+  campos: { monto: string; metodo?: MetodoPago; tipo?: TipoPago; fechaPago?: string },
+): Promise<void> {
+  await pool.query(
+    `INSERT INTO pagos (id, orden_id, sucursal_id, monto, tipo, metodo, usuario_id, fecha_pago)
+     SELECT $1, o.id, o.sucursal_id, $3, $4, $5, $6, COALESCE($7::timestamptz::timestamp, LOCALTIMESTAMP)
+       FROM ordenes o WHERE o.id = $2`,
+    [
+      randomUUID(),
+      orden.id,
+      campos.monto,
+      campos.tipo ?? 'ADELANTO',
+      campos.metodo ?? 'EFECTIVO',
+      esc.usuarioId,
+      campos.fechaPago ?? null,
+    ],
+  );
+}
+
+/** El retiro de la orden: la deja ENTREGADO, como hace el model de entregas. */
+export async function crearEntrega(
+  orden: OrdenCreada,
+  esc: Escenario,
+  campos: { precioFinal: string },
+): Promise<void> {
+  await pool.query(
+    `WITH o AS (UPDATE ordenes SET estado = 'ENTREGADO' WHERE id = $2 RETURNING id, sucursal_id)
+     INSERT INTO entregas (id, orden_id, sucursal_id, tipo_retiro, usuario_entrega_id, precio_final)
+     SELECT $1, o.id, o.sucursal_id, 'CON_BOLETA', $3, $4 FROM o`,
+    [randomUUID(), orden.id, esc.usuarioId, campos.precioFinal],
+  );
 }
 
 export async function leerOrden(id: string): Promise<{ estado: EstadoOrden; sucursalId: string }> {
