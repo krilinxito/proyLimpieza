@@ -126,3 +126,41 @@ const FORMATO_INSTANTE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,6})?)?(Z|
 export function esInstanteConZona(valor: unknown): valor is string {
   return typeof valor === 'string' && FORMATO_INSTANTE.test(valor) && !Number.isNaN(Date.parse(valor));
 }
+
+// ------------------------------------------------------------------
+//  Textos con tope y contraseñas — SPEC-ALE186-009
+// ------------------------------------------------------------------
+
+/**
+ * Un texto con contenido que entra en una columna `VARCHAR(max)`; `null` si
+ * está vacío o se pasa.
+ *
+ * Pasarse no es un 400 para Postgres: es el error 22001 (value too long), que
+ * el manejador central convertiría en un 500. Se corta antes, con un mensaje.
+ */
+export function textoHasta(valor: unknown, max: number): string | null {
+  const texto = textoConContenido(valor);
+  return texto !== null && texto.length <= max ? texto : null;
+}
+
+/**
+ * El largo mínimo de una contraseña. Es el mismo 8 que exige la semilla para la
+ * del primer admin (`db/seed.ts`): una cuenta creada desde la API no puede
+ * quedar más débil que esa.
+ */
+export const LARGO_MINIMO_CONTRASENA = 8;
+
+/**
+ * El máximo, en BYTES. bcrypt solo mira los primeros 72 bytes y descarta el
+ * resto sin avisar: dos contraseñas largas que empiezan igual serían la misma.
+ * Mejor decirlo al crearla que descubrirlo cuando entra cualquiera.
+ */
+export const BYTES_MAXIMOS_CONTRASENA = 72;
+
+/** Una contraseña que cumple el mínimo y el máximo; `null` si no. No se recorta. */
+export function contrasenaValida(valor: unknown): string | null {
+  if (typeof valor !== 'string') return null;
+  if (valor.length < LARGO_MINIMO_CONTRASENA) return null;
+  if (Buffer.byteLength(valor, 'utf8') > BYTES_MAXIMOS_CONTRASENA) return null;
+  return valor;
+}
