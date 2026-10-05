@@ -127,7 +127,7 @@ describe('Auditoría: los valores de antes — SPEC-ALE186-010', () => {
 });
 
 describe('Auditoría: cada escritura anota lo suyo — SPEC-ALE186-010', () => {
-  // Las siete escrituras auditadas: con qué acción, en qué tabla y a nombre de
+  // Las ocho escrituras auditadas: con qué acción, en qué tabla y a nombre de
   // quién. Si mañana hay una escritura nueva, va una línea más acá.
   const ESCRITURAS: [string, () => Promise<unknown>, string, string, string][] = [
     [
