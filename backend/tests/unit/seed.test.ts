@@ -32,6 +32,7 @@ const ADMIN = {
   username: 'admin',
   rol: 'ADMIN' as const,
   sucursalId: null,
+  telefono: null,
   activo: true,
 };
 

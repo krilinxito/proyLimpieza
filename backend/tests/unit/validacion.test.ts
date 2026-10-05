@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import {
+  contrasenaValida,
+  textoHasta,
   comoObjeto,
   esFechaCalendario,
   esInstanteConZona,
@@ -102,5 +104,34 @@ describe('Validación de montos y fechas — SPEC-ALE186-004', () => {
     ['un número', 1759240800000],
   ])('rechaza un instante %s', (_caso, valor) => {
     expect(esInstanteConZona(valor)).toBe(false);
+  });
+});
+
+describe('Validación de textos con tope y contraseñas — SPEC-ALE186-009', () => {
+  it('textoHasta recorta y acepta hasta el tope, ni una letra más', () => {
+    expect(textoHasta('  rosa  ', 4)).toBe('rosa');
+    expect(textoHasta('rosas', 4)).toBeNull();
+    expect(textoHasta('   ', 4)).toBeNull();
+    expect(textoHasta(42, 4)).toBeNull();
+  });
+
+  it('contrasenaValida exige 8 caracteres como mínimo', () => {
+    expect(contrasenaValida('1234567')).toBeNull();
+    expect(contrasenaValida('12345678')).toBe('12345678');
+  });
+
+  it('contrasenaValida no recorta: los espacios también son parte de la contraseña', () => {
+    expect(contrasenaValida(' clave larga ')).toBe(' clave larga ');
+  });
+
+  it('contrasenaValida mide el máximo en bytes, que es lo que lee bcrypt', () => {
+    // 36 eñes son 36 letras pero 72 bytes en UTF-8: entra justo. 37, ya no.
+    expect(contrasenaValida('ñ'.repeat(36))).not.toBeNull();
+    expect(contrasenaValida('ñ'.repeat(37))).toBeNull();
+  });
+
+  it('contrasenaValida rechaza lo que no es texto', () => {
+    expect(contrasenaValida(12345678)).toBeNull();
+    expect(contrasenaValida(undefined)).toBeNull();
   });
 });

@@ -43,6 +43,9 @@ escrituras del negocio; faltan auditoría y el resto de las estadísticas. SPEC-
 de integración contra Postgres real (`npm run test:db`, sección 4), con la atomicidad y
 las carreras de pagos y entregas. SPEC-ALE186-008 añadió las primeras estadísticas
 (`/api/estadisticas/ingresos`, `/saldos` y `/sin-recoger`, solo ADMIN; sección 8).
+SPEC-ALE186-009 añadió el alta, la edición y la baja de cuentas (`POST` y `PATCH
+/api/usuarios`, solo ADMIN): no se borra a nadie, se pone `activo: false`, y la baja corta el
+acceso en el siguiente login o renovación. Un admin no puede darse de baja a sí mismo.
 
 `frontend/` tiene el scaffolding de SPEC-KRILINXI-001: Vite, Tailwind, rutas y su suite de
 tests. SPEC-KRILINXI-002 añadió las piezas que reutilizan todas las pantallas: `Boton`,
