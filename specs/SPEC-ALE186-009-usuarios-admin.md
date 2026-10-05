@@ -2,7 +2,7 @@
 id: SPEC-ALE186-009
 name: Alta, edición y baja de empleados
 slug: usuarios-admin
-status: in-progress
+status: finished
 owner: ale186
 created: 2026-10-05
 scope:
@@ -16,7 +16,11 @@ scope:
   - CLAUDE.md
 priority: high
 depends_on: []
-tests: []
+tests:
+  - backend\tests\db\usuarios.db.test.ts
+  - backend\tests\http\usuarios.test.ts
+  - backend\tests\unit\usuarios.model.test.ts
+  - backend\tests\unit\validacion.test.ts
 ---
 
 ## Descripción
