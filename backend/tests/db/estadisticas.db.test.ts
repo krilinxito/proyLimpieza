@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import * as estadisticas from '../../src/models/estadisticas.model.js';
+import { testApi } from '../helpers/api.js';
 import { crearEntrega, crearOrden, crearPago, crearSucursal, escenario } from '../helpers/baseReal.js';
+import { conSesion } from '../helpers/usuarios.js';
 
 // Contra Postgres real: lo que importa de una agregación es que SUME bien, y eso
 // un doble del pool no lo puede probar (CLAUDE.md, sección 4).
@@ -205,5 +207,27 @@ describe('Estadísticas: ropa sin recoger — SPEC-ALE186-008', () => {
     const resultado = await estadisticas.sinRecoger({ desde: '2025-05-01', hasta: '2025-05-31', sucursalId: esc.sucursalId }, HOY);
 
     expect(resultado.ordenes.map((o) => o.ordenId)).toEqual([adentro.id]);
+  });
+});
+
+describe('Estadísticas por HTTP, de punta a punta — SPEC-ALE186-008', () => {
+  // Una sola pasada por todas las capas reales —ruta, requireRol, controller,
+  // model, Postgres y JSON— para comprobar que el contrato llega con sus tipos:
+  // montos como texto, cantidades y días como números.
+  it('un ADMIN pide saldos por HTTP y recibe el contrato con sus tipos', async () => {
+    const esc = await escenario();
+    const orden = await crearOrden(esc, { precioTotal: '40.00', fechaEntrada: '2024-02-10T10:00:00-04:00' });
+    await crearPago(orden, esc, { monto: '15.00' });
+
+    const res = await testApi()
+      .get('/api/estadisticas/saldos')
+      .query({ desde: '2024-02-01', hasta: '2024-02-29', sucursal_id: esc.sucursalId })
+      .set(conSesion({ rol: 'ADMIN', sucursalId: null }));
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ desde: '2024-02-01', hasta: '2024-02-29', total: '25.00', cantidad: 1 });
+    expect(res.body.ordenes[0]).toMatchObject({ saldoPendiente: '25.00', fechaEntrada: '2024-02-10 10:00:00' });
+    expect(typeof res.body.ordenes[0].dias).toBe('number');
+    expect(typeof res.body.porAntiguedad[0].cantidad).toBe('number');
   });
 });
