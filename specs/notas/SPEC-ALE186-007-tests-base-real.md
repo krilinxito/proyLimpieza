@@ -207,11 +207,16 @@ conjunto cerrado.
 - **Reusados:** ninguno de los helpers existentes servía tal cual, porque todos están
   pensados para dobles. Los tests nuevos sí usan los models reales (`pagos.crear`,
   `entregas.crear`) sin tocarlos.
+- **La garantía de seguridad tiene su propio test** (`tests/db/entorno.db.test.ts`).
+  `entornoDePrueba()` es una función pura, así que se prueba con entornos inventados, sin
+  conectarse a nada: siempre arma `<nombre>_test`, nunca devuelve la URL de desarrollo,
+  borra desde `postgres` y rechaza nombres con comillas, `;` o espacios. Para que el mensaje
+  "sin Postgres" también se pudiera probar, la lógica del global setup quedó en
+  `prepararBase(env)`. La función por defecto no puede recibir el entorno, porque Vitest le
+  pasa su propio contexto como argumento.
 - **Verificado además, a mano:**
   - dos corridas seguidas pasan sin limpiar nada;
-  - la base de desarrollo tiene las mismas filas antes y después;
-  - sin Postgres, la corrida corta al empezar con el mensaje en español (`ECONNREFUSED` en
-    el detalle);
+  - la base de desarrollo tiene las mismas filas antes y después de una corrida;
   - `npm test` sigue con sus 338 tests y no incluye ninguno de `tests/db/`.
 
 ## Si mañana tenés que tocar esto

@@ -29,8 +29,12 @@ function sinConexion(causa: unknown): Error {
   );
 }
 
-export default async function preparar(): Promise<void> {
-  const { nombre, urlPrueba, urlMantenimiento } = entornoDePrueba();
+/**
+ * Lo que hace el global setup, con el entorno como argumento para poder
+ * probarlo (`entorno.db.test.ts`) sin tocar `process.env`.
+ */
+export async function prepararBase(env: NodeJS.ProcessEnv = process.env): Promise<void> {
+  const { nombre, urlPrueba, urlMantenimiento } = entornoDePrueba(env);
 
   // Una base no se puede borrar mientras uno está conectado a ella, así que esto
   // se hace desde `postgres`, la base de mantenimiento que trae todo servidor.
@@ -59,4 +63,10 @@ export default async function preparar(): Promise<void> {
   } finally {
     await prueba.end();
   }
+}
+
+// Vitest llama al global setup pasándole su propio contexto como argumento, así
+// que la función por defecto no recibe nada y usa el entorno real.
+export default async function preparar(): Promise<void> {
+  await prepararBase();
 }
