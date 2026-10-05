@@ -4,6 +4,9 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['tests/**/*.test.ts'],
+    // Los tests contra Postgres real tienen su propia suite (`npm run test:db`,
+    // en `vitest.db.config.ts`) y necesitan Docker: acá no entran — SPEC-ALE186-007.
+    exclude: ['tests/db/**', 'node_modules/**'],
 
     // La suite no necesita Postgres levantado: los tests que tocan la base
     // reemplazan el model por un doble. Pero `src/config.ts` valida DATABASE_URL
