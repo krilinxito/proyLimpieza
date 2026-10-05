@@ -2,7 +2,7 @@
 id: SPEC-ALE186-008
 name: 'Estadísticas de cobros: ingresos, saldos y ropa sin recoger'
 slug: estadisticas-cobros
-status: draft
+status: in-progress
 owner: ale186
 created: 2026-10-05
 scope:
