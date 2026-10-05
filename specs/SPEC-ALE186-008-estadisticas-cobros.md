@@ -2,7 +2,7 @@
 id: SPEC-ALE186-008
 name: 'Estadísticas de cobros: ingresos, saldos y ropa sin recoger'
 slug: estadisticas-cobros
-status: in-progress
+status: finished
 owner: ale186
 created: 2026-10-05
 scope:
@@ -16,7 +16,9 @@ scope:
 priority: high
 depends_on:
   - SPEC-ALE186-007
-tests: []
+tests:
+  - backend\tests\db\estadisticas.db.test.ts
+  - backend\tests\http\estadisticas.test.ts
 ---
 
 ## Descripción
