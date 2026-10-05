@@ -2,7 +2,7 @@
 id: SPEC-ALE186-007
 name: Tests contra una base real
 slug: tests-base-real
-status: in-progress
+status: finished
 owner: ale186
 created: 2026-10-04
 scope:
@@ -14,7 +14,10 @@ scope:
   - CLAUDE.md
 priority: high
 depends_on: []
-tests: []
+tests:
+  - backend\tests\db\entorno.db.test.ts
+  - backend\tests\db\entregas.db.test.ts
+  - backend\tests\db\pagos.db.test.ts
 ---
 
 ## Descripción
