@@ -10,8 +10,15 @@ vi.mock('../../src/models/usuarios.model.js', () => ({
   buscarPorId: vi.fn(),
   crear: vi.fn(),
 }));
+// El login anota en la auditoría (SPEC-ALE186-010). Acá no hay base: el doble
+// deja comprobar QUÉ se anota sin escribir nada.
+vi.mock('../../src/models/auditoria.model.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../src/models/auditoria.model.js')>()),
+  registrar: vi.fn(),
+}));
 
 const { buscarPorUsername, buscarPorId } = await import('../../src/models/usuarios.model.js');
+const registrarAuditoria = vi.mocked((await import('../../src/models/auditoria.model.js')).registrar);
 const buscarPorUsernameMock = vi.mocked(buscarPorUsername);
 const buscarPorIdMock = vi.mocked(buscarPorId);
 
@@ -147,5 +154,50 @@ describe('POST /api/auth/renovar — SPEC-ALE186-002', () => {
   it('no renueva sin token', async () => {
     expectApiError(await renovar(), { status: 401, codigo: 'NO_AUTENTICADO' });
     expect(buscarPorIdMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('El login queda en la auditoría — SPEC-ALE186-010', () => {
+  beforeEach(() => {
+    buscarPorUsernameMock.mockReset();
+    buscarPorIdMock.mockReset();
+    registrarAuditoria.mockReset();
+  });
+
+  it('anota LOGIN a nombre de quien entró cuando el login sale bien', async () => {
+    const usuario = await usuarioDePrueba();
+    buscarPorUsernameMock.mockResolvedValue(usuario);
+
+    const res = await login({ username: 'maria', password: CONTRASENA_DE_PRUEBA });
+
+    expect(res.status).toBe(200);
+    expect(registrarAuditoria).toHaveBeenCalledExactlyOnceWith({
+      usuarioId: usuario.id,
+      accion: 'LOGIN',
+      tabla: 'usuarios',
+      registroId: usuario.id,
+    });
+  });
+
+  it.each([
+    ['la contraseña está mal', async () => usuarioDePrueba(), 'otra-cosa'],
+    ['el usuario no existe', async () => null, CONTRASENA_DE_PRUEBA],
+    ['la cuenta está dada de baja', async () => usuarioDePrueba({ activo: false }), CONTRASENA_DE_PRUEBA],
+  ])('no anota nada cuando %s', async (_caso, guardado, password) => {
+    buscarPorUsernameMock.mockResolvedValue(await guardado());
+
+    const res = await login({ username: 'maria', password });
+
+    expect(res.status).toBe(401);
+    expect(registrarAuditoria).not.toHaveBeenCalled();
+  });
+
+  it('no anota la renovación: pasa en cada reconexión y no dice nada nuevo', async () => {
+    buscarPorIdMock.mockResolvedValue(await usuarioDePrueba());
+
+    const res = await testApi().post('/api/auth/renovar').set('Authorization', `Bearer ${tokenDePrueba()}`);
+
+    expect(res.status).toBe(200);
+    expect(registrarAuditoria).not.toHaveBeenCalled();
   });
 });

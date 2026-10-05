@@ -23,6 +23,17 @@ export type TipoRetiro = (typeof TIPOS_RETIRO)[number];
 export type TipoPago = (typeof TIPOS_PAGO)[number];
 export type MetodoPago = (typeof METODOS_PAGO)[number];
 
+/**
+ * Qué se anota en `auditoria` — SPEC-ALE186-010.
+ *
+ * No viene del dispositivo, así que no hay validador: la elige el model que
+ * escribe. Está acá igual para que el test la compare con el ENUM del schema.
+ * ELIMINAR existe en el ENUM pero hoy no lo usa nadie: no se borra nada (las
+ * bajas son `activo: false` y las anulaciones, un cambio de estado).
+ */
+export const ACCIONES_AUDITORIA = ['CREAR', 'EDITAR', 'ELIMINAR', 'LOGIN', 'ENTREGAR', 'COBRAR'] as const;
+export type AccionAuditoria = (typeof ACCIONES_AUDITORIA)[number];
+
 /** Un "type guard": si da `true`, TypeScript sabe que el valor es de la lista. */
 function crearValidador<const T extends readonly string[]>(valores: T) {
   return (valor: unknown): valor is T[number] => valores.some((v) => v === valor);

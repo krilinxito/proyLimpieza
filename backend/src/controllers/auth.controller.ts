@@ -2,6 +2,7 @@
 // arma la respuesta. No escribe SQL (CLAUDE.md, sección 5).
 import bcrypt from 'bcrypt';
 import type { Request, Response } from 'express';
+import * as auditoria from '../models/auditoria.model.js';
 import { buscarPorId, buscarPorUsername, type Usuario } from '../models/usuarios.model.js';
 import { sesionDe } from '../middleware/auth.js';
 import { ApiError, CODIGOS_ERROR } from '../utils/ApiError.js';
@@ -78,6 +79,11 @@ export async function postLogin(req: Request, res: Response): Promise<void> {
   // solo sabe el nombre de un empleado dado de baja se enteraría de que existe.
   // Así, ese mensaje solo lo ve quien ya demostró ser esa persona.
   if (usuario === null || !usuario.activo) throw noAutenticado(USUARIO_DADO_DE_BAJA);
+
+  // Solo el login que entra (SPEC-ALE186-010). Los fallidos no: `usuario_id` no
+  // admite NULL y un username inventado no es de nadie. La renovación tampoco:
+  // pasa en cada reconexión y llenaría la tabla de ruido sin decir nada nuevo.
+  await auditoria.registrar({ usuarioId: usuario.id, accion: 'LOGIN', tabla: 'usuarios', registroId: usuario.id });
 
   res.json({
     ...emitirCredenciales({ id: usuario.id, rol: usuario.rol, sucursalId: usuario.sucursalId }),

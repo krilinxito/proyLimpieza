@@ -11,6 +11,7 @@ import pg from 'pg';
 import { pool } from '../db/pool.js';
 import { ESTADOS_CERRADOS, ESTADOS_ORDEN, type TipoRetiro } from '../utils/dominio.js';
 import { formatear, type Centavos } from '../utils/money.js';
+import { conAuditoria } from './auditoria.model.js';
 import * as ordenes from './ordenes.model.js';
 import type { Orden } from './ordenes.model.js';
 
@@ -133,36 +134,43 @@ export async function crear(entrega: EntregaNueva, restricciones: RestriccionesE
   let filas: FilaEntrega[];
   let ordenConOtraEntrega = false;
   try {
-    const { rows } = await pool.query<FilaEntrega>(
-      `WITH orden AS (
-         UPDATE ordenes
-            SET estado = 'ENTREGADO'
-          WHERE id = $2
-            AND estado = ANY($9::estado_orden[])
-            AND ($10::uuid IS NULL OR sucursal_id = $10)
-         RETURNING id, sucursal_id, precio_total
-       )
-       INSERT INTO entregas (id, orden_id, sucursal_id, tipo_retiro, retirado_por_nombre,
-                             retirado_por_carnet, usuario_entrega_id, precio_final, fecha_entrega)
-       SELECT $1, orden.id, orden.sucursal_id, $3, $4, $5, $6,
-              COALESCE($7::numeric, orden.precio_total),
-              COALESCE($8::timestamptz::timestamp, LOCALTIMESTAMP)
-         FROM orden
-       RETURNING ${COLUMNAS}`,
-      [
-        entrega.id,
-        entrega.ordenId,
-        entrega.tipoRetiro,
-        entrega.retiradoPorNombre,
-        entrega.retiradoPorCarnet,
-        entrega.usuarioEntregaId,
-        // El dinero va a Postgres como el string decimal, nunca como float.
-        entrega.precioFinal === null ? null : formatear(entrega.precioFinal),
-        entrega.fechaEntrega,
-        ESTADOS_ENTREGABLES,
-        restricciones.sucursalId,
-      ],
+    // ENTREGAR, a nombre de quien entregó, en la misma sentencia que la entrega
+    // y el UPDATE de la orden (SPEC-ALE186-010): las tres cosas o ninguna.
+    const { sql, valores } = conAuditoria(
+      {
+        ctesPrevios: `orden AS (
+           UPDATE ordenes
+              SET estado = 'ENTREGADO'
+            WHERE id = $2
+              AND estado = ANY($9::estado_orden[])
+              AND ($10::uuid IS NULL OR sucursal_id = $10)
+           RETURNING id, sucursal_id, precio_total
+         )`,
+        sql: `INSERT INTO entregas (id, orden_id, sucursal_id, tipo_retiro, retirado_por_nombre,
+                                    retirado_por_carnet, usuario_entrega_id, precio_final, fecha_entrega)
+              SELECT $1, orden.id, orden.sucursal_id, $3, $4, $5, $6,
+                     COALESCE($7::numeric, orden.precio_total),
+                     COALESCE($8::timestamptz::timestamp, LOCALTIMESTAMP)
+                FROM orden
+              RETURNING ${COLUMNAS}`,
+        valores: [
+          entrega.id,
+          entrega.ordenId,
+          entrega.tipoRetiro,
+          entrega.retiradoPorNombre,
+          entrega.retiradoPorCarnet,
+          entrega.usuarioEntregaId,
+          // El dinero va a Postgres como el string decimal, nunca como float.
+          entrega.precioFinal === null ? null : formatear(entrega.precioFinal),
+          entrega.fechaEntrega,
+          ESTADOS_ENTREGABLES,
+          restricciones.sucursalId,
+        ],
+        columnas: COLUMNAS,
+      },
+      { usuarioId: entrega.usuarioEntregaId, accion: 'ENTREGAR', tabla: 'entregas' },
     );
+    const { rows } = await pool.query<FilaEntrega>(sql, valores);
     filas = rows;
   } catch (error) {
     // En los dos casos la sentencia falló entera, así que la orden no se tocó.

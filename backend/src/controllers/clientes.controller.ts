@@ -77,7 +77,7 @@ export async function postCliente(req: Request, res: Response): Promise<void> {
   };
 
   try {
-    const { cliente, creado } = await clientes.crear(datos);
+    const { cliente, creado } = await clientes.crear(datos, sesionDe(req).id);
     // 201 la primera vez, 200 en el reintento: los dos son éxito para la cola
     // de subida, y la diferencia queda a la vista de quien mire los logs.
     res.status(creado ? 201 : 200).json(cliente);
@@ -106,7 +106,7 @@ export async function patchCliente(req: Request, res: Response): Promise<void> {
 
   let cliente: clientes.Cliente | null;
   try {
-    cliente = await clientes.actualizar(id, cambios);
+    cliente = await clientes.actualizar(id, cambios, sesionDe(req).id);
   } catch (error) {
     if (error instanceof TelefonoOcupadoError) throw await telefonoDuplicado(error.telefono);
     throw error;

@@ -10,6 +10,7 @@
 import { pool } from '../db/pool.js';
 import type { MetodoPago, TipoPago } from '../utils/dominio.js';
 import { formatear, type Centavos } from '../utils/money.js';
+import { conAuditoria } from './auditoria.model.js';
 import * as ordenes from './ordenes.model.js';
 import type { Orden } from './ordenes.model.js';
 
@@ -105,29 +106,35 @@ export type ResultadoCrear =
  * cobrar: el cobro ya está registrado), y después la orden.
  */
 export async function crear(pago: PagoNuevo, restricciones: RestriccionesPago): Promise<ResultadoCrear> {
-  const { rows } = await pool.query<FilaPago>(
-    `INSERT INTO pagos (id, orden_id, sucursal_id, monto, tipo, metodo, usuario_id, fecha_pago)
-     SELECT $1, o.id, o.sucursal_id, $3, $4, $5, $6,
-            COALESCE($7::timestamptz::timestamp, LOCALTIMESTAMP)
-       FROM ordenes o
-      WHERE o.id = $2
-        AND o.estado <> 'ANULADO'
-        AND ($8::uuid IS NULL OR o.sucursal_id = $8)
-        FOR SHARE
-     ON CONFLICT (id) DO NOTHING
-     RETURNING ${COLUMNAS}`,
-    [
-      pago.id,
-      pago.ordenId,
-      // El dinero va a Postgres como el string decimal, nunca como float.
-      formatear(pago.monto),
-      pago.tipo,
-      pago.metodo,
-      pago.usuarioId,
-      pago.fechaPago,
-      restricciones.sucursalId,
-    ],
+  // COBRAR, a nombre de quien cobró, en la misma sentencia (SPEC-ALE186-010).
+  const { sql, valores } = conAuditoria(
+    {
+      sql: `INSERT INTO pagos (id, orden_id, sucursal_id, monto, tipo, metodo, usuario_id, fecha_pago)
+            SELECT $1, o.id, o.sucursal_id, $3, $4, $5, $6,
+                   COALESCE($7::timestamptz::timestamp, LOCALTIMESTAMP)
+              FROM ordenes o
+             WHERE o.id = $2
+               AND o.estado <> 'ANULADO'
+               AND ($8::uuid IS NULL OR o.sucursal_id = $8)
+               FOR SHARE
+            ON CONFLICT (id) DO NOTHING
+            RETURNING ${COLUMNAS}`,
+      valores: [
+        pago.id,
+        pago.ordenId,
+        // El dinero va a Postgres como el string decimal, nunca como float.
+        formatear(pago.monto),
+        pago.tipo,
+        pago.metodo,
+        pago.usuarioId,
+        pago.fechaPago,
+        restricciones.sucursalId,
+      ],
+      columnas: COLUMNAS,
+    },
+    { usuarioId: pago.usuarioId, accion: 'COBRAR', tabla: 'pagos' },
   );
+  const { rows } = await pool.query<FilaPago>(sql, valores);
 
   const insertado = rows[0];
   if (insertado !== undefined) return { tipo: 'creado', pago: aPago(insertado) };

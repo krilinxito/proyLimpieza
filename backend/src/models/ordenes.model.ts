@@ -9,6 +9,7 @@ import pg from 'pg';
 import { pool } from '../db/pool.js';
 import type { EstadoOrden } from '../utils/dominio.js';
 import { formatear, type Centavos } from '../utils/money.js';
+import { conAuditoria, updateConAntes, type ColumnaAuditada } from './auditoria.model.js';
 
 export interface Orden {
   id: string;
@@ -143,15 +144,17 @@ export interface OrdenNueva {
  * cuando no viene— y el `DEFAULT NOW()` del schema escriben las demás filas.
  */
 export async function crear(orden: OrdenNueva): Promise<{ orden: Orden; creada: boolean }> {
-  const { rows } = await traducirErrores(orden, () =>
-    pool.query<FilaOrden>(
-      `INSERT INTO ordenes (id, numero_boleta, cliente_id, sucursal_id, usuario_recepcion_id,
-                            descripcion, precio_total, fecha_estimada_salida, fecha_entrada)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8,
-                    COALESCE($9::timestamptz::timestamp, LOCALTIMESTAMP))
-       ON CONFLICT (id) DO NOTHING
-         RETURNING ${COLUMNAS}`,
-      [
+  // Quien la recibe es quien la crea: la auditoría (SPEC-ALE186-010) se anota a
+  // su nombre, en la misma sentencia, y solo si el INSERT insertó.
+  const { sql, valores } = conAuditoria(
+    {
+      sql: `INSERT INTO ordenes (id, numero_boleta, cliente_id, sucursal_id, usuario_recepcion_id,
+                                 descripcion, precio_total, fecha_estimada_salida, fecha_entrada)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8,
+                         COALESCE($9::timestamptz::timestamp, LOCALTIMESTAMP))
+            ON CONFLICT (id) DO NOTHING
+              RETURNING ${COLUMNAS}`,
+      valores: [
         orden.id,
         orden.numeroBoleta,
         orden.clienteId,
@@ -162,8 +165,11 @@ export async function crear(orden: OrdenNueva): Promise<{ orden: Orden; creada: 
         orden.fechaEstimadaSalida,
         orden.fechaEntrada,
       ],
-    ),
+      columnas: COLUMNAS,
+    },
+    { usuarioId: orden.usuarioRecepcionId, accion: 'CREAR', tabla: 'ordenes' },
   );
+  const { rows } = await traducirErrores(orden, () => pool.query<FilaOrden>(sql, valores));
 
   const insertada = rows[0];
   if (insertada !== undefined) return { orden: aOrden(insertada), creada: true };
@@ -202,6 +208,11 @@ function valorDeColumna(campo: keyof CambiosOrden, cambios: CambiosOrden): unkno
   return campo === 'precioTotal' && typeof valor === 'number' ? formatear(valor) : valor;
 }
 
+function columnaAuditada(campo: keyof CambiosOrden): ColumnaAuditada {
+  // El precio se guarda en la auditoría como "45.50", igual que sale de la API.
+  return { columna: COLUMNA_EDITABLE[campo], comoTexto: campo === 'precioTotal' };
+}
+
 export interface Restricciones {
   /** La orden solo se toca si está en uno de estos estados. */
   estadosDeOrigen: readonly EstadoOrden[];
@@ -218,11 +229,14 @@ export type ResultadoActualizar =
 /**
  * Aplica los cambios solo si la orden cumple las restricciones.
  *
- * Las condiciones van dentro del WHERE del UPDATE, no en un SELECT previo. Si
- * se leyera primero el estado y se escribiera después, entre las dos consultas
- * otra petición podría anular la orden, y esta la pasaría a LISTO igual. En una
- * sola sentencia, Postgres bloquea la fila mientras la evalúa y la escribe: o
- * cumple y se aplica, o no se aplica.
+ * Las condiciones van dentro de la misma sentencia que escribe, no en una
+ * consulta previa. Si se leyera primero el estado y se escribiera después, entre
+ * las dos otra petición podría anular la orden, y esta la pasaría a LISTO igual.
+ * En una sola sentencia, Postgres bloquea la fila mientras la evalúa y la
+ * escribe: o cumple y se aplica, o no se aplica. Desde SPEC-ALE186-010 esas
+ * condiciones viven en el `SELECT … FOR UPDATE` que lee la fila de antes (ver
+ * `updateConAntes`), que es el mismo bloqueo con un paso más: deja leer qué
+ * había, para la auditoría.
  *
  * Solo cuando no se aplicó se vuelve a leer, para distinguir "no existe (o no
  * es tuya)" de "existe, pero no está en un estado que lo permita".
@@ -231,6 +245,7 @@ export async function actualizar(
   id: string,
   cambios: CambiosOrden,
   restricciones: Restricciones,
+  autorId: string,
 ): Promise<ResultadoActualizar> {
   const campos = (Object.keys(COLUMNA_EDITABLE) as (keyof CambiosOrden)[]).filter(
     (campo) => cambios[campo] !== undefined,
@@ -242,16 +257,30 @@ export async function actualizar(
                        AND ($3::uuid IS NULL OR sucursal_id = $3)`;
   const parametros = [id, restricciones.estadosDeOrigen, restricciones.sucursalId];
 
-  // Un PATCH sin nada que cambiar no escribe, pero responde igual que uno que
-  // sí: con la orden, si es visible para quien la pide.
-  const sql =
+  // Un PATCH sin nada que cambiar no escribe (ni se audita), pero responde igual
+  // que uno que sí: con la orden, si es visible para quien la pide.
+  const valores = [...parametros, ...campos.map((c) => valorDeColumna(c, cambios))];
+  const consulta =
     campos.length === 0
-      ? `SELECT ${COLUMNAS} FROM ordenes WHERE ${condiciones}`
-      : `UPDATE ordenes SET ${asignaciones.join(', ')} WHERE ${condiciones} RETURNING ${COLUMNAS}`;
+      ? { sql: `SELECT ${COLUMNAS} FROM ordenes WHERE ${condiciones}`, valores }
+      : conAuditoria(
+          {
+            sql: updateConAntes({
+              tabla: 'ordenes',
+              asignaciones,
+              condiciones,
+              columnas: COLUMNAS,
+              auditadas: campos.map((campo) => columnaAuditada(campo)),
+            }),
+            valores,
+            columnas: COLUMNAS,
+          },
+          // Avanzar y anular también son EDITAR: lo que cambió es `estado`, y
+          // su valor anterior queda en `valores_anteriores`.
+          { usuarioId: autorId, accion: 'EDITAR', tabla: 'ordenes', conValoresAnteriores: true },
+        );
 
-  const { rows } = await traducirErrores(cambios, () =>
-    pool.query<FilaOrden>(sql, [...parametros, ...campos.map((c) => valorDeColumna(c, cambios))]),
-  );
+  const { rows } = await traducirErrores(cambios, () => pool.query<FilaOrden>(consulta.sql, consulta.valores));
 
   const fila = rows[0];
   if (fila !== undefined) return { tipo: 'actualizada', orden: aOrden(fila) };
