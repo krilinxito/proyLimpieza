@@ -7,6 +7,7 @@ import { Router } from 'express';
 import { authRouter } from './auth.routes.js';
 import { clientesRouter } from './clientes.routes.js';
 import { entregasRouter } from './entregas.routes.js';
+import { estadisticasRouter } from './estadisticas.routes.js';
 import { healthRouter } from './health.routes.js';
 import { ordenesRouter } from './ordenes.routes.js';
 import { pagosRouter } from './pagos.routes.js';
@@ -16,6 +17,7 @@ export const apiRouter = Router();
 apiRouter.use('/auth', authRouter);
 apiRouter.use('/clientes', clientesRouter);
 apiRouter.use('/entregas', entregasRouter);
+apiRouter.use('/estadisticas', estadisticasRouter);
 apiRouter.use('/health', healthRouter);
 apiRouter.use('/ordenes', ordenesRouter);
 apiRouter.use('/pagos', pagosRouter);
@@ -23,5 +25,4 @@ apiRouter.use('/pagos', pagosRouter);
 // Pendientes, en el orden del flujo del negocio (CLAUDE.md, sección 3).
 // Descomentar en la spec que implemente cada uno:
 //
-// apiRouter.use('/estadisticas', estadisticasRouter);  // SPEC del dashboard
 // apiRouter.use('/auditoria', auditoriaRouter);        // SPEC del dashboard
