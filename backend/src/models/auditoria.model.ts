@@ -17,9 +17,16 @@
 // segunda fila, sin un solo `if`.
 import { pool } from '../db/pool.js';
 import type { AccionAuditoria } from '../utils/dominio.js';
+import { ZONA_NEGOCIO, horaDelNegocio, type Periodo } from '../utils/periodo.js';
 
 /** Las tablas que se auditan. Es el valor de `tabla_afectada`. */
-export type TablaAuditada = 'clientes' | 'ordenes' | 'pagos' | 'entregas' | 'usuarios' | 'sucursales';
+export const TABLAS_AUDITADAS = ['clientes', 'ordenes', 'pagos', 'entregas', 'usuarios', 'sucursales'] as const;
+export type TablaAuditada = (typeof TABLAS_AUDITADAS)[number];
+
+/** Para el filtro `?tabla=` de la consulta — SPEC-ALE186-012. */
+export function esTablaAuditada(valor: unknown): valor is TablaAuditada {
+  return TABLAS_AUDITADAS.some((tabla) => tabla === valor);
+}
 
 export interface Registro {
   /** Quién lo hizo. Siempre el de la sesión, nunca uno que venga en el cuerpo. */
@@ -153,4 +160,151 @@ export async function registrar(registro: Registro & { registroId: string | null
      VALUES ($1, $2, $3, $4)`,
     [registro.usuarioId, registro.accion, registro.tabla, registro.registroId],
   );
+}
+
+// ------------------------------------------------------------------
+//  Consulta para el admin — SPEC-ALE186-012
+// ------------------------------------------------------------------
+
+export interface FiltrosAuditoria extends Periodo {
+  usuarioId: string | null;
+  accion: AccionAuditoria | null;
+  tabla: TablaAuditada | null;
+  registroId: string | null;
+}
+
+export interface Paginacion {
+  /** Desde 1. */
+  pagina: number;
+  porPagina: number;
+}
+
+export interface RegistroAuditoria {
+  id: string;
+  /** `YYYY-MM-DD HH:MM:SS`, en la hora del negocio. */
+  fecha: string;
+  accion: AccionAuditoria;
+  tablaAfectada: TablaAuditada;
+  registroId: string | null;
+  /** Dónde ocurrió; `null` si no ocurre en una sucursal (ver `SUCURSAL_DE_LA_ACCION`). */
+  sucursalId: string | null;
+  valoresAnteriores: Record<string, unknown> | null;
+  usuario: { id: string; nombreCompleto: string; username: string };
+}
+
+interface FilaAuditoria {
+  id: string;
+  fecha: string;
+  accion: AccionAuditoria;
+  tabla_afectada: TablaAuditada;
+  registro_id: string | null;
+  sucursal_id: string | null;
+  valores_anteriores: Record<string, unknown> | null;
+  usuario_id: string;
+  nombre_completo: string;
+  username: string;
+}
+
+/**
+ * En qué sucursal ocurrió cada acción.
+ *
+ * `auditoria` no tiene `sucursal_id`, y la sucursal NO sale de la persona: si a
+ * alguien lo mueven de sucursal, lo que hizo antes tiene que seguir en la
+ * anterior. Sale del registro que tocó, que no cambia nunca de sucursal: la
+ * orden, el pago y la entrega tienen la suya, y el cliente, la de su alta. Es el
+ * mismo criterio que las estadísticas, que suman por la sucursal del pago o de
+ * la orden y no por la de quien lo registró.
+ *
+ * Lo que no ocurre en una sucursal queda en NULL: editar un cliente (es de todo
+ * el sistema y la edición no guarda dónde se hizo), el login, y lo que el admin
+ * hace con usuarios y sucursales.
+ */
+const SUCURSAL_DE_LA_ACCION = `CASE a.tabla_afectada
+    WHEN 'ordenes'  THEN (SELECT o.sucursal_id FROM ordenes  o WHERE o.id = a.registro_id)
+    WHEN 'pagos'    THEN (SELECT p.sucursal_id FROM pagos    p WHERE p.id = a.registro_id)
+    WHEN 'entregas' THEN (SELECT e.sucursal_id FROM entregas e WHERE e.id = a.registro_id)
+    WHEN 'clientes' THEN CASE WHEN a.accion = 'CREAR'
+                              THEN (SELECT c.sucursal_registro_id FROM clientes c WHERE c.id = a.registro_id)
+                         END
+  END`;
+
+/**
+ * Las filas que cumplen los filtros, con su sucursal ya calculada. Es el mismo
+ * CTE para la página y para el total: así no pueden filtrar distinto.
+ *
+ * Parámetros: $1 desde, $2 hasta, $3 zona, $4 usuario, $5 acción, $6 tabla,
+ * $7 registro, $8 sucursal. Un filtro en NULL no filtra.
+ */
+const FILTRADAS = `filtradas AS (
+  SELECT * FROM (
+    SELECT a.id, a.fecha, a.accion, a.tabla_afectada, a.registro_id, a.valores_anteriores,
+           u.id AS usuario_id, u.nombre_completo, u.username,
+           ${SUCURSAL_DE_LA_ACCION} AS sucursal_id
+      FROM auditoria a
+      JOIN usuarios u ON u.id = a.usuario_id
+     WHERE ${horaDelNegocio('a.fecha', '$3')}::date BETWEEN $1::date AND $2::date
+       AND ($4::uuid IS NULL OR a.usuario_id = $4)
+       AND ($5::accion_auditoria IS NULL OR a.accion = $5)
+       AND ($6::text IS NULL OR a.tabla_afectada = $6)
+       AND ($7::uuid IS NULL OR a.registro_id = $7)
+  ) con_sucursal
+  WHERE ($8::uuid IS NULL OR con_sucursal.sucursal_id = $8)
+)`;
+
+function parametrosDe(filtros: FiltrosAuditoria): unknown[] {
+  return [
+    filtros.desde,
+    filtros.hasta,
+    ZONA_NEGOCIO,
+    filtros.usuarioId,
+    filtros.accion,
+    filtros.tabla,
+    filtros.registroId,
+    filtros.sucursalId,
+  ];
+}
+
+/**
+ * Una página de la auditoría, de lo más nuevo a lo más viejo, y cuántas filas
+ * cumplen los filtros en total. Solo lee: no anota nada, ni siquiera la consulta.
+ *
+ * Son dos consultas y no un `count(*) OVER ()` en la misma: con una página más
+ * allá de la última, la ventana no tendría filas sobre las que contar, y el
+ * total saldría 0 en vez del real.
+ */
+export async function consultar(
+  filtros: FiltrosAuditoria,
+  paginacion: Paginacion,
+): Promise<{ total: number; registros: RegistroAuditoria[] }> {
+  const parametros = parametrosDe(filtros);
+
+  const { rows: conteo } = await pool.query<{ total: number }>(
+    `WITH ${FILTRADAS} SELECT count(*)::int AS total FROM filtradas`,
+    parametros,
+  );
+  const { rows } = await pool.query<FilaAuditoria>(
+    `WITH ${FILTRADAS}
+     SELECT id,
+            to_char(${horaDelNegocio('fecha', '$3')}, 'YYYY-MM-DD HH24:MI:SS') AS fecha,
+            accion, tabla_afectada, registro_id, sucursal_id, valores_anteriores,
+            usuario_id, nombre_completo, username
+       FROM filtradas
+      ORDER BY filtradas.fecha DESC, id DESC
+      LIMIT $9 OFFSET $10`,
+    [...parametros, paginacion.porPagina, (paginacion.pagina - 1) * paginacion.porPagina],
+  );
+
+  return {
+    total: conteo[0]?.total ?? 0,
+    registros: rows.map((fila) => ({
+      id: fila.id,
+      fecha: fila.fecha,
+      accion: fila.accion,
+      tablaAfectada: fila.tabla_afectada,
+      registroId: fila.registro_id,
+      sucursalId: fila.sucursal_id,
+      valoresAnteriores: fila.valores_anteriores,
+      usuario: { id: fila.usuario_id, nombreCompleto: fila.nombre_completo, username: fila.username },
+    })),
+  };
 }

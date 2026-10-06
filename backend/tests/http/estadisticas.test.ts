@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { hoyEnElNegocio } from '../../src/controllers/estadisticas.controller.js';
+import { hoyEnElNegocio } from '../../src/utils/periodo.js';
 import { expectApiError, testApi } from '../helpers/api.js';
 import { IDS } from '../helpers/ordenes.js';
 import { conSesion } from '../helpers/usuarios.js';
