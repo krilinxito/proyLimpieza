@@ -2,7 +2,7 @@
 id: SPEC-ALE186-011
 name: Alta, edición y cierre de sucursales
 slug: sucursales-admin
-status: in-progress
+status: finished
 owner: ale186
 created: 2026-10-06
 scope:
@@ -17,7 +17,11 @@ scope:
   - CLAUDE.md
 priority: high
 depends_on: []
-tests: []
+tests:
+  - backend\tests\db\sucursales.db.test.ts
+  - backend\tests\http\sucursales.test.ts
+  - backend\tests\unit\auditoria.model.test.ts
+  - backend\tests\unit\sucursales.model.test.ts
 ---
 
 ## Descripción
