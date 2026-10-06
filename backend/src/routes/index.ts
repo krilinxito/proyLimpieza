@@ -11,6 +11,7 @@ import { estadisticasRouter } from './estadisticas.routes.js';
 import { healthRouter } from './health.routes.js';
 import { ordenesRouter } from './ordenes.routes.js';
 import { pagosRouter } from './pagos.routes.js';
+import { sucursalesRouter } from './sucursales.routes.js';
 import { usuariosRouter } from './usuarios.routes.js';
 
 export const apiRouter = Router();
@@ -22,6 +23,7 @@ apiRouter.use('/estadisticas', estadisticasRouter);
 apiRouter.use('/health', healthRouter);
 apiRouter.use('/ordenes', ordenesRouter);
 apiRouter.use('/pagos', pagosRouter);
+apiRouter.use('/sucursales', sucursalesRouter);
 apiRouter.use('/usuarios', usuariosRouter);
 
 // Pendientes, en el orden del flujo del negocio (CLAUDE.md, sección 3).

@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Usuario } from '../../src/models/usuarios.model.js';
 import { expectApiError, testApi } from '../helpers/api.js';
+import { sucursalDePrueba } from '../helpers/sucursales.js';
 import {
   comoAdmin,
   conSesion,
@@ -37,7 +38,7 @@ const ADMIN = '33333333-3333-3333-3333-333333333333';
 const SUCURSAL = '22222222-2222-2222-2222-222222222222';
 const EMPLEADA = '55555555-5555-5555-5555-555555555555';
 
-const SUCURSAL_ABIERTA = { id: SUCURSAL, nombre: 'Central', direccion: null, telefono: null, activa: true };
+const SUCURSAL_ABIERTA = sucursalDePrueba({ id: SUCURSAL });
 
 /** Lo que guardó el model para un cuerpo de alta: la misma cuenta, sin hash. */
 function guardadoDe(cuerpo: Record<string, unknown>, campos: Partial<Usuario> = {}): Usuario {

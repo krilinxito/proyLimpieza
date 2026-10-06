@@ -19,7 +19,7 @@ import { pool } from '../db/pool.js';
 import type { AccionAuditoria } from '../utils/dominio.js';
 
 /** Las tablas que se auditan. Es el valor de `tabla_afectada`. */
-export type TablaAuditada = 'clientes' | 'ordenes' | 'pagos' | 'entregas' | 'usuarios';
+export type TablaAuditada = 'clientes' | 'ordenes' | 'pagos' | 'entregas' | 'usuarios' | 'sucursales';
 
 export interface Registro {
   /** Quién lo hizo. Siempre el de la sesión, nunca uno que venga en el cuerpo. */

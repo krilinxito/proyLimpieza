@@ -1,7 +1,12 @@
-// Model de sucursales. Por ahora solo lo que necesitan la semilla inicial
-// (SPEC-ALE186-002) y el registro de órdenes (SPEC-ALE186-004); la gestión de
-// sucursales tendrá su propia spec.
+// Model de sucursales: el único sitio que consulta la tabla `sucursales`.
+//
+// Empezó con lo que necesitaban la semilla (SPEC-ALE186-002) y el registro de
+// órdenes (SPEC-ALE186-004). SPEC-ALE186-011 le sumó el alta y la edición desde
+// la API, con las mismas reglas de escritura que clientes y usuarios: id del
+// dispositivo, reintento idempotente y auditoría en la misma sentencia.
 import { pool } from '../db/pool.js';
+import { ESTADOS_CERRADOS, ESTADOS_ORDEN } from '../utils/dominio.js';
+import { conAuditoria, updateConAntes } from './auditoria.model.js';
 
 export interface Sucursal {
   id: string;
@@ -49,4 +54,200 @@ export async function crear(nombre: string): Promise<Sucursal> {
   const fila = rows[0];
   if (fila === undefined) throw new Error('El INSERT de la sucursal no devolvió ninguna fila.');
   return fila;
+}
+
+// ------------------------------------------------------------------
+//  Alta y edición desde la API — SPEC-ALE186-011
+// ------------------------------------------------------------------
+
+/**
+ * Los estados de una orden cuya ropa todavía está en el local. Una sucursal con
+ * órdenes así no se cierra: el cliente vuelve a retirarla a esa misma sucursal
+ * (CLAUDE.md, sección 3).
+ */
+export const ESTADOS_ABIERTOS = ESTADOS_ORDEN.filter((estado) => !ESTADOS_CERRADOS.includes(estado));
+
+/**
+ * "Ninguna otra sucursal se llama así", sin distinguir mayúsculas ni espacios
+ * de los extremos. El schema no tiene UNIQUE sobre el nombre y no hay
+ * migraciones para agregarlo, así que la regla vive acá, DENTRO de la sentencia
+ * que escribe y no en una consulta previa: es lo más cerca que se puede estar de
+ * una restricción sin tenerla. Dos altas simultáneas con el mismo nombre todavía
+ * podrían pasar las dos; para algo que hace solo el admin y muy de vez en
+ * cuando, se acepta (está dicho en la spec).
+ *
+ * `id` y `nombre` son los parámetros (`$1`, `$2::varchar`…) de cada sentencia. El
+ * nombre se castea a `varchar`, el tipo de la columna, y no a `text`: el mismo
+ * parámetro va también a la columna, y Postgres rechaza deducirle dos tipos
+ * ("inconsistent types deduced for parameter").
+ */
+function nombreLibre(id: string, nombre: string): string {
+  return `NOT EXISTS (SELECT 1 FROM sucursales otra
+                       WHERE lower(btrim(otra.nombre)) = lower(btrim(${nombre}))
+                         AND otra.id <> ${id})`;
+}
+
+/** El nombre ya lo usa otra sucursal. Error de dominio: el 409 lo decide el controller. */
+export class NombreOcupadoError extends Error {
+  constructor(readonly nombre: string) {
+    super(`Ya hay otra sucursal que se llama ${nombre}.`);
+    this.name = 'NombreOcupadoError';
+  }
+}
+
+export interface SucursalNueva {
+  id: string;
+  nombre: string;
+  direccion: string | null;
+  telefono: string | null;
+}
+
+/**
+ * Da de alta una sucursal con el id del cliente, o devuelve la que ya existe
+ * con ese id.
+ *
+ * Un `INSERT … SELECT … WHERE NOT EXISTS`: si otra sucursal ya tiene el nombre,
+ * el SELECT no devuelve nada y no se inserta nada (el mismo recurso que usa
+ * pagos con la orden anulada, SPEC-ALE186-005). `ON CONFLICT (id) DO NOTHING`
+ * hace idempotente el reintento, y la condición del nombre excluye a la propia
+ * sucursal (`otra.id <> $1`), así que un reintento no choca consigo mismo.
+ */
+export async function registrar(
+  sucursal: SucursalNueva,
+  autorId: string,
+): Promise<{ sucursal: Sucursal; creada: boolean }> {
+  const { sql, valores } = conAuditoria(
+    {
+      sql: `INSERT INTO sucursales (id, nombre, direccion, telefono)
+            SELECT $1, $2, $3, $4
+             WHERE ${nombreLibre('$1::uuid', '$2::varchar')}
+            ON CONFLICT (id) DO NOTHING
+            RETURNING ${COLUMNAS}`,
+      valores: [sucursal.id, sucursal.nombre, sucursal.direccion, sucursal.telefono],
+      columnas: COLUMNAS,
+    },
+    { usuarioId: autorId, accion: 'CREAR', tabla: 'sucursales' },
+  );
+  const { rows } = await pool.query<FilaSucursal>(sql, valores);
+
+  const insertada = rows[0];
+  if (insertada !== undefined) return { sucursal: insertada, creada: true };
+
+  // No se insertó. El reintento va primero: si la sucursal con ese id ya está,
+  // que el nombre "esté ocupado" es por ella misma.
+  const existente = await buscarPorId(sucursal.id);
+  if (existente !== null) return { sucursal: existente, creada: false };
+  throw new NombreOcupadoError(sucursal.nombre);
+}
+
+/** Lo único de una sucursal que se puede cambiar. */
+export interface CambiosSucursal {
+  nombre?: string;
+  direccion?: string | null;
+  telefono?: string | null;
+  activa?: boolean;
+}
+
+// Campo de TypeScript → columna. Lista cerrada: las columnas del UPDATE salen
+// SOLO de acá, nunca del cuerpo de la petición.
+const COLUMNA_EDITABLE: Record<keyof CambiosSucursal, string> = {
+  nombre: 'nombre',
+  direccion: 'direccion',
+  telefono: 'telefono',
+  activa: 'activa',
+};
+
+export type ResultadoActualizar =
+  | { tipo: 'actualizada'; sucursal: Sucursal }
+  | { tipo: 'no-encontrada' }
+  | { tipo: 'nombre-ocupado' }
+  /** Se pidió cerrarla y todavía tiene ropa en el local. */
+  | { tipo: 'con-ropa-abierta'; cantidad: number };
+
+/**
+ * Aplica los cambios solo si se pueden aplicar.
+ *
+ * Las dos reglas —el nombre libre y, al cerrar, que no quede ropa en el local—
+ * van como condiciones del `SELECT … FOR UPDATE` que lee la fila de antes
+ * (`updateConAntes`, SPEC-ALE186-010): si no se cumplen, no se escribe ni se
+ * anota nada. Solo cuando no se aplicó se averigua por qué, igual que en
+ * `ordenes.actualizar`.
+ */
+export async function actualizar(
+  id: string,
+  cambios: CambiosSucursal,
+  autorId: string,
+): Promise<ResultadoActualizar> {
+  const campos = (Object.keys(COLUMNA_EDITABLE) as (keyof CambiosSucursal)[]).filter(
+    (campo) => cambios[campo] !== undefined,
+  );
+
+  if (campos.length === 0) {
+    const actual = await buscarPorId(id);
+    return actual === null ? { tipo: 'no-encontrada' } : { tipo: 'actualizada', sucursal: actual };
+  }
+
+  // $1 es el id; si se cierra, $2 son los estados abiertos; después, los
+  // cambios. Un parámetro que no aparece en el SQL hace fallar a Postgres
+  // ("could not determine data type"), por eso los estados van solo si se usan.
+  const valores: unknown[] = [id];
+  const condiciones = ['id = $1'];
+  if (cambios.activa === false) {
+    valores.push(ESTADOS_ABIERTOS);
+    condiciones.push(`NOT EXISTS (SELECT 1 FROM ordenes
+                                   WHERE ordenes.sucursal_id = $1
+                                     AND ordenes.estado = ANY($2::estado_orden[]))`);
+  }
+  const desde = valores.length + 1;
+  const posicion = (campo: keyof CambiosSucursal) => `$${campos.indexOf(campo) + desde}`;
+  if (cambios.nombre !== undefined) condiciones.push(nombreLibre('$1', `${posicion('nombre')}::varchar`));
+  valores.push(...campos.map((campo) => cambios[campo]));
+
+  const consulta = conAuditoria(
+    {
+      sql: updateConAntes({
+        tabla: 'sucursales',
+        asignaciones: campos.map((campo) => `${COLUMNA_EDITABLE[campo]} = ${posicion(campo)}`),
+        condiciones: condiciones.join(' AND '),
+        columnas: COLUMNAS,
+        auditadas: campos.map((campo) => ({ columna: COLUMNA_EDITABLE[campo] })),
+      }),
+      valores,
+      columnas: COLUMNAS,
+    },
+    { usuarioId: autorId, accion: 'EDITAR', tabla: 'sucursales', conValoresAnteriores: true },
+  );
+  const { rows } = await pool.query<FilaSucursal>(consulta.sql, consulta.valores);
+
+  const fila = rows[0];
+  if (fila !== undefined) return { tipo: 'actualizada', sucursal: fila };
+
+  if ((await buscarPorId(id)) === null) return { tipo: 'no-encontrada' };
+  if (cambios.nombre !== undefined && (await nombreUsadoPorOtra(id, cambios.nombre))) {
+    return { tipo: 'nombre-ocupado' };
+  }
+  return { tipo: 'con-ropa-abierta', cantidad: await contarOrdenesAbiertas(id) };
+}
+
+async function nombreUsadoPorOtra(id: string, nombre: string): Promise<boolean> {
+  const { rows } = await pool.query<{ usado: boolean }>(
+    `SELECT NOT ${nombreLibre('$1::uuid', '$2::varchar')} AS usado`,
+    [id, nombre],
+  );
+  return rows[0]?.usado === true;
+}
+
+/**
+ * Cuántas órdenes tienen la ropa todavía en el local, para que el mensaje diga
+ * cuántas quedan. Es un conteo sobre `ordenes`, pero se queda acá: es la
+ * pregunta de esta tabla ("¿se puede cerrar?"), y la misma condición ya está
+ * escrita en el UPDATE de arriba.
+ */
+async function contarOrdenesAbiertas(id: string): Promise<number> {
+  const { rows } = await pool.query<{ cantidad: number }>(
+    `SELECT count(*)::int AS cantidad FROM ordenes
+      WHERE sucursal_id = $1 AND estado = ANY($2::estado_orden[])`,
+    [id, ESTADOS_ABIERTOS],
+  );
+  return rows[0]?.cantidad ?? 0;
 }
