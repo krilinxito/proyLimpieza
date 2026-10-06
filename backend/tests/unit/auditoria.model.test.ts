@@ -16,6 +16,7 @@ const ordenes = await import('../../src/models/ordenes.model.js');
 const pagos = await import('../../src/models/pagos.model.js');
 const entregas = await import('../../src/models/entregas.model.js');
 const usuarios = await import('../../src/models/usuarios.model.js');
+const sucursales = await import('../../src/models/sucursales.model.js');
 
 const AUTOR = '99999999-9999-9999-9999-999999999999';
 
@@ -127,7 +128,7 @@ describe('Auditoría: los valores de antes — SPEC-ALE186-010', () => {
 });
 
 describe('Auditoría: cada escritura anota lo suyo — SPEC-ALE186-010', () => {
-  // Las ocho escrituras auditadas: con qué acción, en qué tabla y a nombre de
+  // Las diez escrituras auditadas: con qué acción, en qué tabla y a nombre de
   // quién. Si mañana hay una escritura nueva, va una línea más acá.
   const ESCRITURAS: [string, () => Promise<unknown>, string, string, string][] = [
     [
@@ -182,6 +183,13 @@ describe('Auditoría: cada escritura anota lo suyo — SPEC-ALE186-010', () => {
       'CREAR', 'usuarios', AUTOR,
     ],
     ['la edición de una cuenta', () => usuarios.actualizar(IDS.usuario, { activo: false }, AUTOR), 'EDITAR', 'usuarios', AUTOR],
+    // SPEC-ALE186-011
+    [
+      'el alta de una sucursal',
+      () => sucursales.registrar({ id: IDS.sucursal, nombre: 'Norte', direccion: null, telefono: null }, AUTOR),
+      'CREAR', 'sucursales', AUTOR,
+    ],
+    ['el cierre de una sucursal', () => sucursales.actualizar(IDS.sucursal, { activa: false }, AUTOR), 'EDITAR', 'sucursales', AUTOR],
   ];
 
   it.each(ESCRITURAS)('%s anota %s en %s, en la misma sentencia', async (_caso, escribir, accion, tabla, autor) => {

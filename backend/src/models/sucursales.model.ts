@@ -76,7 +76,10 @@ export const ESTADOS_ABIERTOS = ESTADOS_ORDEN.filter((estado) => !ESTADOS_CERRAD
  * podrían pasar las dos; para algo que hace solo el admin y muy de vez en
  * cuando, se acepta (está dicho en la spec).
  *
- * `id` y `nombre` son los parámetros (`$1`, `$2::text`…) de cada sentencia.
+ * `id` y `nombre` son los parámetros (`$1`, `$2::varchar`…) de cada sentencia. El
+ * nombre se castea a `varchar`, el tipo de la columna, y no a `text`: el mismo
+ * parámetro va también a la columna, y Postgres rechaza deducirle dos tipos
+ * ("inconsistent types deduced for parameter").
  */
 function nombreLibre(id: string, nombre: string): string {
   return `NOT EXISTS (SELECT 1 FROM sucursales otra
@@ -117,7 +120,7 @@ export async function registrar(
     {
       sql: `INSERT INTO sucursales (id, nombre, direccion, telefono)
             SELECT $1, $2, $3, $4
-             WHERE ${nombreLibre('$1::uuid', '$2::text')}
+             WHERE ${nombreLibre('$1::uuid', '$2::varchar')}
             ON CONFLICT (id) DO NOTHING
             RETURNING ${COLUMNAS}`,
       valores: [sucursal.id, sucursal.nombre, sucursal.direccion, sucursal.telefono],
@@ -197,7 +200,7 @@ export async function actualizar(
   }
   const desde = valores.length + 1;
   const posicion = (campo: keyof CambiosSucursal) => `$${campos.indexOf(campo) + desde}`;
-  if (cambios.nombre !== undefined) condiciones.push(nombreLibre('$1', `${posicion('nombre')}::text`));
+  if (cambios.nombre !== undefined) condiciones.push(nombreLibre('$1', `${posicion('nombre')}::varchar`));
   valores.push(...campos.map((campo) => cambios[campo]));
 
   const consulta = conAuditoria(
@@ -228,7 +231,7 @@ export async function actualizar(
 
 async function nombreUsadoPorOtra(id: string, nombre: string): Promise<boolean> {
   const { rows } = await pool.query<{ usado: boolean }>(
-    `SELECT NOT ${nombreLibre('$1::uuid', '$2::text')} AS usado`,
+    `SELECT NOT ${nombreLibre('$1::uuid', '$2::varchar')} AS usado`,
     [id, nombre],
   );
   return rows[0]?.usado === true;
