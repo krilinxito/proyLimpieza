@@ -2,7 +2,7 @@
 id: SPEC-ALE186-010
 name: Registro de auditoría en cada escritura
 slug: auditoria-registro
-status: in-progress
+status: finished
 owner: ale186
 created: 2026-10-05
 scope:
@@ -14,7 +14,17 @@ scope:
   - CLAUDE.md
 priority: high
 depends_on: []
-tests: []
+tests:
+  - backend\tests\db\auditoria.db.test.ts
+  - backend\tests\http\auth.test.ts
+  - backend\tests\http\usuarios.test.ts
+  - backend\tests\unit\auditoria.model.test.ts
+  - backend\tests\unit\clientes.model.test.ts
+  - backend\tests\unit\dominio.test.ts
+  - backend\tests\unit\entregas.model.test.ts
+  - backend\tests\unit\ordenes.model.test.ts
+  - backend\tests\unit\pagos.model.test.ts
+  - backend\tests\unit\usuarios.model.test.ts
 ---
 
 ## Descripción
