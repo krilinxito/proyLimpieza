@@ -230,3 +230,53 @@ describe('Auditoría suelta: el login — SPEC-ALE186-010', () => {
     expect(valores).toEqual([AUTOR, 'LOGIN', 'usuarios', AUTOR]);
   });
 });
+
+describe('Auditoría: la consulta del admin — SPEC-ALE186-012', () => {
+  const FILTROS = {
+    desde: '2026-03-01',
+    hasta: '2026-03-31',
+    sucursalId: IDS.sucursal,
+    usuarioId: IDS.usuario,
+    accion: 'COBRAR' as const,
+    tabla: 'pagos' as const,
+    registroId: IDS.orden,
+  };
+
+  beforeEach(() => {
+    query.mockReset();
+    query.mockResolvedValueOnce({ rows: [{ total: 7 }] }).mockResolvedValueOnce({ rows: [] });
+  });
+
+  it('el total y la página filtran con el mismo SQL y los mismos parámetros', async () => {
+    const { total } = await auditoria.consultar(FILTROS, { pagina: 3, porPagina: 2 });
+
+    expect(total).toBe(7);
+    const [[sqlTotal, valoresTotal], [sqlPagina, valoresPagina]] = query.mock.calls as [string, unknown[]][];
+    // Lo mismo hasta el final del CTE: si uno filtrara distinto, el total mentiría.
+    const filtradas = (sql: string) => sql.slice(0, sql.indexOf('\n)') + 2);
+    expect(filtradas(sqlTotal)).toBe(filtradas(sqlPagina));
+    expect(valoresPagina.slice(0, 8)).toEqual(valoresTotal);
+    // La página 3 de a 2 se saltea las 4 primeras.
+    expect(valoresPagina.slice(8)).toEqual([2, 4]);
+  });
+
+  it('todos los filtros van como parámetros, nunca dentro del SQL', async () => {
+    await auditoria.consultar(FILTROS, { pagina: 1, porPagina: 50 });
+
+    const [sql, valores] = query.mock.calls[0] as [string, unknown[]];
+    expect(valores).toEqual(['2026-03-01', '2026-03-31', 'America/La_Paz', IDS.usuario, 'COBRAR', 'pagos', IDS.orden, IDS.sucursal]);
+    for (const valor of [IDS.usuario, IDS.sucursal, IDS.orden, '2026-03-01', "'COBRAR'"]) {
+      expect(sql).not.toContain(valor);
+    }
+  });
+
+  it('la sucursal de cada acción sale del registro tocado, y del cliente solo en su alta', async () => {
+    await auditoria.consultar(FILTROS, { pagina: 1, porPagina: 50 });
+
+    const [sql] = query.mock.calls[0] as [string];
+    expect(sql).toContain("WHEN 'ordenes'  THEN (SELECT o.sucursal_id FROM ordenes  o WHERE o.id = a.registro_id)");
+    expect(sql).toMatch(/WHEN 'clientes' THEN CASE WHEN a\.accion = 'CREAR'\s+THEN \(SELECT c\.sucursal_registro_id/);
+    // Nunca la sucursal de la persona: si la movieron, lo viejo cambiaría de lugar.
+    expect(sql).not.toContain('u.sucursal_id');
+  });
+});

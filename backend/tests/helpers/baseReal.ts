@@ -25,6 +25,9 @@
 //                           Para comprobar cómo quedó la base después.
 //   auditoriaDe(registroId) Las filas de `auditoria` de un registro, en orden —
 //                           SPEC-ALE186-010.
+//   anotarAuditoria({...})  Una fila de `auditoria` con la fecha que el test elija
+//                           (ISO con zona), para probar la consulta por períodos
+//                           y la paginación — SPEC-ALE186-012.
 //
 // Todo se crea con ids y valores únicos nuevos (teléfono, boleta, usuario), así
 // que los tests no chocan entre sí aunque corran en paralelo, y no hace falta
@@ -195,6 +198,28 @@ export async function auditoriaDe(registroId: string): Promise<FilaAuditoria[]> 
     tablaAfectada: fila.tabla_afectada,
     valoresAnteriores: fila.valores_anteriores,
   }));
+}
+
+/**
+ * Una fila de auditoría escrita directo, sin pasar por una escritura del
+ * negocio: para cuando el test necesita elegir la fecha. Pasa por `timestamptz`
+ * igual que las fechas del dispositivo, así queda en la misma hora de
+ * referencia que las filas que escribe el backend.
+ */
+export async function anotarAuditoria(campos: {
+  usuarioId: string;
+  fecha: string;
+  accion?: string;
+  tabla?: string;
+  registroId?: string;
+}): Promise<string> {
+  const id = randomUUID();
+  await pool.query(
+    `INSERT INTO auditoria (id, usuario_id, accion, tabla_afectada, registro_id, fecha)
+     VALUES ($1, $2, $3, $4, $5, $6::timestamptz::timestamp)`,
+    [id, campos.usuarioId, campos.accion ?? 'LOGIN', campos.tabla ?? 'usuarios', campos.registroId ?? null, campos.fecha],
+  );
+  return id;
 }
 
 /** `SELECT count(*) …` como número. */
