@@ -19,6 +19,12 @@ vi.mock('../../src/models/usuarios.model.js', async (importOriginal) => ({
   buscarPorUsername: vi.fn(),
 }));
 vi.mock('../../src/models/sucursales.model.js', () => ({ buscarPorId: vi.fn() }));
+// El login anota en la auditoría (SPEC-ALE186-010). Acá no hay base: el doble
+// deja comprobar QUÉ se anota sin escribir nada.
+vi.mock('../../src/models/auditoria.model.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../src/models/auditoria.model.js')>()),
+  registrar: vi.fn(),
+}));
 
 const modelo = await import('../../src/models/usuarios.model.js');
 const registrar = vi.mocked(modelo.registrar);
@@ -212,10 +218,12 @@ describe('PATCH /api/usuarios/:id — SPEC-ALE186-009', () => {
     });
 
     expect(res.status).toBe(200);
-    expect(actualizar).toHaveBeenCalledWith(EMPLEADA, {
-      nombreCompleto: 'Rosa M. Mamani',
-      telefono: null,
-    });
+    expect(actualizar).toHaveBeenCalledWith(
+      EMPLEADA,
+      { nombreCompleto: 'Rosa M. Mamani', telefono: null },
+      // Quién la editó, para la auditoría: el admin de la sesión (SPEC-ALE186-010).
+      ADMIN,
+    );
     expect(res.body.rol).toBe('EMPLEADO');
   });
 
@@ -225,7 +233,7 @@ describe('PATCH /api/usuarios/:id — SPEC-ALE186-009', () => {
 
     await edicion(EMPLEADA, { sucursal_id: otra });
 
-    expect(actualizar).toHaveBeenCalledWith(EMPLEADA, { sucursalId: otra });
+    expect(actualizar).toHaveBeenCalledWith(EMPLEADA, { sucursalId: otra }, ADMIN);
   });
 
   it('guarda la contraseña nueva hasheada, y no la devuelve', async () => {

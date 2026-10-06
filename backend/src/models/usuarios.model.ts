@@ -7,6 +7,7 @@
 import pg from 'pg';
 import { pool } from '../db/pool.js';
 import type { Rol } from '../utils/jwt.js';
+import { conAuditoria, updateConAntes } from './auditoria.model.js';
 
 export interface Usuario {
   id: string;
@@ -115,6 +116,9 @@ export interface UsuarioNuevo {
 /**
  * Crea un usuario, o no hace nada si el username ya existe.
  *
+ * Es el de la semilla, y NO se audita (SPEC-ALE186-010): el primer admin no lo
+ * crea nadie con sesión, y `auditoria.usuario_id` no admite NULL.
+ *
  * Devuelve `null` en ese segundo caso, y de ahí sale la idempotencia de la
  * semilla: la unicidad la decide la base con su restricción `UNIQUE`, no una
  * consulta previa nuestra. Comprobar y después insertar son dos pasos, y entre
@@ -205,14 +209,15 @@ export interface UsuarioRegistrado {
 export async function registrar(
   usuario: UsuarioRegistrado,
 ): Promise<{ usuario: Usuario; creado: boolean }> {
-  const { rows } = await conUsernameUnico(usuario.username, () =>
-    pool.query<FilaUsuario>(
-      `INSERT INTO usuarios (id, nombre_completo, username, password_hash, rol,
-                             sucursal_id, telefono, creado_por)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       ON CONFLICT (id) DO NOTHING
-         RETURNING ${COLUMNAS}`,
-      [
+  // CREAR, a nombre del admin que la da de alta (SPEC-ALE186-010).
+  const { sql, valores } = conAuditoria(
+    {
+      sql: `INSERT INTO usuarios (id, nombre_completo, username, password_hash, rol,
+                                  sucursal_id, telefono, creado_por)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            ON CONFLICT (id) DO NOTHING
+              RETURNING ${COLUMNAS}`,
+      valores: [
         usuario.id,
         usuario.nombreCompleto,
         usuario.username,
@@ -222,8 +227,11 @@ export async function registrar(
         usuario.telefono,
         usuario.creadoPor,
       ],
-    ),
+      columnas: COLUMNAS,
+    },
+    { usuarioId: usuario.creadoPor, accion: 'CREAR', tabla: 'usuarios' },
   );
+  const { rows } = await conUsernameUnico(usuario.username, () => pool.query<FilaUsuario>(sql, valores));
 
   const insertada = rows[0];
   if (insertada !== undefined) return { usuario: aUsuario(insertada), creado: true };
@@ -260,22 +268,41 @@ const COLUMNA_EDITABLE: Record<keyof CambiosUsuario, string> = {
  * Aplica los cambios y devuelve la cuenta, o `null` si no existe.
  *
  * Escribe el hash pero no lo devuelve: el `RETURNING` usa las mismas columnas
- * sin hash que todo lo demás.
+ * sin hash que todo lo demás. Tampoco lo copia a la auditoría: ahí queda
+ * `contrasena_cambiada: true` (SPEC-ALE186-010).
  */
-export async function actualizar(id: string, cambios: CambiosUsuario): Promise<Usuario | null> {
+export async function actualizar(
+  id: string,
+  cambios: CambiosUsuario,
+  autorId: string,
+): Promise<Usuario | null> {
   const campos = (Object.keys(COLUMNA_EDITABLE) as (keyof CambiosUsuario)[]).filter(
     (campo) => cambios[campo] !== undefined,
   );
 
   if (campos.length === 0) return buscarPorId(id);
 
-  const asignaciones = campos.map((campo, i) => `${COLUMNA_EDITABLE[campo]} = $${i + 2}`);
-  const valores = campos.map((campo) => cambios[campo]);
-
-  const { rows } = await pool.query<FilaUsuario>(
-    `UPDATE usuarios SET ${asignaciones.join(', ')} WHERE id = $1 RETURNING ${COLUMNAS}`,
-    [id, ...valores],
+  const { sql, valores } = conAuditoria(
+    {
+      sql: updateConAntes({
+        tabla: 'usuarios',
+        asignaciones: campos.map((campo, i) => `${COLUMNA_EDITABLE[campo]} = $${i + 2}`),
+        condiciones: 'id = $1',
+        columnas: COLUMNAS,
+        // De la contraseña se anota que cambió, nunca el hash de antes.
+        auditadas: campos.map((campo) =>
+          campo === 'passwordHash'
+            ? { columna: COLUMNA_EDITABLE[campo], soloMarca: 'contrasena_cambiada' }
+            : { columna: COLUMNA_EDITABLE[campo] },
+        ),
+      }),
+      valores: [id, ...campos.map((campo) => cambios[campo])],
+      columnas: COLUMNAS,
+    },
+    { usuarioId: autorId, accion: 'EDITAR', tabla: 'usuarios', conValoresAnteriores: true },
   );
+
+  const { rows } = await pool.query<FilaUsuario>(sql, valores);
 
   const fila = rows[0];
   return fila === undefined ? null : aUsuario(fila);

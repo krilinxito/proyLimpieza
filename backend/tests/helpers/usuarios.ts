@@ -46,10 +46,17 @@ export async function usuarioDePrueba(opciones: Opciones = {}): Promise<UsuarioC
   };
 }
 
+/**
+ * El id de quien está adentro en `tokenDePrueba` / `conSesion` si el test no
+ * pide otro — SPEC-ALE186-010. Para comprobar que algo se anota a nombre de la
+ * SESIÓN (la auditoría, quién cobró…) sin repetir el UUID en cada test.
+ */
+export const ID_DE_SESION = '11111111-1111-1111-1111-111111111111';
+
 /** El token de la API para esa sesión, firmado con la config de la suite. */
 export function tokenDePrueba(sesion: Partial<Sesion> = {}): string {
   return emitirCredenciales({
-    id: '11111111-1111-1111-1111-111111111111',
+    id: ID_DE_SESION,
     rol: 'EMPLEADO',
     sucursalId: '22222222-2222-2222-2222-222222222222',
     ...sesion,

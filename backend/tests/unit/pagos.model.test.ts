@@ -114,7 +114,8 @@ describe('Pagos model: crear — SPEC-ALE186-005', () => {
 
     await pagos.crear(NUEVO, SOLO_MI_SUCURSAL);
 
-    expect(llamada()[1].at(-1)).toBe(IDS.sucursal);
+    // $8 del INSERT. Detrás van los de la auditoría (SPEC-ALE186-010).
+    expect(llamada()[1][7]).toBe(IDS.sucursal);
   });
 
   it('en un reintento devuelve el pago que ya existía', async () => {

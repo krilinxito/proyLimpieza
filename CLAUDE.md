@@ -39,13 +39,19 @@ la manda el dispositivo, en ISO 8601 con zona. SPEC-ALE186-005 añadió los cobr
 `INSERT … SELECT`, que también rechaza las órdenes anuladas. SPEC-ALE186-006 añadió las
 entregas (`POST /api/entregas`, sin edición ni borrado), que cierran el flujo: la entrega y
 el paso de la orden a ENTREGADO van en una sola sentencia. Con eso están todas las
-escrituras del negocio; faltan auditoría y el resto de las estadísticas. SPEC-ALE186-007 añadió la suite
+escrituras del negocio; faltan el resto de las estadísticas y la consulta de la auditoría. SPEC-ALE186-007 añadió la suite
 de integración contra Postgres real (`npm run test:db`, sección 4), con la atomicidad y
 las carreras de pagos y entregas. SPEC-ALE186-008 añadió las primeras estadísticas
 (`/api/estadisticas/ingresos`, `/saldos` y `/sin-recoger`, solo ADMIN; sección 8).
 SPEC-ALE186-009 añadió el alta, la edición y la baja de cuentas (`POST` y `PATCH
 /api/usuarios`, solo ADMIN): no se borra a nadie, se pone `activo: false`, y la baja corta el
 acceso en el siguiente login o renovación. Un admin no puede darse de baja a sí mismo.
+SPEC-ALE186-010 añadió la auditoría: cada alta, edición, cobro y entrega deja su fila en
+`auditoria` **en la misma sentencia** que la escritura (`models/auditoria.model.ts` arma el
+CTE), y el login exitoso deja un LOGIN. Quién la hizo sale siempre de la sesión. Una edición
+guarda en `valores_anteriores` solo lo que cambió de verdad, y de la contraseña solo
+`contrasena_cambiada: true`. Un reintento o un PATCH que no cambia nada no anota. Toda
+escritura nueva tiene que pasar por `conAuditoria`.
 
 `frontend/` tiene el scaffolding de SPEC-KRILINXI-001: Vite, Tailwind, rutas y su suite de
 tests. SPEC-KRILINXI-002 añadió las piezas que reutilizan todas las pantallas: `Boton`,
@@ -275,7 +281,8 @@ flotante es un bug de contabilidad esperando su turno.
 `ordenes.estado = 'ENTREGADO'` al registrarse una entrega es del servidor, pero se hace en
 el model de entregas, en la misma sentencia que inserta la entrega (SPEC-ALE186-006): es
 igual de atómico y no exige migraciones, que el proyecto no tiene —un trigger nuevo
-obligaría a todos a recrear su base con `down -v`. Toda validación de la que el empleado
+obligaría a todos a recrear su base con `down -v`. La auditoría sigue el mismo camino
+(SPEC-ALE186-010): un CTE encadena la escritura con su fila de `auditoria`. Toda validación de la que el empleado
 necesite respuesta inmediata va en TypeScript: nada del servidor existe en el dispositivo,
 y su efecto no se ve hasta que sincroniza.
 
@@ -497,5 +504,8 @@ Nada se implementa sin una spec aprobada.
   (solo local, sin columna nueva en Postgres) y lo muestra en `/para-corregir`, pero
   todavía no se puede editar y volver a enviar: hoy el empleado lee el motivo y avisa. Va en
   una spec propia (`corregir-registros`).
-- **No hay triggers.** El paso a `ENTREGADO` se resolvió en código (sección 6). La
-  auditoría está decidida pero sin implementar; cómo se registra se cierra en su spec.
+- **No hay triggers.** El paso a `ENTREGADO` y la auditoría se resolvieron en código, en la
+  misma sentencia que la escritura (sección 6, SPEC-ALE186-006 y -010). El costo: una
+  escritura que alguien haga a mano en la base, o por un camino que no pase por
+  `conAuditoria`, no queda auditada. La semilla del primer admin no se audita a propósito
+  (no hay sesión de quien atribuirla).

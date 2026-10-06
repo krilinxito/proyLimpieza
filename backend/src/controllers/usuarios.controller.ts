@@ -249,7 +249,7 @@ export async function patchUsuario(req: Request, res: Response): Promise<void> {
     cambios.passwordHash = await bcrypt.hash(leerContrasena(cuerpo.password), COSTE_BCRYPT);
   }
 
-  const usuario = await usuarios.actualizar(id, cambios);
+  const usuario = await usuarios.actualizar(id, cambios, sesionDe(req).id);
   if (usuario === null) {
     throw new ApiError(404, CODIGOS_ERROR.NO_ENCONTRADO, 'Esa cuenta no existe en el sistema.');
   }

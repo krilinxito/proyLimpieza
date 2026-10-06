@@ -73,6 +73,10 @@ describe('Usuarios model: alta — SPEC-ALE186-009', () => {
       SUCURSAL,
       '70011122',
       ADMIN,
+      // La auditoría del alta, a nombre del mismo admin (SPEC-ALE186-010).
+      ADMIN,
+      'CREAR',
+      'usuarios',
     ]);
   });
 
@@ -108,18 +112,18 @@ describe('Usuarios model: edición — SPEC-ALE186-009', () => {
   it('actualiza solo los campos que vinieron, con las columnas de la lista cerrada', async () => {
     query.mockResolvedValueOnce({ rows: [{ ...FILA, activo: false }] });
 
-    const usuario = await usuarios.actualizar(FILA.id, { activo: false, telefono: null });
+    const usuario = await usuarios.actualizar(FILA.id, { activo: false, telefono: null }, ADMIN);
 
     expect(usuario?.activo).toBe(false);
     const [sql, valores] = query.mock.calls[0] ?? [];
-    expect(sql).toMatch(/^UPDATE usuarios SET telefono = \$2, activo = \$3 WHERE id = \$1/);
-    expect(valores).toEqual([FILA.id, null, false]);
+    expect(sql).toMatch(/UPDATE usuarios AS c SET telefono = \$2, activo = \$3\s+FROM \(SELECT .* FROM usuarios WHERE id = \$1 FOR UPDATE\)/);
+    expect(valores).toEqual([FILA.id, null, false, ADMIN, 'EDITAR', 'usuarios']);
   });
 
   it('sin cambios no escribe: devuelve la cuenta como está', async () => {
     query.mockResolvedValueOnce({ rows: [FILA] });
 
-    await usuarios.actualizar(FILA.id, {});
+    await usuarios.actualizar(FILA.id, {}, ADMIN);
 
     expect(sqlEnviado()).toHaveLength(1);
     expect(sqlEnviado()[0]).toMatch(/^SELECT/);
@@ -128,7 +132,7 @@ describe('Usuarios model: edición — SPEC-ALE186-009', () => {
   it('devuelve null cuando la cuenta no existe', async () => {
     query.mockResolvedValueOnce({ rows: [] });
 
-    expect(await usuarios.actualizar(FILA.id, { nombreCompleto: 'Otra' })).toBeNull();
+    expect(await usuarios.actualizar(FILA.id, { nombreCompleto: 'Otra' }, ADMIN)).toBeNull();
   });
 });
 
@@ -145,16 +149,22 @@ describe('Usuarios model: el hash no se escapa — SPEC-ALE186-009', () => {
     ['buscarPorId', () => usuarios.buscarPorId(FILA.id)],
     ['crear', () => usuarios.crear({ ...NUEVO, sucursalId: SUCURSAL })],
     ['registrar', () => usuarios.registrar(NUEVO)],
-    ['actualizar', () => usuarios.actualizar(FILA.id, { passwordHash: NUEVO.passwordHash, nombreCompleto: 'X' })],
+    ['actualizar', () => usuarios.actualizar(FILA.id, { passwordHash: NUEVO.passwordHash, nombreCompleto: 'X' }, ADMIN)],
   ];
 
   it.each(SIN_HASH)('%s no pide password_hash ni lo devuelve', async (_nombre, llamar) => {
     const resultado = await llamar();
 
-    // Se miran solo las columnas que se LEEN: la lista del SELECT y la del
-    // RETURNING. El INSERT y el SET sí nombran la columna, porque la escriben.
+    // Se miran solo las columnas que se LEEN: las listas de cada SELECT y la
+    // del RETURNING. El INSERT y el SET sí nombran la columna, porque la
+    // escriben. Son TODOS los SELECT, no solo el del principio: desde
+    // SPEC-ALE186-010 una escritura lleva dentro otros (la fila de antes, la
+    // auditoría, lo que se devuelve).
     for (const sql of sqlEnviado()) {
-      const leidas = [/^SELECT (.*?) FROM/s.exec(sql)?.[1], /RETURNING (.*)$/s.exec(sql)?.[1]];
+      const leidas = [
+        ...[...sql.matchAll(/SELECT (.*?) FROM/gs)].map((m) => m[1]),
+        /RETURNING (.*)$/s.exec(sql)?.[1],
+      ];
       for (const columnas of leidas) expect(columnas ?? '').not.toContain('password_hash');
     }
     expect(JSON.stringify(resultado)).not.toContain('no-deberia-salir');

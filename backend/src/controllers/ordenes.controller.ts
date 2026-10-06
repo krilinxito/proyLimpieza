@@ -216,7 +216,7 @@ export async function patchOrden(req: Request, res: Response): Promise<void> {
       // las de la suya. Una ajena le responde 404, no 403: para él no existe, y
       // un 403 le confirmaría que ese id es una orden de otra sucursal.
       sucursalId: sesion.rol === 'ADMIN' ? null : sesion.sucursalId,
-    });
+    }, sesion.id);
   } catch (error) {
     if (error instanceof BoletaOcupadaError) throw boletaDuplicada();
     throw error;

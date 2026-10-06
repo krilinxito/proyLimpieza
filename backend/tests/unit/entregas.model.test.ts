@@ -134,7 +134,8 @@ describe('Entregas model: crear — SPEC-ALE186-006', () => {
 
     await entregas.crear(NUEVA, SOLO_MI_SUCURSAL);
 
-    expect(llamada()[1].at(-1)).toBe(IDS.sucursal);
+    // $10 del INSERT. Detrás van los de la auditoría (SPEC-ALE186-010).
+    expect(llamada()[1][9]).toBe(IDS.sucursal);
   });
 
   it('en un reintento devuelve la entrega que ya existía', async () => {

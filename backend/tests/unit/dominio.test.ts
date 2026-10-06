@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  ACCIONES_AUDITORIA,
   ESTADOS_ORDEN,
   METODOS_PAGO,
   TIPOS_PAGO,
@@ -41,6 +42,12 @@ describe('Dominio: los ENUM del schema — SPEC-ALE186-004', () => {
     expect(esEstadoOrden('EN_PROCESO')).toBe(true);
     expect(esEstadoOrden('EN PROCESO')).toBe(false);
     expect(esEstadoOrden(undefined)).toBe(false);
+  });
+});
+
+describe('Dominio: las acciones de auditoría — SPEC-ALE186-010', () => {
+  it('accion_auditoria tiene exactamente los mismos valores que el código', () => {
+    expect(enumsDelSchema().get('accion_auditoria')).toEqual([...ACCIONES_AUDITORIA]);
   });
 });
 

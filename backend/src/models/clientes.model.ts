@@ -8,6 +8,7 @@
 //      mitad de la subida, PowerSync la reintenta. Un reintento no duplica.
 import pg from 'pg';
 import { pool } from '../db/pool.js';
+import { conAuditoria, updateConAntes } from './auditoria.model.js';
 
 export interface Cliente {
   id: string;
@@ -118,16 +119,22 @@ export interface ClienteNuevo {
  */
 export async function crear(
   cliente: ClienteNuevo,
+  autorId: string,
 ): Promise<{ cliente: Cliente; creado: boolean }> {
-  const { rows } = await conTelefonoUnico(cliente.telefono, () =>
-    pool.query<FilaCliente>(
-      `INSERT INTO clientes (id, nombre, telefono, carnet, sucursal_registro_id)
-            VALUES ($1, $2, $3, $4, $5)
-       ON CONFLICT (id) DO NOTHING
-         RETURNING ${COLUMNAS}`,
-      [cliente.id, cliente.nombre, cliente.telefono, cliente.carnet, cliente.sucursalRegistroId],
-    ),
+  // La fila de auditoría va en la misma sentencia (SPEC-ALE186-010): si el
+  // INSERT no inserta —un reintento—, tampoco se anota nada.
+  const { sql, valores } = conAuditoria(
+    {
+      sql: `INSERT INTO clientes (id, nombre, telefono, carnet, sucursal_registro_id)
+                 VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT (id) DO NOTHING
+              RETURNING ${COLUMNAS}`,
+      valores: [cliente.id, cliente.nombre, cliente.telefono, cliente.carnet, cliente.sucursalRegistroId],
+      columnas: COLUMNAS,
+    },
+    { usuarioId: autorId, accion: 'CREAR', tabla: 'clientes' },
   );
+  const { rows } = await conTelefonoUnico(cliente.telefono, () => pool.query<FilaCliente>(sql, valores));
 
   const insertada = rows[0];
   if (insertada !== undefined) return { cliente: aCliente(insertada), creado: true };
@@ -164,23 +171,37 @@ const COLUMNA_EDITABLE: Record<keyof CambiosCliente, string> = {
  * El UPDATE se arma según qué campos vinieron, pero sin concatenar ningún
  * valor: los nombres de columna salen de la lista cerrada de arriba y los
  * valores van siempre como `$1, $2...` (sección 5).
+ *
+ * La auditoría (SPEC-ALE186-010) se anota en la misma sentencia, con el valor
+ * que tenía cada columna que cambió. Si no cambió ninguna de verdad, no se anota.
  */
-export async function actualizar(id: string, cambios: CambiosCliente): Promise<Cliente | null> {
+export async function actualizar(
+  id: string,
+  cambios: CambiosCliente,
+  autorId: string,
+): Promise<Cliente | null> {
   const campos = (Object.keys(COLUMNA_EDITABLE) as (keyof CambiosCliente)[]).filter(
     (campo) => cambios[campo] !== undefined,
   );
 
   if (campos.length === 0) return buscarPorId(id);
 
-  const asignaciones = campos.map((campo, i) => `${COLUMNA_EDITABLE[campo]} = $${i + 2}`);
-  const valores = campos.map((campo) => cambios[campo]);
-
-  const { rows } = await conTelefonoUnico(cambios.telefono ?? '', () =>
-    pool.query<FilaCliente>(
-      `UPDATE clientes SET ${asignaciones.join(', ')} WHERE id = $1 RETURNING ${COLUMNAS}`,
-      [id, ...valores],
-    ),
+  const { sql, valores } = conAuditoria(
+    {
+      sql: updateConAntes({
+        tabla: 'clientes',
+        asignaciones: campos.map((campo, i) => `${COLUMNA_EDITABLE[campo]} = $${i + 2}`),
+        condiciones: 'id = $1',
+        columnas: COLUMNAS,
+        auditadas: campos.map((campo) => ({ columna: COLUMNA_EDITABLE[campo] })),
+      }),
+      valores: [id, ...campos.map((campo) => cambios[campo])],
+      columnas: COLUMNAS,
+    },
+    { usuarioId: autorId, accion: 'EDITAR', tabla: 'clientes', conValoresAnteriores: true },
   );
+
+  const { rows } = await conTelefonoUnico(cambios.telefono ?? '', () => pool.query<FilaCliente>(sql, valores));
 
   const fila = rows[0];
   return fila === undefined ? null : aCliente(fila);
