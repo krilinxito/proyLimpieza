@@ -251,7 +251,8 @@ describe('Auditoría: la consulta del admin — SPEC-ALE186-012', () => {
     const { total } = await auditoria.consultar(FILTROS, { pagina: 3, porPagina: 2 });
 
     expect(total).toBe(7);
-    const [[sqlTotal, valoresTotal], [sqlPagina, valoresPagina]] = query.mock.calls as [string, unknown[]][];
+    const [sqlTotal, valoresTotal] = (query.mock.calls[0] ?? []) as [string, unknown[]];
+    const [sqlPagina, valoresPagina] = (query.mock.calls[1] ?? []) as [string, unknown[]];
     // Lo mismo hasta el final del CTE: si uno filtrara distinto, el total mentiría.
     const filtradas = (sql: string) => sql.slice(0, sql.indexOf('\n)') + 2);
     expect(filtradas(sqlTotal)).toBe(filtradas(sqlPagina));
