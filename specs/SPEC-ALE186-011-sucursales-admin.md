@@ -2,7 +2,7 @@
 id: SPEC-ALE186-011
 name: Alta, edición y cierre de sucursales
 slug: sucursales-admin
-status: draft
+status: approved
 owner: ale186
 created: 2026-10-06
 scope:
