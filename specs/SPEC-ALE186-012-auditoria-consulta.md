@@ -2,7 +2,7 @@
 id: SPEC-ALE186-012
 name: Consulta de la auditoría para el admin
 slug: auditoria-consulta
-status: draft
+status: approved
 owner: ale186
 created: 2026-10-06
 scope:
