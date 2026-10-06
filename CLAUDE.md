@@ -51,7 +51,11 @@ SPEC-ALE186-010 añadió la auditoría: cada alta, edición, cobro y entrega dej
 CTE), y el login exitoso deja un LOGIN. Quién la hizo sale siempre de la sesión. Una edición
 guarda en `valores_anteriores` solo lo que cambió de verdad, y de la contraseña solo
 `contrasena_cambiada: true`. Un reintento o un PATCH que no cambia nada no anota. Toda
-escritura nueva tiene que pasar por `conAuditoria`.
+escritura nueva tiene que pasar por `conAuditoria`. SPEC-ALE186-011 añadió las sucursales
+(`POST` y `PATCH /api/sucursales`, solo ADMIN): el nombre es único sin distinguir
+mayúsculas (regla en la aplicación, porque el schema no tiene UNIQUE), y una sucursal no se
+cierra (`activa: false`) mientras tenga ropa en RECIBIDO, EN_PROCESO o LISTO. Las dos reglas
+van dentro de la sentencia que escribe. Una sucursal cerrada no recibe personal nuevo.
 
 `frontend/` tiene el scaffolding de SPEC-KRILINXI-001: Vite, Tailwind, rutas y su suite de
 tests. SPEC-KRILINXI-002 añadió las piezas que reutilizan todas las pantallas: `Boton`,
@@ -504,6 +508,11 @@ Nada se implementa sin una spec aprobada.
   (solo local, sin columna nueva en Postgres) y lo muestra en `/para-corregir`, pero
   todavía no se puede editar y volver a enviar: hoy el empleado lee el motivo y avisa. Va en
   una spec propia (`corregir-registros`).
+- **Una sucursal cerrada no frena al personal que ya tenía.** SPEC-ALE186-011 impide
+  asignarle gente y cerrarla con ropa adentro, pero un EMPLEADO que sigue asignado a ella
+  puede seguir registrando ropa: su sucursal sale del token, y `POST /api/ordenes` no mira
+  `activa` para un empleado. Al cerrar, el admin tiene que mover o dar de baja a su gente.
+  Si hace falta que el sistema lo impida, va en una spec propia.
 - **No hay triggers.** El paso a `ENTREGADO` y la auditoría se resolvieron en código, en la
   misma sentencia que la escritura (sección 6, SPEC-ALE186-006 y -010). El costo: una
   escritura que alguien haga a mano en la base, o por un camino que no pase por
