@@ -2,7 +2,7 @@
 id: SPEC-ALE186-013
 name: Volumen de órdenes y productividad
 slug: estadisticas-volumen
-status: in-progress
+status: finished
 owner: ale186
 created: 2026-10-07
 scope:
@@ -14,7 +14,10 @@ scope:
   - CLAUDE.md
 priority: medium
 depends_on: []
-tests: []
+tests:
+  - backend\tests\db\estadisticasVolumen.db.test.ts
+  - backend\tests\http\estadisticas.test.ts
+  - backend\tests\unit\estadisticas.model.test.ts
 ---
 
 ## Descripción
