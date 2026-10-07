@@ -2,7 +2,7 @@
 id: SPEC-ALE186-013
 name: Volumen de órdenes y productividad
 slug: estadisticas-volumen
-status: draft
+status: approved
 owner: ale186
 created: 2026-10-07
 scope:
