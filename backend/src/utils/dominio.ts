@@ -43,6 +43,8 @@ export const esEstadoOrden = crearValidador(ESTADOS_ORDEN);
 export const esTipoRetiro = crearValidador(TIPOS_RETIRO);
 export const esTipoPago = crearValidador(TIPOS_PAGO);
 export const esMetodoPago = crearValidador(METODOS_PAGO);
+/** Para el filtro `?accion=` de la consulta de la auditoría — SPEC-ALE186-012. */
+export const esAccionAuditoria = crearValidador(ACCIONES_AUDITORIA);
 
 // ------------------------------------------------------------------
 //  Cómo avanza una orden

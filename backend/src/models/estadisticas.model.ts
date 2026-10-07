@@ -11,40 +11,19 @@
 //     sucursal o el general, que salen de funciones de ventana (`OVER`).
 //
 //   - Las fechas se miran en la hora del negocio, no en la del servidor (ver
-//     `DIA_LOCAL`).
+//     `horaDelNegocio`, en `utils/periodo.ts`).
 import { pool } from '../db/pool.js';
 import { METODOS_PAGO, type EstadoOrden, type MetodoPago } from '../utils/dominio.js';
+import { ZONA_NEGOCIO, horaDelNegocio, type Periodo } from '../utils/periodo.js';
 
-/** La zona horaria del negocio: las tres sucursales están en Bolivia. */
-export const ZONA_NEGOCIO = 'America/La_Paz';
+// La zona, el período y la conversión a la hora del negocio viven en
+// `utils/periodo.ts` desde SPEC-ALE186-012: los comparte con la auditoría.
+// `ZONA_NEGOCIO` y `Periodo` se reexportan para quien ya los importaba de acá.
+export { ZONA_NEGOCIO, type Periodo };
 
-/**
- * El día, en la hora del negocio, de una columna TIMESTAMP (sin zona).
- *
- * Esas columnas guardan la hora "de reloj" de la sesión de Postgres: el backend
- * las escribe con LOCALTIMESTAMP o pasando por `timestamptz` (SPEC-ALE186-003).
- * En este servidor la sesión está en UTC, así que un cobro de las 21:00 en
- * Bolivia queda guardado como las 01:00 del día siguiente. Para saber a qué día
- * del negocio pertenece hay que hacer dos pasos:
- *
- *   1. `col AT TIME ZONE current_setting('TimeZone')`: "esta hora está en la zona
- *      de la sesión" → un instante absoluto (timestamptz).
- *   2. `… AT TIME ZONE $zona`: ese instante, en el reloj de Bolivia.
- *
- * Se usa `current_setting('TimeZone')` y no 'UTC' escrito a mano para que siga
- * siendo correcto si el servidor de producción tiene otra zona.
- */
+/** El día, en la hora del negocio, de una columna TIMESTAMP (ver `horaDelNegocio`). */
 function diaLocal(columna: string, parametroZona: string): string {
-  return `((${columna} AT TIME ZONE current_setting('TimeZone')) AT TIME ZONE ${parametroZona})`;
-}
-
-export interface Periodo {
-  /** `YYYY-MM-DD`, incluido. */
-  desde: string;
-  /** `YYYY-MM-DD`, incluido. */
-  hasta: string;
-  /** `null` = todas las sucursales. */
-  sucursalId: string | null;
+  return horaDelNegocio(columna, parametroZona);
 }
 
 // ------------------------------------------------------------------
