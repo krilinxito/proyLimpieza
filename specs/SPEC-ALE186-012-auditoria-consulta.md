@@ -2,7 +2,7 @@
 id: SPEC-ALE186-012
 name: Consulta de la auditoría para el admin
 slug: auditoria-consulta
-status: in-progress
+status: finished
 owner: ale186
 created: 2026-10-06
 scope:
@@ -16,7 +16,11 @@ scope:
   - CLAUDE.md
 priority: high
 depends_on: []
-tests: []
+tests:
+  - backend\tests\db\auditoriaConsulta.db.test.ts
+  - backend\tests\http\auditoria.test.ts
+  - backend\tests\unit\auditoria.model.test.ts
+  - backend\tests\unit\periodo.test.ts
 ---
 
 ## Descripción
