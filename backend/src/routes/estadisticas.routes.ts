@@ -1,6 +1,12 @@
 // Las rutas solo declaran endpoints y su middleware. Sin lógica.
 import { Router } from 'express';
-import { getIngresos, getSaldos, getSinRecoger } from '../controllers/estadisticas.controller.js';
+import {
+  getIngresos,
+  getProductividad,
+  getSaldos,
+  getSinRecoger,
+  getVolumen,
+} from '../controllers/estadisticas.controller.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireRol } from '../middleware/roles.js';
 
@@ -13,3 +19,5 @@ estadisticasRouter.use(requireAuth, requireRol('ADMIN'));
 estadisticasRouter.get('/ingresos', getIngresos);
 estadisticasRouter.get('/saldos', getSaldos);
 estadisticasRouter.get('/sin-recoger', getSinRecoger);
+estadisticasRouter.get('/volumen', getVolumen);
+estadisticasRouter.get('/productividad', getProductividad);
