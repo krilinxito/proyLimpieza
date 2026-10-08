@@ -2,7 +2,7 @@
 id: SPEC-ALE186-015
 name: La hora del servidor y la fecha de cada hecho
 slug: hora-del-servidor
-status: approved
+status: in-progress
 owner: ale186
 created: 2026-10-08
 scope:
