@@ -2,7 +2,7 @@
 id: SPEC-ALE186-017
 name: Atenciones de cada cliente por sucursal
 slug: estadisticas-clientes
-status: in-progress
+status: finished
 owner: ale186
 created: 2026-10-08
 scope:
@@ -14,7 +14,10 @@ scope:
   - CLAUDE.md
 priority: medium
 depends_on: []
-tests: []
+tests:
+  - backend\tests\db\estadisticasClientes.db.test.ts
+  - backend\tests\http\estadisticas.test.ts
+  - backend\tests\unit\estadisticas.model.test.ts
 ---
 
 ## Descripción
