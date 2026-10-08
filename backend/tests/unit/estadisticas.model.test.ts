@@ -56,3 +56,38 @@ describe('Estadísticas model: volumen y productividad — SPEC-ALE186-013', () 
     expect(await estadisticas.productividad(PERIODO)).toEqual([]);
   });
 });
+
+describe('Estadísticas model: atenciones de cada cliente — SPEC-ALE186-017', () => {
+  const CLIENTE = '44444444-4444-4444-4444-444444444444';
+
+  it('el total y la página usan el mismo CTE y los mismos filtros, como parámetros', async () => {
+    await estadisticas.clientes(PERIODO, CLIENTE, { pagina: 3, porPagina: 20 });
+
+    const [sqlTotal, valoresTotal] = (query.mock.calls[0] ?? []) as [string, unknown[]];
+    const [sqlPagina, valoresPagina] = (query.mock.calls[1] ?? []) as [string, unknown[]];
+    const ctes = (sql: string) => sql.slice(0, sql.indexOf('por_cliente AS'));
+    expect(ctes(sqlTotal)).toBe(ctes(sqlPagina));
+    expect(valoresTotal).toEqual(['2025-05-01', '2025-05-31', SUCURSAL, 'America/La_Paz', CLIENTE]);
+    expect(valoresPagina).toEqual([...valoresTotal, 20, 40]);
+    for (const sql of [sqlTotal, sqlPagina]) {
+      expect(sql).not.toContain(CLIENTE);
+      expect(sql).not.toContain(SUCURSAL);
+    }
+  });
+
+  it('cuenta solo órdenes no anuladas, por el día de Bolivia, y suma pagos y no precios', async () => {
+    await estadisticas.clientes(PERIODO, null, { pagina: 1, porPagina: 50 });
+
+    const [sql] = (query.mock.calls[0] ?? []) as [string];
+    expect(sql).toContain("o.estado <> 'ANULADO'");
+    expect(sql).toContain(`${horaDelNegocio('o.fecha_entrada', '$4')}::date BETWEEN $1::date AND $2::date`);
+    expect(sql).toContain('SELECT SUM(p.monto) FROM pagos p WHERE p.orden_id = o.id');
+    expect(sql).not.toContain('precio_total');
+  });
+
+  it('dentro del JSON de sucursales, el dinero viaja como texto', async () => {
+    await estadisticas.clientes(PERIODO, null, { pagina: 1, porPagina: 50 });
+
+    expect((query.mock.calls[1] as [string])[0]).toContain("'gastado', ps.gastado::numeric(14,2)::text");
+  });
+});

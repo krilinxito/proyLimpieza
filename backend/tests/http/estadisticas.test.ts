@@ -17,6 +17,7 @@ vi.mock('../../src/models/estadisticas.model.js', async (importOriginal) => ({
   sinRecoger: vi.fn(),
   volumen: vi.fn(), // SPEC-ALE186-013
   productividad: vi.fn(), // SPEC-ALE186-013
+  clientes: vi.fn(), // SPEC-ALE186-017
 }));
 
 const modelo = await import('../../src/models/estadisticas.model.js');
@@ -25,6 +26,7 @@ const saldos = vi.mocked(modelo.saldos);
 const sinRecoger = vi.mocked(modelo.sinRecoger);
 const volumen = vi.mocked(modelo.volumen);
 const productividad = vi.mocked(modelo.productividad);
+const clientes = vi.mocked(modelo.clientes);
 
 const ADMIN = conSesion({ rol: 'ADMIN', sucursalId: null });
 const ENDPOINTS = ['/ingresos', '/saldos', '/sin-recoger'] as const;
@@ -246,5 +248,45 @@ describe('Estadísticas: volumen y productividad — SPEC-ALE186-013', () => {
     expectApiError(await testApi().get(`/api/estadisticas${endpoint}`), { status: 401, codigo: 'NO_AUTENTICADO' });
     expect(volumen).not.toHaveBeenCalled();
     expect(productividad).not.toHaveBeenCalled();
+  });
+});
+
+describe('Estadísticas: atenciones de cada cliente — SPEC-ALE186-017', () => {
+  beforeEach(() => {
+    clientes.mockResolvedValue({ total: 0, clientes: [] });
+  });
+
+  it('responde el período, la página y lo que devolvió el model', async () => {
+    const res = await pedir('/clientes', { desde: '2025-07-01', hasta: '2025-07-31' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ desde: '2025-07-01', hasta: '2025-07-31', pagina: 1, porPagina: 50, total: 0, clientes: [] });
+  });
+
+  it('pasa al model el período, la sucursal, el cliente y la página que vinieron', async () => {
+    await pedir('/clientes', { sucursal_id: IDS.sucursal, cliente_id: IDS.cliente, pagina: '2', por_pagina: '10' });
+
+    expect(clientes).toHaveBeenCalledWith(
+      expect.objectContaining({ sucursalId: IDS.sucursal, hasta: hoyEnElNegocio() }),
+      IDS.cliente,
+      { pagina: 2, porPagina: 10 },
+    );
+  });
+
+  it.each([
+    ['un cliente que no es UUID', { cliente_id: '42' }],
+    ['una sucursal que no es UUID', { sucursal_id: '42' }],
+    ['una fecha mal escrita', { desde: '30/06/2025' }],
+    ['la página 0', { pagina: '0' }],
+    ['más de 200 por página', { por_pagina: '201' }],
+  ])('responde 400 con %s', async (_caso, query) => {
+    expectApiError(await pedir('/clientes', query), { status: 400, codigo: 'VALIDACION' });
+    expect(clientes).not.toHaveBeenCalled();
+  });
+
+  it('responde 403 a un EMPLEADO y 401 sin token, sin llegar al model', async () => {
+    expectApiError(await pedir('/clientes', {}, conSesion()), { status: 403, codigo: 'SIN_PERMISO' });
+    expectApiError(await testApi().get('/api/estadisticas/clientes'), { status: 401, codigo: 'NO_AUTENTICADO' });
+    expect(clientes).not.toHaveBeenCalled();
   });
 });
