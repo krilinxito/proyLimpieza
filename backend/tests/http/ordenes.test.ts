@@ -348,3 +348,23 @@ describe('PATCH /api/ordenes/:id — SPEC-ALE186-004', () => {
     expectApiError(res, { status: 401, codigo: 'NO_AUTENTICADO' });
   });
 });
+
+describe('POST /api/ordenes: sucursal cerrada y fecha futura — SPEC-ALE186-014', () => {
+  it('responde 409 SUCURSAL_CERRADA, con qué hacer, cuando la sucursal fue dada de baja', async () => {
+    crear.mockRejectedValue(new modelo.SucursalCerradaError(IDS.sucursal));
+
+    const res = await alta(cuerpoDeOrden());
+
+    expectApiError(res, { status: 409, codigo: 'SUCURSAL_CERRADA' });
+    expect(res.body.error.mensaje).toMatch(/Avisale al encargado/);
+  });
+
+  it('responde 400 FECHA_FUTURA, pidiendo revisar la hora de la tablet', async () => {
+    crear.mockRejectedValue(new modelo.FechaFuturaError('2099-01-01T00:00:00Z'));
+
+    const res = await alta(cuerpoDeOrden({ fecha_entrada: '2099-01-01T00:00:00Z' }));
+
+    expectApiError(res, { status: 400, codigo: 'FECHA_FUTURA' });
+    expect(res.body.error.mensaje).toMatch(/hora de la tablet/);
+  });
+});

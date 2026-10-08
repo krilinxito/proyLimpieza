@@ -211,3 +211,38 @@ describe('Ordenes model: actualizar — SPEC-ALE186-004', () => {
     ).rejects.toBeInstanceOf(ordenes.BoletaOcupadaError);
   });
 });
+
+describe('Ordenes model: sucursal cerrada y fecha futura — SPEC-ALE186-014', () => {
+  it('las dos reglas van dentro del INSERT, con la fecha, la sucursal y el margen como parámetros', async () => {
+    query.mockResolvedValueOnce({ rows: [FILA] });
+
+    await ordenes.crear(NUEVA);
+
+    const [sql, valores] = llamada();
+    expect(sql).toMatch(/INSERT INTO ordenes[\s\S]*SELECT[\s\S]*FROM sucursales s\s+WHERE s\.id = \$4::uuid/);
+    expect(sql).toContain('$9::timestamptz <= now() + $10::interval');
+    // La sucursal abierta, o la fecha de entrada antes del último cierre que anotó la auditoría.
+    expect(sql).toMatch(/s\.activa\s+OR \(\$9::timestamptz IS NOT NULL\s+AND \$9::timestamptz::timestamp < \(SELECT max\(cierre\.fecha\) FROM auditoria cierre/);
+    expect(sql).toContain("cierre.valores_anteriores->>'activa' = 'true'");
+    expect(valores.slice(8, 10)).toEqual([NUEVA.fechaEntrada, '5 minutes']);
+    expect(sql).not.toContain(NUEVA.fechaEntrada);
+  });
+
+  it('si no insertó, el reintento gana: devuelve la orden aunque la sucursal esté cerrada', async () => {
+    query.mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({ rows: [FILA] });
+
+    expect(await ordenes.crear(NUEVA)).toMatchObject({ creada: false, orden: { id: IDS.orden } });
+  });
+
+  it.each([
+    ['la fecha está en el futuro', { futura: true, activa: true }, 'FechaFuturaError'],
+    ['la sucursal está cerrada', { futura: false, activa: false }, 'SucursalCerradaError'],
+  ])('si no insertó y no es un reintento, dice que %s', async (_caso, motivo, error) => {
+    query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [motivo] });
+
+    await expect(ordenes.crear(NUEVA)).rejects.toMatchObject({ name: error });
+  });
+});
