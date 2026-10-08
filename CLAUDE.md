@@ -63,7 +63,11 @@ la sucursal a la que está asignada hoy la persona: si la mueven, lo que hizo an
 anterior. Editar un cliente, el login y lo que el admin hace con usuarios y sucursales no tienen
 sucursal. El período (`desde`/`hasta` en días de Bolivia) se lee en `utils/periodo.ts`, que
 comparten la auditoría y las estadísticas. SPEC-ALE186-013 completó las métricas de la sección 8
-con `/api/estadisticas/volumen` y `/productividad`.
+con `/api/estadisticas/volumen` y `/productividad`. SPEC-ALE186-014 hizo que una sucursal dada
+de baja (`activa: false`, algo excepcional) no reciba ropa nueva: acepta la que una tablet
+cargó sin internet **antes** del cierre y sube después, y rechaza con 409 `SUCURSAL_CERRADA`
+la posterior. El momento del cierre sale de la auditoría. Toda `fecha_entrada` más de 5
+minutos en el futuro de la hora del servidor se rechaza con 400 `FECHA_FUTURA`.
 
 `frontend/` tiene el scaffolding de SPEC-KRILINXI-001: Vite, Tailwind, rutas y su suite de
 tests. SPEC-KRILINXI-002 añadió las piezas que reutilizan todas las pantallas: `Boton`,
@@ -519,11 +523,13 @@ Nada se implementa sin una spec aprobada.
   (solo local, sin columna nueva en Postgres) y lo muestra en `/para-corregir`, pero
   todavía no se puede editar y volver a enviar: hoy el empleado lee el motivo y avisa. Va en
   una spec propia (`corregir-registros`).
-- **Una sucursal cerrada no frena al personal que ya tenía.** SPEC-ALE186-011 impide
-  asignarle gente y cerrarla con ropa adentro, pero un EMPLEADO que sigue asignado a ella
-  puede seguir registrando ropa: su sucursal sale del token, y `POST /api/ordenes` no mira
-  `activa` para un empleado. Al cerrar, el admin tiene que mover o dar de baja a su gente.
-  Si hace falta que el sistema lo impida, va en una spec propia.
+- **El reloj de la tablet (pedido al frontend).** `fecha_entrada`, `fecha_pago` y
+  `fecha_entrega` las pone la tablet, y son las oficiales. Si su reloj está mal, quedan mal.
+  SPEC-ALE186-014 rechaza en el servidor una `fecha_entrada` más de 5 minutos en el futuro,
+  pero la corrección de verdad es del dispositivo: cada vez que tenga conexión, medir el
+  desfase contra la hora del servidor y aplicarlo al registrar, también sin internet. El
+  backend va a exponer esa hora (`ahora` en `login` y `renovar`) en una spec propia,
+  `hora-del-servidor`.
 - **No hay triggers.** El paso a `ENTREGADO` y la auditoría se resolvieron en código, en la
   misma sentencia que la escritura (sección 6, SPEC-ALE186-006 y -010). El costo: una
   escritura que alguien haga a mano en la base, o por un camino que no pase por
