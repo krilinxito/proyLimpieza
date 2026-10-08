@@ -1,6 +1,7 @@
 // Las rutas solo declaran endpoints y su middleware. Sin lógica.
 import { Router } from 'express';
 import {
+  getClientes,
   getIngresos,
   getProductividad,
   getSaldos,
@@ -21,3 +22,4 @@ estadisticasRouter.get('/saldos', getSaldos);
 estadisticasRouter.get('/sin-recoger', getSinRecoger);
 estadisticasRouter.get('/volumen', getVolumen);
 estadisticasRouter.get('/productividad', getProductividad);
+estadisticasRouter.get('/clientes', getClientes);
