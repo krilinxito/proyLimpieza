@@ -2,7 +2,7 @@
 id: SPEC-ALE186-017
 name: Atenciones de cada cliente por sucursal
 slug: estadisticas-clientes
-status: approved
+status: in-progress
 owner: ale186
 created: 2026-10-08
 scope:
