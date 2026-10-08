@@ -160,6 +160,22 @@ export async function postOrden(req: Request, res: Response): Promise<void> {
     if (error instanceof ClienteInexistenteError) {
       throw invalido('Ese cliente no está registrado. Buscalo por su teléfono o dalo de alta.');
     }
+    // SPEC-ALE186-014. Un 409 y un 400: la tablet aparta los dos en "para
+    // corregir" (SPEC-KRILINXI-007), así que la ropa no se pierde en silencio.
+    if (error instanceof ordenes.SucursalCerradaError) {
+      throw new ApiError(
+        409,
+        CODIGOS_ERROR.SUCURSAL_CERRADA,
+        'Esta sucursal fue dada de baja y ya no recibe ropa nueva. Avisale al encargado para que te asigne a otra sucursal.',
+      );
+    }
+    if (error instanceof ordenes.FechaFuturaError) {
+      throw new ApiError(
+        400,
+        CODIGOS_ERROR.FECHA_FUTURA,
+        'La fecha de ingreso de la ropa está en el futuro. Revisá la fecha y la hora de la tablet y volvé a cargarla.',
+      );
+    }
     throw error;
   }
 }

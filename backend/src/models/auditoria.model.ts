@@ -149,6 +149,26 @@ export function updateConAntes(partes: {
 }
 
 /**
+ * El momento en que se cerró una sucursal, como fragmento de SQL — SPEC-ALE186-014.
+ *
+ * `sucursales` no guarda la fecha de cierre (agregarle una columna exigiría
+ * `down -v`), pero la auditoría sí: cerrar es un EDITAR de `sucursales` cuyo
+ * `valores_anteriores` dice `activa: true` (así lo anota `valoresAnteriores`,
+ * solo cuando el valor cambió). Si se cerró, se reabrió y se volvió a cerrar,
+ * `max` se queda con el último. Da NULL si nunca se cerró desde que hay
+ * auditoría. La fecha está en la zona de la sesión, como el resto.
+ *
+ * `parametroSucursal` es el `$n` con el id de la sucursal en la sentencia que lo use.
+ */
+export function momentoDelCierre(parametroSucursal: string): string {
+  return `(SELECT max(cierre.fecha) FROM auditoria cierre
+            WHERE cierre.tabla_afectada = 'sucursales'
+              AND cierre.registro_id = ${parametroSucursal}
+              AND cierre.accion = 'EDITAR'
+              AND cierre.valores_anteriores->>'activa' = 'true')`;
+}
+
+/**
  * Anota algo que no es una escritura de otra tabla. Hoy, solo el login.
  *
  * Va suelta y no encadenada porque el login no escribe nada más: no hay con

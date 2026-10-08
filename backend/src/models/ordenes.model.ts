@@ -9,7 +9,7 @@ import pg from 'pg';
 import { pool } from '../db/pool.js';
 import type { EstadoOrden } from '../utils/dominio.js';
 import { formatear, type Centavos } from '../utils/money.js';
-import { conAuditoria, updateConAntes, type ColumnaAuditada } from './auditoria.model.js';
+import { conAuditoria, momentoDelCierre, updateConAntes, type ColumnaAuditada } from './auditoria.model.js';
 
 export interface Orden {
   id: string;
@@ -143,6 +143,51 @@ export interface OrdenNueva {
  * sesión de Postgres, que es la misma con la que `LOCALTIMESTAMP` —el valor
  * cuando no viene— y el `DEFAULT NOW()` del schema escriben las demás filas.
  */
+/**
+ * Cuánto puede adelantarse el reloj de una tablet antes de que su `fecha_entrada`
+ * se considere imposible — SPEC-ALE186-014. Es una red de seguridad: la hora de
+ * la tablet se corrige antes, en el dispositivo; esto frena lo que se escape.
+ */
+export const MARGEN_FECHA_FUTURA = '5 minutes';
+
+/** La sucursal está dada de baja y la orden es de después — SPEC-ALE186-014. */
+export class SucursalCerradaError extends Error {
+  constructor(readonly sucursalId: string) {
+    super(`La sucursal ${sucursalId} está cerrada.`);
+    this.name = 'SucursalCerradaError';
+  }
+}
+
+/** La `fecha_entrada` está en el futuro respecto de la hora del servidor — SPEC-ALE186-014. */
+export class FechaFuturaError extends Error {
+  constructor(readonly fechaEntrada: string) {
+    super(`La fecha de entrada ${fechaEntrada} está en el futuro.`);
+    this.name = 'FechaFuturaError';
+  }
+}
+
+/** El momento en que se cerró la sucursal de la orden (`$4`); lo sabe la auditoría. */
+const CIERRE_DE_LA_SUCURSAL = momentoDelCierre('$4');
+
+/**
+ * Crea la orden en RECIBIDO, o devuelve la que ya existe con ese id.
+ *
+ * Es un `INSERT … SELECT … FROM sucursales` (el mismo recurso que pagos usa con
+ * la orden anulada, SPEC-ALE186-005): si la fila de la sucursal no cumple las
+ * condiciones, el SELECT no devuelve nada y no se inserta nada. Dos reglas
+ * viven ahí, en la misma sentencia que escribe — SPEC-ALE186-014:
+ *
+ *   - Una sucursal cerrada solo recibe la ropa que entró ANTES del cierre: la
+ *     que una tablet cargó sin internet y sube después. Sin `fecha_entrada` no
+ *     se puede saber, así que no entra.
+ *   - Ninguna `fecha_entrada` puede estar más de `MARGEN_FECHA_FUTURA` adelante
+ *     de la hora del servidor (`now()` de Postgres).
+ *
+ * `fecha_entrada` pasa por `timestamptz` antes de llegar a la columna, igual
+ * que antes: el instante que mandó el dispositivo se convierte a la zona de la
+ * sesión de Postgres, la misma con que se escriben las demás fechas, incluida
+ * `auditoria.fecha`. Por eso se puede comparar con el cierre sin convertir nada.
+ */
 export async function crear(orden: OrdenNueva): Promise<{ orden: Orden; creada: boolean }> {
   // Quien la recibe es quien la crea: la auditoría (SPEC-ALE186-010) se anota a
   // su nombre, en la misma sentencia, y solo si el INSERT insertó.
@@ -150,10 +195,16 @@ export async function crear(orden: OrdenNueva): Promise<{ orden: Orden; creada: 
     {
       sql: `INSERT INTO ordenes (id, numero_boleta, cliente_id, sucursal_id, usuario_recepcion_id,
                                  descripcion, precio_total, fecha_estimada_salida, fecha_entrada)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8,
-                         COALESCE($9::timestamptz::timestamp, LOCALTIMESTAMP))
+            SELECT $1, $2, $3, s.id, $5, $6, $7, $8,
+                   COALESCE($9::timestamptz::timestamp, LOCALTIMESTAMP)
+              FROM sucursales s
+             WHERE s.id = $4::uuid
+               AND ($9::timestamptz IS NULL OR $9::timestamptz <= now() + $10::interval)
+               AND (s.activa
+                    OR ($9::timestamptz IS NOT NULL
+                        AND $9::timestamptz::timestamp < ${CIERRE_DE_LA_SUCURSAL}))
             ON CONFLICT (id) DO NOTHING
-              RETURNING ${COLUMNAS}`,
+            RETURNING ${COLUMNAS}`,
       valores: [
         orden.id,
         orden.numeroBoleta,
@@ -164,6 +215,7 @@ export async function crear(orden: OrdenNueva): Promise<{ orden: Orden; creada: 
         formatear(orden.precioTotal),
         orden.fechaEstimadaSalida,
         orden.fechaEntrada,
+        MARGEN_FECHA_FUTURA,
       ],
       columnas: COLUMNAS,
     },
@@ -174,13 +226,29 @@ export async function crear(orden: OrdenNueva): Promise<{ orden: Orden; creada: 
   const insertada = rows[0];
   if (insertada !== undefined) return { orden: aOrden(insertada), creada: true };
 
+  // No se insertó. El reintento va primero: una orden que ya estaba guardada se
+  // devuelve aunque la sucursal se haya cerrado después. Un reintento no es una
+  // orden nueva.
   const existente = await buscarPorId(orden.id);
-  if (existente === null) {
-    // Chocó por id y el id no está: no hay borrado de órdenes, así que esto no
-    // debería pasar nunca. Mejor enterarse que inventar una respuesta.
-    throw new Error(`La orden ${orden.id} chocó por id pero no se encuentra.`);
-  }
-  return { orden: existente, creada: false };
+  if (existente !== null) return { orden: existente, creada: false };
+
+  throw await motivoDelRechazo(orden);
+}
+
+/** Por qué el INSERT de `crear` no insertó, sabiendo que no fue un reintento. */
+async function motivoDelRechazo(orden: OrdenNueva): Promise<Error> {
+  const { rows } = await pool.query<{ futura: boolean; activa: boolean | null }>(
+    `SELECT ($1::timestamptz IS NOT NULL AND $1::timestamptz > now() + $2::interval) AS futura,
+            (SELECT activa FROM sucursales WHERE id = $3::uuid) AS activa`,
+    [orden.fechaEntrada, MARGEN_FECHA_FUTURA, orden.sucursalId],
+  );
+  const motivo = rows[0];
+  if (motivo?.futura === true) return new FechaFuturaError(orden.fechaEntrada ?? '');
+  if (motivo?.activa === false) return new SucursalCerradaError(orden.sucursalId);
+
+  // La sucursal existe, está abierta y la fecha es válida, pero no se insertó:
+  // no debería pasar. Mejor enterarse que inventar un motivo.
+  return new Error(`La orden ${orden.id} no se insertó y no se encuentra el motivo.`);
 }
 
 /** Lo único de una orden que se puede cambiar. */
