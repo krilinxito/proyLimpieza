@@ -3,6 +3,7 @@
 import bcrypt from 'bcrypt';
 import type { Request, Response } from 'express';
 import * as auditoria from '../models/auditoria.model.js';
+import * as reloj from '../models/reloj.model.js';
 import { buscarPorId, buscarPorUsername, type Usuario } from '../models/usuarios.model.js';
 import { sesionDe } from '../middleware/auth.js';
 import { ApiError, CODIGOS_ERROR } from '../utils/ApiError.js';
@@ -88,6 +89,8 @@ export async function postLogin(req: Request, res: Response): Promise<void> {
   res.json({
     ...emitirCredenciales({ id: usuario.id, rol: usuario.rol, sucursalId: usuario.sucursalId }),
     usuario: paraRespuesta(usuario),
+    // Para que la tablet mida el desfase de su reloj (SPEC-ALE186-015).
+    ahora: await reloj.ahora(),
   });
 }
 
@@ -108,5 +111,7 @@ export async function postRenovar(req: Request, res: Response): Promise<void> {
   res.json({
     ...emitirCredenciales({ id: usuario.id, rol: usuario.rol, sucursalId: usuario.sucursalId }),
     usuario: paraRespuesta(usuario),
+    // Se renueva en cada reconexión: es el mejor momento para recalibrar el reloj.
+    ahora: await reloj.ahora(),
   });
 }
