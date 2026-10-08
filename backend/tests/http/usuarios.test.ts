@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Usuario } from '../../src/models/usuarios.model.js';
+import { limitadorLogin } from '../../src/services/limiteLogin.js';
 import { expectApiError, testApi } from '../helpers/api.js';
 import { sucursalDePrueba } from '../helpers/sucursales.js';
 import {
@@ -68,6 +69,8 @@ function edicion(id: string, cuerpo: Record<string, unknown>, sesion: Record<str
 beforeEach(() => {
   vi.clearAllMocks();
   buscarSucursal.mockResolvedValue(SUCURSAL_ABIERTA);
+  // El límite de intentos (SPEC-ALE186-016) vive todo el proceso: cada test arranca sin fallos.
+  limitadorLogin.reiniciar();
 });
 
 describe('POST /api/usuarios — SPEC-ALE186-009', () => {

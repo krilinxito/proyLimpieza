@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { limitadorLogin } from '../../src/services/limiteLogin.js';
 import { expectApiError, testApi } from '../helpers/api.js';
 import { CONTRASENA_DE_PRUEBA, tokenDePrueba, usuarioDePrueba } from '../helpers/usuarios.js';
 
@@ -28,6 +29,13 @@ const buscarPorIdMock = vi.mocked(buscarPorId);
 function login(body: Record<string, unknown>) {
   return testApi().post('/api/auth/login').send(body);
 }
+
+// El límite de intentos (SPEC-ALE186-016) es un objeto que vive todo el proceso, y
+// estos tests hacen logins fallidos con el mismo usuario: sin esto, se sumarían
+// entre tests y uno terminaría bloqueado por culpa de los anteriores.
+beforeEach(() => {
+  limitadorLogin.reiniciar();
+});
 
 describe('POST /api/auth/login — SPEC-ALE186-002', () => {
   beforeEach(() => {
@@ -237,5 +245,115 @@ describe('La hora del servidor en las respuestas — SPEC-ALE186-015', () => {
 
     expectApiError(res, { status: 401, codigo: 'NO_AUTENTICADO' });
     expect(res.body).not.toHaveProperty('ahora');
+  });
+});
+
+describe('Límite de intentos en el login — SPEC-ALE186-016', () => {
+  beforeEach(() => {
+    buscarPorUsernameMock.mockReset();
+    buscarPorIdMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** `veces` logins fallidos seguidos con ese usuario. */
+  async function fallar(username: string, veces: number) {
+    for (let i = 0; i < veces; i++) await login({ username, password: 'no-es-esta' });
+  }
+
+  it('al sexto intento responde 429 con Retry-After, aunque la contraseña sea la correcta', async () => {
+    buscarPorUsernameMock.mockResolvedValue(await usuarioDePrueba());
+    await fallar('maria', 5);
+
+    const res = await login({ username: 'maria', password: CONTRASENA_DE_PRUEBA });
+
+    expectApiError(res, { status: 429, codigo: 'DEMASIADOS_INTENTOS' });
+    expect(res.body.error.mensaje).toMatch(/Esperá 5 minutos/);
+    expect(res.headers['retry-after']).toBe('300');
+  });
+
+  it('mientras está bloqueado no consulta la base ni anota nada', async () => {
+    buscarPorUsernameMock.mockResolvedValue(await usuarioDePrueba());
+    await fallar('maria', 5);
+    buscarPorUsernameMock.mockClear();
+    registrarAuditoria.mockClear();
+
+    await login({ username: 'maria', password: CONTRASENA_DE_PRUEBA });
+
+    expect(buscarPorUsernameMock).not.toHaveBeenCalled();
+    expect(registrarAuditoria).not.toHaveBeenCalled();
+  });
+
+  it('a los 4:59 sigue bloqueado y a los 5:00 vuelve a dejar entrar', async () => {
+    // El limitador usa el reloj del proceso (`Date.now`): con este reloj falso se
+    // prueban 5 minutos sin esperarlos.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-08T10:00:00Z'));
+    buscarPorUsernameMock.mockResolvedValue(await usuarioDePrueba());
+    await fallar('maria', 5);
+
+    vi.setSystemTime(new Date('2026-10-08T10:04:59Z'));
+    const casi = await login({ username: 'maria', password: CONTRASENA_DE_PRUEBA });
+    vi.setSystemTime(new Date('2026-10-08T10:05:00Z'));
+    const ya = await login({ username: 'maria', password: CONTRASENA_DE_PRUEBA });
+
+    expect(casi.status).toBe(429);
+    expect(casi.headers['retry-after']).toBe('1');
+    expect(ya.status).toBe(200);
+  });
+
+  it('entrar bien reinicia el contador: 4 fallos, entrar, 4 fallos más no bloquea', async () => {
+    buscarPorUsernameMock.mockResolvedValue(await usuarioDePrueba());
+    await fallar('maria', 4);
+    expect((await login({ username: 'maria', password: CONTRASENA_DE_PRUEBA })).status).toBe(200);
+    await fallar('maria', 4);
+
+    expect((await login({ username: 'maria', password: CONTRASENA_DE_PRUEBA })).status).toBe(200);
+  });
+
+  it('los fallos de un usuario no bloquean a otro', async () => {
+    buscarPorUsernameMock.mockResolvedValue(await usuarioDePrueba({ username: 'rosa' }));
+    await fallar('maria', 5);
+
+    expect((await login({ username: 'rosa', password: CONTRASENA_DE_PRUEBA })).status).toBe(200);
+  });
+
+  it('bloquea igual un usuario que no existe, con la misma respuesta', async () => {
+    buscarPorUsernameMock.mockResolvedValue(null);
+    await fallar('nadie', 5);
+
+    const res = await login({ username: 'nadie', password: 'loquesea' });
+
+    expectApiError(res, { status: 429, codigo: 'DEMASIADOS_INTENTOS' });
+    expect(res.body.error.mensaje).toMatch(/Esperá 5 minutos/);
+  });
+
+  it('una cuenta dada de baja con su contraseña correcta cuenta como fallo, y también se bloquea', async () => {
+    buscarPorUsernameMock.mockResolvedValue(await usuarioDePrueba({ activo: false }));
+    for (let i = 0; i < 5; i++) await login({ username: 'maria', password: CONTRASENA_DE_PRUEBA });
+
+    expectApiError(await login({ username: 'maria', password: CONTRASENA_DE_PRUEBA }), {
+      status: 429,
+      codigo: 'DEMASIADOS_INTENTOS',
+    });
+  });
+
+  it('una petición sin contraseña responde 400 y no cuenta como intento', async () => {
+    buscarPorUsernameMock.mockResolvedValue(await usuarioDePrueba());
+    for (let i = 0; i < 10; i++) expect((await login({ username: 'maria' })).status).toBe(400);
+
+    expect((await login({ username: 'maria', password: CONTRASENA_DE_PRUEBA })).status).toBe(200);
+  });
+
+  it('la renovación no se limita', async () => {
+    buscarPorUsernameMock.mockResolvedValue(await usuarioDePrueba());
+    buscarPorIdMock.mockResolvedValue(await usuarioDePrueba());
+    await fallar('maria', 5);
+
+    const res = await testApi().post('/api/auth/renovar').set('Authorization', `Bearer ${tokenDePrueba()}`);
+
+    expect(res.status).toBe(200);
   });
 });
