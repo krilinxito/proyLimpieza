@@ -2,7 +2,7 @@
 id: SPEC-ALE186-014
 name: Una sucursal cerrada no recibe ropa nueva
 slug: ordenes-sucursal-cerrada
-status: approved
+status: in-progress
 owner: ale186
 created: 2026-10-08
 scope:
