@@ -2,7 +2,7 @@
 id: SPEC-ALE186-015
 name: La hora del servidor y la fecha de cada hecho
 slug: hora-del-servidor
-status: in-progress
+status: finished
 owner: ale186
 created: 2026-10-08
 scope:
@@ -14,7 +14,12 @@ scope:
   - CLAUDE.md
 priority: medium
 depends_on: []
-tests: []
+tests:
+  - backend\tests\db\horaDelServidor.db.test.ts
+  - backend\tests\http\auth.test.ts
+  - backend\tests\http\usuarios.test.ts
+  - backend\tests\unit\auditoria.model.test.ts
+  - backend\tests\unit\reloj.model.test.ts
 ---
 
 ## Descripción
