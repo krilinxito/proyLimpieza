@@ -4,6 +4,7 @@ import bcrypt from 'bcrypt';
 import type { Request, Response } from 'express';
 import * as auditoria from '../models/auditoria.model.js';
 import * as reloj from '../models/reloj.model.js';
+import { limitadorLogin } from '../services/limiteLogin.js';
 import { buscarPorId, buscarPorUsername, type Usuario } from '../models/usuarios.model.js';
 import { sesionDe } from '../middleware/auth.js';
 import { ApiError, CODIGOS_ERROR } from '../utils/ApiError.js';
@@ -66,20 +67,52 @@ function leerCredenciales(body: unknown): { username: string; contrasena: string
   return { username, contrasena };
 }
 
+/**
+ * El 429 del bloqueo, en minutos y con palabras del mostrador. Es el mismo para
+ * un usuario que existe y para uno que no: no delata cuál es real.
+ */
+function demasiadosIntentos(segundos: number): ApiError {
+  const minutos = Math.ceil(segundos / 60);
+  const cuanto = minutos === 1 ? '1 minuto' : `${minutos} minutos`;
+  return new ApiError(
+    429,
+    CODIGOS_ERROR.DEMASIADOS_INTENTOS,
+    `Hubo demasiados intentos con este usuario. Esperá ${cuanto} y volvé a probar.`,
+  );
+}
+
 /** POST /api/auth/login */
 export async function postLogin(req: Request, res: Response): Promise<void> {
+  // Una petición sin usuario o sin contraseña sale acá con 400 y no cuenta como
+  // intento: no está probando ninguna contraseña.
   const { username, contrasena } = leerCredenciales(req.body);
+
+  // Antes de tocar la base (SPEC-ALE186-016): mientras dura el bloqueo no se
+  // busca al usuario ni se compara la contraseña. Ni siquiera la correcta entra.
+  const espera = limitadorLogin.segundosDeBloqueo(username);
+  if (espera !== null) {
+    res.set('Retry-After', String(espera));
+    throw demasiadosIntentos(espera);
+  }
 
   const usuario = await buscarPorUsername(username);
 
   if (!(await verificarContrasena(contrasena, usuario?.passwordHash ?? null))) {
+    limitadorLogin.registrarFallo(username);
     throw noAutenticado(CREDENCIALES_INVALIDAS);
   }
 
   // El orden importa: primero la contraseña, después el estado. Al revés, quien
   // solo sabe el nombre de un empleado dado de baja se enteraría de que existe.
-  // Así, ese mensaje solo lo ve quien ya demostró ser esa persona.
-  if (usuario === null || !usuario.activo) throw noAutenticado(USUARIO_DADO_DE_BAJA);
+  // Así, ese mensaje solo lo ve quien ya demostró ser esa persona. Y cuenta como
+  // fallo: un login que no entra, aunque la contraseña sea buena, no puede ser
+  // un camino sin límite (SPEC-ALE186-016).
+  if (usuario === null || !usuario.activo) {
+    limitadorLogin.registrarFallo(username);
+    throw noAutenticado(USUARIO_DADO_DE_BAJA);
+  }
+
+  limitadorLogin.registrarExito(username);
 
   // Solo el login que entra (SPEC-ALE186-010). Los fallidos no: `usuario_id` no
   // admite NULL y un username inventado no es de nadie. La renovación tampoco:

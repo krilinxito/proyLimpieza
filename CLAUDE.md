@@ -71,6 +71,9 @@ minutos en el futuro de la hora del servidor se rechaza con 400 `FECHA_FUTURA`.
 SPEC-ALE186-015 agregó `ahora` (la hora de Postgres) a las respuestas de `login` y `renovar`,
 para que la tablet mida el desfase de su reloj, y `fechaDelHecho` a cada registro de la
 auditoría: cuándo pasó de verdad según la tablet, aparte de cuándo llegó al servidor (`fecha`).
+SPEC-ALE186-016 limitó el login: después de 5 intentos fallidos seguidos para un mismo nombre de
+usuario (exista o no, y también si es una cuenta dada de baja), se bloquea 5 minutos con 429
+`DEMASIADOS_INTENTOS` y `Retry-After`. El contador vive en `services/limiteLogin.ts`, en memoria.
 
 `frontend/` tiene el scaffolding de SPEC-KRILINXI-001: Vite, Tailwind, rutas y su suite de
 tests. SPEC-KRILINXI-002 añadió las piezas que reutilizan todas las pantallas: `Boton`,
@@ -534,6 +537,13 @@ Nada se implementa sin una spec aprobada.
   backend ya la expone desde SPEC-ALE186-015: `ahora` (ISO en UTC) en las respuestas de
   `login` y `renovar`, sacado de `now()` de Postgres, el mismo reloj que valida la fecha
   futura. Falta el lado de la tablet.
+- **El límite de intentos del login vive en memoria** (SPEC-ALE186-016). No hay migraciones
+  y una tabla nueva exigiría `down -v`. El costo: se pierde al reiniciar el servidor (quien
+  estaba bloqueado queda libre) y no sirve si algún día hay **más de una instancia** del
+  backend, porque cada una tendría su propio contador. Si se escala, hay que moverlo a la
+  base o a algo compartido. Además, como bloquea por nombre de usuario, alguien de afuera
+  puede dejar a un empleado 5 minutos sin entrar escribiendo mal su contraseña a propósito:
+  por eso el bloqueo es corto.
 - **No hay triggers.** El paso a `ENTREGADO` y la auditoría se resolvieron en código, en la
   misma sentencia que la escritura (sección 6, SPEC-ALE186-006 y -010). El costo: una
   escritura que alguien haga a mano en la base, o por un camino que no pase por
