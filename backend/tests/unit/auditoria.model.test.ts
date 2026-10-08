@@ -281,3 +281,34 @@ describe('Auditoría: la consulta del admin — SPEC-ALE186-012', () => {
     expect(sql).not.toContain('u.sucursal_id');
   });
 });
+
+describe('Auditoría: la fecha del hecho — SPEC-ALE186-015', () => {
+  beforeEach(() => {
+    query.mockReset();
+    query.mockResolvedValueOnce({ rows: [{ total: 0 }] }).mockResolvedValueOnce({ rows: [] });
+  });
+
+  it('sale del registro tocado con un CASE sobre la tabla, y de la orden solo en su alta', async () => {
+    await auditoria.consultar(
+      { desde: '2026-03-01', hasta: '2026-03-31', sucursalId: null, usuarioId: null, accion: null, tabla: null, registroId: null },
+      { pagina: 1, porPagina: 50 },
+    );
+
+    const [sql] = query.mock.calls[1] as [string];
+    expect(sql).toMatch(/WHEN 'ordenes'\s+THEN CASE WHEN a\.accion = 'CREAR'\s+THEN \(SELECT o\.fecha_entrada/);
+    expect(sql).toContain("WHEN 'pagos'    THEN (SELECT p.fecha_pago");
+    expect(sql).toContain("WHEN 'entregas' THEN (SELECT e.fecha_entrega");
+    // Se formatea en la hora del negocio con la zona que la consulta ya tenía ($3).
+    expect(sql).toMatch(/to_char\(\(\(fecha_del_hecho AT TIME ZONE current_setting\('TimeZone'\)\) AT TIME ZONE \$3\)/);
+  });
+
+  it('no agrega parámetros: los mismos ocho filtros, más el límite y el salto de la página', async () => {
+    await auditoria.consultar(
+      { desde: '2026-03-01', hasta: '2026-03-31', sucursalId: null, usuarioId: null, accion: null, tabla: null, registroId: null },
+      { pagina: 1, porPagina: 50 },
+    );
+
+    expect((query.mock.calls[0] as [string, unknown[]])[1]).toHaveLength(8);
+    expect((query.mock.calls[1] as [string, unknown[]])[1]).toHaveLength(10);
+  });
+});

@@ -68,6 +68,9 @@ de baja (`activa: false`, algo excepcional) no reciba ropa nueva: acepta la que 
 cargó sin internet **antes** del cierre y sube después, y rechaza con 409 `SUCURSAL_CERRADA`
 la posterior. El momento del cierre sale de la auditoría. Toda `fecha_entrada` más de 5
 minutos en el futuro de la hora del servidor se rechaza con 400 `FECHA_FUTURA`.
+SPEC-ALE186-015 agregó `ahora` (la hora de Postgres) a las respuestas de `login` y `renovar`,
+para que la tablet mida el desfase de su reloj, y `fechaDelHecho` a cada registro de la
+auditoría: cuándo pasó de verdad según la tablet, aparte de cuándo llegó al servidor (`fecha`).
 
 `frontend/` tiene el scaffolding de SPEC-KRILINXI-001: Vite, Tailwind, rutas y su suite de
 tests. SPEC-KRILINXI-002 añadió las piezas que reutilizan todas las pantallas: `Boton`,
@@ -528,8 +531,9 @@ Nada se implementa sin una spec aprobada.
   SPEC-ALE186-014 rechaza en el servidor una `fecha_entrada` más de 5 minutos en el futuro,
   pero la corrección de verdad es del dispositivo: cada vez que tenga conexión, medir el
   desfase contra la hora del servidor y aplicarlo al registrar, también sin internet. El
-  backend va a exponer esa hora (`ahora` en `login` y `renovar`) en una spec propia,
-  `hora-del-servidor`.
+  backend ya la expone desde SPEC-ALE186-015: `ahora` (ISO en UTC) en las respuestas de
+  `login` y `renovar`, sacado de `now()` de Postgres, el mismo reloj que valida la fecha
+  futura. Falta el lado de la tablet.
 - **No hay triggers.** El paso a `ENTREGADO` y la auditoría se resolvieron en código, en la
   misma sentencia que la escritura (sección 6, SPEC-ALE186-006 y -010). El costo: una
   escritura que alguien haga a mano en la base, o por un camino que no pase por

@@ -20,6 +20,9 @@ vi.mock('../../src/models/usuarios.model.js', async (importOriginal) => ({
   buscarPorUsername: vi.fn(),
 }));
 vi.mock('../../src/models/sucursales.model.js', () => ({ buscarPorId: vi.fn() }));
+// La hora del servidor sale de Postgres (SPEC-ALE186-015). Acá no hay base: una
+// hora fija, que además deja comprobar que llega tal cual a la respuesta.
+vi.mock('../../src/models/reloj.model.js', () => ({ ahora: vi.fn(async () => '2026-10-08T14:05:03.123Z') }));
 // El login anota en la auditoría (SPEC-ALE186-010). Acá no hay base: el doble
 // deja comprobar QUÉ se anota sin escribir nada.
 vi.mock('../../src/models/auditoria.model.js', async (importOriginal) => ({

@@ -208,6 +208,12 @@ export interface RegistroAuditoria {
   registroId: string | null;
   /** Dónde ocurrió; `null` si no ocurre en una sucursal (ver `SUCURSAL_DE_LA_ACCION`). */
   sucursalId: string | null;
+  /**
+   * Cuándo pasó de verdad, según el dispositivo: `YYYY-MM-DD HH:MM:SS` en la hora
+   * del negocio, o `null` (ver `FECHA_DEL_HECHO`). `fecha`, en cambio, es cuándo
+   * llegó al servidor — SPEC-ALE186-015.
+   */
+  fechaDelHecho: string | null;
   valoresAnteriores: Record<string, unknown> | null;
   usuario: { id: string; nombreCompleto: string; username: string };
 }
@@ -219,6 +225,7 @@ interface FilaAuditoria {
   tabla_afectada: TablaAuditada;
   registro_id: string | null;
   sucursal_id: string | null;
+  fecha_del_hecho: string | null;
   valores_anteriores: Record<string, unknown> | null;
   usuario_id: string;
   nombre_completo: string;
@@ -249,6 +256,23 @@ const SUCURSAL_DE_LA_ACCION = `CASE a.tabla_afectada
   END`;
 
 /**
+ * Cuándo pasó de verdad cada acción, según el dispositivo — SPEC-ALE186-015.
+ *
+ * `auditoria.fecha` es cuándo LLEGÓ al servidor. Para una orden cargada sin
+ * internet, eso puede ser horas después de que la ropa entró. La fecha oficial
+ * la tiene el registro: la `fecha_entrada` de la orden (solo en su alta: editarla
+ * no tiene "fecha del hecho" propia), la `fecha_pago` y la `fecha_entrega`. Se
+ * saca igual que la sucursal, con un CASE sobre la tabla. Para el resto, NULL.
+ */
+const FECHA_DEL_HECHO = `CASE a.tabla_afectada
+    WHEN 'ordenes'  THEN CASE WHEN a.accion = 'CREAR'
+                              THEN (SELECT o.fecha_entrada FROM ordenes o WHERE o.id = a.registro_id)
+                         END
+    WHEN 'pagos'    THEN (SELECT p.fecha_pago    FROM pagos    p WHERE p.id = a.registro_id)
+    WHEN 'entregas' THEN (SELECT e.fecha_entrega FROM entregas e WHERE e.id = a.registro_id)
+  END`;
+
+/**
  * Las filas que cumplen los filtros, con su sucursal ya calculada. Es el mismo
  * CTE para la página y para el total: así no pueden filtrar distinto.
  *
@@ -259,7 +283,8 @@ const FILTRADAS = `filtradas AS (
   SELECT * FROM (
     SELECT a.id, a.fecha, a.accion, a.tabla_afectada, a.registro_id, a.valores_anteriores,
            u.id AS usuario_id, u.nombre_completo, u.username,
-           ${SUCURSAL_DE_LA_ACCION} AS sucursal_id
+           ${SUCURSAL_DE_LA_ACCION} AS sucursal_id,
+           ${FECHA_DEL_HECHO} AS fecha_del_hecho
       FROM auditoria a
       JOIN usuarios u ON u.id = a.usuario_id
      WHERE ${horaDelNegocio('a.fecha', '$3')}::date BETWEEN $1::date AND $2::date
@@ -306,6 +331,7 @@ export async function consultar(
     `WITH ${FILTRADAS}
      SELECT id,
             to_char(${horaDelNegocio('fecha', '$3')}, 'YYYY-MM-DD HH24:MI:SS') AS fecha,
+            to_char(${horaDelNegocio('fecha_del_hecho', '$3')}, 'YYYY-MM-DD HH24:MI:SS') AS fecha_del_hecho,
             accion, tabla_afectada, registro_id, sucursal_id, valores_anteriores,
             usuario_id, nombre_completo, username
        FROM filtradas
@@ -323,6 +349,7 @@ export async function consultar(
       tablaAfectada: fila.tabla_afectada,
       registroId: fila.registro_id,
       sucursalId: fila.sucursal_id,
+      fechaDelHecho: fila.fecha_del_hecho,
       valoresAnteriores: fila.valores_anteriores,
       usuario: { id: fila.usuario_id, nombreCompleto: fila.nombre_completo, username: fila.username },
     })),

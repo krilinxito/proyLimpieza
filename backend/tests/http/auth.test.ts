@@ -10,6 +10,9 @@ vi.mock('../../src/models/usuarios.model.js', () => ({
   buscarPorId: vi.fn(),
   crear: vi.fn(),
 }));
+// La hora del servidor sale de Postgres (SPEC-ALE186-015). Acá no hay base: una
+// hora fija, que además deja comprobar que llega tal cual a la respuesta.
+vi.mock('../../src/models/reloj.model.js', () => ({ ahora: vi.fn(async () => '2026-10-08T14:05:03.123Z') }));
 // El login anota en la auditoría (SPEC-ALE186-010). Acá no hay base: el doble
 // deja comprobar QUÉ se anota sin escribir nada.
 vi.mock('../../src/models/auditoria.model.js', async (importOriginal) => ({
@@ -199,5 +202,40 @@ describe('El login queda en la auditoría — SPEC-ALE186-010', () => {
 
     expect(res.status).toBe(200);
     expect(registrarAuditoria).not.toHaveBeenCalled();
+  });
+});
+
+describe('La hora del servidor en las respuestas — SPEC-ALE186-015', () => {
+  beforeEach(() => {
+    buscarPorUsernameMock.mockReset();
+    buscarPorIdMock.mockReset();
+  });
+
+  it('el login y la renovación traen ahora, y conservan todo lo demás', async () => {
+    const usuario = await usuarioDePrueba();
+    buscarPorUsernameMock.mockResolvedValue(usuario);
+    buscarPorIdMock.mockResolvedValue(usuario);
+
+    const entrar = await login({ username: 'maria', password: CONTRASENA_DE_PRUEBA });
+    const renovar = await testApi().post('/api/auth/renovar').set('Authorization', `Bearer ${tokenDePrueba()}`);
+
+    for (const res of [entrar, renovar]) {
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        ahora: '2026-10-08T14:05:03.123Z',
+        token: expect.any(String),
+        tokenPowerSync: expect.any(String),
+        usuario: { id: usuario.id },
+      });
+    }
+  });
+
+  it('un error del login no trae ahora: el formato de error no cambia', async () => {
+    buscarPorUsernameMock.mockResolvedValue(null);
+
+    const res = await login({ username: 'nadie', password: 'loquesea' });
+
+    expectApiError(res, { status: 401, codigo: 'NO_AUTENTICADO' });
+    expect(res.body).not.toHaveProperty('ahora');
   });
 });
