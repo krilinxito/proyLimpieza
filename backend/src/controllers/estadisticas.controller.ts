@@ -30,3 +30,17 @@ export async function getSinRecoger(req: Request, res: Response): Promise<void> 
   const resultado = await estadisticas.sinRecoger(periodo, hoyEnElNegocio());
   res.json({ desde: periodo.desde, hasta: periodo.hasta, ...resultado });
 }
+
+/** GET /api/estadisticas/volumen — SPEC-ALE186-013 */
+export async function getVolumen(req: Request, res: Response): Promise<void> {
+  const periodo = leerPeriodo(req.query);
+  const resultado = await estadisticas.volumen(periodo);
+  res.json({ desde: periodo.desde, hasta: periodo.hasta, ...resultado });
+}
+
+/** GET /api/estadisticas/productividad — SPEC-ALE186-013 */
+export async function getProductividad(req: Request, res: Response): Promise<void> {
+  const periodo = leerPeriodo(req.query);
+  const porEmpleado = await estadisticas.productividad(periodo);
+  res.json({ desde: periodo.desde, hasta: periodo.hasta, porEmpleado });
+}

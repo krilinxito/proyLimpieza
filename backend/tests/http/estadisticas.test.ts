@@ -15,12 +15,16 @@ vi.mock('../../src/models/estadisticas.model.js', async (importOriginal) => ({
   ingresos: vi.fn(),
   saldos: vi.fn(),
   sinRecoger: vi.fn(),
+  volumen: vi.fn(), // SPEC-ALE186-013
+  productividad: vi.fn(), // SPEC-ALE186-013
 }));
 
 const modelo = await import('../../src/models/estadisticas.model.js');
 const ingresos = vi.mocked(modelo.ingresos);
 const saldos = vi.mocked(modelo.saldos);
 const sinRecoger = vi.mocked(modelo.sinRecoger);
+const volumen = vi.mocked(modelo.volumen);
+const productividad = vi.mocked(modelo.productividad);
 
 const ADMIN = conSesion({ rol: 'ADMIN', sucursalId: null });
 const ENDPOINTS = ['/ingresos', '/saldos', '/sin-recoger'] as const;
@@ -179,5 +183,68 @@ describe('Estadísticas: la forma de las respuestas — SPEC-ALE186-008', () => 
       'DE_8_A_30_DIAS',
       'MAS_DE_30_DIAS',
     ]);
+  });
+});
+
+describe('Estadísticas: volumen y productividad — SPEC-ALE186-013', () => {
+  const NUEVOS = ['/volumen', '/productividad'] as const;
+
+  beforeEach(() => {
+    volumen.mockResolvedValue({ total: 2, anuladas: 1, porDia: [{ fecha: '2025-05-10', ordenes: 2, anuladas: 1 }] });
+    productividad.mockResolvedValue([
+      {
+        usuario: { id: IDS.usuario, nombreCompleto: 'María Pérez' },
+        sucursal: { id: IDS.sucursal, nombre: 'Central' },
+        ordenesRecibidas: 3,
+        cobros: 2,
+        montoCobrado: '125.50',
+        entregas: 1,
+      },
+    ]);
+  });
+
+  it('volumen responde el período y lo que contó el model', async () => {
+    const res = await pedir('/volumen', { desde: '2025-05-10', hasta: '2025-05-10' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      desde: '2025-05-10',
+      hasta: '2025-05-10',
+      total: 2,
+      anuladas: 1,
+      porDia: [{ fecha: '2025-05-10', ordenes: 2, anuladas: 1 }],
+    });
+  });
+
+  it('productividad responde una fila por persona y sucursal, con el monto como texto', async () => {
+    const res = await pedir('/productividad', { desde: '2025-05-01', hasta: '2025-05-31' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.porEmpleado[0]).toMatchObject({ montoCobrado: '125.50', sucursal: { nombre: 'Central' } });
+  });
+
+  it.each(NUEVOS)('%s sin fechas usa los últimos 30 días contando hoy, y filtra por sucursal', async (endpoint) => {
+    const res = await pedir(endpoint, { sucursal_id: IDS.sucursal });
+
+    expect(res.body.hasta).toBe(hoyEnElNegocio());
+    const modeloLlamado = endpoint === '/volumen' ? volumen : productividad;
+    expect(modeloLlamado).toHaveBeenCalledWith({ desde: res.body.desde, hasta: res.body.hasta, sucursalId: IDS.sucursal });
+  });
+
+  it.each(NUEVOS.flatMap((endpoint) => [
+    [endpoint, { desde: '30/06/2025' }],
+    [endpoint, { desde: '2025-06-30', hasta: '2025-06-01' }],
+    [endpoint, { sucursal_id: '42' }],
+  ] as const))('%s responde 400 con un período o una sucursal inválidos (%o)', async (endpoint, query) => {
+    expectApiError(await pedir(endpoint, query), { status: 400, codigo: 'VALIDACION' });
+    expect(volumen).not.toHaveBeenCalled();
+    expect(productividad).not.toHaveBeenCalled();
+  });
+
+  it.each(NUEVOS)('%s responde 403 a un EMPLEADO y 401 sin token, sin llegar al model', async (endpoint) => {
+    expectApiError(await pedir(endpoint, {}, conSesion()), { status: 403, codigo: 'SIN_PERMISO' });
+    expectApiError(await testApi().get(`/api/estadisticas${endpoint}`), { status: 401, codigo: 'NO_AUTENTICADO' });
+    expect(volumen).not.toHaveBeenCalled();
+    expect(productividad).not.toHaveBeenCalled();
   });
 });

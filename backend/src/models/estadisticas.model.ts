@@ -317,3 +317,145 @@ export async function sinRecoger(periodo: Periodo, hoy: string): Promise<SinReco
     })),
   };
 }
+
+// ------------------------------------------------------------------
+//  Volumen de órdenes — SPEC-ALE186-013
+// ------------------------------------------------------------------
+
+export interface VolumenDia {
+  /** `YYYY-MM-DD`, día del negocio. */
+  fecha: string;
+  /** Todas las que entraron ese día, incluidas las que después se anularon. */
+  ordenes: number;
+  /** Cuántas de esas están anuladas. No se descuentan de `ordenes`. */
+  anuladas: number;
+}
+
+export interface Volumen {
+  total: number;
+  anuladas: number;
+  porDia: VolumenDia[];
+}
+
+interface FilaVolumen {
+  fecha: string;
+  ordenes: number;
+  anuladas: number;
+  total: number;
+  anuladas_total: number;
+}
+
+/**
+ * Las órdenes que entraron por día, con TODOS los días del período.
+ *
+ * `generate_series` arma la lista de días y el LEFT JOIN cuenta las órdenes de
+ * cada uno: un día sin órdenes queda en 0 en vez de desaparecer, y el gráfico
+ * no salta días. Es el mismo recurso que los tramos de saldos (`LOS_TRES_TRAMOS`):
+ * agrupar sobre una lista fija y no sobre lo que haya en la tabla.
+ *
+ * La anulada se cuenta en el día en que entró: la ropa entró igual, y el
+ * mostrador trabajó. Se informa aparte, con `FILTER`, sin restarla.
+ */
+export async function volumen(periodo: Periodo): Promise<Volumen> {
+  const { rows } = await pool.query<FilaVolumen>(
+    `WITH dias AS (
+       SELECT d::date AS fecha FROM generate_series($1::date, $2::date, interval '1 day') AS d
+     ),
+     del_periodo AS (
+       SELECT ${diaLocal('o.fecha_entrada', '$4')}::date AS fecha, o.estado
+         FROM ordenes o
+        WHERE ${diaLocal('o.fecha_entrada', '$4')}::date BETWEEN $1::date AND $2::date
+          AND ($3::uuid IS NULL OR o.sucursal_id = $3)
+     )
+     SELECT to_char(dias.fecha, 'YYYY-MM-DD')                                         AS fecha,
+            COUNT(del_periodo.fecha)::int                                             AS ordenes,
+            (COUNT(*) FILTER (WHERE del_periodo.estado = 'ANULADO'))::int             AS anuladas,
+            (SUM(COUNT(del_periodo.fecha)) OVER ())::int                              AS total,
+            (SUM(COUNT(*) FILTER (WHERE del_periodo.estado = 'ANULADO')) OVER ())::int AS anuladas_total
+       FROM dias
+       LEFT JOIN del_periodo ON del_periodo.fecha = dias.fecha
+      GROUP BY dias.fecha
+      ORDER BY dias.fecha`,
+    [periodo.desde, periodo.hasta, periodo.sucursalId, ZONA_NEGOCIO],
+  );
+
+  return {
+    total: rows[0]?.total ?? 0,
+    anuladas: rows[0]?.anuladas_total ?? 0,
+    porDia: rows.map(({ fecha, ordenes, anuladas }) => ({ fecha, ordenes, anuladas })),
+  };
+}
+
+// ------------------------------------------------------------------
+//  Productividad por empleado — SPEC-ALE186-013
+// ------------------------------------------------------------------
+
+export interface ProductividadFila {
+  usuario: { id: string; nombreCompleto: string };
+  sucursal: { id: string; nombre: string };
+  ordenesRecibidas: number;
+  cobros: number;
+  /** Como lo suma Postgres: `"125.50"`. */
+  montoCobrado: string;
+  entregas: number;
+}
+
+interface FilaProductividad {
+  usuario_id: string;
+  nombre_completo: string;
+  sucursal_id: string;
+  sucursal: string;
+  ordenes_recibidas: number;
+  cobros: number;
+  monto_cobrado: string;
+  entregas: number;
+}
+
+/**
+ * Lo que hizo cada persona en el período, por sucursal.
+ *
+ * Las tres cosas que se cuentan viven en tres tablas, cada una con quién la hizo
+ * y en qué sucursal. El `UNION ALL` las pone una debajo de la otra con la misma
+ * forma (quién, dónde, qué, cuánto, cuándo), y después se agrupa por persona y
+ * sucursal con `FILTER` para separar cada tipo.
+ *
+ * La sucursal es la DEL REGISTRO, no la de la persona hoy (la regla de
+ * SPEC-ALE186-012): a un empleado que cambió de sucursal en el período le
+ * corresponden dos filas, cada una con lo que hizo ahí. Quien no hizo nada en el
+ * período no aparece: no hay filas de donde sacarlo.
+ */
+export async function productividad(periodo: Periodo): Promise<ProductividadFila[]> {
+  const { rows } = await pool.query<FilaProductividad>(
+    `WITH acciones AS (
+       SELECT usuario_recepcion_id AS usuario_id, sucursal_id, 'ORDEN' AS tipo, NULL::numeric AS monto,
+              fecha_entrada AS fecha
+         FROM ordenes
+       UNION ALL
+       SELECT usuario_id, sucursal_id, 'COBRO', monto, fecha_pago FROM pagos
+       UNION ALL
+       SELECT usuario_entrega_id, sucursal_id, 'ENTREGA', NULL, fecha_entrega FROM entregas
+     )
+     SELECT u.id AS usuario_id, u.nombre_completo, s.id AS sucursal_id, s.nombre AS sucursal,
+            (COUNT(*) FILTER (WHERE a.tipo = 'ORDEN'))::int                            AS ordenes_recibidas,
+            (COUNT(*) FILTER (WHERE a.tipo = 'COBRO'))::int                            AS cobros,
+            COALESCE(SUM(a.monto) FILTER (WHERE a.tipo = 'COBRO'), 0)::numeric(14,2)  AS monto_cobrado,
+            (COUNT(*) FILTER (WHERE a.tipo = 'ENTREGA'))::int                          AS entregas
+       FROM acciones a
+       JOIN usuarios   u ON u.id = a.usuario_id
+       JOIN sucursales s ON s.id = a.sucursal_id
+      WHERE ${diaLocal('a.fecha', '$4')}::date BETWEEN $1::date AND $2::date
+        AND ($3::uuid IS NULL OR a.sucursal_id = $3)
+      GROUP BY u.id, u.nombre_completo, s.id, s.nombre
+      ORDER BY s.nombre, s.id, u.nombre_completo, u.id`,
+    [periodo.desde, periodo.hasta, periodo.sucursalId, ZONA_NEGOCIO],
+  );
+
+  return rows.map((fila) => ({
+    usuario: { id: fila.usuario_id, nombreCompleto: fila.nombre_completo },
+    sucursal: { id: fila.sucursal_id, nombre: fila.sucursal },
+    ordenesRecibidas: fila.ordenes_recibidas,
+    cobros: fila.cobros,
+    montoCobrado: fila.monto_cobrado,
+    entregas: fila.entregas,
+  }));
+}

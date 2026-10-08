@@ -39,7 +39,7 @@ la manda el dispositivo, en ISO 8601 con zona. SPEC-ALE186-005 añadió los cobr
 `INSERT … SELECT`, que también rechaza las órdenes anuladas. SPEC-ALE186-006 añadió las
 entregas (`POST /api/entregas`, sin edición ni borrado), que cierran el flujo: la entrega y
 el paso de la orden a ENTREGADO van en una sola sentencia. Con eso están todas las
-escrituras del negocio; falta el resto de las estadísticas. SPEC-ALE186-007 añadió la suite
+escrituras del negocio y las cuatro métricas del dashboard del admin. SPEC-ALE186-007 añadió la suite
 de integración contra Postgres real (`npm run test:db`, sección 4), con la atomicidad y
 las carreras de pagos y entregas. SPEC-ALE186-008 añadió las primeras estadísticas
 (`/api/estadisticas/ingresos`, `/saldos` y `/sin-recoger`, solo ADMIN; sección 8).
@@ -62,7 +62,8 @@ sale del registro que tocó** (la orden, el pago, la entrega, o el cliente en su
 la sucursal a la que está asignada hoy la persona: si la mueven, lo que hizo antes sigue en la
 anterior. Editar un cliente, el login y lo que el admin hace con usuarios y sucursales no tienen
 sucursal. El período (`desde`/`hasta` en días de Bolivia) se lee en `utils/periodo.ts`, que
-comparten la auditoría y las estadísticas.
+comparten la auditoría y las estadísticas. SPEC-ALE186-013 completó las métricas de la sección 8
+con `/api/estadisticas/volumen` y `/productividad`.
 
 `frontend/` tiene el scaffolding de SPEC-KRILINXI-001: Vite, Tailwind, rutas y su suite de
 tests. SPEC-KRILINXI-002 añadió las piezas que reutilizan todas las pantallas: `Boton`,
@@ -361,7 +362,10 @@ es caro y no aporta nada, porque el admin trabaja en la oficina, con conexión.
 - Endpoints `GET /api/estadisticas/*`, que agregan en Postgres con `SUM` y `GROUP BY`.
   Todos aceptan `desde`, `hasta` y `sucursal_id` opcional. Hechos: `/ingresos`, `/saldos`
   y `/sin-recoger` (SPEC-ALE186-008, que fija la forma de cada respuesta campo por campo:
-  es el contrato de la pantalla). Falta volumen y productividad.
+  es el contrato de la pantalla), y `/volumen` y `/productividad` (SPEC-ALE186-013). El
+  volumen trae todos los días del período, también los que quedan en 0. La productividad va
+  por persona **y por la sucursal del registro**: a quien cambió de sucursal le
+  corresponde una fila por cada una, la misma regla que la auditoría (SPEC-ALE186-012).
 - **Las fechas se miran en la hora de Bolivia** (`ZONA_NEGOCIO = 'America/La_Paz'`, en
   `utils/periodo.ts` desde SPEC-ALE186-012, junto con `leerPeriodo` y `horaDelNegocio`). Las columnas `TIMESTAMP` guardan la hora de la sesión de
   Postgres, que en el servidor es UTC: sin convertir, un cobro de las 21:00 caería en el día
