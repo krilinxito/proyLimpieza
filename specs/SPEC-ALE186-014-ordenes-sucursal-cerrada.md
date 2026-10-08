@@ -2,7 +2,7 @@
 id: SPEC-ALE186-014
 name: Una sucursal cerrada no recibe ropa nueva
 slug: ordenes-sucursal-cerrada
-status: in-progress
+status: finished
 owner: ale186
 created: 2026-10-08
 scope:
@@ -16,7 +16,10 @@ scope:
   - CLAUDE.md
 priority: high
 depends_on: []
-tests: []
+tests:
+  - backend\tests\db\ordenesSucursalCerrada.db.test.ts
+  - backend\tests\http\ordenes.test.ts
+  - backend\tests\unit\ordenes.model.test.ts
 ---
 
 ## Descripción
