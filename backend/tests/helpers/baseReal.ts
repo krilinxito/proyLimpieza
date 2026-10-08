@@ -28,6 +28,9 @@
 //   anotarAuditoria({...})  Una fila de `auditoria` con la fecha que el test elija
 //                           (ISO con zona), para probar la consulta por períodos
 //                           y la paginación — SPEC-ALE186-012.
+//   ahoraEnLaBase(ms)       La hora de POSTGRES (no la de Node) corrida `ms`
+//                           milisegundos, en ISO: para comparar con fechas que
+//                           pone la base, como la del cierre — SPEC-ALE186-014.
 //
 // Todo se crea con ids y valores únicos nuevos (teléfono, boleta, usuario), así
 // que los tests no chocan entre sí aunque corran en paralelo, y no hace falta
@@ -220,6 +223,20 @@ export async function anotarAuditoria(campos: {
     [id, campos.usuarioId, campos.accion ?? 'LOGIN', campos.tabla ?? 'usuarios', campos.registroId ?? null, campos.fecha],
   );
   return id;
+}
+
+/**
+ * La hora de la base, corrida `desplazamientoMs`, en ISO con zona.
+ *
+ * Para los tests que comparan una fecha armada en el test con otra que puso
+ * Postgres (`now()`, `DEFAULT NOW()` de la auditoría). En Windows, Postgres
+ * corre en la VM de Docker, cuyo reloj puede desviarse unos segundos del de la
+ * máquina: "un minuto después" calculado con el reloj de Node podría caer antes.
+ */
+export async function ahoraEnLaBase(desplazamientoMs = 0): Promise<string> {
+  const { rows } = await pool.query<{ ahora: Date }>('SELECT now() AS ahora');
+  const ahora = rows[0]?.ahora ?? new Date();
+  return new Date(ahora.getTime() + desplazamientoMs).toISOString();
 }
 
 /** `SELECT count(*) …` como número. */
