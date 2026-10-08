@@ -2,7 +2,7 @@
 id: SPEC-ALE186-016
 name: Límite de intentos en el login
 slug: login-limite-intentos
-status: in-progress
+status: finished
 owner: ale186
 created: 2026-10-08
 scope:
@@ -13,7 +13,10 @@ scope:
   - CLAUDE.md
 priority: high
 depends_on: []
-tests: []
+tests:
+  - backend\tests\http\auth.test.ts
+  - backend\tests\http\usuarios.test.ts
+  - backend\tests\unit\limiteLogin.test.ts
 ---
 
 ## Descripción
