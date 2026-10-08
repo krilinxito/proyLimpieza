@@ -17,6 +17,7 @@
 // segunda fila, sin un solo `if`.
 import { pool } from '../db/pool.js';
 import type { AccionAuditoria } from '../utils/dominio.js';
+import { salteo, type Paginacion } from '../utils/paginacion.js';
 import { ZONA_NEGOCIO, horaDelNegocio, type Periodo } from '../utils/periodo.js';
 
 /** Las tablas que se auditan. Es el valor de `tabla_afectada`. */
@@ -193,11 +194,9 @@ export interface FiltrosAuditoria extends Periodo {
   registroId: string | null;
 }
 
-export interface Paginacion {
-  /** Desde 1. */
-  pagina: number;
-  porPagina: number;
-}
+// La paginación vive en `utils/paginacion.ts` desde SPEC-ALE186-017; se reexporta
+// para quien ya la importaba de acá.
+export type { Paginacion };
 
 export interface RegistroAuditoria {
   id: string;
@@ -337,7 +336,7 @@ export async function consultar(
        FROM filtradas
       ORDER BY filtradas.fecha DESC, id DESC
       LIMIT $9 OFFSET $10`,
-    [...parametros, paginacion.porPagina, (paginacion.pagina - 1) * paginacion.porPagina],
+    [...parametros, paginacion.porPagina, salteo(paginacion)],
   );
 
   return {

@@ -5,7 +5,10 @@
 // Solo lo ve el ADMIN; lo exige la ruta con `requireRol('ADMIN')`, no este archivo.
 import type { Request, Response } from 'express';
 import * as estadisticas from '../models/estadisticas.model.js';
+import { ApiError, CODIGOS_ERROR } from '../utils/ApiError.js';
+import { leerPaginacion } from '../utils/paginacion.js';
 import { hoyEnElNegocio, leerPeriodo } from '../utils/periodo.js';
+import { esUuid } from '../utils/validacion.js';
 
 // El período (`desde`, `hasta`, `sucursal_id`) se lee en `utils/periodo.ts`, que
 // comparte con la consulta de la auditoría (SPEC-ALE186-012).
@@ -43,4 +46,24 @@ export async function getProductividad(req: Request, res: Response): Promise<voi
   const periodo = leerPeriodo(req.query);
   const porEmpleado = await estadisticas.productividad(periodo);
   res.json({ desde: periodo.desde, hasta: periodo.hasta, porEmpleado });
+}
+
+/** GET /api/estadisticas/clientes — SPEC-ALE186-017 */
+export async function getClientes(req: Request, res: Response): Promise<void> {
+  const periodo = leerPeriodo(req.query);
+  const { cliente_id: clienteId } = req.query;
+  if (clienteId !== undefined && !esUuid(clienteId)) {
+    throw new ApiError(400, CODIGOS_ERROR.VALIDACION, 'El cliente elegido no es válido. Buscalo de nuevo.');
+  }
+  const paginacion = leerPaginacion(req.query);
+
+  const resultado = await estadisticas.clientes(periodo, clienteId ?? null, paginacion);
+
+  res.json({
+    desde: periodo.desde,
+    hasta: periodo.hasta,
+    pagina: paginacion.pagina,
+    porPagina: paginacion.porPagina,
+    ...resultado,
+  });
 }

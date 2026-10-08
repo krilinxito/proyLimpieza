@@ -14,6 +14,7 @@
 //     `horaDelNegocio`, en `utils/periodo.ts`).
 import { pool } from '../db/pool.js';
 import { METODOS_PAGO, type EstadoOrden, type MetodoPago } from '../utils/dominio.js';
+import { salteo, type Paginacion } from '../utils/paginacion.js';
 import { ZONA_NEGOCIO, horaDelNegocio, type Periodo } from '../utils/periodo.js';
 
 // La zona, el período y la conversión a la hora del negocio viven en
@@ -458,4 +459,143 @@ export async function productividad(periodo: Periodo): Promise<ProductividadFila
     montoCobrado: fila.monto_cobrado,
     entregas: fila.entregas,
   }));
+}
+
+// ------------------------------------------------------------------
+//  Atenciones de cada cliente — SPEC-ALE186-017
+// ------------------------------------------------------------------
+
+export interface AtencionesEnSucursal {
+  sucursal: { id: string; nombre: string };
+  ordenes: number;
+  /** Lo que pagó de verdad, como lo suma Postgres: `"125.50"`. */
+  gastado: string;
+  /** `YYYY-MM-DD HH:MM:SS`, en la hora del negocio. */
+  ultimaVisita: string;
+}
+
+export interface AtencionesCliente {
+  cliente: { id: string; nombre: string; telefono: string };
+  ordenes: number;
+  gastado: string;
+  ultimaVisita: string;
+  porSucursal: AtencionesEnSucursal[];
+}
+
+interface FilaCliente {
+  cliente_id: string;
+  nombre: string;
+  telefono: string;
+  ordenes: number;
+  gastado: string;
+  ultima_visita: string;
+  /** El `json_agg` de abajo, ya parseado por `pg`. */
+  por_sucursal: {
+    sucursal_id: string;
+    sucursal: string;
+    ordenes: number;
+    gastado: string;
+    ultima_visita: string;
+  }[];
+}
+
+/**
+ * Las atenciones del período, agrupadas dos veces: por cliente y sucursal, y por
+ * cliente. Es la base de la página y del total, así que los dos filtran igual.
+ *
+ * Una atención es una orden NO anulada que entró en el período, y es de la
+ * sucursal de esa orden, que no cambia nunca (la regla del registro,
+ * SPEC-ALE186-012). Lo pagado sale de los pagos de cada orden, no de su precio:
+ * una deuda sin cobrar no es plata gastada.
+ *
+ * Parámetros: $1 desde, $2 hasta, $3 sucursal, $4 zona, $5 cliente.
+ */
+const ATENCIONES = `atenciones AS (
+    SELECT o.cliente_id, o.sucursal_id, o.fecha_entrada,
+           COALESCE((SELECT SUM(p.monto) FROM pagos p WHERE p.orden_id = o.id), 0) AS pagado
+      FROM ordenes o
+     WHERE o.estado <> 'ANULADO'
+       AND ${diaLocal('o.fecha_entrada', '$4')}::date BETWEEN $1::date AND $2::date
+       AND ($3::uuid IS NULL OR o.sucursal_id = $3)
+       AND ($5::uuid IS NULL OR o.cliente_id = $5)
+  ),
+  por_sucursal AS (
+    SELECT cliente_id, sucursal_id, COUNT(*) AS ordenes, SUM(pagado) AS gastado,
+           MAX(fecha_entrada) AS ultima
+      FROM atenciones
+     GROUP BY cliente_id, sucursal_id
+  ),
+  por_cliente AS (
+    SELECT cliente_id, SUM(ordenes) AS ordenes, SUM(gastado) AS gastado, MAX(ultima) AS ultima
+      FROM por_sucursal
+     GROUP BY cliente_id
+  )`;
+
+/**
+ * Una página de clientes con atenciones, de quien más vino a quien menos, y
+ * cuántos clientes hay en total.
+ *
+ * Las sucursales de cada cliente salen en la misma fila, como un array JSON
+ * (`json_agg`): así una página de 50 clientes es una consulta, no 51. Dentro de
+ * ese JSON el dinero va como TEXTO: un número en JSON llega a JavaScript como
+ * float, y un float no es un monto (CLAUDE.md, sección 6).
+ *
+ * Son dos consultas y no un `count(*) OVER ()`, por lo mismo que en la auditoría
+ * (SPEC-ALE186-012): una página más allá de la última no tendría filas sobre las
+ * que contar.
+ */
+export async function clientes(
+  periodo: Periodo,
+  clienteId: string | null,
+  paginacion: Paginacion,
+): Promise<{ total: number; clientes: AtencionesCliente[] }> {
+  const parametros = [periodo.desde, periodo.hasta, periodo.sucursalId, ZONA_NEGOCIO, clienteId];
+
+  const { rows: conteo } = await pool.query<{ total: number }>(
+    `WITH ${ATENCIONES} SELECT COUNT(*)::int AS total FROM por_cliente`,
+    parametros,
+  );
+  const { rows } = await pool.query<FilaCliente>(
+    `WITH ${ATENCIONES},
+     pagina AS (
+       SELECT pc.cliente_id, c.nombre, c.telefono, pc.ordenes, pc.gastado, pc.ultima
+         FROM por_cliente pc
+         JOIN clientes c ON c.id = pc.cliente_id
+        ORDER BY pc.ordenes DESC, c.nombre, c.id
+        LIMIT $6 OFFSET $7
+     )
+     SELECT pagina.cliente_id, pagina.nombre, pagina.telefono,
+            pagina.ordenes::int AS ordenes,
+            pagina.gastado::numeric(14,2) AS gastado,
+            to_char(${horaDelNegocio('pagina.ultima', '$4')}, 'YYYY-MM-DD HH24:MI:SS') AS ultima_visita,
+            (SELECT json_agg(json_build_object(
+                      'sucursal_id', s.id,
+                      'sucursal', s.nombre,
+                      'ordenes', ps.ordenes,
+                      'gastado', ps.gastado::numeric(14,2)::text,
+                      'ultima_visita', to_char(${horaDelNegocio('ps.ultima', '$4')}, 'YYYY-MM-DD HH24:MI:SS'))
+                    ORDER BY s.nombre, s.id)
+               FROM por_sucursal ps
+               JOIN sucursales s ON s.id = ps.sucursal_id
+              WHERE ps.cliente_id = pagina.cliente_id) AS por_sucursal
+       FROM pagina
+      ORDER BY pagina.ordenes DESC, pagina.nombre, pagina.cliente_id`,
+    [...parametros, paginacion.porPagina, salteo(paginacion)],
+  );
+
+  return {
+    total: conteo[0]?.total ?? 0,
+    clientes: rows.map((fila) => ({
+      cliente: { id: fila.cliente_id, nombre: fila.nombre, telefono: fila.telefono },
+      ordenes: fila.ordenes,
+      gastado: fila.gastado,
+      ultimaVisita: fila.ultima_visita,
+      porSucursal: fila.por_sucursal.map((ps) => ({
+        sucursal: { id: ps.sucursal_id, nombre: ps.sucursal },
+        ordenes: ps.ordenes,
+        gastado: ps.gastado,
+        ultimaVisita: ps.ultima_visita,
+      })),
+    })),
+  };
 }
