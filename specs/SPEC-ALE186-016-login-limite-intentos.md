@@ -2,7 +2,7 @@
 id: SPEC-ALE186-016
 name: Límite de intentos en el login
 slug: login-limite-intentos
-status: approved
+status: in-progress
 owner: ale186
 created: 2026-10-08
 scope:
