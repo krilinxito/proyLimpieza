@@ -74,6 +74,9 @@ auditoría: cuándo pasó de verdad según la tablet, aparte de cuándo llegó a
 SPEC-ALE186-016 limitó el login: después de 5 intentos fallidos seguidos para un mismo nombre de
 usuario (exista o no, y también si es una cuenta dada de baja), se bloquea 5 minutos con 429
 `DEMASIADOS_INTENTOS` y `Retry-After`. El contador vive en `services/limiteLogin.ts`, en memoria.
+SPEC-ALE186-017 agregó `/api/estadisticas/clientes`: las atenciones de cada cliente por sucursal
+(órdenes no anuladas, lo que pagó de verdad y su última visita), paginadas. La paginación pasó a
+`utils/paginacion.ts`, que comparte con la auditoría.
 
 `frontend/` tiene el scaffolding de SPEC-KRILINXI-001: Vite, Tailwind, rutas y su suite de
 tests. SPEC-KRILINXI-002 añadió las piezas que reutilizan todas las pantallas: `Boton`,
@@ -376,6 +379,9 @@ es caro y no aporta nada, porque el admin trabaja en la oficina, con conexión.
   volumen trae todos los días del período, también los que quedan en 0. La productividad va
   por persona **y por la sucursal del registro**: a quien cambió de sucursal le
   corresponde una fila por cada una, la misma regla que la auditoría (SPEC-ALE186-012).
+  Además, `/clientes` (SPEC-ALE186-017): cuántas veces se atendió a cada cliente en cada
+  sucursal y cuánto pagó. Un cliente no es de ninguna sucursal; cada atención es de la
+  sucursal de su orden.
 - **Las fechas se miran en la hora de Bolivia** (`ZONA_NEGOCIO = 'America/La_Paz'`, en
   `utils/periodo.ts` desde SPEC-ALE186-012, junto con `leerPeriodo` y `horaDelNegocio`). Las columnas `TIMESTAMP` guardan la hora de la sesión de
   Postgres, que en el servidor es UTC: sin convertir, un cobro de las 21:00 caería en el día
