@@ -2,7 +2,7 @@
 id: SPEC-ALE186-018
 name: Lo que sube la tablet de una cuenta dada de baja
 slug: cola-usuario-revocado
-status: in-progress
+status: finished
 owner: ale186
 created: 2026-10-09
 scope:
@@ -21,7 +21,15 @@ scope:
   - CLAUDE.md
 priority: high
 depends_on: []
-tests: []
+tests:
+  - backend\tests\db\colaRevocada.db.test.ts
+  - backend\tests\http\clientes.test.ts
+  - backend\tests\http\colaRevocada.test.ts
+  - backend\tests\http\entregas.test.ts
+  - backend\tests\http\ordenes.test.ts
+  - backend\tests\http\pagos.test.ts
+  - backend\tests\unit\auditoria.model.test.ts
+  - backend\tests\unit\jwtCola.test.ts
 ---
 
 ## Descripción
