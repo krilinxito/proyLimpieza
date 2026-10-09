@@ -11,6 +11,8 @@
 //
 import { randomUUID } from 'node:crypto';
 import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import { authConfig } from '../../src/config.js';
 import type { UsuarioConHash } from '../../src/models/usuarios.model.js';
 import { emitirCredenciales, type Sesion } from '../../src/utils/jwt.js';
 
@@ -102,4 +104,32 @@ export function cuerpoDeAltaUsuario(campos: Record<string, unknown> = {}): Recor
 /** La cabecera de un ADMIN (sin sucursal, sección 3) — SPEC-ALE186-009. */
 export function comoAdmin(id = '33333333-3333-3333-3333-333333333333'): { Authorization: string } {
   return conSesion({ id, rol: 'ADMIN', sucursalId: null });
+}
+
+/**
+ * La cabecera de una sesión cuyo token de la API VENCIÓ hace `segundos` —
+ * SPEC-ALE186-018.
+ *
+ *   await testApi().post('/api/ordenes').set(conTokenVencidoHace(DIA)).send(...)
+ *
+ * Firmado con el mismo secreto y la misma audiencia que los de verdad: lo único
+ * distinto es el vencimiento, que queda en el pasado. Así se prueba la ventana
+ * de la cola sin esperar días. El vencimiento se cuenta desde `Date.now()`, así
+ * que con un reloj falso de Vitest también se mueve.
+ */
+export function conTokenVencidoHace(segundos: number, sesion: Partial<Sesion> = {}): { Authorization: string } {
+  const { id, rol, sucursalId } = {
+    id: ID_DE_SESION,
+    rol: 'EMPLEADO' as const,
+    sucursalId: '22222222-2222-2222-2222-222222222222',
+    ...sesion,
+  };
+  const ahora = Math.floor(Date.now() / 1000);
+  const token = jwt.sign(
+    // `iat` un día antes del vencimiento: un token que existió, no uno que nació vencido.
+    { rol, sucursal_id: sucursalId, iat: ahora - segundos - 86_400, exp: ahora - segundos },
+    authConfig.secreto,
+    { algorithm: 'HS256', subject: id, audience: `${authConfig.audiencia}-api` },
+  );
+  return { Authorization: `Bearer ${token}` };
 }

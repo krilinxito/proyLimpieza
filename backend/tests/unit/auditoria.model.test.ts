@@ -313,3 +313,42 @@ describe('Auditoría: la fecha del hecho — SPEC-ALE186-015', () => {
     expect((query.mock.calls[1] as [string, unknown[]])[1]).toHaveLength(11);
   });
 });
+
+describe('Auditoría: la marca de revisión — SPEC-ALE186-018', () => {
+  const ESCRITURA = { sql: 'INSERT INTO clientes (id) VALUES ($1) RETURNING id', valores: ['un-id'], columnas: 'id' };
+  const AUTOR = '99999999-9999-9999-9999-999999999999';
+
+  it('sin marca, arma exactamente el mismo SQL que antes', () => {
+    const sinMarca = auditoria.conAuditoria(ESCRITURA, { usuarioId: AUTOR, accion: 'CREAR', tabla: 'clientes' });
+    const conNull = auditoria.conAuditoria(ESCRITURA, { usuarioId: AUTOR, accion: 'CREAR', tabla: 'clientes', revision: null });
+
+    expect(conNull).toEqual(sinMarca);
+    expect(sinMarca.sql).not.toContain('revision');
+  });
+
+  it('con marca, la suma como parámetro a los valores de antes, y en un alta queda sola', () => {
+    const { sql, valores } = auditoria.conAuditoria(ESCRITURA, {
+      usuarioId: AUTOR,
+      accion: 'CREAR',
+      tabla: 'clientes',
+      revision: 'cuenta_dada_de_baja',
+    });
+
+    expect(valores).toEqual(['un-id', AUTOR, 'CREAR', 'clientes', 'cuenta_dada_de_baja']);
+    expect(sql).toContain("COALESCE(NULL, '{}'::jsonb) || jsonb_build_object('revision', $5::text)");
+    expect(sql).not.toContain("'cuenta_dada_de_baja'");
+  });
+
+  it('en una edición, el filtro de "no cambió nada" sigue mirando los valores sin la marca', () => {
+    const { sql } = auditoria.conAuditoria(ESCRITURA, {
+      usuarioId: AUTOR,
+      accion: 'EDITAR',
+      tabla: 'clientes',
+      conValoresAnteriores: true,
+      revision: 'cuenta_dada_de_baja',
+    });
+
+    expect(sql).toContain("COALESCE(escrita.valores_anteriores, '{}'::jsonb) || jsonb_build_object('revision', $5::text)");
+    expect(sql).toContain("WHERE escrita.valores_anteriores <> '{}'::jsonb");
+  });
+});
