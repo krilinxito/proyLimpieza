@@ -9,7 +9,13 @@ import pg from 'pg';
 import { pool } from '../db/pool.js';
 import type { EstadoOrden } from '../utils/dominio.js';
 import { formatear, type Centavos } from '../utils/money.js';
-import { conAuditoria, momentoDelCierre, updateConAntes, type ColumnaAuditada } from './auditoria.model.js';
+import {
+  conAuditoria,
+  momentoDelCierre,
+  updateConAntes,
+  type ColumnaAuditada,
+  type Revision,
+} from './auditoria.model.js';
 
 export interface Orden {
   id: string;
@@ -188,7 +194,11 @@ const CIERRE_DE_LA_SUCURSAL = momentoDelCierre('$4');
  * sesión de Postgres, la misma con que se escriben las demás fechas, incluida
  * `auditoria.fecha`. Por eso se puede comparar con el cierre sin convertir nada.
  */
-export async function crear(orden: OrdenNueva): Promise<{ orden: Orden; creada: boolean }> {
+export async function crear(
+  orden: OrdenNueva,
+  /** Si la escritura queda marcada para el admin (SPEC-ALE186-018). */
+  revision: Revision | null = null,
+): Promise<{ orden: Orden; creada: boolean }> {
   // Quien la recibe es quien la crea: la auditoría (SPEC-ALE186-010) se anota a
   // su nombre, en la misma sentencia, y solo si el INSERT insertó.
   const { sql, valores } = conAuditoria(
@@ -219,7 +229,7 @@ export async function crear(orden: OrdenNueva): Promise<{ orden: Orden; creada: 
       ],
       columnas: COLUMNAS,
     },
-    { usuarioId: orden.usuarioRecepcionId, accion: 'CREAR', tabla: 'ordenes' },
+    { usuarioId: orden.usuarioRecepcionId, accion: 'CREAR', tabla: 'ordenes', revision },
   );
   const { rows } = await traducirErrores(orden, () => pool.query<FilaOrden>(sql, valores));
 
@@ -314,6 +324,8 @@ export async function actualizar(
   cambios: CambiosOrden,
   restricciones: Restricciones,
   autorId: string,
+  /** Si la escritura queda marcada para el admin (SPEC-ALE186-018). */
+  revision: Revision | null = null,
 ): Promise<ResultadoActualizar> {
   const campos = (Object.keys(COLUMNA_EDITABLE) as (keyof CambiosOrden)[]).filter(
     (campo) => cambios[campo] !== undefined,
@@ -345,7 +357,7 @@ export async function actualizar(
           },
           // Avanzar y anular también son EDITAR: lo que cambió es `estado`, y
           // su valor anterior queda en `valores_anteriores`.
-          { usuarioId: autorId, accion: 'EDITAR', tabla: 'ordenes', conValoresAnteriores: true },
+          { usuarioId: autorId, accion: 'EDITAR', tabla: 'ordenes', conValoresAnteriores: true, revision },
         );
 
   const { rows } = await traducirErrores(cambios, () => pool.query<FilaOrden>(consulta.sql, consulta.valores));

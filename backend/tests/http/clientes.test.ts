@@ -7,6 +7,21 @@ import { ID_DE_SESION, conSesion } from '../helpers/usuarios.js';
 // REAL: el controller la reconoce con `instanceof`, y una copia del doble no
 // sería la misma clase. `importOriginal` trae el módulo verdadero y encima se
 // pisan solo las funciones que hablan con la base.
+// Las rutas del mostrador miran si la cuenta sigue activa (SPEC-ALE186-018). Acá no
+// hay base: la cuenta de la sesión siempre está activa. El caso de una dada de baja
+// está en tests/http/colaRevocada.test.ts.
+vi.mock('../../src/models/usuarios.model.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../src/models/usuarios.model.js')>()),
+  buscarPorId: vi.fn(async (id: string) => ({
+    id,
+    nombreCompleto: 'Cuenta activa',
+    username: 'activa',
+    rol: 'EMPLEADO' as const,
+    sucursalId: null,
+    telefono: null,
+    activo: true,
+  })),
+}));
 vi.mock('../../src/models/clientes.model.js', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../src/models/clientes.model.js')>()),
   crear: vi.fn(),
@@ -44,7 +59,7 @@ describe('POST /api/clientes — SPEC-ALE186-003', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.id).toBe(cuerpo.id);
-    expect(crear).toHaveBeenCalledWith(expect.objectContaining({ id: cuerpo.id }), ID_DE_SESION);
+    expect(crear).toHaveBeenCalledWith(expect.objectContaining({ id: cuerpo.id }), ID_DE_SESION, null);
   });
 
   it('en un reintento responde 200 con el que ya existía', async () => {
@@ -72,7 +87,7 @@ describe('POST /api/clientes — SPEC-ALE186-003', () => {
 
     await alta(cuerpoDeAlta({ telefono: ' 7012-3456 ' }));
 
-    expect(crear).toHaveBeenCalledWith(expect.objectContaining({ telefono: '70123456' }), ID_DE_SESION);
+    expect(crear).toHaveBeenCalledWith(expect.objectContaining({ telefono: '70123456' }), ID_DE_SESION, null);
   });
 
   it.each([
@@ -97,7 +112,7 @@ describe('POST /api/clientes — SPEC-ALE186-003', () => {
 
     // Si valiera la del cuerpo, un empleado podría registrar clientes a nombre
     // de otra tienda con solo escribirla.
-    expect(crear).toHaveBeenCalledWith(expect.objectContaining({ sucursalRegistroId: SUCURSAL }), ID_DE_SESION);
+    expect(crear).toHaveBeenCalledWith(expect.objectContaining({ sucursalRegistroId: SUCURSAL }), ID_DE_SESION, null);
   });
 
   it('un ADMIN registra sin sucursal', async () => {
@@ -105,7 +120,7 @@ describe('POST /api/clientes — SPEC-ALE186-003', () => {
 
     await alta(cuerpoDeAlta(), conSesion({ rol: 'ADMIN', sucursalId: null }));
 
-    expect(crear).toHaveBeenCalledWith(expect.objectContaining({ sucursalRegistroId: null }), ID_DE_SESION);
+    expect(crear).toHaveBeenCalledWith(expect.objectContaining({ sucursalRegistroId: null }), ID_DE_SESION, null);
   });
 
   it('responde 409 diciendo a nombre de quién está el teléfono', async () => {
@@ -136,7 +151,7 @@ describe('PATCH /api/clientes/:id — SPEC-ALE186-003', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.nombre).toBe('Ana María Quispe');
-    expect(actualizar).toHaveBeenCalledWith(ID, { nombre: 'Ana María Quispe' }, ID_DE_SESION);
+    expect(actualizar).toHaveBeenCalledWith(ID, { nombre: 'Ana María Quispe' }, ID_DE_SESION, null);
   });
 
   it('normaliza también el teléfono al editarlo', async () => {
@@ -144,7 +159,7 @@ describe('PATCH /api/clientes/:id — SPEC-ALE186-003', () => {
 
     await edicion(ID, { telefono: '7012-3456' });
 
-    expect(actualizar).toHaveBeenCalledWith(ID, { telefono: '70123456' }, ID_DE_SESION);
+    expect(actualizar).toHaveBeenCalledWith(ID, { telefono: '70123456' }, ID_DE_SESION, null);
   });
 
   it('deja vaciar el carnet', async () => {
@@ -152,7 +167,7 @@ describe('PATCH /api/clientes/:id — SPEC-ALE186-003', () => {
 
     await edicion(ID, { carnet: '' });
 
-    expect(actualizar).toHaveBeenCalledWith(ID, { carnet: null }, ID_DE_SESION);
+    expect(actualizar).toHaveBeenCalledWith(ID, { carnet: null }, ID_DE_SESION, null);
   });
 
   it('solo aplica nombre, teléfono y carnet: el resto del cuerpo no llega al model', async () => {
@@ -165,7 +180,7 @@ describe('PATCH /api/clientes/:id — SPEC-ALE186-003', () => {
       sucursalRegistroId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     });
 
-    expect(actualizar).toHaveBeenCalledWith(ID, { nombre: 'Ana' }, ID_DE_SESION);
+    expect(actualizar).toHaveBeenCalledWith(ID, { nombre: 'Ana' }, ID_DE_SESION, null);
   });
 
   it('responde 404 cuando el cliente no existe', async () => {

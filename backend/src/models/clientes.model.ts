@@ -8,7 +8,7 @@
 //      mitad de la subida, PowerSync la reintenta. Un reintento no duplica.
 import pg from 'pg';
 import { pool } from '../db/pool.js';
-import { conAuditoria, updateConAntes } from './auditoria.model.js';
+import { conAuditoria, updateConAntes, type Revision } from './auditoria.model.js';
 
 export interface Cliente {
   id: string;
@@ -120,6 +120,8 @@ export interface ClienteNuevo {
 export async function crear(
   cliente: ClienteNuevo,
   autorId: string,
+  /** Si la escritura queda marcada para el admin (SPEC-ALE186-018). */
+  revision: Revision | null = null,
 ): Promise<{ cliente: Cliente; creado: boolean }> {
   // La fila de auditoría va en la misma sentencia (SPEC-ALE186-010): si el
   // INSERT no inserta —un reintento—, tampoco se anota nada.
@@ -132,7 +134,7 @@ export async function crear(
       valores: [cliente.id, cliente.nombre, cliente.telefono, cliente.carnet, cliente.sucursalRegistroId],
       columnas: COLUMNAS,
     },
-    { usuarioId: autorId, accion: 'CREAR', tabla: 'clientes' },
+    { usuarioId: autorId, accion: 'CREAR', tabla: 'clientes', revision },
   );
   const { rows } = await conTelefonoUnico(cliente.telefono, () => pool.query<FilaCliente>(sql, valores));
 
@@ -179,6 +181,8 @@ export async function actualizar(
   id: string,
   cambios: CambiosCliente,
   autorId: string,
+  /** Si la escritura queda marcada para el admin (SPEC-ALE186-018). */
+  revision: Revision | null = null,
 ): Promise<Cliente | null> {
   const campos = (Object.keys(COLUMNA_EDITABLE) as (keyof CambiosCliente)[]).filter(
     (campo) => cambios[campo] !== undefined,
@@ -198,7 +202,7 @@ export async function actualizar(
       valores: [id, ...campos.map((campo) => cambios[campo])],
       columnas: COLUMNAS,
     },
-    { usuarioId: autorId, accion: 'EDITAR', tabla: 'clientes', conValoresAnteriores: true },
+    { usuarioId: autorId, accion: 'EDITAR', tabla: 'clientes', conValoresAnteriores: true, revision },
   );
 
   const { rows } = await conTelefonoUnico(cambios.telefono ?? '', () => pool.query<FilaCliente>(sql, valores));

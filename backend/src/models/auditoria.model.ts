@@ -29,11 +29,24 @@ export function esTablaAuditada(valor: unknown): valor is TablaAuditada {
   return TABLAS_AUDITADAS.some((tabla) => tabla === valor);
 }
 
+/**
+ * Por qué una escritura queda marcada para que el admin la revise —
+ * SPEC-ALE186-018. Hoy hay un solo motivo: la hizo una cuenta dada de baja.
+ *
+ * Sin migraciones no hay columna para esto: la marca va en la misma fila de
+ * auditoría, dentro de `valores_anteriores`, bajo la clave `revision`. La
+ * consulta (`consultar`) la saca de ahí y la expone aparte, así que cuando haya
+ * migraciones y pase a una columna propia, la respuesta no cambia.
+ */
+export type Revision = 'cuenta_dada_de_baja';
+
 export interface Registro {
   /** Quién lo hizo. Siempre el de la sesión, nunca uno que venga en el cuerpo. */
   usuarioId: string;
   accion: AccionAuditoria;
   tabla: TablaAuditada;
+  /** Si la escritura queda marcada para revisión. Ausente o `null`: no. */
+  revision?: Revision | null;
 }
 
 /**
@@ -56,7 +69,17 @@ export function conAuditoria(
   registro: Registro & { conValoresAnteriores?: boolean },
 ): { sql: string; valores: unknown[] } {
   const n = escritura.valores.length;
-  const anteriores = registro.conValoresAnteriores === true ? 'escrita.valores_anteriores' : 'NULL';
+  const revision = registro.revision ?? null;
+  const base = registro.conValoresAnteriores === true ? 'escrita.valores_anteriores' : 'NULL';
+  // La marca de revisión (SPEC-ALE186-018) se suma a los valores de antes; en un
+  // alta, que no tiene, queda sola. Va como parámetro, y solo si hay marca: así
+  // una escritura normal arma exactamente el mismo SQL que antes.
+  const anteriores =
+    revision === null
+      ? base
+      : `COALESCE(${base}, '{}'::jsonb) || jsonb_build_object('revision', $${n + 4}::text)`;
+  // El filtro mira los valores de antes SIN la marca: una edición que no cambió
+  // nada sigue sin dejar fila, la haga quien la haga.
   const filtro =
     registro.conValoresAnteriores === true ? `WHERE escrita.valores_anteriores <> '{}'::jsonb` : '';
   const previos = escritura.ctesPrevios === undefined ? '' : `${escritura.ctesPrevios},\n`;
@@ -72,7 +95,13 @@ auditada AS (
   ${filtro}
 )
 SELECT ${escritura.columnas} FROM escrita`,
-    valores: [...escritura.valores, registro.usuarioId, registro.accion, registro.tabla],
+    valores: [
+      ...escritura.valores,
+      registro.usuarioId,
+      registro.accion,
+      registro.tabla,
+      ...(revision === null ? [] : [revision]),
+    ],
   };
 }
 

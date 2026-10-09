@@ -9,7 +9,7 @@
 // porque es lo que sube la cola de PowerSync: cada cambio local viaja con las
 // columnas de la tabla. La respuesta sale en camelCase, como la de clientes.
 import type { Request, Response } from 'express';
-import { sesionDe } from '../middleware/auth.js';
+import { revisionDe, sesionDe } from '../middleware/auth.js';
 import * as ordenes from '../models/ordenes.model.js';
 import {
   BoletaOcupadaError,
@@ -152,7 +152,7 @@ export async function postOrden(req: Request, res: Response): Promise<void> {
   };
 
   try {
-    const { orden, creada } = await ordenes.crear(datos);
+    const { orden, creada } = await ordenes.crear(datos, revisionDe(req));
     // 201 la primera vez, 200 en el reintento: los dos son éxito para la cola.
     res.status(creada ? 201 : 200).json(orden);
   } catch (error) {
@@ -232,7 +232,7 @@ export async function patchOrden(req: Request, res: Response): Promise<void> {
       // las de la suya. Una ajena le responde 404, no 403: para él no existe, y
       // un 403 le confirmaría que ese id es una orden de otra sucursal.
       sucursalId: sesion.rol === 'ADMIN' ? null : sesion.sucursalId,
-    }, sesion.id);
+    }, sesion.id, revisionDe(req));
   } catch (error) {
     if (error instanceof BoletaOcupadaError) throw boletaDuplicada();
     throw error;

@@ -7,7 +7,7 @@
 //
 // El cobro final NO va acá: se registra aparte, por POST /api/pagos.
 import type { Request, Response } from 'express';
-import { sesionDe } from '../middleware/auth.js';
+import { revisionDe, sesionDe } from '../middleware/auth.js';
 import * as entregas from '../models/entregas.model.js';
 import { ApiError, CODIGOS_ERROR } from '../utils/ApiError.js';
 import { esTipoRetiro, type TipoRetiro } from '../utils/dominio.js';
@@ -124,7 +124,7 @@ export async function postEntrega(req: Request, res: Response): Promise<void> {
     // `sucursal_id` no se lee: el model la copia de la orden.
   };
 
-  const resultado = await entregas.crear(datos, { sucursalId: sucursalPermitida(sesion) });
+  const resultado = await entregas.crear(datos, { sucursalId: sucursalPermitida(sesion) }, revisionDe(req));
 
   switch (resultado.tipo) {
     case 'creada':

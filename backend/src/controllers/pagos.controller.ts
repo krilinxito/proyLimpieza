@@ -10,7 +10,7 @@
 // Como en órdenes, el cuerpo llega con los nombres de columna (`orden_id`...)
 // porque es lo que sube la cola de PowerSync, y la respuesta sale en camelCase.
 import type { Request, Response } from 'express';
-import { sesionDe } from '../middleware/auth.js';
+import { revisionDe, sesionDe } from '../middleware/auth.js';
 import * as pagos from '../models/pagos.model.js';
 import { ApiError, CODIGOS_ERROR } from '../utils/ApiError.js';
 import { esMetodoPago, esTipoPago, type MetodoPago, type TipoPago } from '../utils/dominio.js';
@@ -95,7 +95,7 @@ export async function postPago(req: Request, res: Response): Promise<void> {
     // `sucursal_id` no se lee: el model la copia de la orden.
   };
 
-  const resultado = await pagos.crear(datos, { sucursalId: sucursalPermitida(sesion) });
+  const resultado = await pagos.crear(datos, { sucursalId: sucursalPermitida(sesion) }, revisionDe(req));
 
   switch (resultado.tipo) {
     case 'creado':
