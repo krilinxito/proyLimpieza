@@ -2,7 +2,7 @@
 id: SPEC-ALE186-018
 name: Lo que sube la tablet de una cuenta dada de baja
 slug: cola-usuario-revocado
-status: draft
+status: approved
 owner: ale186
 created: 2026-10-09
 scope:
