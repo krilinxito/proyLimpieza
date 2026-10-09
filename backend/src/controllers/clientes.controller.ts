@@ -5,7 +5,7 @@
 // (bucket `global`) y el mostrador los busca en su SQLite local. Un GET acá
 // haría que la búsqueda dependiera de internet (sección 6).
 import type { Request, Response } from 'express';
-import { sesionDe } from '../middleware/auth.js';
+import { revisionDe, sesionDe } from '../middleware/auth.js';
 import * as clientes from '../models/clientes.model.js';
 import { TelefonoOcupadoError, type CambiosCliente } from '../models/clientes.model.js';
 import { ApiError, CODIGOS_ERROR } from '../utils/ApiError.js';
@@ -77,7 +77,7 @@ export async function postCliente(req: Request, res: Response): Promise<void> {
   };
 
   try {
-    const { cliente, creado } = await clientes.crear(datos, sesionDe(req).id);
+    const { cliente, creado } = await clientes.crear(datos, sesionDe(req).id, revisionDe(req));
     // 201 la primera vez, 200 en el reintento: los dos son éxito para la cola
     // de subida, y la diferencia queda a la vista de quien mire los logs.
     res.status(creado ? 201 : 200).json(cliente);
@@ -106,7 +106,7 @@ export async function patchCliente(req: Request, res: Response): Promise<void> {
 
   let cliente: clientes.Cliente | null;
   try {
-    cliente = await clientes.actualizar(id, cambios, sesionDe(req).id);
+    cliente = await clientes.actualizar(id, cambios, sesionDe(req).id, revisionDe(req));
   } catch (error) {
     if (error instanceof TelefonoOcupadoError) throw await telefonoDuplicado(error.telefono);
     throw error;

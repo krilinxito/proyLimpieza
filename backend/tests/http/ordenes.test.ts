@@ -6,6 +6,21 @@ import { conSesion } from '../helpers/usuarios.js';
 // Como en clientes: se reemplazan las funciones que hablan con la base y se
 // conservan las clases de error REALES, que el controller reconoce con
 // `instanceof`.
+// Las rutas del mostrador miran si la cuenta sigue activa (SPEC-ALE186-018). Acá no
+// hay base: la cuenta de la sesión siempre está activa. El caso de una dada de baja
+// está en tests/http/colaRevocada.test.ts.
+vi.mock('../../src/models/usuarios.model.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../src/models/usuarios.model.js')>()),
+  buscarPorId: vi.fn(async (id: string) => ({
+    id,
+    nombreCompleto: 'Cuenta activa',
+    username: 'activa',
+    rol: 'EMPLEADO' as const,
+    sucursalId: null,
+    telefono: null,
+    activo: true,
+  })),
+}));
 vi.mock('../../src/models/ordenes.model.js', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../src/models/ordenes.model.js')>()),
   crear: vi.fn(),

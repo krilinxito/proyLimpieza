@@ -7,6 +7,21 @@ import { conSesion } from '../helpers/usuarios.js';
 // Se reemplaza la función del model que habla con la base. Lo que se prueba acá
 // es el controller: qué valida, qué le pasa al model y cómo traduce cada
 // resultado a HTTP. Que el SQL haga lo que promete es cosa del test del model.
+// Las rutas del mostrador miran si la cuenta sigue activa (SPEC-ALE186-018). Acá no
+// hay base: la cuenta de la sesión siempre está activa. El caso de una dada de baja
+// está en tests/http/colaRevocada.test.ts.
+vi.mock('../../src/models/usuarios.model.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../src/models/usuarios.model.js')>()),
+  buscarPorId: vi.fn(async (id: string) => ({
+    id,
+    nombreCompleto: 'Cuenta activa',
+    username: 'activa',
+    rol: 'EMPLEADO' as const,
+    sucursalId: null,
+    telefono: null,
+    activo: true,
+  })),
+}));
 vi.mock('../../src/models/pagos.model.js', () => ({ crear: vi.fn() }));
 
 const crear = vi.mocked((await import('../../src/models/pagos.model.js')).crear);

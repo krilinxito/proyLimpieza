@@ -89,12 +89,40 @@ function noAutenticado(mensaje: string): ApiError {
  * esperamos. Quien manda un token inválido no necesita saber por qué lo es.
  */
 export function verificarToken(token: string, cfg: ConfigAuth = authConfig): Sesion {
+  return verificar(token, cfg, 0);
+}
+
+/**
+ * Cuánto tiempo después de vencido un token todavía puede subir la cola del
+ * mostrador — SPEC-ALE186-018. Es la decisión del negocio: una tablet que estuvo
+ * sin internet no pierde el trabajo que tenía guardado, y la ventana es corta
+ * para que un token viejo robado no sirva por mucho.
+ */
+export const VENTANA_COLA_SEGUNDOS = 3 * 24 * 60 * 60;
+
+/**
+ * Como `verificarToken`, pero acepta un token vencido hace hasta
+ * `VENTANA_COLA_SEGUNDOS`. Solo la usa `requireAuthDeLaCola`, en las rutas de
+ * escritura del mostrador: nunca para renovar la sesión, leer datos ni nada del
+ * admin. La firma y la audiencia se exigen igual: un token de PowerSync o uno
+ * alterado no entran nunca.
+ */
+export function verificarTokenDeLaCola(token: string, cfg: ConfigAuth = authConfig): Sesion {
+  return verificar(token, cfg, VENTANA_COLA_SEGUNDOS);
+}
+
+/**
+ * `clockTolerance` es cuántos segundos de más le da `jsonwebtoken` al
+ * vencimiento (`exp`): con 0, vencido es vencido.
+ */
+function verificar(token: string, cfg: ConfigAuth, toleranciaSegundos: number): Sesion {
   let contenido: unknown;
 
   try {
     contenido = jwt.verify(token, cfg.secreto, {
       algorithms: ['HS256'],
       audience: audienciaApi(cfg),
+      clockTolerance: toleranciaSegundos,
     });
   } catch (error) {
     throw noAutenticado(error instanceof jwt.TokenExpiredError ? SESION_VENCIDA : SESION_INVALIDA);

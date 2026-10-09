@@ -10,7 +10,7 @@
 import { pool } from '../db/pool.js';
 import type { MetodoPago, TipoPago } from '../utils/dominio.js';
 import { formatear, type Centavos } from '../utils/money.js';
-import { conAuditoria } from './auditoria.model.js';
+import { conAuditoria, type Revision } from './auditoria.model.js';
 import * as ordenes from './ordenes.model.js';
 import type { Orden } from './ordenes.model.js';
 
@@ -105,7 +105,12 @@ export type ResultadoCrear =
  * primero el pago (un reintento gana aunque la orden se haya anulado después de
  * cobrar: el cobro ya está registrado), y después la orden.
  */
-export async function crear(pago: PagoNuevo, restricciones: RestriccionesPago): Promise<ResultadoCrear> {
+export async function crear(
+  pago: PagoNuevo,
+  restricciones: RestriccionesPago,
+  /** Si la escritura queda marcada para el admin (SPEC-ALE186-018). */
+  revision: Revision | null = null,
+): Promise<ResultadoCrear> {
   // COBRAR, a nombre de quien cobró, en la misma sentencia (SPEC-ALE186-010).
   const { sql, valores } = conAuditoria(
     {
@@ -132,7 +137,7 @@ export async function crear(pago: PagoNuevo, restricciones: RestriccionesPago): 
       ],
       columnas: COLUMNAS,
     },
-    { usuarioId: pago.usuarioId, accion: 'COBRAR', tabla: 'pagos' },
+    { usuarioId: pago.usuarioId, accion: 'COBRAR', tabla: 'pagos', revision },
   );
   const { rows } = await pool.query<FilaPago>(sql, valores);
 

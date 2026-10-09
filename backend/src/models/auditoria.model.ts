@@ -29,11 +29,24 @@ export function esTablaAuditada(valor: unknown): valor is TablaAuditada {
   return TABLAS_AUDITADAS.some((tabla) => tabla === valor);
 }
 
+/**
+ * Por qué una escritura queda marcada para que el admin la revise —
+ * SPEC-ALE186-018. Hoy hay un solo motivo: la hizo una cuenta dada de baja.
+ *
+ * Sin migraciones no hay columna para esto: la marca va en la misma fila de
+ * auditoría, dentro de `valores_anteriores`, bajo la clave `revision`. La
+ * consulta (`consultar`) la saca de ahí y la expone aparte, así que cuando haya
+ * migraciones y pase a una columna propia, la respuesta no cambia.
+ */
+export type Revision = 'cuenta_dada_de_baja';
+
 export interface Registro {
   /** Quién lo hizo. Siempre el de la sesión, nunca uno que venga en el cuerpo. */
   usuarioId: string;
   accion: AccionAuditoria;
   tabla: TablaAuditada;
+  /** Si la escritura queda marcada para revisión. Ausente o `null`: no. */
+  revision?: Revision | null;
 }
 
 /**
@@ -56,7 +69,17 @@ export function conAuditoria(
   registro: Registro & { conValoresAnteriores?: boolean },
 ): { sql: string; valores: unknown[] } {
   const n = escritura.valores.length;
-  const anteriores = registro.conValoresAnteriores === true ? 'escrita.valores_anteriores' : 'NULL';
+  const revision = registro.revision ?? null;
+  const base = registro.conValoresAnteriores === true ? 'escrita.valores_anteriores' : 'NULL';
+  // La marca de revisión (SPEC-ALE186-018) se suma a los valores de antes; en un
+  // alta, que no tiene, queda sola. Va como parámetro, y solo si hay marca: así
+  // una escritura normal arma exactamente el mismo SQL que antes.
+  const anteriores =
+    revision === null
+      ? base
+      : `COALESCE(${base}, '{}'::jsonb) || jsonb_build_object('revision', $${n + 4}::text)`;
+  // El filtro mira los valores de antes SIN la marca: una edición que no cambió
+  // nada sigue sin dejar fila, la haga quien la haga.
   const filtro =
     registro.conValoresAnteriores === true ? `WHERE escrita.valores_anteriores <> '{}'::jsonb` : '';
   const previos = escritura.ctesPrevios === undefined ? '' : `${escritura.ctesPrevios},\n`;
@@ -72,7 +95,13 @@ auditada AS (
   ${filtro}
 )
 SELECT ${escritura.columnas} FROM escrita`,
-    valores: [...escritura.valores, registro.usuarioId, registro.accion, registro.tabla],
+    valores: [
+      ...escritura.valores,
+      registro.usuarioId,
+      registro.accion,
+      registro.tabla,
+      ...(revision === null ? [] : [revision]),
+    ],
   };
 }
 
@@ -192,6 +221,8 @@ export interface FiltrosAuditoria extends Periodo {
   accion: AccionAuditoria | null;
   tabla: TablaAuditada | null;
   registroId: string | null;
+  /** Solo lo marcado para revisión (SPEC-ALE186-018). */
+  soloParaRevisar: boolean;
 }
 
 // La paginación vive en `utils/paginacion.ts` desde SPEC-ALE186-017; se reexporta
@@ -213,6 +244,12 @@ export interface RegistroAuditoria {
    * llegó al servidor — SPEC-ALE186-015.
    */
   fechaDelHecho: string | null;
+  /**
+   * Si el admin tiene que revisarla, y por qué; `null` si no — SPEC-ALE186-018.
+   * Hoy vive dentro de `valores_anteriores`, pero sale aparte y se quita de
+   * `valoresAnteriores`: cuando pase a una columna propia, esta respuesta no cambia.
+   */
+  revision: Revision | null;
   valoresAnteriores: Record<string, unknown> | null;
   usuario: { id: string; nombreCompleto: string; username: string };
 }
@@ -225,6 +262,7 @@ interface FilaAuditoria {
   registro_id: string | null;
   sucursal_id: string | null;
   fecha_del_hecho: string | null;
+  revision: Revision | null;
   valores_anteriores: Record<string, unknown> | null;
   usuario_id: string;
   nombre_completo: string;
@@ -276,11 +314,19 @@ const FECHA_DEL_HECHO = `CASE a.tabla_afectada
  * CTE para la página y para el total: así no pueden filtrar distinto.
  *
  * Parámetros: $1 desde, $2 hasta, $3 zona, $4 usuario, $5 acción, $6 tabla,
- * $7 registro, $8 sucursal. Un filtro en NULL no filtra.
+ * $7 registro, $8 sucursal, $9 solo lo marcado para revisión. Un filtro en NULL
+ * (o `false`, el $9) no filtra.
+ *
+ * La marca de revisión (SPEC-ALE186-018) está guardada dentro de
+ * `valores_anteriores`, porque no hay migraciones para darle una columna. Acá se
+ * separa: sale como `revision` y se quita de los valores de antes, que en un
+ * alta marcada quedan otra vez en NULL.
  */
 const FILTRADAS = `filtradas AS (
   SELECT * FROM (
-    SELECT a.id, a.fecha, a.accion, a.tabla_afectada, a.registro_id, a.valores_anteriores,
+    SELECT a.id, a.fecha, a.accion, a.tabla_afectada, a.registro_id,
+           a.valores_anteriores->>'revision' AS revision,
+           NULLIF(a.valores_anteriores - 'revision', '{}'::jsonb) AS valores_anteriores,
            u.id AS usuario_id, u.nombre_completo, u.username,
            ${SUCURSAL_DE_LA_ACCION} AS sucursal_id,
            ${FECHA_DEL_HECHO} AS fecha_del_hecho
@@ -291,6 +337,7 @@ const FILTRADAS = `filtradas AS (
        AND ($5::accion_auditoria IS NULL OR a.accion = $5)
        AND ($6::text IS NULL OR a.tabla_afectada = $6)
        AND ($7::uuid IS NULL OR a.registro_id = $7)
+       AND (NOT $9::boolean OR a.valores_anteriores ? 'revision')
   ) con_sucursal
   WHERE ($8::uuid IS NULL OR con_sucursal.sucursal_id = $8)
 )`;
@@ -305,6 +352,7 @@ function parametrosDe(filtros: FiltrosAuditoria): unknown[] {
     filtros.tabla,
     filtros.registroId,
     filtros.sucursalId,
+    filtros.soloParaRevisar,
   ];
 }
 
@@ -331,11 +379,11 @@ export async function consultar(
      SELECT id,
             to_char(${horaDelNegocio('fecha', '$3')}, 'YYYY-MM-DD HH24:MI:SS') AS fecha,
             to_char(${horaDelNegocio('fecha_del_hecho', '$3')}, 'YYYY-MM-DD HH24:MI:SS') AS fecha_del_hecho,
-            accion, tabla_afectada, registro_id, sucursal_id, valores_anteriores,
+            accion, tabla_afectada, registro_id, sucursal_id, revision, valores_anteriores,
             usuario_id, nombre_completo, username
        FROM filtradas
       ORDER BY filtradas.fecha DESC, id DESC
-      LIMIT $9 OFFSET $10`,
+      LIMIT $10 OFFSET $11`,
     [...parametros, paginacion.porPagina, salteo(paginacion)],
   );
 
@@ -349,6 +397,7 @@ export async function consultar(
       registroId: fila.registro_id,
       sucursalId: fila.sucursal_id,
       fechaDelHecho: fila.fecha_del_hecho,
+      revision: fila.revision,
       valoresAnteriores: fila.valores_anteriores,
       usuario: { id: fila.usuario_id, nombreCompleto: fila.nombre_completo, username: fila.username },
     })),

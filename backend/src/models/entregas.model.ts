@@ -11,7 +11,7 @@ import pg from 'pg';
 import { pool } from '../db/pool.js';
 import { ESTADOS_CERRADOS, ESTADOS_ORDEN, type TipoRetiro } from '../utils/dominio.js';
 import { formatear, type Centavos } from '../utils/money.js';
-import { conAuditoria } from './auditoria.model.js';
+import { conAuditoria, type Revision } from './auditoria.model.js';
 import * as ordenes from './ordenes.model.js';
 import type { Orden } from './ordenes.model.js';
 
@@ -130,7 +130,12 @@ export type ResultadoCrear =
  * como entregada y quedaría sin entrega. Sin él, un id repetido hace fallar la
  * sentencia entera —y deshace el UPDATE—, y el error se atrapa abajo.
  */
-export async function crear(entrega: EntregaNueva, restricciones: RestriccionesEntrega): Promise<ResultadoCrear> {
+export async function crear(
+  entrega: EntregaNueva,
+  restricciones: RestriccionesEntrega,
+  /** Si la escritura queda marcada para el admin (SPEC-ALE186-018). */
+  revision: Revision | null = null,
+): Promise<ResultadoCrear> {
   let filas: FilaEntrega[];
   let ordenConOtraEntrega = false;
   try {
@@ -168,7 +173,7 @@ export async function crear(entrega: EntregaNueva, restricciones: RestriccionesE
         ],
         columnas: COLUMNAS,
       },
-      { usuarioId: entrega.usuarioEntregaId, accion: 'ENTREGAR', tabla: 'entregas' },
+      { usuarioId: entrega.usuarioEntregaId, accion: 'ENTREGAR', tabla: 'entregas', revision },
     );
     const { rows } = await pool.query<FilaEntrega>(sql, valores);
     filas = rows;

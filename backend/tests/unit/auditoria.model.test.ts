@@ -240,6 +240,7 @@ describe('Auditoría: la consulta del admin — SPEC-ALE186-012', () => {
     accion: 'COBRAR' as const,
     tabla: 'pagos' as const,
     registroId: IDS.orden,
+    soloParaRevisar: false,
   };
 
   beforeEach(() => {
@@ -256,16 +257,16 @@ describe('Auditoría: la consulta del admin — SPEC-ALE186-012', () => {
     // Lo mismo hasta el final del CTE: si uno filtrara distinto, el total mentiría.
     const filtradas = (sql: string) => sql.slice(0, sql.indexOf('\n)') + 2);
     expect(filtradas(sqlTotal)).toBe(filtradas(sqlPagina));
-    expect(valoresPagina.slice(0, 8)).toEqual(valoresTotal);
+    expect(valoresPagina.slice(0, 9)).toEqual(valoresTotal);
     // La página 3 de a 2 se saltea las 4 primeras.
-    expect(valoresPagina.slice(8)).toEqual([2, 4]);
+    expect(valoresPagina.slice(9)).toEqual([2, 4]);
   });
 
   it('todos los filtros van como parámetros, nunca dentro del SQL', async () => {
     await auditoria.consultar(FILTROS, { pagina: 1, porPagina: 50 });
 
     const [sql, valores] = query.mock.calls[0] as [string, unknown[]];
-    expect(valores).toEqual(['2026-03-01', '2026-03-31', 'America/La_Paz', IDS.usuario, 'COBRAR', 'pagos', IDS.orden, IDS.sucursal]);
+    expect(valores).toEqual(['2026-03-01', '2026-03-31', 'America/La_Paz', IDS.usuario, 'COBRAR', 'pagos', IDS.orden, IDS.sucursal, false]);
     for (const valor of [IDS.usuario, IDS.sucursal, IDS.orden, '2026-03-01', "'COBRAR'"]) {
       expect(sql).not.toContain(valor);
     }
@@ -290,7 +291,7 @@ describe('Auditoría: la fecha del hecho — SPEC-ALE186-015', () => {
 
   it('sale del registro tocado con un CASE sobre la tabla, y de la orden solo en su alta', async () => {
     await auditoria.consultar(
-      { desde: '2026-03-01', hasta: '2026-03-31', sucursalId: null, usuarioId: null, accion: null, tabla: null, registroId: null },
+      { desde: '2026-03-01', hasta: '2026-03-31', sucursalId: null, usuarioId: null, accion: null, tabla: null, registroId: null, soloParaRevisar: false },
       { pagina: 1, porPagina: 50 },
     );
 
@@ -302,13 +303,52 @@ describe('Auditoría: la fecha del hecho — SPEC-ALE186-015', () => {
     expect(sql).toMatch(/to_char\(\(\(fecha_del_hecho AT TIME ZONE current_setting\('TimeZone'\)\) AT TIME ZONE \$3\)/);
   });
 
-  it('no agrega parámetros: los mismos ocho filtros, más el límite y el salto de la página', async () => {
+  it('no agrega parámetros: los filtros (nueve desde SPEC-ALE186-018), más el límite y el salto de la página', async () => {
     await auditoria.consultar(
-      { desde: '2026-03-01', hasta: '2026-03-31', sucursalId: null, usuarioId: null, accion: null, tabla: null, registroId: null },
+      { desde: '2026-03-01', hasta: '2026-03-31', sucursalId: null, usuarioId: null, accion: null, tabla: null, registroId: null, soloParaRevisar: false },
       { pagina: 1, porPagina: 50 },
     );
 
-    expect((query.mock.calls[0] as [string, unknown[]])[1]).toHaveLength(8);
-    expect((query.mock.calls[1] as [string, unknown[]])[1]).toHaveLength(10);
+    expect((query.mock.calls[0] as [string, unknown[]])[1]).toHaveLength(9);
+    expect((query.mock.calls[1] as [string, unknown[]])[1]).toHaveLength(11);
+  });
+});
+
+describe('Auditoría: la marca de revisión — SPEC-ALE186-018', () => {
+  const ESCRITURA = { sql: 'INSERT INTO clientes (id) VALUES ($1) RETURNING id', valores: ['un-id'], columnas: 'id' };
+  const AUTOR = '99999999-9999-9999-9999-999999999999';
+
+  it('sin marca, arma exactamente el mismo SQL que antes', () => {
+    const sinMarca = auditoria.conAuditoria(ESCRITURA, { usuarioId: AUTOR, accion: 'CREAR', tabla: 'clientes' });
+    const conNull = auditoria.conAuditoria(ESCRITURA, { usuarioId: AUTOR, accion: 'CREAR', tabla: 'clientes', revision: null });
+
+    expect(conNull).toEqual(sinMarca);
+    expect(sinMarca.sql).not.toContain('revision');
+  });
+
+  it('con marca, la suma como parámetro a los valores de antes, y en un alta queda sola', () => {
+    const { sql, valores } = auditoria.conAuditoria(ESCRITURA, {
+      usuarioId: AUTOR,
+      accion: 'CREAR',
+      tabla: 'clientes',
+      revision: 'cuenta_dada_de_baja',
+    });
+
+    expect(valores).toEqual(['un-id', AUTOR, 'CREAR', 'clientes', 'cuenta_dada_de_baja']);
+    expect(sql).toContain("COALESCE(NULL, '{}'::jsonb) || jsonb_build_object('revision', $5::text)");
+    expect(sql).not.toContain("'cuenta_dada_de_baja'");
+  });
+
+  it('en una edición, el filtro de "no cambió nada" sigue mirando los valores sin la marca', () => {
+    const { sql } = auditoria.conAuditoria(ESCRITURA, {
+      usuarioId: AUTOR,
+      accion: 'EDITAR',
+      tabla: 'clientes',
+      conValoresAnteriores: true,
+      revision: 'cuenta_dada_de_baja',
+    });
+
+    expect(sql).toContain("COALESCE(escrita.valores_anteriores, '{}'::jsonb) || jsonb_build_object('revision', $5::text)");
+    expect(sql).toContain("WHERE escrita.valores_anteriores <> '{}'::jsonb");
   });
 });
