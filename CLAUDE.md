@@ -77,6 +77,11 @@ usuario (exista o no, y también si es una cuenta dada de baja), se bloquea 5 mi
 SPEC-ALE186-017 agregó `/api/estadisticas/clientes`: las atenciones de cada cliente por sucursal
 (órdenes no anuladas, lo que pagó de verdad y su última visita), paginadas. La paginación pasó a
 `utils/paginacion.ts`, que comparte con la auditoría.
+SPEC-ALE186-018 resolvió la cola de una cuenta dada de baja: las rutas de escritura del
+mostrador (`POST`/`PATCH` de clientes y órdenes, `POST` de pagos y entregas) usan
+`requireAuthDeLaCola`, que acepta un token vencido hace hasta 3 días y mira en la base si la
+cuenta sigue activa. Lo de una cuenta dada de baja se acepta pero queda marcado para el admin
+(`revision` en la auditoría, filtrable con `?revisar=true`). Nada más acepta tokens vencidos.
 
 `frontend/` tiene el scaffolding de SPEC-KRILINXI-001: Vite, Tailwind, rutas y su suite de
 tests. SPEC-KRILINXI-002 añadió las piezas que reutilizan todas las pantallas: `Boton`,
@@ -494,16 +499,18 @@ Nada se implementa sin una spec aprobada.
 
 ## 13. Deuda conocida y pendientes
 
-- **Qué hacer con la cola de un usuario revocado.** Al reconectar, un dispositivo dado de
-  baja puede traer trabajo real sin subir — ropa que entró de verdad, de clientes que van a
-  volver a buscarla. Rechazarlo entero pierde ese trabajo. La decisión tomada es
-  **aceptarlo y marcarlo para que el admin lo revise**, nunca descartarlo en silencio.
-  SPEC-KRILINXI-007 cubrió el lado del dispositivo: un 401 con la cola llena desconecta sin
-  borrar, y la cola sube con la siguiente sesión que entre. Falta el lado del servidor (hoy
-  rechazaría con 401 la cola de un usuario dado de baja), que va con `renovar-sesion`.
-- **La cola sube con la sesión de quien esté adentro.** Si después de un 401 entra OTRA
-  persona en la tablet, lo pendiente se sube con su token, y el backend anota a esa persona
-  como quien recibió o cobró (lo toma de la sesión). Se aceptó así en SPEC-KRILINXI-007: la
+- **La marca de revisión vive dentro de `valores_anteriores`** (SPEC-ALE186-018). Lo que sube
+  una cuenta dada de baja se acepta y queda marcado para el admin, pero sin migraciones no
+  hay columna para eso: va como `valores_anteriores.revision`. La consulta de la auditoría
+  la separa y la expone como `revision`, así que pasarla a una columna propia no cambia la
+  API. Es uno de los parches que resuelve la spec de limpieza prevista para cuando haya
+  migraciones, junto con `sucursales.cerrada_en` (hoy sale de la auditoría, SPEC-ALE186-014)
+  y un índice UNIQUE para el nombre de sucursal (hoy se comprueba en el código, SPEC-ALE186-011).
+- **La cola sube con la sesión de quien esté adentro, pasados 3 días.** Desde
+  SPEC-ALE186-018, una tablet sube su cola con su propio token hasta 3 días después de que
+  venza, así que queda a nombre de quien la hizo. Pasada esa ventana, el servidor responde
+  401, y si después entra OTRA persona en la tablet, lo pendiente se sube con su token y el
+  backend la anota a ella como quien recibió o cobró. Se aceptó así en SPEC-KRILINXI-007: la
   alternativa era perder el trabajo. Salir confirmando, en cambio, sigue borrando la base
   aunque haya cosas sin subir: el aviso de salida debería decirlo, o impedirlo.
 
