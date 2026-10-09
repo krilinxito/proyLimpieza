@@ -221,6 +221,8 @@ export interface FiltrosAuditoria extends Periodo {
   accion: AccionAuditoria | null;
   tabla: TablaAuditada | null;
   registroId: string | null;
+  /** Solo lo marcado para revisión (SPEC-ALE186-018). */
+  soloParaRevisar: boolean;
 }
 
 // La paginación vive en `utils/paginacion.ts` desde SPEC-ALE186-017; se reexporta
@@ -242,6 +244,12 @@ export interface RegistroAuditoria {
    * llegó al servidor — SPEC-ALE186-015.
    */
   fechaDelHecho: string | null;
+  /**
+   * Si el admin tiene que revisarla, y por qué; `null` si no — SPEC-ALE186-018.
+   * Hoy vive dentro de `valores_anteriores`, pero sale aparte y se quita de
+   * `valoresAnteriores`: cuando pase a una columna propia, esta respuesta no cambia.
+   */
+  revision: Revision | null;
   valoresAnteriores: Record<string, unknown> | null;
   usuario: { id: string; nombreCompleto: string; username: string };
 }
@@ -254,6 +262,7 @@ interface FilaAuditoria {
   registro_id: string | null;
   sucursal_id: string | null;
   fecha_del_hecho: string | null;
+  revision: Revision | null;
   valores_anteriores: Record<string, unknown> | null;
   usuario_id: string;
   nombre_completo: string;
@@ -305,11 +314,19 @@ const FECHA_DEL_HECHO = `CASE a.tabla_afectada
  * CTE para la página y para el total: así no pueden filtrar distinto.
  *
  * Parámetros: $1 desde, $2 hasta, $3 zona, $4 usuario, $5 acción, $6 tabla,
- * $7 registro, $8 sucursal. Un filtro en NULL no filtra.
+ * $7 registro, $8 sucursal, $9 solo lo marcado para revisión. Un filtro en NULL
+ * (o `false`, el $9) no filtra.
+ *
+ * La marca de revisión (SPEC-ALE186-018) está guardada dentro de
+ * `valores_anteriores`, porque no hay migraciones para darle una columna. Acá se
+ * separa: sale como `revision` y se quita de los valores de antes, que en un
+ * alta marcada quedan otra vez en NULL.
  */
 const FILTRADAS = `filtradas AS (
   SELECT * FROM (
-    SELECT a.id, a.fecha, a.accion, a.tabla_afectada, a.registro_id, a.valores_anteriores,
+    SELECT a.id, a.fecha, a.accion, a.tabla_afectada, a.registro_id,
+           a.valores_anteriores->>'revision' AS revision,
+           NULLIF(a.valores_anteriores - 'revision', '{}'::jsonb) AS valores_anteriores,
            u.id AS usuario_id, u.nombre_completo, u.username,
            ${SUCURSAL_DE_LA_ACCION} AS sucursal_id,
            ${FECHA_DEL_HECHO} AS fecha_del_hecho
@@ -320,6 +337,7 @@ const FILTRADAS = `filtradas AS (
        AND ($5::accion_auditoria IS NULL OR a.accion = $5)
        AND ($6::text IS NULL OR a.tabla_afectada = $6)
        AND ($7::uuid IS NULL OR a.registro_id = $7)
+       AND (NOT $9::boolean OR a.valores_anteriores ? 'revision')
   ) con_sucursal
   WHERE ($8::uuid IS NULL OR con_sucursal.sucursal_id = $8)
 )`;
@@ -334,6 +352,7 @@ function parametrosDe(filtros: FiltrosAuditoria): unknown[] {
     filtros.tabla,
     filtros.registroId,
     filtros.sucursalId,
+    filtros.soloParaRevisar,
   ];
 }
 
@@ -360,11 +379,11 @@ export async function consultar(
      SELECT id,
             to_char(${horaDelNegocio('fecha', '$3')}, 'YYYY-MM-DD HH24:MI:SS') AS fecha,
             to_char(${horaDelNegocio('fecha_del_hecho', '$3')}, 'YYYY-MM-DD HH24:MI:SS') AS fecha_del_hecho,
-            accion, tabla_afectada, registro_id, sucursal_id, valores_anteriores,
+            accion, tabla_afectada, registro_id, sucursal_id, revision, valores_anteriores,
             usuario_id, nombre_completo, username
        FROM filtradas
       ORDER BY filtradas.fecha DESC, id DESC
-      LIMIT $9 OFFSET $10`,
+      LIMIT $10 OFFSET $11`,
     [...parametros, paginacion.porPagina, salteo(paginacion)],
   );
 
@@ -378,6 +397,7 @@ export async function consultar(
       registroId: fila.registro_id,
       sucursalId: fila.sucursal_id,
       fechaDelHecho: fila.fecha_del_hecho,
+      revision: fila.revision,
       valoresAnteriores: fila.valores_anteriores,
       usuario: { id: fila.usuario_id, nombreCompleto: fila.nombre_completo, username: fila.username },
     })),

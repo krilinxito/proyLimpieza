@@ -24,6 +24,7 @@ const REGISTRO = {
   registroId: USUARIO,
   sucursalId: null,
   fechaDelHecho: null,
+  revision: null,
   valoresAnteriores: { contrasena_cambiada: true },
   usuario: { id: '33333333-3333-3333-3333-333333333333', nombreCompleto: 'Admin', username: 'admin' },
 };
@@ -65,6 +66,7 @@ describe('GET /api/auditoria — SPEC-ALE186-012', () => {
         accion: null,
         tabla: null,
         registroId: null,
+        soloParaRevisar: false,
       },
       { pagina: 1, porPagina: 50 },
     );

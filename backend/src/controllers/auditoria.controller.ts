@@ -24,6 +24,13 @@ function leerId(valor: unknown, mensaje: string): string | null {
   return valor;
 }
 
+/** `?revisar=true` muestra solo lo marcado para revisión (SPEC-ALE186-018). */
+function leerRevisar(valor: unknown): boolean {
+  if (valor === undefined || valor === 'false') return false;
+  if (valor === 'true') return true;
+  throw invalido('Para ver solo lo que hay que revisar, usá revisar=true.');
+}
+
 /** GET /api/auditoria */
 export async function getAuditoria(req: Request, res: Response): Promise<void> {
   const { query } = req;
@@ -43,6 +50,7 @@ export async function getAuditoria(req: Request, res: Response): Promise<void> {
     accion: accion ?? null,
     tabla: tabla ?? null,
     registroId: leerId(query.registro_id, 'El registro elegido no es válido.'),
+    soloParaRevisar: leerRevisar(query.revisar),
   };
   const paginacion = leerPaginacion(query);
 
