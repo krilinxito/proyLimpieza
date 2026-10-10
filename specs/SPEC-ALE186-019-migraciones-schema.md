@@ -2,7 +2,7 @@
 id: SPEC-ALE186-019
 name: Migraciones del schema sin borrar datos
 slug: migraciones-schema
-status: draft
+status: approved
 owner: ale186
 created: 2026-10-09
 scope:
