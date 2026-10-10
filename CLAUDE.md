@@ -53,9 +53,9 @@ guarda en `valores_anteriores` solo lo que cambió de verdad, y de la contraseñ
 `contrasena_cambiada: true`. Un reintento o un PATCH que no cambia nada no anota. Toda
 escritura nueva tiene que pasar por `conAuditoria`. SPEC-ALE186-011 añadió las sucursales
 (`POST` y `PATCH /api/sucursales`, solo ADMIN): el nombre es único sin distinguir
-mayúsculas (regla en la aplicación, porque el schema no tiene UNIQUE), y una sucursal no se
-cierra (`activa: false`) mientras tenga ropa en RECIBIDO, EN_PROCESO o LISTO. Las dos reglas
-van dentro de la sentencia que escribe. Una sucursal cerrada no recibe personal nuevo.
+mayúsculas ni espacios (desde SPEC-ALE186-020, un índice único de la base), y una sucursal no
+se cierra (`activa: false`) mientras tenga ropa en RECIBIDO, EN_PROCESO o LISTO (condición
+dentro de la sentencia que escribe). Una sucursal cerrada no recibe personal nuevo.
 SPEC-ALE186-012 añadió la consulta de la auditoría (`GET /api/auditoria`, solo ADMIN), paginada y
 con filtros por fechas, persona, acción, tabla, registro y sucursal. **La sucursal de una acción
 sale del registro que tocó** (la orden, el pago, la entrega, o el cliente en su alta), nunca de
@@ -66,7 +66,7 @@ comparten la auditoría y las estadísticas. SPEC-ALE186-013 completó las métr
 con `/api/estadisticas/volumen` y `/productividad`. SPEC-ALE186-014 hizo que una sucursal dada
 de baja (`activa: false`, algo excepcional) no reciba ropa nueva: acepta la que una tablet
 cargó sin internet **antes** del cierre y sube después, y rechaza con 409 `SUCURSAL_CERRADA`
-la posterior. El momento del cierre sale de la auditoría. Toda `fecha_entrada` más de 5
+la posterior. El momento del cierre es `sucursales.cerrada_en`. Toda `fecha_entrada` más de 5
 minutos en el futuro de la hora del servidor se rechaza con 400 `FECHA_FUTURA`.
 SPEC-ALE186-015 agregó `ahora` (la hora de Postgres) a las respuestas de `login` y `renovar`,
 para que la tablet mida el desfase de su reloj, y `fechaDelHecho` a cada registro de la
@@ -87,6 +87,11 @@ congelada, y los cambios de schema son archivos `backend/migraciones/NNN_nombre.
 `npm run migrar --workspace backend`, en orden, sin borrar datos. **Después de cada `git pull`,
 corré `npm run migrar`**: si a la base le falta alguna, el backend no arranca y dice qué correr.
 Nunca edites la línea base ni una migración ya aplicada: se corrige con una nueva.
+SPEC-ALE186-020 usó las primeras cuatro para quitar los parches de cuando no había migraciones:
+la marca de revisión es la columna `auditoria.revision`, el momento del cierre es
+`sucursales.cerrada_en` (la pone la misma sentencia que cierra, y la borra la que reabre; una
+cerrada sin fecha no acepta ropa), el nombre único de sucursal es el índice
+`uq_sucursales_nombre` (el model traduce su 23505 a 409) y `auditoria.registro_id` tiene índice.
 
 `frontend/` tiene el scaffolding de SPEC-KRILINXI-001: Vite, Tailwind, rutas y su suite de
 tests. SPEC-KRILINXI-002 añadió las piezas que reutilizan todas las pantallas: `Boton`,
@@ -512,14 +517,6 @@ Nada se implementa sin una spec aprobada.
 
 ## 13. Deuda conocida y pendientes
 
-- **La marca de revisión vive dentro de `valores_anteriores`** (SPEC-ALE186-018). Lo que sube
-  una cuenta dada de baja se acepta y queda marcado para el admin, pero cuando se hizo no
-  había migraciones ni columna para eso: va como `valores_anteriores.revision`. La consulta
-  de la auditoría la separa y la expone como `revision`, así que pasarla a una columna propia
-  no cambia la API. Es uno de los parches que resuelve la spec de limpieza `deuda-schema`,
-  posible desde que hay migraciones (SPEC-ALE186-019), junto con `sucursales.cerrada_en` (hoy
-  sale de la auditoría, SPEC-ALE186-014) y un índice UNIQUE para el nombre de sucursal (hoy se
-  comprueba en el código, SPEC-ALE186-011).
 - **La cola sube con la sesión de quien esté adentro, pasados 3 días.** Desde
   SPEC-ALE186-018, una tablet sube su cola con su propio token hasta 3 días después de que
   venza, así que queda a nombre de quien la hizo. Pasada esa ventana, el servidor responde
@@ -593,7 +590,8 @@ repartido en specs del roadmap del backend:
   respaldos de la base (dependen del hosting).
 - **Escalabilidad:** los filtros por "día de Bolivia" aplican una función sobre la columna, así
   que Postgres no usa los índices de fecha y recorre la tabla entera (comprobado con
-  `EXPLAIN`). Falta un índice en `auditoria.registro_id`. El pool no tiene `statement_timeout`.
+  `EXPLAIN`). El pool no tiene `statement_timeout`. (El índice que faltaba en
+  `auditoria.registro_id` lo agregó SPEC-ALE186-020.)
 - **Confidencialidad:** el bucket `global` baja todos los clientes (con teléfono y carnet) a
   todas las tablets, y no mira `activo`: una cuenta dada de baja sigue bajándolos mientras su
   token de PowerSync no venza. Los logs de errores pueden llevar datos personales.
