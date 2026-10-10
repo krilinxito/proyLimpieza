@@ -2,7 +2,7 @@
 id: SPEC-ALE186-021
 name: Los filtros por día de Bolivia usan los índices de fecha
 slug: consultas-por-fecha
-status: draft
+status: approved
 owner: ale186
 created: 2026-10-10
 scope:
