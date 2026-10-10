@@ -402,6 +402,10 @@ es caro y no aporta nada, porque el admin trabaja en la oficina, con conexión.
   `utils/periodo.ts` desde SPEC-ALE186-012, junto con `leerPeriodo` y `horaDelNegocio`). Las columnas `TIMESTAMP` guardan la hora de la sesión de
   Postgres, que en el servidor es UTC: sin convertir, un cobro de las 21:00 caería en el día
   siguiente. `desde`/`hasta` son días de Bolivia, y "hoy" también (`hoyEnElNegocio()`).
+  **Para filtrar por período se usa `enElPeriodo(columna, …)`** (SPEC-ALE186-021), nunca
+  `horaDelNegocio(columna)::date BETWEEN …`: la segunda aplica una función a la columna en
+  cada fila y Postgres no puede buscar en su índice. `horaDelNegocio` queda para lo que se
+  MUESTRA (el `SELECT`, el `GROUP BY` por día), donde no estorba.
 - **Los montos se suman en Postgres y salen como texto** (`"125.50"`), incluidos los totales
   por sucursal y el general. El frontend no suma: muestra.
 - Métricas de la primera versión:
@@ -588,10 +592,9 @@ repartido en specs del roadmap del backend:
   superusuario: debería tener un usuario propio sin privilegios y sin `UPDATE`/`DELETE` sobre
   `auditoria`. API y PowerSync comparten el secreto de los tokens (va RS256). No hay HTTPS ni
   respaldos de la base (dependen del hosting).
-- **Escalabilidad:** los filtros por "día de Bolivia" aplican una función sobre la columna, así
-  que Postgres no usa los índices de fecha y recorre la tabla entera (comprobado con
-  `EXPLAIN`). El pool no tiene `statement_timeout`. (El índice que faltaba en
-  `auditoria.registro_id` lo agregó SPEC-ALE186-020.)
+- **Escalabilidad:** el pool no tiene `statement_timeout`. (El índice que faltaba en
+  `auditoria.registro_id` lo agregó SPEC-ALE186-020, y SPEC-ALE186-021 hizo que los filtros
+  por "día de Bolivia" busquen en los índices de fecha en vez de recorrer la tabla.)
 - **Confidencialidad:** el bucket `global` baja todos los clientes (con teléfono y carnet) a
   todas las tablets, y no mira `activo`: una cuenta dada de baja sigue bajándolos mientras su
   token de PowerSync no venza. Los logs de errores pueden llevar datos personales.

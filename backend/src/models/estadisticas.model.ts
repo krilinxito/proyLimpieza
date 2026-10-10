@@ -15,7 +15,7 @@
 import { pool } from '../db/pool.js';
 import { METODOS_PAGO, type EstadoOrden, type MetodoPago } from '../utils/dominio.js';
 import { salteo, type Paginacion } from '../utils/paginacion.js';
-import { ZONA_NEGOCIO, horaDelNegocio, type Periodo } from '../utils/periodo.js';
+import { ZONA_NEGOCIO, enElPeriodo, horaDelNegocio, type Periodo } from '../utils/periodo.js';
 
 // La zona, el período y la conversión a la hora del negocio viven en
 // `utils/periodo.ts` desde SPEC-ALE186-012: los comparte con la auditoría.
@@ -25,6 +25,15 @@ export { ZONA_NEGOCIO, type Periodo };
 /** El día, en la hora del negocio, de una columna TIMESTAMP (ver `horaDelNegocio`). */
 function diaLocal(columna: string, parametroZona: string): string {
   return horaDelNegocio(columna, parametroZona);
+}
+
+/**
+ * La columna cae en el período. Todas las consultas de este archivo usan los
+ * mismos parámetros: $1 desde, $2 hasta, $4 zona. Compara la columna tal cual,
+ * para que sirva su índice (SPEC-ALE186-021, ver `enElPeriodo`).
+ */
+function delPeriodo(columna: string): string {
+  return enElPeriodo(columna, { desde: '$1', hasta: '$2', zona: '$4' });
 }
 
 // ------------------------------------------------------------------
@@ -79,7 +88,7 @@ export async function ingresos(periodo: Periodo): Promise<Ingresos> {
             (SUM(SUM(p.monto)) OVER ())::numeric(14,2)                          AS total_general
        FROM pagos p
        JOIN sucursales s ON s.id = p.sucursal_id
-      WHERE ${diaLocal('p.fecha_pago', '$4')}::date BETWEEN $1::date AND $2::date
+      WHERE ${delPeriodo('p.fecha_pago')}
         AND ($3::uuid IS NULL OR p.sucursal_id = $3)
       GROUP BY p.sucursal_id, s.nombre, p.metodo
       ORDER BY s.nombre, p.sucursal_id, p.metodo`,
@@ -187,7 +196,7 @@ const SALDOS_DEL_PERIODO = `
     JOIN ordenes o ON o.id = v.orden_id
    WHERE v.estado <> 'ANULADO'
      AND v.saldo_pendiente > 0
-     AND ${diaLocal('o.fecha_entrada', '$4')}::date BETWEEN $1::date AND $2::date
+     AND ${delPeriodo('o.fecha_entrada')}
      AND ($3::uuid IS NULL OR v.sucursal_id = $3)`;
 
 /** Las órdenes con saldo pendiente, por antigüedad. `hoy` en `YYYY-MM-DD`. */
@@ -279,7 +288,7 @@ const SIN_RECOGER_DEL_PERIODO = `
          ($5::date - ${diaLocal('v.fecha_entrada', '$4')}::date) AS dias
     FROM vw_pendientes_recoger v
     JOIN ordenes o ON o.id = v.id
-   WHERE ${diaLocal('v.fecha_entrada', '$4')}::date BETWEEN $1::date AND $2::date
+   WHERE ${delPeriodo('o.fecha_entrada')}
      AND ($3::uuid IS NULL OR o.sucursal_id = $3)`;
 
 /** La ropa que sigue en el local, por antigüedad. `hoy` en `YYYY-MM-DD`. */
@@ -365,7 +374,7 @@ export async function volumen(periodo: Periodo): Promise<Volumen> {
      del_periodo AS (
        SELECT ${diaLocal('o.fecha_entrada', '$4')}::date AS fecha, o.estado
          FROM ordenes o
-        WHERE ${diaLocal('o.fecha_entrada', '$4')}::date BETWEEN $1::date AND $2::date
+        WHERE ${delPeriodo('o.fecha_entrada')}
           AND ($3::uuid IS NULL OR o.sucursal_id = $3)
      )
      SELECT to_char(dias.fecha, 'YYYY-MM-DD')                                         AS fecha,
@@ -417,8 +426,12 @@ interface FilaProductividad {
  *
  * Las tres cosas que se cuentan viven en tres tablas, cada una con quién la hizo
  * y en qué sucursal. El `UNION ALL` las pone una debajo de la otra con la misma
- * forma (quién, dónde, qué, cuánto, cuándo), y después se agrupa por persona y
+ * forma (quién, dónde, qué, cuánto), y después se agrupa por persona y
  * sucursal con `FILTER` para separar cada tipo.
+ *
+ * El período se filtra DENTRO de cada parte de la unión, sobre su propia columna
+ * de fecha (SPEC-ALE186-021): así cada tabla usa su índice y solo sube a la unión
+ * lo del período, en vez de unir las tres tablas enteras y filtrar después.
  *
  * La sucursal es la DEL REGISTRO, no la de la persona hoy (la regla de
  * SPEC-ALE186-012): a un empleado que cambió de sucursal en el período le
@@ -428,13 +441,17 @@ interface FilaProductividad {
 export async function productividad(periodo: Periodo): Promise<ProductividadFila[]> {
   const { rows } = await pool.query<FilaProductividad>(
     `WITH acciones AS (
-       SELECT usuario_recepcion_id AS usuario_id, sucursal_id, 'ORDEN' AS tipo, NULL::numeric AS monto,
-              fecha_entrada AS fecha
+       SELECT usuario_recepcion_id AS usuario_id, sucursal_id, 'ORDEN' AS tipo, NULL::numeric AS monto
          FROM ordenes
+        WHERE ${delPeriodo('fecha_entrada')}
        UNION ALL
-       SELECT usuario_id, sucursal_id, 'COBRO', monto, fecha_pago FROM pagos
+       SELECT usuario_id, sucursal_id, 'COBRO', monto
+         FROM pagos
+        WHERE ${delPeriodo('fecha_pago')}
        UNION ALL
-       SELECT usuario_entrega_id, sucursal_id, 'ENTREGA', NULL, fecha_entrega FROM entregas
+       SELECT usuario_entrega_id, sucursal_id, 'ENTREGA', NULL
+         FROM entregas
+        WHERE ${delPeriodo('fecha_entrega')}
      )
      SELECT u.id AS usuario_id, u.nombre_completo, s.id AS sucursal_id, s.nombre AS sucursal,
             (COUNT(*) FILTER (WHERE a.tipo = 'ORDEN'))::int                            AS ordenes_recibidas,
@@ -444,8 +461,7 @@ export async function productividad(periodo: Periodo): Promise<ProductividadFila
        FROM acciones a
        JOIN usuarios   u ON u.id = a.usuario_id
        JOIN sucursales s ON s.id = a.sucursal_id
-      WHERE ${diaLocal('a.fecha', '$4')}::date BETWEEN $1::date AND $2::date
-        AND ($3::uuid IS NULL OR a.sucursal_id = $3)
+      WHERE ($3::uuid IS NULL OR a.sucursal_id = $3)
       GROUP BY u.id, u.nombre_completo, s.id, s.nombre
       ORDER BY s.nombre, s.id, u.nombre_completo, u.id`,
     [periodo.desde, periodo.hasta, periodo.sucursalId, ZONA_NEGOCIO],
@@ -515,7 +531,7 @@ const ATENCIONES = `atenciones AS (
            COALESCE((SELECT SUM(p.monto) FROM pagos p WHERE p.orden_id = o.id), 0) AS pagado
       FROM ordenes o
      WHERE o.estado <> 'ANULADO'
-       AND ${diaLocal('o.fecha_entrada', '$4')}::date BETWEEN $1::date AND $2::date
+       AND ${delPeriodo('o.fecha_entrada')}
        AND ($3::uuid IS NULL OR o.sucursal_id = $3)
        AND ($5::uuid IS NULL OR o.cliente_id = $5)
   ),
