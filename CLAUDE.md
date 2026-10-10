@@ -577,3 +577,50 @@ Nada se implementa sin una spec aprobada.
   escritura que alguien haga a mano en la base, o por un camino que no pase por
   `conAuditoria`, no queda auditada. La semilla del primer admin no se audita a propósito
   (no hay sesión de quien atribuirla).
+
+### Revisión del backend (2026-10-09)
+
+Una revisión de seguridad, confidencialidad y escalabilidad del backend no encontró
+vulnerabilidades graves en el código (SQL siempre parametrizado, bcrypt, rol verificado en el
+servidor, sin `password_hash` fuera de la base, errores 500 sin detalles). Lo pendiente, ya
+repartido en specs del roadmap del backend:
+
+- **Antes de producción:** `proxy-addr` (dentro de Express) tiene una vulnerabilidad crítica
+  que hoy no aplica porque no usamos `trust proxy`, pero sí aplicará detrás de un proxy
+  (`npm audit fix`). CORS acepta cualquier origen. El backend se conecta a Postgres como
+  superusuario: debería tener un usuario propio sin privilegios y sin `UPDATE`/`DELETE` sobre
+  `auditoria`. API y PowerSync comparten el secreto de los tokens (va RS256). No hay HTTPS ni
+  respaldos de la base (dependen del hosting).
+- **Escalabilidad:** los filtros por "día de Bolivia" aplican una función sobre la columna, así
+  que Postgres no usa los índices de fecha y recorre la tabla entera (comprobado con
+  `EXPLAIN`). Falta un índice en `auditoria.registro_id`. El pool no tiene `statement_timeout`.
+- **Confidencialidad:** el bucket `global` baja todos los clientes (con teléfono y carnet) a
+  todas las tablets, y no mira `activo`: una cuenta dada de baja sigue bajándolos mientras su
+  token de PowerSync no venza. Los logs de errores pueden llevar datos personales.
+
+### Avisos para el frontend
+
+Cambios del backend, hechos o en camino, que el frontend tiene que tener en cuenta. Quien
+implemente una spec de las de abajo actualiza su línea cuando la mergee.
+
+- **Después de cada `git pull`, `npm run migrar --workspace backend`** (SPEC-ALE186-019, hecho).
+  Si a la base le falta una migración, el backend no arranca.
+- **El reloj de la tablet** (SPEC-ALE186-015, hecho del lado del backend): `login` y `renovar`
+  devuelven `ahora`, la hora del servidor. Falta que la tablet mida su desfase y lo aplique al
+  registrar (ver "El reloj de la tablet" más arriba).
+- **CORS restringido** (spec `endurecer-api`, pendiente): la API va a aceptar solo los orígenes
+  de una variable del `.env`. En desarrollo será `http://localhost:5173`. Si el frontend corre
+  en otro puerto o dominio, hay que agregarlo ahí, o el navegador bloqueará las llamadas.
+- **Sync rules del bucket `global`** (spec `endurecer-api`, pendiente): va a dejar de bajar
+  clientes, sucursales y usuarios a una cuenta dada de baja. Para las activas no cambia nada,
+  pero toca `docker/powersync/sync-rules.yaml`: después de mergear, reiniciar PowerSync y
+  probar que la tablet siga bajando clientes.
+- **Usuario de la base sin privilegios** (spec `usuario-base-app`, pendiente): va a cambiar el
+  usuario de `DATABASE_URL` en el `.env`. Habrá que actualizar el `.env` de cada uno.
+- **Tokens de PowerSync con RS256** (spec `powersync-rs256`, pendiente): el backend va a firmar
+  con una clave privada y PowerSync va a verificar con la pública. Habrá variables nuevas en el
+  `.env` y un cambio en `docker/powersync/powersync.yaml`; cada uno tendrá que generar sus
+  claves y reiniciar PowerSync.
+- **Del frontend, no del backend:** la sesión vive en `localStorage`, así que un XSS en el
+  frontend podría robar el token. Conviene revisarlo (Content-Security-Policy, nada de HTML
+  sin escapar).
