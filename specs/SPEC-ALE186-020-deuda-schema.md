@@ -2,7 +2,7 @@
 id: SPEC-ALE186-020
 name: Los parches del schema pasan a columnas e índices
 slug: deuda-schema
-status: draft
+status: approved
 owner: ale186
 created: 2026-10-10
 scope:
