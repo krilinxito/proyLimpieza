@@ -2,7 +2,7 @@
 id: SPEC-ALE186-019
 name: Migraciones del schema sin borrar datos
 slug: migraciones-schema
-status: in-progress
+status: finished
 owner: ale186
 created: 2026-10-09
 scope:
@@ -17,7 +17,9 @@ scope:
   - CLAUDE.md
 priority: high
 depends_on: []
-tests: []
+tests:
+  - backend\tests\db\migraciones.db.test.ts
+  - backend\tests\unit\migraciones.test.ts
 ---
 
 ## Descripción
