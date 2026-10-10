@@ -221,9 +221,10 @@ describe('Ordenes model: sucursal cerrada y fecha futura — SPEC-ALE186-014', (
     const [sql, valores] = llamada();
     expect(sql).toMatch(/INSERT INTO ordenes[\s\S]*SELECT[\s\S]*FROM sucursales s\s+WHERE s\.id = \$4::uuid/);
     expect(sql).toContain('$9::timestamptz <= now() + $10::interval');
-    // La sucursal abierta, o la fecha de entrada antes del último cierre que anotó la auditoría.
-    expect(sql).toMatch(/s\.activa\s+OR \(\$9::timestamptz IS NOT NULL\s+AND \$9::timestamptz::timestamp < \(SELECT max\(cierre\.fecha\) FROM auditoria cierre/);
-    expect(sql).toContain("cierre.valores_anteriores->>'activa' = 'true'");
+    // La sucursal abierta, o la fecha de entrada antes de su cierre. Desde
+    // SPEC-ALE186-020 el cierre es la columna `cerrada_en`, no una búsqueda en la auditoría.
+    expect(sql).toMatch(/s\.activa\s+OR \(\$9::timestamptz IS NOT NULL\s+AND \$9::timestamptz::timestamp < s\.cerrada_en\)/);
+    expect(sql).not.toContain('FROM auditoria cierre');
     expect(valores.slice(8, 10)).toEqual([NUEVA.fechaEntrada, '5 minutes']);
     expect(sql).not.toContain(NUEVA.fechaEntrada);
   });

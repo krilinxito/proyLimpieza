@@ -5,9 +5,10 @@ import { cuerpoDeSucursal } from '../helpers/sucursales.js';
 import { comoAdmin, cuerpoDeAltaUsuario } from '../helpers/usuarios.js';
 
 // Contra Postgres real (sección 4). Las dos reglas de esta spec —nombre único y
-// no cerrar con ropa en el local— viven DENTRO de la sentencia que escribe, como
-// condiciones. Con un doble del pool, el test solo vería que el SQL las nombra;
-// acá se ve que frenan.
+// no cerrar con ropa en el local— las hace cumplir la base: la segunda, como
+// condición dentro de la sentencia que escribe; la primera, desde SPEC-ALE186-020,
+// un índice único. Con un doble del pool, el test solo vería el SQL; acá se ve
+// que frenan.
 //
 // Todo va por HTTP con un admin de verdad (lo exige la FK de la auditoría).
 
@@ -30,8 +31,8 @@ describe('Sucursales contra la base real: alta — SPEC-ALE186-011', () => {
   });
 
   it('el reintento con el mismo id y nombre responde 200 y no duplica ni vuelve a anotar', async () => {
-    // El caso fino: el id Y el nombre chocan a la vez. La regla del nombre
-    // excluye a la propia sucursal, así que gana el ON CONFLICT del id.
+    // El caso fino: el id Y el nombre chocan a la vez. `ON CONFLICT (id)` arbitra
+    // sobre el id, así que gana él y el índice del nombre no llega a quejarse.
     const admin = await unAdmin();
     const cuerpo = cuerpoDeSucursal();
 

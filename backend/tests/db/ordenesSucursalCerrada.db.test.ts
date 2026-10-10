@@ -6,7 +6,8 @@ import { cuerpoDeOrden } from '../helpers/ordenes.js';
 import { comoAdmin, conSesion } from '../helpers/usuarios.js';
 
 // Contra Postgres real (sección 4). La regla depende de dos fechas que pone la
-// base —el cierre, que es `auditoria.fecha`, y `now()`— y vive dentro del INSERT:
+// base —el cierre, que es `sucursales.cerrada_en` desde SPEC-ALE186-020, y
+// `now()`— y vive dentro del INSERT:
 // solo se puede comprobar con la base de verdad. Todas las fechas de estos tests
 // salen de `ahoraEnLaBase`, nunca del reloj de Node (ver el helper).
 

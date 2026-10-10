@@ -326,7 +326,8 @@ describe('Auditoría: la marca de revisión — SPEC-ALE186-018', () => {
     expect(sinMarca.sql).not.toContain('revision');
   });
 
-  it('con marca, la suma como parámetro a los valores de antes, y en un alta queda sola', () => {
+  // Desde SPEC-ALE186-020 la marca va en su propia columna, `revision`.
+  it('con marca, la escribe como parámetro en la columna revision', () => {
     const { sql, valores } = auditoria.conAuditoria(ESCRITURA, {
       usuarioId: AUTOR,
       accion: 'CREAR',
@@ -335,11 +336,12 @@ describe('Auditoría: la marca de revisión — SPEC-ALE186-018', () => {
     });
 
     expect(valores).toEqual(['un-id', AUTOR, 'CREAR', 'clientes', 'cuenta_dada_de_baja']);
-    expect(sql).toContain("COALESCE(NULL, '{}'::jsonb) || jsonb_build_object('revision', $5::text)");
+    expect(sql).toContain('INSERT INTO auditoria (usuario_id, accion, tabla_afectada, registro_id, valores_anteriores, revision)');
+    expect(sql).toContain('escrita.id, NULL, $5::text');
     expect(sql).not.toContain("'cuenta_dada_de_baja'");
   });
 
-  it('en una edición, el filtro de "no cambió nada" sigue mirando los valores sin la marca', () => {
+  it('en una edición, la marca no toca los valores de antes ni el filtro de "no cambió nada"', () => {
     const { sql } = auditoria.conAuditoria(ESCRITURA, {
       usuarioId: AUTOR,
       accion: 'EDITAR',
@@ -348,7 +350,8 @@ describe('Auditoría: la marca de revisión — SPEC-ALE186-018', () => {
       revision: 'cuenta_dada_de_baja',
     });
 
-    expect(sql).toContain("COALESCE(escrita.valores_anteriores, '{}'::jsonb) || jsonb_build_object('revision', $5::text)");
+    expect(sql).toContain('escrita.id, escrita.valores_anteriores, $5::text');
+    expect(sql).not.toContain("jsonb_build_object('revision'");
     expect(sql).toContain("WHERE escrita.valores_anteriores <> '{}'::jsonb");
   });
 });

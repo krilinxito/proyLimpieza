@@ -4,6 +4,7 @@
 // órdenes (SPEC-ALE186-004). SPEC-ALE186-011 le sumó el alta y la edición desde
 // la API, con las mismas reglas de escritura que clientes y usuarios: id del
 // dispositivo, reintento idempotente y auditoría en la misma sentencia.
+import pg from 'pg';
 import { pool } from '../db/pool.js';
 import { ESTADOS_CERRADOS, ESTADOS_ORDEN } from '../utils/dominio.js';
 import { conAuditoria, updateConAntes } from './auditoria.model.js';
@@ -67,24 +68,14 @@ export async function crear(nombre: string): Promise<Sucursal> {
  */
 export const ESTADOS_ABIERTOS = ESTADOS_ORDEN.filter((estado) => !ESTADOS_CERRADOS.includes(estado));
 
-/**
- * "Ninguna otra sucursal se llama así", sin distinguir mayúsculas ni espacios
- * de los extremos. El schema no tiene UNIQUE sobre el nombre y no hay
- * migraciones para agregarlo, así que la regla vive acá, DENTRO de la sentencia
- * que escribe y no en una consulta previa: es lo más cerca que se puede estar de
- * una restricción sin tenerla. Dos altas simultáneas con el mismo nombre todavía
- * podrían pasar las dos; para algo que hace solo el admin y muy de vez en
- * cuando, se acepta (está dicho en la spec).
- *
- * `id` y `nombre` son los parámetros (`$1`, `$2::varchar`…) de cada sentencia. El
- * nombre se castea a `varchar`, el tipo de la columna, y no a `text`: el mismo
- * parámetro va también a la columna, y Postgres rechaza deducirle dos tipos
- * ("inconsistent types deduced for parameter").
- */
-function nombreLibre(id: string, nombre: string): string {
-  return `NOT EXISTS (SELECT 1 FROM sucursales otra
-                       WHERE lower(btrim(otra.nombre)) = lower(btrim(${nombre}))
-                         AND otra.id <> ${id})`;
+// El índice único sobre `lower(btrim(nombre))` (SPEC-ALE186-020, migración 003).
+// Hasta esa spec la regla vivía en el código, como condición dentro de cada
+// sentencia, y dejaba pasar dos altas simultáneas; ahora la garantiza la base.
+const RESTRICCION_NOMBRE = 'uq_sucursales_nombre';
+
+/** 23505 = unique_violation, sobre el índice del nombre. */
+function nombreRepetido(error: unknown): boolean {
+  return error instanceof pg.DatabaseError && error.code === '23505' && error.constraint === RESTRICCION_NOMBRE;
 }
 
 /** El nombre ya lo usa otra sucursal. Error de dominio: el 409 lo decide el controller. */
@@ -106,11 +97,10 @@ export interface SucursalNueva {
  * Da de alta una sucursal con el id del cliente, o devuelve la que ya existe
  * con ese id.
  *
- * Un `INSERT … SELECT … WHERE NOT EXISTS`: si otra sucursal ya tiene el nombre,
- * el SELECT no devuelve nada y no se inserta nada (el mismo recurso que usa
- * pagos con la orden anulada, SPEC-ALE186-005). `ON CONFLICT (id) DO NOTHING`
- * hace idempotente el reintento, y la condición del nombre excluye a la propia
- * sucursal (`otra.id <> $1`), así que un reintento no choca consigo mismo.
+ * `ON CONFLICT (id) DO NOTHING` hace idempotente el reintento. Solo arbitra sobre
+ * el id: en un reintento chocan el id Y el nombre a la vez, y gana el id, sin
+ * error. Un nombre repetido con OTRO id lo frena el índice único, que tira 23505
+ * y se traduce a `NombreOcupadoError`, también si dos altas llegan a la vez.
  */
 export async function registrar(
   sucursal: SucursalNueva,
@@ -119,18 +109,23 @@ export async function registrar(
   const { sql, valores } = conAuditoria(
     {
       sql: `INSERT INTO sucursales (id, nombre, direccion, telefono)
-            SELECT $1, $2, $3, $4
-             WHERE ${nombreLibre('$1::uuid', '$2::varchar')}
+                 VALUES ($1, $2, $3, $4)
             ON CONFLICT (id) DO NOTHING
-            RETURNING ${COLUMNAS}`,
+              RETURNING ${COLUMNAS}`,
       valores: [sucursal.id, sucursal.nombre, sucursal.direccion, sucursal.telefono],
       columnas: COLUMNAS,
     },
     { usuarioId: autorId, accion: 'CREAR', tabla: 'sucursales' },
   );
-  const { rows } = await pool.query<FilaSucursal>(sql, valores);
+  let filas: FilaSucursal[];
+  try {
+    filas = (await pool.query<FilaSucursal>(sql, valores)).rows;
+  } catch (error) {
+    if (nombreRepetido(error)) throw new NombreOcupadoError(sucursal.nombre);
+    throw error;
+  }
 
-  const insertada = rows[0];
+  const insertada = filas[0];
   if (insertada !== undefined) return { sucursal: insertada, creada: true };
 
   // No se insertó. El reintento va primero: si la sucursal con ese id ya está,
@@ -200,14 +195,21 @@ export async function actualizar(
   }
   const desde = valores.length + 1;
   const posicion = (campo: keyof CambiosSucursal) => `$${campos.indexOf(campo) + desde}`;
-  if (cambios.nombre !== undefined) condiciones.push(nombreLibre('$1', `${posicion('nombre')}::varchar`));
   valores.push(...campos.map((campo) => cambios[campo]));
+
+  // Cuándo se cerró (SPEC-ALE186-020): al cerrar, la hora del servidor, pero solo
+  // si estaba abierta —volver a "cerrar" una cerrada no le corre la fecha, que la
+  // haría más permisiva—; al reabrir, nada. En el SET, `c.activa` es el valor de
+  // ANTES del cambio.
+  const asignaciones = campos.map((campo) => `${COLUMNA_EDITABLE[campo]} = ${posicion(campo)}`);
+  if (cambios.activa === false) asignaciones.push('cerrada_en = CASE WHEN c.activa THEN LOCALTIMESTAMP ELSE c.cerrada_en END');
+  if (cambios.activa === true) asignaciones.push('cerrada_en = NULL');
 
   const consulta = conAuditoria(
     {
       sql: updateConAntes({
         tabla: 'sucursales',
-        asignaciones: campos.map((campo) => `${COLUMNA_EDITABLE[campo]} = ${posicion(campo)}`),
+        asignaciones,
         condiciones: condiciones.join(' AND '),
         columnas: COLUMNAS,
         auditadas: campos.map((campo) => ({ columna: COLUMNA_EDITABLE[campo] })),
@@ -217,24 +219,19 @@ export async function actualizar(
     },
     { usuarioId: autorId, accion: 'EDITAR', tabla: 'sucursales', conValoresAnteriores: true },
   );
-  const { rows } = await pool.query<FilaSucursal>(consulta.sql, consulta.valores);
+  let filas: FilaSucursal[];
+  try {
+    filas = (await pool.query<FilaSucursal>(consulta.sql, consulta.valores)).rows;
+  } catch (error) {
+    if (nombreRepetido(error)) return { tipo: 'nombre-ocupado' };
+    throw error;
+  }
 
-  const fila = rows[0];
+  const fila = filas[0];
   if (fila !== undefined) return { tipo: 'actualizada', sucursal: fila };
 
   if ((await buscarPorId(id)) === null) return { tipo: 'no-encontrada' };
-  if (cambios.nombre !== undefined && (await nombreUsadoPorOtra(id, cambios.nombre))) {
-    return { tipo: 'nombre-ocupado' };
-  }
   return { tipo: 'con-ropa-abierta', cantidad: await contarOrdenesAbiertas(id) };
-}
-
-async function nombreUsadoPorOtra(id: string, nombre: string): Promise<boolean> {
-  const { rows } = await pool.query<{ usado: boolean }>(
-    `SELECT NOT ${nombreLibre('$1::uuid', '$2::varchar')} AS usado`,
-    [id, nombre],
-  );
-  return rows[0]?.usado === true;
 }
 
 /**

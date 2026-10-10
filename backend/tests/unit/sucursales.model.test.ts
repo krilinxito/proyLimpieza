@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { unicidadViolada } from '../helpers/postgres.js';
 
 // El doble es el POOL, como en los demás tests de model: se prueba qué SQL arma,
 // con qué parámetros, y cómo decide el motivo cuando no escribió. Que las reglas
@@ -33,16 +34,17 @@ beforeEach(() => {
 describe('Sucursales model: alta — SPEC-ALE186-011', () => {
   const NUEVA = { id: ID, nombre: INYECCION, direccion: null, telefono: '3-3334455' };
 
-  it('inserta solo si ningún otro nombre coincide, sin mayúsculas ni espacios, y con todo como parámetro', async () => {
+  // Desde SPEC-ALE186-020 el nombre único lo garantiza un índice de la base: el
+  // INSERT ya no lleva la condición, y el model traduce el 23505 de ese índice.
+  it('inserta con todo como parámetro, y deja la unicidad del nombre al índice de la base', async () => {
     laBaseDevuelve([FILA]);
 
     const { creada } = await sucursales.registrar(NUEVA, ADMIN);
 
     expect(creada).toBe(true);
     const [sql, valores] = llamada();
-    expect(sql).toMatch(/INSERT INTO sucursales[\s\S]*SELECT \$1, \$2, \$3, \$4\s+WHERE NOT EXISTS/);
-    expect(sql).toContain('lower(btrim(otra.nombre)) = lower(btrim($2::varchar))');
-    expect(sql).toContain('otra.id <> $1::uuid');
+    expect(sql).toMatch(/INSERT INTO sucursales \(id, nombre, direccion, telefono\)\s+VALUES \(\$1, \$2, \$3, \$4\)/);
+    expect(sql).not.toContain('otra.nombre');
     expect(sql).toContain('ON CONFLICT (id) DO NOTHING');
     expect(sql).not.toContain('DROP TABLE');
     expect(valores).toEqual([ID, INYECCION, null, '3-3334455', ADMIN, 'CREAR', 'sucursales']);
@@ -98,13 +100,13 @@ describe('Sucursales model: edición — SPEC-ALE186-011', () => {
     expect(llamada()[0]).not.toContain('FROM ordenes');
   });
 
-  it('al renombrar, el nombre nuevo va como parámetro y se compara con las demás', async () => {
+  it('al renombrar, el nombre nuevo va como parámetro', async () => {
     laBaseDevuelve([FILA]);
 
     await sucursales.actualizar(ID, { nombre: INYECCION }, ADMIN);
 
     const [sql, valores] = llamada();
-    expect(sql).toContain('lower(btrim(otra.nombre)) = lower(btrim($2::varchar))');
+    expect(sql).toContain('nombre = $2');
     expect(sql).not.toContain('DROP TABLE');
     expect(valores[1]).toBe(INYECCION);
   });
@@ -122,8 +124,8 @@ describe('Sucursales model: edición — SPEC-ALE186-011', () => {
     expect(await sucursales.actualizar(ID, { activa: false }, ADMIN)).toEqual({ tipo: 'no-encontrada' });
   });
 
-  it('si no escribió por el nombre, lo dice', async () => {
-    laBaseDevuelve([], [FILA], [{ usado: true }]);
+  it('si el índice rechaza el nombre, lo dice', async () => {
+    query.mockRejectedValueOnce(unicidadViolada('uq_sucursales_nombre'));
 
     expect(await sucursales.actualizar(ID, { nombre: 'Central', activa: false }, ADMIN)).toEqual({
       tipo: 'nombre-ocupado',

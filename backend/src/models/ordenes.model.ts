@@ -11,7 +11,6 @@ import type { EstadoOrden } from '../utils/dominio.js';
 import { formatear, type Centavos } from '../utils/money.js';
 import {
   conAuditoria,
-  momentoDelCierre,
   updateConAntes,
   type ColumnaAuditada,
   type Revision,
@@ -172,9 +171,6 @@ export class FechaFuturaError extends Error {
   }
 }
 
-/** El momento en que se cerró la sucursal de la orden (`$4`); lo sabe la auditoría. */
-const CIERRE_DE_LA_SUCURSAL = momentoDelCierre('$4');
-
 /**
  * Crea la orden en RECIBIDO, o devuelve la que ya existe con ese id.
  *
@@ -192,7 +188,10 @@ const CIERRE_DE_LA_SUCURSAL = momentoDelCierre('$4');
  * `fecha_entrada` pasa por `timestamptz` antes de llegar a la columna, igual
  * que antes: el instante que mandó el dispositivo se convierte a la zona de la
  * sesión de Postgres, la misma con que se escriben las demás fechas, incluida
- * `auditoria.fecha`. Por eso se puede comparar con el cierre sin convertir nada.
+ * `sucursales.cerrada_en`. Por eso se puede comparar con el cierre sin convertir
+ * nada. Hasta SPEC-ALE186-020 el cierre se deducía de la auditoría; ahora es una
+ * columna, y una cerrada sin fecha conocida (NULL) no acepta nada: `x < NULL` no
+ * es verdadero.
  */
 export async function crear(
   orden: OrdenNueva,
@@ -212,7 +211,7 @@ export async function crear(
                AND ($9::timestamptz IS NULL OR $9::timestamptz <= now() + $10::interval)
                AND (s.activa
                     OR ($9::timestamptz IS NOT NULL
-                        AND $9::timestamptz::timestamp < ${CIERRE_DE_LA_SUCURSAL}))
+                        AND $9::timestamptz::timestamp < s.cerrada_en))
             ON CONFLICT (id) DO NOTHING
             RETURNING ${COLUMNAS}`,
       valores: [

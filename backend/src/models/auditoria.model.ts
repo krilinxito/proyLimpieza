@@ -33,10 +33,9 @@ export function esTablaAuditada(valor: unknown): valor is TablaAuditada {
  * Por qué una escritura queda marcada para que el admin la revise —
  * SPEC-ALE186-018. Hoy hay un solo motivo: la hizo una cuenta dada de baja.
  *
- * Sin migraciones no hay columna para esto: la marca va en la misma fila de
- * auditoría, dentro de `valores_anteriores`, bajo la clave `revision`. La
- * consulta (`consultar`) la saca de ahí y la expone aparte, así que cuando haya
- * migraciones y pase a una columna propia, la respuesta no cambia.
+ * Vive en la columna `auditoria.revision` (SPEC-ALE186-020, migración 001). Antes
+ * iba dentro de `valores_anteriores`, porque no había migraciones; la migración
+ * movió las que ya existían.
  */
 export type Revision = 'cuenta_dada_de_baja';
 
@@ -70,16 +69,12 @@ export function conAuditoria(
 ): { sql: string; valores: unknown[] } {
   const n = escritura.valores.length;
   const revision = registro.revision ?? null;
-  const base = registro.conValoresAnteriores === true ? 'escrita.valores_anteriores' : 'NULL';
-  // La marca de revisión (SPEC-ALE186-018) se suma a los valores de antes; en un
-  // alta, que no tiene, queda sola. Va como parámetro, y solo si hay marca: así
-  // una escritura normal arma exactamente el mismo SQL que antes.
-  const anteriores =
-    revision === null
-      ? base
-      : `COALESCE(${base}, '{}'::jsonb) || jsonb_build_object('revision', $${n + 4}::text)`;
-  // El filtro mira los valores de antes SIN la marca: una edición que no cambió
-  // nada sigue sin dejar fila, la haga quien la haga.
+  const anteriores = registro.conValoresAnteriores === true ? 'escrita.valores_anteriores' : 'NULL';
+  // La marca de revisión (SPEC-ALE186-018) va en su columna, `revision`, desde
+  // SPEC-ALE186-020. Como parámetro, y solo si hay marca: así una escritura normal
+  // arma exactamente el mismo SQL de siempre.
+  const columnaRevision = revision === null ? '' : ', revision';
+  const valorRevision = revision === null ? '' : `, $${n + 4}::text`;
   const filtro =
     registro.conValoresAnteriores === true ? `WHERE escrita.valores_anteriores <> '{}'::jsonb` : '';
   const previos = escritura.ctesPrevios === undefined ? '' : `${escritura.ctesPrevios},\n`;
@@ -89,8 +84,8 @@ export function conAuditoria(
   ${escritura.sql}
 ),
 auditada AS (
-  INSERT INTO auditoria (usuario_id, accion, tabla_afectada, registro_id, valores_anteriores)
-  SELECT $${n + 1}::uuid, $${n + 2}::accion_auditoria, $${n + 3}, escrita.id, ${anteriores}
+  INSERT INTO auditoria (usuario_id, accion, tabla_afectada, registro_id, valores_anteriores${columnaRevision})
+  SELECT $${n + 1}::uuid, $${n + 2}::accion_auditoria, $${n + 3}, escrita.id, ${anteriores}${valorRevision}
     FROM escrita
   ${filtro}
 )
@@ -179,26 +174,6 @@ export function updateConAntes(partes: {
 }
 
 /**
- * El momento en que se cerró una sucursal, como fragmento de SQL — SPEC-ALE186-014.
- *
- * `sucursales` no guarda la fecha de cierre (agregarle una columna exigiría
- * `down -v`), pero la auditoría sí: cerrar es un EDITAR de `sucursales` cuyo
- * `valores_anteriores` dice `activa: true` (así lo anota `valoresAnteriores`,
- * solo cuando el valor cambió). Si se cerró, se reabrió y se volvió a cerrar,
- * `max` se queda con el último. Da NULL si nunca se cerró desde que hay
- * auditoría. La fecha está en la zona de la sesión, como el resto.
- *
- * `parametroSucursal` es el `$n` con el id de la sucursal en la sentencia que lo use.
- */
-export function momentoDelCierre(parametroSucursal: string): string {
-  return `(SELECT max(cierre.fecha) FROM auditoria cierre
-            WHERE cierre.tabla_afectada = 'sucursales'
-              AND cierre.registro_id = ${parametroSucursal}
-              AND cierre.accion = 'EDITAR'
-              AND cierre.valores_anteriores->>'activa' = 'true')`;
-}
-
-/**
  * Anota algo que no es una escritura de otra tabla. Hoy, solo el login.
  *
  * Va suelta y no encadenada porque el login no escribe nada más: no hay con
@@ -246,8 +221,8 @@ export interface RegistroAuditoria {
   fechaDelHecho: string | null;
   /**
    * Si el admin tiene que revisarla, y por qué; `null` si no — SPEC-ALE186-018.
-   * Hoy vive dentro de `valores_anteriores`, pero sale aparte y se quita de
-   * `valoresAnteriores`: cuando pase a una columna propia, esta respuesta no cambia.
+   * Es la columna `auditoria.revision` (SPEC-ALE186-020); hasta esa spec iba
+   * dentro de `valores_anteriores`, y la respuesta ya la daba aparte.
    */
   revision: Revision | null;
   valoresAnteriores: Record<string, unknown> | null;
@@ -317,16 +292,14 @@ const FECHA_DEL_HECHO = `CASE a.tabla_afectada
  * $7 registro, $8 sucursal, $9 solo lo marcado para revisión. Un filtro en NULL
  * (o `false`, el $9) no filtra.
  *
- * La marca de revisión (SPEC-ALE186-018) está guardada dentro de
- * `valores_anteriores`, porque no hay migraciones para darle una columna. Acá se
- * separa: sale como `revision` y se quita de los valores de antes, que en un
- * alta marcada quedan otra vez en NULL.
+ * La marca de revisión (SPEC-ALE186-018) es su propia columna desde
+ * SPEC-ALE186-020; el filtro "solo lo marcado" usa su índice parcial.
  */
 const FILTRADAS = `filtradas AS (
   SELECT * FROM (
     SELECT a.id, a.fecha, a.accion, a.tabla_afectada, a.registro_id,
-           a.valores_anteriores->>'revision' AS revision,
-           NULLIF(a.valores_anteriores - 'revision', '{}'::jsonb) AS valores_anteriores,
+           a.revision,
+           a.valores_anteriores,
            u.id AS usuario_id, u.nombre_completo, u.username,
            ${SUCURSAL_DE_LA_ACCION} AS sucursal_id,
            ${FECHA_DEL_HECHO} AS fecha_del_hecho
@@ -337,7 +310,7 @@ const FILTRADAS = `filtradas AS (
        AND ($5::accion_auditoria IS NULL OR a.accion = $5)
        AND ($6::text IS NULL OR a.tabla_afectada = $6)
        AND ($7::uuid IS NULL OR a.registro_id = $7)
-       AND (NOT $9::boolean OR a.valores_anteriores ? 'revision')
+       AND (NOT $9::boolean OR a.revision IS NOT NULL)
   ) con_sucursal
   WHERE ($8::uuid IS NULL OR con_sucursal.sucursal_id = $8)
 )`;
