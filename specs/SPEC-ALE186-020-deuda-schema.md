@@ -2,7 +2,7 @@
 id: SPEC-ALE186-020
 name: Los parches del schema pasan a columnas e índices
 slug: deuda-schema
-status: in-progress
+status: finished
 owner: ale186
 created: 2026-10-10
 scope:
@@ -16,7 +16,13 @@ scope:
 priority: high
 depends_on:
   - SPEC-ALE186-019
-tests: []
+tests:
+  - backend\tests\db\deudaSchema.db.test.ts
+  - backend\tests\db\ordenesSucursalCerrada.db.test.ts
+  - backend\tests\db\sucursales.db.test.ts
+  - backend\tests\unit\auditoria.model.test.ts
+  - backend\tests\unit\ordenes.model.test.ts
+  - backend\tests\unit\sucursales.model.test.ts
 ---
 
 ## Descripción
