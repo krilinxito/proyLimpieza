@@ -2,13 +2,15 @@
 //
 // Es un "global setup" de Vitest: corre UNA vez, antes de cualquier test, en el
 // proceso principal (no en los workers que ejecutan los tests). Borra la base
-// `<nombre>_test`, la vuelve a crear y le carga `context/lavanderia_schema.sql`.
+// `<nombre>_test`, la vuelve a crear, le carga `context/lavanderia_schema.sql` (la
+// línea base) y le aplica las migraciones de `backend/migraciones/` (SPEC-ALE186-019).
 //
 // Recrearla en cada corrida es lo que hace que:
 //   - lo que dejó una corrida anterior no afecte a la siguiente;
 //   - los tests prueben siempre contra el schema actual, sin `docker compose down -v`.
 import { readFile } from 'node:fs/promises';
 import pg from 'pg';
+import { CARPETA_DE_MIGRACIONES, migrar } from '../../src/db/migraciones.js';
 import { RUTA_DEL_SCHEMA, entornoDePrueba } from './entorno.js';
 
 /** Algo legible del error de conexión. */
@@ -56,10 +58,14 @@ export async function prepararBase(env: NodeJS.ProcessEnv = process.env): Promis
 
   // Un `query` sin parámetros acepta varias sentencias seguidas: el schema
   // entero viaja de una vez, igual que cuando Docker lo carga al arrancar.
+  // Después, las migraciones, con el MISMO runner que `npm run migrar`
+  // (SPEC-ALE186-019): la base de pruebas queda igual que una de verdad, y una
+  // migración rota rompe la suite antes de que llegue a desarrollo.
   const prueba = new pg.Client({ connectionString: urlPrueba });
   await prueba.connect();
   try {
     await prueba.query(await readFile(RUTA_DEL_SCHEMA, 'utf8'));
+    await migrar(prueba, CARPETA_DE_MIGRACIONES);
   } finally {
     await prueba.end();
   }
