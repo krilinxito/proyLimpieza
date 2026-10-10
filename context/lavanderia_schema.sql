@@ -7,6 +7,13 @@
 --  Las decisiones que se apartan de un schema "normal" están ahí por
 --  el enfoque offline-first con PowerSync y llevan su comentario.
 --  Ver CLAUDE.md § Arquitectura offline-first.
+--
+--  LÍNEA BASE CONGELADA (SPEC-ALE186-019): este archivo NO se vuelve a
+--  editar. Todo cambio al schema es una migración en
+--  backend/migraciones/NNN_nombre.sql, que se aplica con
+--  `npm run migrar --workspace backend` sobre la base que ya existe, sin
+--  borrar datos. Editar este archivo solo cambiaría las bases NUEVAS, y
+--  las que ya tienen datos quedarían distintas sin que nadie lo note.
 -- ============================================================
 
 -- gen_random_uuid() es nativo desde PostgreSQL 13; en la 12 vive en pgcrypto.
