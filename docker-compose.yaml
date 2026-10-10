@@ -39,8 +39,11 @@ services:
       - "${POSTGRES_PORT}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      # El schema se ejecuta solo la PRIMERA vez, cuando el volumen
-      # está vacío. Para recargarlo: docker compose down -v && up.
+      # La línea base del schema se ejecuta solo la PRIMERA vez, cuando el
+      # volumen está vacío. Los cambios posteriores NO se cargan acá: son
+      # migraciones (backend/migraciones/), y se aplican sobre la base que
+      # ya existe con `npm run migrar --workspace backend` (SPEC-ALE186-019).
+      # `down -v` sigue sirviendo para empezar de cero, pero borra los datos.
       - ./context/lavanderia_schema.sql:/docker-entrypoint-initdb.d/00-schema.sql:ro
       - ./docker/postgres/01-powersync-storage.sql:/docker-entrypoint-initdb.d/01-powersync-storage.sql:ro
     healthcheck:

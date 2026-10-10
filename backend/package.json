@@ -8,6 +8,7 @@
     "dev": "nodemon",
     "start": "tsx src/server.ts",
     "seed": "tsx src/db/seed.ts",
+    "migrar": "tsx src/db/migrar.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:db": "vitest run --config vitest.db.config.ts",

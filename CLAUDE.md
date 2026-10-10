@@ -82,6 +82,11 @@ mostrador (`POST`/`PATCH` de clientes y órdenes, `POST` de pagos y entregas) us
 `requireAuthDeLaCola`, que acepta un token vencido hace hasta 3 días y mira en la base si la
 cuenta sigue activa. Lo de una cuenta dada de baja se acepta pero queda marcado para el admin
 (`revision` en la auditoría, filtrable con `?revisar=true`). Nada más acepta tokens vencidos.
+SPEC-ALE186-019 agregó **migraciones**: `context/lavanderia_schema.sql` es la línea base
+congelada, y los cambios de schema son archivos `backend/migraciones/NNN_nombre.sql` que aplica
+`npm run migrar --workspace backend`, en orden, sin borrar datos. **Después de cada `git pull`,
+corré `npm run migrar`**: si a la base le falta alguna, el backend no arranca y dice qué correr.
+Nunca edites la línea base ni una migración ya aplicada: se corrige con una nueva.
 
 `frontend/` tiene el scaffolding de SPEC-KRILINXI-001: Vite, Tailwind, rutas y su suite de
 tests. SPEC-KRILINXI-002 añadió las piezas que reutilizan todas las pantallas: `Boton`,
@@ -310,8 +315,9 @@ flotante es un bug de contabilidad esperando su turno.
 **Lo autoritativo del servidor se hace en el servidor, y no siempre con triggers.** Marcar
 `ordenes.estado = 'ENTREGADO'` al registrarse una entrega es del servidor, pero se hace en
 el model de entregas, en la misma sentencia que inserta la entrega (SPEC-ALE186-006): es
-igual de atómico y no exige migraciones, que el proyecto no tiene —un trigger nuevo
-obligaría a todos a recrear su base con `down -v`. La auditoría sigue el mismo camino
+igual de atómico y, cuando se decidió, el proyecto no tenía migraciones —un trigger nuevo
+habría obligado a todos a recrear su base con `down -v`. Desde SPEC-ALE186-019 un cambio de
+schema es una migración, pero la regla de hacerlo en el model, en la misma sentencia, sigue. La auditoría sigue el mismo camino
 (SPEC-ALE186-010): un CTE encadena la escritura con su fila de `auditoria`. Toda validación de la que el empleado
 necesite respuesta inmediata va en TypeScript: nada del servidor existe en el dispositivo,
 y su efecto no se ve hasta que sincroniza.
@@ -449,7 +455,9 @@ cp .env.example .env        # solo la primera vez (y generá el secreto JWT)
 
 docker compose up           # Postgres (negocio + storage de PowerSync) + PowerSync
 docker compose down         # parar
-docker compose down -v      # parar y BORRAR los datos (recarga el schema al subir)
+docker compose down -v      # parar y BORRAR los datos (recarga la línea base al subir)
+
+npm run migrar --workspace backend    # aplica las migraciones pendientes (después de cada pull)
 
 cd backend  && npm run dev  # API en :4000
 cd frontend && npm run dev  # Vite en :5173
@@ -458,9 +466,14 @@ npm test                    # suite completa desde la raíz (no necesita Docker)
 npm run test:db --workspace backend   # tests contra Postgres real (necesita Docker)
 ```
 
-El schema se carga solo en el primer arranque, cuando el volumen de Postgres está vacío.
-Si lo modificás, hace falta `down -v` para volver a cargarlo. Ese mismo arranque crea la
-base `powersync_storage` (`docker/postgres/01-powersync-storage.sql`).
+La **línea base** del schema (`context/lavanderia_schema.sql`) se carga sola en el primer
+arranque, cuando el volumen de Postgres está vacío; ese mismo arranque crea la base
+`powersync_storage` (`docker/postgres/01-powersync-storage.sql`). Desde SPEC-ALE186-019 ese
+archivo **no se vuelve a editar**: todo cambio al schema es una migración en
+`backend/migraciones/NNN_nombre.sql` (cómo escribirla: `backend/migraciones/README.md`), y se
+aplica con `npm run migrar --workspace backend` sobre la base que ya existe, sin borrar datos.
+**Después de cada `git pull`, corré `npm run migrar`**: si falta alguna, el backend no arranca
+y dice cuántas. `down -v` sigue sirviendo para empezar de cero, pero borra todo.
 
 ---
 
@@ -500,12 +513,13 @@ Nada se implementa sin una spec aprobada.
 ## 13. Deuda conocida y pendientes
 
 - **La marca de revisión vive dentro de `valores_anteriores`** (SPEC-ALE186-018). Lo que sube
-  una cuenta dada de baja se acepta y queda marcado para el admin, pero sin migraciones no
-  hay columna para eso: va como `valores_anteriores.revision`. La consulta de la auditoría
-  la separa y la expone como `revision`, así que pasarla a una columna propia no cambia la
-  API. Es uno de los parches que resuelve la spec de limpieza prevista para cuando haya
-  migraciones, junto con `sucursales.cerrada_en` (hoy sale de la auditoría, SPEC-ALE186-014)
-  y un índice UNIQUE para el nombre de sucursal (hoy se comprueba en el código, SPEC-ALE186-011).
+  una cuenta dada de baja se acepta y queda marcado para el admin, pero cuando se hizo no
+  había migraciones ni columna para eso: va como `valores_anteriores.revision`. La consulta
+  de la auditoría la separa y la expone como `revision`, así que pasarla a una columna propia
+  no cambia la API. Es uno de los parches que resuelve la spec de limpieza `deuda-schema`,
+  posible desde que hay migraciones (SPEC-ALE186-019), junto con `sucursales.cerrada_en` (hoy
+  sale de la auditoría, SPEC-ALE186-014) y un índice UNIQUE para el nombre de sucursal (hoy se
+  comprueba en el código, SPEC-ALE186-011).
 - **La cola sube con la sesión de quien esté adentro, pasados 3 días.** Desde
   SPEC-ALE186-018, una tablet sube su cola con su propio token hasta 3 días después de que
   venza, así que queda a nombre de quien la hizo. Pasada esa ventana, el servidor responde
@@ -550,8 +564,9 @@ Nada se implementa sin una spec aprobada.
   backend ya la expone desde SPEC-ALE186-015: `ahora` (ISO en UTC) en las respuestas de
   `login` y `renovar`, sacado de `now()` de Postgres, el mismo reloj que valida la fecha
   futura. Falta el lado de la tablet.
-- **El límite de intentos del login vive en memoria** (SPEC-ALE186-016). No hay migraciones
-  y una tabla nueva exigiría `down -v`. El costo: se pierde al reiniciar el servidor (quien
+- **El límite de intentos del login vive en memoria** (SPEC-ALE186-016). Se hizo antes de
+  las migraciones, cuando una tabla nueva exigía `down -v`; desde SPEC-ALE186-019 moverlo a la
+  base es posible, pero solo hace falta si hay más de una instancia. El costo: se pierde al reiniciar el servidor (quien
   estaba bloqueado queda libre) y no sirve si algún día hay **más de una instancia** del
   backend, porque cada una tendría su propio contador. Si se escala, hay que moverlo a la
   base o a algo compartido. Además, como bloquea por nombre de usuario, alguien de afuera
