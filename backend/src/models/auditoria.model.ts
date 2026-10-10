@@ -18,7 +18,7 @@
 import { pool } from '../db/pool.js';
 import type { AccionAuditoria } from '../utils/dominio.js';
 import { salteo, type Paginacion } from '../utils/paginacion.js';
-import { ZONA_NEGOCIO, horaDelNegocio, type Periodo } from '../utils/periodo.js';
+import { ZONA_NEGOCIO, enElPeriodo, horaDelNegocio, type Periodo } from '../utils/periodo.js';
 
 /** Las tablas que se auditan. Es el valor de `tabla_afectada`. */
 export const TABLAS_AUDITADAS = ['clientes', 'ordenes', 'pagos', 'entregas', 'usuarios', 'sucursales'] as const;
@@ -305,7 +305,7 @@ const FILTRADAS = `filtradas AS (
            ${FECHA_DEL_HECHO} AS fecha_del_hecho
       FROM auditoria a
       JOIN usuarios u ON u.id = a.usuario_id
-     WHERE ${horaDelNegocio('a.fecha', '$3')}::date BETWEEN $1::date AND $2::date
+     WHERE ${enElPeriodo('a.fecha', { desde: '$1', hasta: '$2', zona: '$3' })}
        AND ($4::uuid IS NULL OR a.usuario_id = $4)
        AND ($5::accion_auditoria IS NULL OR a.accion = $5)
        AND ($6::text IS NULL OR a.tabla_afectada = $6)

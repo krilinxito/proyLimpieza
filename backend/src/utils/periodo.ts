@@ -102,3 +102,43 @@ export function leerPeriodo(query: Record<string, unknown>): Periodo {
 export function horaDelNegocio(columna: string, parametroZona: string): string {
   return `((${columna} AT TIME ZONE current_setting('TimeZone')) AT TIME ZONE ${parametroZona})`;
 }
+
+/**
+ * El comienzo de un día del negocio, en el reloj en que se guardan las columnas
+ * TIMESTAMP: el camino inverso de `horaDelNegocio`.
+ *
+ *   1. `dia::timestamp AT TIME ZONE $zona`: "la medianoche de ese día en Bolivia"
+ *      → un instante absoluto (timestamptz).
+ *   2. `… AT TIME ZONE current_setting('TimeZone')`: ese instante, en el reloj de
+ *      la sesión, que es como están guardadas las columnas.
+ */
+function inicioDelDia(dia: string, parametroZona: string): string {
+  return `((${dia})::timestamp AT TIME ZONE ${parametroZona}) AT TIME ZONE current_setting('TimeZone')`;
+}
+
+/**
+ * "La columna cae en el período", como fragmento de SQL — SPEC-ALE186-021.
+ *
+ * El período son días de Bolivia, `desde` y `hasta` incluidos. La forma obvia,
+ * `horaDelNegocio(col)::date BETWEEN desde AND hasta`, es correcta pero lenta:
+ * aplica una función a la columna en CADA fila, y un índice guarda la columna
+ * tal cual, no el resultado de esa función. Postgres no puede usarlo y recorre
+ * la tabla entera.
+ *
+ * Esta forma da vuelta la cuenta: convierte los dos bordes UNA vez (el comienzo
+ * de `desde` y el comienzo del día siguiente a `hasta`) y compara la columna sin
+ * tocarla, así que el índice de la columna sirve. Las dos dicen lo mismo porque
+ * convertir de zona no cambia el orden: si un instante cae entre dos medianoches
+ * de Bolivia, su día en Bolivia es el de la primera.
+ *
+ * El borde de arriba es `<` y no `<=`: el comienzo del día siguiente ya no es del
+ * período, y así no hace falta hablar de "23:59:59.999".
+ */
+export function enElPeriodo(
+  columna: string,
+  parametros: { desde: string; hasta: string; zona: string },
+): string {
+  const { desde, hasta, zona } = parametros;
+  return `(${columna} >= ${inicioDelDia(`${desde}::date`, zona)}
+       AND ${columna} < ${inicioDelDia(`${hasta}::date + 1`, zona)})`;
+}

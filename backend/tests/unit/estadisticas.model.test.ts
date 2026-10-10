@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { horaDelNegocio } from '../../src/utils/periodo.js';
+import { enElPeriodo } from '../../src/utils/periodo.js';
+
+const PARAMETROS_DEL_PERIODO = { desde: '$1', hasta: '$2', zona: '$4' };
 
 // El doble es el POOL: se mira qué SQL arma el model y con qué parámetros. Que
 // cuente y sume bien está en tests/db/estadisticasVolumen.db.test.ts, contra
@@ -25,16 +27,17 @@ function llamada(): [string, unknown[]] {
 
 describe('Estadísticas model: volumen y productividad — SPEC-ALE186-013', () => {
   it.each([
-    ['volumen', () => estadisticas.volumen(PERIODO), 'o.fecha_entrada'],
-    ['productividad', () => estadisticas.productividad(PERIODO), 'a.fecha'],
-  ] as const)('%s manda el período, la sucursal y la zona como parámetros', async (_nombre, consultar, columna) => {
+    ['volumen', () => estadisticas.volumen(PERIODO), ['o.fecha_entrada']],
+    // Desde SPEC-ALE186-021, la productividad filtra en cada parte de la unión.
+    ['productividad', () => estadisticas.productividad(PERIODO), ['fecha_entrada', 'fecha_pago', 'fecha_entrega']],
+  ] as const)('%s manda el período, la sucursal y la zona como parámetros', async (_nombre, consultar, columnas) => {
     await consultar();
 
     const [sql, valores] = llamada();
     expect(valores).toEqual(['2025-05-01', '2025-05-31', SUCURSAL, 'America/La_Paz']);
     for (const valor of ['2025-05-01', SUCURSAL, 'America/La_Paz']) expect(sql).not.toContain(valor);
-    // El día sale de la hora de Bolivia, no de la fecha guardada en la zona del servidor.
-    expect(sql).toContain(`${horaDelNegocio(columna, '$4')}::date BETWEEN $1::date AND $2::date`);
+    // El período son días de Bolivia, no de la zona del servidor.
+    for (const columna of columnas) expect(sql).toContain(enElPeriodo(columna, PARAMETROS_DEL_PERIODO));
   });
 
   it('volumen arma todos los días del período, para que los que no tienen órdenes salgan en 0', async () => {
@@ -80,7 +83,7 @@ describe('Estadísticas model: atenciones de cada cliente — SPEC-ALE186-017', 
 
     const [sql] = (query.mock.calls[0] ?? []) as [string];
     expect(sql).toContain("o.estado <> 'ANULADO'");
-    expect(sql).toContain(`${horaDelNegocio('o.fecha_entrada', '$4')}::date BETWEEN $1::date AND $2::date`);
+    expect(sql).toContain(enElPeriodo('o.fecha_entrada', PARAMETROS_DEL_PERIODO));
     expect(sql).toContain('SELECT SUM(p.monto) FROM pagos p WHERE p.orden_id = o.id');
     expect(sql).not.toContain('precio_total');
   });
