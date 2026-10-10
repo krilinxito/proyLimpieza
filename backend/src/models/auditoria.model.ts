@@ -221,8 +221,8 @@ export interface RegistroAuditoria {
   fechaDelHecho: string | null;
   /**
    * Si el admin tiene que revisarla, y por qué; `null` si no — SPEC-ALE186-018.
-   * Hoy vive dentro de `valores_anteriores`, pero sale aparte y se quita de
-   * `valoresAnteriores`: cuando pase a una columna propia, esta respuesta no cambia.
+   * Es la columna `auditoria.revision` (SPEC-ALE186-020); hasta esa spec iba
+   * dentro de `valores_anteriores`, y la respuesta ya la daba aparte.
    */
   revision: Revision | null;
   valoresAnteriores: Record<string, unknown> | null;
