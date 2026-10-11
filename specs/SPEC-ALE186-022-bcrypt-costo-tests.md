@@ -2,7 +2,7 @@
 id: SPEC-ALE186-022
 name: bcrypt con costo bajo solo en los tests
 slug: bcrypt-costo-tests
-status: approved
+status: in-progress
 owner: ale186
 created: 2026-10-11
 scope:
