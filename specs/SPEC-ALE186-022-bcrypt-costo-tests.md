@@ -2,7 +2,7 @@
 id: SPEC-ALE186-022
 name: bcrypt con costo bajo solo en los tests
 slug: bcrypt-costo-tests
-status: in-progress
+status: finished
 owner: ale186
 created: 2026-10-11
 scope:
@@ -15,7 +15,9 @@ scope:
   - CLAUDE.md
 priority: medium
 depends_on: []
-tests: []
+tests:
+  - backend\tests\db\contrasenas.db.test.ts
+  - backend\tests\unit\contrasenas.test.ts
 ---
 
 ## Descripción
