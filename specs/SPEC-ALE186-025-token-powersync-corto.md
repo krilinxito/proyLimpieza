@@ -2,7 +2,7 @@
 id: SPEC-ALE186-025
 name: El token de PowerSync dura menos de 24 horas
 slug: token-powersync-corto
-status: in-progress
+status: finished
 owner: ale186
 created: 2026-10-11
 scope:
@@ -13,7 +13,10 @@ scope:
   - CLAUDE.md
 priority: high
 depends_on: []
-tests: []
+tests:
+  - backend\tests\http\auth.test.ts
+  - backend\tests\unit\authConfig.test.ts
+  - backend\tests\unit\jwt.test.ts
 ---
 
 ## Descripción
