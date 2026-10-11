@@ -116,3 +116,31 @@ describe('Tokens de sesión — SPEC-ALE186-002', () => {
     expect(() => verificarToken(raro, cfg)).toThrow(/No pudimos validar tu sesión/);
   });
 });
+
+describe('Cada token con su plazo — SPEC-ALE186-025', () => {
+  /** Cuántos segundos dura un token, leyendo su `exp - iat`. */
+  function duracion(token: string): number {
+    const { exp, iat } = contenidoDe(token).payload as jwt.JwtPayload;
+    return (exp ?? 0) - (iat ?? 0);
+  }
+
+  it('con la config por defecto, el de PowerSync vence en 12 h y el de la API en 3 días', () => {
+    const { token, tokenPowerSync } = emitirCredenciales(EMPLEADA, cfg);
+
+    expect(duracion(tokenPowerSync)).toBe(12 * 60 * 60);
+    expect(duracion(token)).toBe(3 * 24 * 60 * 60);
+  });
+
+  it('el de PowerSync nunca pasa de 24 h, que es lo máximo que acepta PowerSync', () => {
+    const { tokenPowerSync } = emitirCredenciales(EMPLEADA, cfg);
+
+    expect(duracion(tokenPowerSync)).toBeLessThanOrEqual(24 * 60 * 60);
+  });
+
+  it('cambiar el plazo de uno no cambia el del otro', () => {
+    const { token, tokenPowerSync } = emitirCredenciales(EMPLEADA, { ...cfg, expiraEnPowerSync: '1h' });
+
+    expect(duracion(tokenPowerSync)).toBe(60 * 60);
+    expect(duracion(token)).toBe(3 * 24 * 60 * 60);
+  });
+});

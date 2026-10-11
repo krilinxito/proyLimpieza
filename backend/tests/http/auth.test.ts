@@ -1,4 +1,6 @@
+import jwt from 'jsonwebtoken';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { authConfig } from '../../src/config.js';
 import { limitadorLogin } from '../../src/services/limiteLogin.js';
 import { expectApiError, testApi } from '../helpers/api.js';
 import { CONTRASENA_DE_PRUEBA, tokenDePrueba, usuarioDePrueba } from '../helpers/usuarios.js';
@@ -355,5 +357,40 @@ describe('Límite de intentos en el login — SPEC-ALE186-016', () => {
     const res = await testApi().post('/api/auth/renovar').set('Authorization', `Bearer ${tokenDePrueba()}`);
 
     expect(res.status).toBe(200);
+  });
+});
+
+describe('Login y renovación devuelven cada token con su plazo — SPEC-ALE186-025', () => {
+  beforeEach(() => {
+    buscarPorUsernameMock.mockReset();
+    buscarPorIdMock.mockReset();
+  });
+
+  /** Cuántos segundos dura un token (`exp - iat`). */
+  function duracion(token: string): number {
+    const { exp = 0, iat = 0 } = jwt.decode(token) as jwt.JwtPayload;
+    return exp - iat;
+  }
+
+  /** Cuántos segundos es un plazo de la config, medido igual que lo mide jsonwebtoken. */
+  function segundos(plazo: string): number {
+    return duracion(jwt.sign({}, 'x', { expiresIn: plazo as jwt.SignOptions['expiresIn'] }));
+  }
+
+  it('el login y /renovar dan el de PowerSync con su plazo corto y el de la API con el suyo', async () => {
+    const usuario = await usuarioDePrueba();
+    buscarPorUsernameMock.mockResolvedValue(usuario);
+    buscarPorIdMock.mockResolvedValue(usuario);
+
+    const entrar = await login({ username: 'maria', password: CONTRASENA_DE_PRUEBA });
+    // La renovación es SIN contraseña: alcanza con el token de la API.
+    const renovar = await testApi().post('/api/auth/renovar').set('Authorization', `Bearer ${tokenDePrueba()}`);
+
+    for (const res of [entrar, renovar]) {
+      expect(res.status).toBe(200);
+      expect(duracion(res.body.tokenPowerSync)).toBe(segundos(authConfig.expiraEnPowerSync));
+      expect(duracion(res.body.tokenPowerSync)).toBeLessThanOrEqual(24 * 60 * 60);
+      expect(duracion(res.body.token)).toBe(segundos(authConfig.expiraEn));
+    }
   });
 });

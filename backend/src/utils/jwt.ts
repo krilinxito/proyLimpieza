@@ -49,13 +49,15 @@ export function emitirCredenciales(sesion: Sesion, cfg: ConfigAuth = authConfig)
   const comunes: SignOptions = {
     algorithm: 'HS256',
     subject: sesion.id,
-    expiresIn: cfg.expiraEn as SignOptions['expiresIn'],
   };
 
   // El token de la API lleva rol y sucursal: es lo que el middleware necesita
   // para autorizar sin volver a consultar la base en cada petición.
+  // Dura días (`JWT_EXPIRES_IN`): es el que se presenta al volver la conexión para subir
+  // la cola y pedir tokens nuevos sin contraseña. Ver CLAUDE.md §6.
   const token = jwt.sign({ rol: sesion.rol, sucursal_id: sesion.sucursalId }, cfg.secreto, {
     ...comunes,
+    expiresIn: cfg.expiraEn as SignOptions['expiresIn'],
     audience: audienciaApi(cfg),
   });
 
@@ -63,8 +65,14 @@ export function emitirCredenciales(sesion: Sesion, cfg: ConfigAuth = authConfig)
   // es saber QUIÉN es (`sub`, que las sync rules leen con `request.user_id()`);
   // el rol y la sucursal los saca él de la base. Mandarle claims que no usa es
   // repartir información de más a otro sistema.
+  //
+  // Y dura MENOS de 24 h (`PS_JWT_EXPIRES_IN`, SPEC-ALE186-025): PowerSync rechaza los más
+  // largos. Hasta esa spec heredaba los días del de la API, y PowerSync los rechazaba todos.
+  // Que venza pronto no afecta el trabajo sin internet, donde no se usa ningún token: al
+  // volver la conexión, el frontend pide un par nuevo a /renovar con el de la API.
   const tokenPowerSync = jwt.sign({}, cfg.secreto, {
     ...comunes,
+    expiresIn: cfg.expiraEnPowerSync as SignOptions['expiresIn'],
     audience: cfg.audiencia,
     keyid: KID_POWERSYNC,
   });
