@@ -7,6 +7,7 @@ import * as reloj from '../models/reloj.model.js';
 import { limitadorLogin } from '../services/limiteLogin.js';
 import { buscarPorId, buscarPorUsername, type Usuario } from '../models/usuarios.model.js';
 import { sesionDe } from '../middleware/auth.js';
+import { HASH_SENUELO } from '../utils/contrasenas.js';
 import { ApiError, CODIGOS_ERROR } from '../utils/ApiError.js';
 import { emitirCredenciales } from '../utils/jwt.js';
 
@@ -18,8 +19,6 @@ const CREDENCIALES_INVALIDAS = 'El usuario o la contraseña no coinciden. Volvé
 const USUARIO_DADO_DE_BAJA =
   'Tu usuario está desactivado. Pedile al encargado que lo active para poder entrar.';
 
-// Hash de una contraseña que no es de nadie. Ver `verificarContrasena`.
-const HASH_SENUELO = '$2b$10$ypHkIMXL.Y1pI.U5MdNKxewUM0QOv.FX4UWOQCD6Nsi1Aiwp4RGaG';
 
 function noAutenticado(mensaje: string): ApiError {
   return new ApiError(401, CODIGOS_ERROR.NO_AUTENTICADO, mensaje);
@@ -30,10 +29,11 @@ function noAutenticado(mensaje: string): ApiError {
  *
  * Cuando el usuario no existe igual se hace una comparación, contra un hash
  * señuelo, y se descarta el resultado. Parece trabajo tirado y es justo lo
- * contrario: `bcrypt.compare` tarda ~100 ms a propósito, así que saltárselo
+ * contrario: `bcrypt.compare` tarda ~50 ms a propósito, así que saltárselo
  * haría que el login de un usuario inexistente respondiera mucho más rápido
  * que el de uno real. Esa diferencia de tiempo es la misma pista que el
- * mensaje único quiere tapar.
+ * mensaje único quiere tapar. El señuelo tiene el mismo costo que los hashes
+ * reales (`utils/contrasenas.ts`, SPEC-ALE186-022).
  */
 async function verificarContrasena(contrasena: string, hash: string | null): Promise<boolean> {
   const coincide = await bcrypt.compare(contrasena, hash ?? HASH_SENUELO);
