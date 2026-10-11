@@ -2,7 +2,7 @@
 id: SPEC-ALE186-024
 name: El bucket global de PowerSync solo baja a cuentas activas
 slug: sync-global-activos
-status: in-progress
+status: finished
 owner: ale186
 created: 2026-10-11
 scope:
@@ -11,7 +11,8 @@ scope:
   - CLAUDE.md
 priority: high
 depends_on: []
-tests: []
+tests:
+  - backend\tests\unit\syncRules.test.ts
 ---
 
 ## Descripción
