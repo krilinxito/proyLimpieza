@@ -2,7 +2,7 @@
 id: SPEC-ALE186-025
 name: El token de PowerSync dura menos de 24 horas
 slug: token-powersync-corto
-status: draft
+status: approved
 owner: ale186
 created: 2026-10-11
 scope:
