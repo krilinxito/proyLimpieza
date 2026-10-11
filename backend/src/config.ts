@@ -15,6 +15,50 @@ export interface Config {
   port: number;
   databaseUrl: string;
   nodeEnv: string;
+  /** Los orígenes desde los que un navegador puede llamar a la API (CORS) — SPEC-ALE186-023. */
+  corsOrigenes: string[];
+  /** Cuánto puede durar una consulta antes de que Postgres la corte. */
+  dbStatementTimeoutMs: number;
+  /** Cuánto se espera para conseguir una conexión nueva a Postgres. */
+  dbConnectionTimeoutMs: number;
+}
+
+/** El origen de Vite en desarrollo (`npm run dev` del frontend). */
+const CORS_ORIGEN_DE_DESARROLLO = 'http://localhost:5173';
+
+/**
+ * Los orígenes permitidos para CORS — SPEC-ALE186-023.
+ *
+ * Fuera de producción, si falta la variable, vale el del frontend en desarrollo:
+ * así nadie se queda sin backend después de un pull por no haber tocado su .env.
+ * En producción es obligatoria. Ahí "si falta, aceptar cualquiera" sería
+ * exactamente el agujero que esto viene a cerrar, así que es mejor no arrancar.
+ */
+function leerCorsOrigenes(env: NodeJS.ProcessEnv, nodeEnv: string): string[] {
+  const origenes = (env.CORS_ORIGENES ?? '')
+    .split(',')
+    .map((origen) => origen.trim())
+    .filter((origen) => origen !== '');
+
+  if (origenes.length > 0) return origenes;
+  if (nodeEnv !== 'production') return [CORS_ORIGEN_DE_DESARROLLO];
+
+  throw new Error(
+    'Falta la variable CORS_ORIGENES. En producción hay que decir desde qué dirección se abre ' +
+      'la app, por ejemplo CORS_ORIGENES=https://lavanderia.ejemplo.com (varias, separadas por comas).',
+  );
+}
+
+/** Un número de milisegundos del entorno, o el valor por defecto si no está. */
+function leerMilisegundos(env: NodeJS.ProcessEnv, nombre: string, porDefecto: number): number {
+  const valor = env[nombre]?.trim();
+  if (!valor) return porDefecto;
+
+  const ms = Number(valor);
+  if (!Number.isInteger(ms) || ms <= 0) {
+    throw new Error(`${nombre} tiene que ser una cantidad de milisegundos mayor que cero, y llegó "${valor}".`);
+  }
+  return ms;
 }
 
 /**
@@ -40,7 +84,16 @@ export function readConfig(env: NodeJS.ProcessEnv): Config {
     throw new Error(`PORT tiene que ser un número de puerto válido, y llegó "${env.PORT}".`);
   }
 
-  return { port, databaseUrl, nodeEnv: env.NODE_ENV ?? 'development' };
+  const nodeEnv = env.NODE_ENV ?? 'development';
+
+  return {
+    port,
+    databaseUrl,
+    nodeEnv,
+    corsOrigenes: leerCorsOrigenes(env, nodeEnv),
+    dbStatementTimeoutMs: leerMilisegundos(env, 'DB_STATEMENT_TIMEOUT_MS', 10_000),
+    dbConnectionTimeoutMs: leerMilisegundos(env, 'DB_CONNECTION_TIMEOUT_MS', 5_000),
+  };
 }
 
 export const config = readConfig(process.env);

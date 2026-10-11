@@ -5,7 +5,7 @@
 // pocas abiertas y las presta, que es lo que hace que la API aguante varias
 // peticiones a la vez sin castigar a la base.
 import pg from 'pg';
-import { config } from '../config.js';
+import { config, type Config } from '../config.js';
 
 const { Pool, types } = pg;
 
@@ -35,4 +35,26 @@ types.setTypeParser(types.builtins.DATE, (valor: string) => valor);
 // distintos según el camino. Una columna sin zona horaria se entrega tal cual.
 types.setTypeParser(types.builtins.TIMESTAMP, (valor: string) => valor);
 
-export const pool = new Pool({ connectionString: config.databaseUrl });
+// ------------------------------------------------------------------
+//  Tiempos límite — SPEC-ALE186-023
+// ------------------------------------------------------------------
+// Sin ellos, una consulta trabada (un bloqueo que nunca se suelta, un plan
+// desastroso) se queda con su conexión para siempre. El pool tiene unas pocas
+// (10 por defecto): bastan unas cuantas trabadas para que la API entera deje de
+// responder, aunque el resto del sistema esté sano.
+//
+//   statement_timeout        Postgres corta la consulta que pasa de este tiempo
+//                            (error 57014) y la conexión vuelve al pool. Lo
+//                            aplica la base, así que sirve aunque Node esté ocupado.
+//   connectionTimeoutMillis  Si no se consigue conexión en este tiempo (la base
+//                            caída, la red rota), el pedido falla en vez de
+//                            esperar indefinidamente.
+export function opcionesDelPool(cfg: Pick<Config, 'databaseUrl' | 'dbStatementTimeoutMs' | 'dbConnectionTimeoutMs'>): pg.PoolConfig {
+  return {
+    connectionString: cfg.databaseUrl,
+    statement_timeout: cfg.dbStatementTimeoutMs,
+    connectionTimeoutMillis: cfg.dbConnectionTimeoutMs,
+  };
+}
+
+export const pool = new Pool(opcionesDelPool(config));
