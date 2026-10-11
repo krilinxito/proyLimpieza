@@ -2,7 +2,7 @@
 id: SPEC-ALE186-023
 name: Endurecer la API HTTP antes de producción
 slug: endurecer-http
-status: in-progress
+status: finished
 owner: ale186
 created: 2026-10-11
 scope:
@@ -17,7 +17,11 @@ scope:
   - CLAUDE.md
 priority: high
 depends_on: []
-tests: []
+tests:
+  - backend\tests\db\seguridad.db.test.ts
+  - backend\tests\http\seguridad.test.ts
+  - backend\tests\unit\config.test.ts
+  - backend\tests\unit\pool.test.ts
 ---
 
 ## Descripción
