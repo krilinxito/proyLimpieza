@@ -53,3 +53,34 @@ describe('readAuthConfig — SPEC-ALE186-002', () => {
     expect(cfg.expiraEn).toBe('12h');
   });
 });
+
+describe('Dos plazos: el token de PowerSync dura menos de 24 h — SPEC-ALE186-025', () => {
+  const BASE = { PS_JWT_SECRET_B64: SECRETO, PS_JWT_AUDIENCE: 'lavanderia' };
+
+  it('sin PS_JWT_EXPIRES_IN, el de PowerSync dura 12 h, y el de la API sigue con sus 3 días', () => {
+    const cfg = readAuthConfig(BASE);
+
+    expect(cfg.expiraEnPowerSync).toBe('12h');
+    expect(cfg.expiraEn).toBe('3d');
+  });
+
+  it.each(['6h', '30m', '24h'])('acepta PS_JWT_EXPIRES_IN=%s, que no pasa de 24 h', (plazo) => {
+    expect(readAuthConfig({ ...BASE, PS_JWT_EXPIRES_IN: plazo }).expiraEnPowerSync).toBe(plazo);
+  });
+
+  it.each(['25h', '2d', '3d'])('rechaza PS_JWT_EXPIRES_IN=%s, diciendo que PowerSync no acepta más de 24 h', (plazo) => {
+    expect(() => readAuthConfig({ ...BASE, PS_JWT_EXPIRES_IN: plazo })).toThrow(/PS_JWT_EXPIRES_IN/);
+    expect(() => readAuthConfig({ ...BASE, PS_JWT_EXPIRES_IN: plazo })).toThrow(/24 horas/);
+  });
+
+  it.each(['cualquier cosa', '-1h'])('rechaza un plazo que no sirve: %j', (plazo) => {
+    expect(() => readAuthConfig({ ...BASE, PS_JWT_EXPIRES_IN: plazo })).toThrow(/PS_JWT_EXPIRES_IN/);
+  });
+
+  it('un JWT_EXPIRES_IN de días no afecta al de PowerSync', () => {
+    const cfg = readAuthConfig({ ...BASE, JWT_EXPIRES_IN: '7d' });
+
+    expect(cfg.expiraEn).toBe('7d');
+    expect(cfg.expiraEnPowerSync).toBe('12h');
+  });
+});
