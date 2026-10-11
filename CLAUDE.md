@@ -228,6 +228,14 @@ corrida: nunca toca la base de desarrollo. Cuándo va un test en cada una:
   Un doble del pool no puede probar nada de eso: solo devuelve lo que el test le dijo.
   Los datos se crean con `tests/helpers/baseReal.ts`.
 
+**`test:db` se corre sola, nunca a la vez que otra suite** (SPEC-ALE186-022). Corre sus
+archivos en paralelo contra el Postgres de Docker; si al mismo tiempo corren los tests del
+frontend, que usan todos los núcleos, la CPU se satura, Vitest tarda más en cargar los
+archivos que en correr los tests, y algunos pasan el límite de 15 s ("Test timed out"). No es
+un error del código: corrida sola pasa en ~15 s. Si un test falla por tiempo, primero mirá qué
+más estaba corriendo en la máquina. En los tests, bcrypt usa costo 4 en vez de 10
+(`utils/contrasenas.ts`, solo con `NODE_ENV=test`), así que los logins de prueba no pesan.
+
 ---
 
 ## 5. Arquitectura y estructura de carpetas

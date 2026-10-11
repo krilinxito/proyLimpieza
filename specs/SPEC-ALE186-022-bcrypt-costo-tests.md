@@ -35,7 +35,7 @@ La suite contra Postgres real (`npm run test:db`) falla al azar cuando la máqui
 ## Criterios de aceptación
 
  de `password_hash`).
-- [ ] La suite `npm run test:db` pasa completa en 3 corridas seguidas con la máquina cargada (los tests del frontend corriendo a la vez), sin ningún "Test timed out"; el resultado queda anotado en la bitácora.
+- [ ] La suite `npm run test:db`, corrida sola, pasa completa en 6 corridas seguidas sin ningún "Test timed out", y CLAUDE.md anota que no se corre a la vez que otra suite de tests; el resultado queda anotado en la bitácora. (Reescrito durante la implementación, con el visto bueno del owner: la versión anterior pedía pasar con los tests del frontend corriendo a la vez, y se comprobó que eso satura la CPU de la máquina —Vitest tarda más en cargar los archivos que en correr los tests— con o sin bcrypt, así que medía la máquina y no el código.)
 
 ## Notas
 
