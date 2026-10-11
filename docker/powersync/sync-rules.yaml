@@ -48,8 +48,25 @@ bucket_definitions:
   #  dejar ropa en sucursales distintas en visitas distintas, y el
   #  alta por teléfono tiene que encontrarlo desde cualquiera. La
   #  ropa de cada orden, eso sí, se retira donde se dejó.
+  #
+  #  Solo para cuentas activas (SPEC-ALE186-024). Antes no tenía
+  #  `parameters` y se entregaba a cualquier token válido: una
+  #  cuenta dada de baja seguía bajando todos los clientes hasta
+  #  que su token vencía.
+  #
+  #  La consulta no devuelve columnas A PROPÓSITO. Cada columna que
+  #  devuelve `parameters` es un parámetro del bucket, y PowerSync
+  #  exige que todas las consultas `data` lo usen ("Query must cover
+  #  all bucket parameters"); estos catálogos no dependen de quién
+  #  los pide. Sin columnas, la consulta solo decide SI el bucket
+  #  existe para ese usuario: si encuentra su fila activa, sí.
+  #  Comprobado con el validador de PowerSync 1.25.
   # ----------------------------------------------------------
   global:
+    parameters: |
+      SELECT FROM usuarios
+      WHERE id = request.user_id()
+        AND activo = true
     data:
       - SELECT * FROM clientes
       - SELECT id, nombre, direccion, telefono, activa FROM sucursales
