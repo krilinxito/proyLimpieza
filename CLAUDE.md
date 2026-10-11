@@ -355,6 +355,13 @@ El mecanismo, ya decidido:
   a la cola; el token solo hace falta para hablar con un servidor.
 - **Dura 2 o 3 días.** Es el presupuesto de trabajo sin internet, no una medida de
   seguridad: se ajustará según lo que aguante de verdad cada sucursal.
+- **Son dos tokens con dos plazos** (SPEC-ALE186-025). El de la **API** dura esos días
+  (`JWT_EXPIRES_IN`): es el que se presenta al volver la conexión para subir la cola y pedir
+  tokens nuevos sin contraseña. El de **PowerSync** dura menos de 24 h (`PS_JWT_EXPIRES_IN`,
+  12 h por defecto), porque PowerSync 1.25 rechaza los más largos (`PSYNC_S2104`, límite fijo en
+  su código). Que venza pronto no afecta el trabajo sin internet, donde no se usa ningún token:
+  solo hace falta para bajar datos, y eso ya requiere conexión. Al volver la conexión, si está
+  vencido, la app pide un par nuevo a `/renovar` con el de la API.
 - **En cada reconexión se verifica el estado contra el servidor** y se renueva el token,
   reiniciando el plazo. Ese es el único momento en que se puede decir que no, así que es
   donde se comprueba que el usuario sigue `activo`.
@@ -566,18 +573,6 @@ Nada se implementa sin una spec aprobada.
   Se detecta con `docker port lavanderia-postgres`: si no lista nada, es esto. Se arregla
   moviendo `POSTGRES_PORT` (y el puerto de `DATABASE_URL`) a uno libre, p. ej. 5434, y
   recreando con `docker compose up -d --force-recreate postgres`.
-- **PowerSync rechaza los tokens de 3 días** (encontrado en SPEC-ALE186-024, sin resolver).
-  PowerSync 1.25 no acepta un token que dure más de 24 h: lo rechaza con 401
-  `PSYNC_S2104 Token must expire in a maximum of 86400 seconds, got 259200s`. Ese límite está
-  fijo en su código (`token_max_expiration: '1d'`) y no se configura en `powersync.yaml`. El
-  backend emite el `tokenPowerSync` con el mismo `JWT_EXPIRES_IN` que el de la API (3 días, por
-  la sesión que sobrevive sin internet, sección 6), así que con la configuración actual ninguna
-  tablet baja datos de un PowerSync real. Los tests no lo vieron porque el frontend prueba con
-  un PowerSync simulado. El arreglo tiene dos lados: el backend tiene que emitir el token de
-  PowerSync con menos de 24 h (el de la API puede seguir en 3 días: es el que sirve sin
-  internet; el de PowerSync solo se usa CON conexión), y el frontend tiene que pedir uno nuevo
-  cuando vence (`fetchCredentials`, con la renovación que ya está pendiente). Va en una spec
-  propia, coordinada entre los dos.
 - **La autenticación de PowerSync usa un secreto compartido HS256**, pensado para poder
   probar el servicio antes de que exista el backend. En producción va RS256 con un
   `jwks_uri` servido por la API.
@@ -649,9 +644,25 @@ implemente una spec de las de abajo actualiza su línea cuando la mergee.
 - **Sync rules del bucket `global`** (SPEC-ALE186-024, hecho): ya no baja clientes, sucursales
   ni usuarios a una cuenta dada de baja. Para las activas no cambia nada. **Después del pull,
   `docker compose restart powersync`**, para que lea las reglas nuevas.
-- **El token de PowerSync dura más de lo que PowerSync acepta** (encontrado en SPEC-ALE186-024,
-  **sin resolver**): ver "PowerSync rechaza los tokens de 3 días" en la deuda, arriba. Afecta la
-  bajada de datos a la tablet con un backend real.
+- **Renovar el token de PowerSync** (SPEC-ALE186-025 hizo el lado del backend; **falta el
+  frontend**). Desde esa spec, `login` y `renovar` devuelven el `tokenPowerSync` con 12 h de
+  vida (antes duraba 3 días y PowerSync lo rechazaba siempre con 401 `PSYNC_S2104`: ninguna
+  tablet bajaba datos de un PowerSync real). El `token` de la API sigue durando 3 días. Para que
+  la sincronización siga después de las 12 h, el frontend tiene que:
+  1. En `fetchCredentials` (`frontend/src/lib/powersync/conector.ts`): si el `tokenPowerSync`
+     guardado está vencido o vence en menos de un par de minutos (mirar su `exp`), llamar a
+     `POST /api/auth/renovar` con el `token` de la API, en vez de devolver el vencido.
+     PowerSync vuelve a llamar a `fetchCredentials` cuando necesita credenciales.
+  2. Guardar el par nuevo (`token` y `tokenPowerSync`) en la sesión, como hace el login. La
+     respuesta trae también `usuario` y `ahora`.
+  3. **No cerrar la sesión** por un `tokenPowerSync` vencido: sin internet no se usa, y con
+     internet se renueva solo.
+  4. Pedir la contraseña **solo si `/renovar` responde 401** (cuenta dada de baja, o el token de
+     la API también venció: más de 3 días sin conexión). Si falla por falta de conexión,
+     reintentar después, sin cerrar nada.
+  Sin esto, la tablet baja datos durante las primeras 12 h de cada sesión y después deja de
+  bajarlos hasta un login nuevo. Comprobado contra el PowerSync local: con el token por defecto,
+  PowerSync responde 200 y entrega el bucket `global`.
 - **Usuario de la base sin privilegios** (spec `usuario-base-app`, pendiente): va a cambiar el
   usuario de `DATABASE_URL` en el `.env`. Habrá que actualizar el `.env` de cada uno.
 - **Tokens de PowerSync con RS256** (spec `powersync-rs256`, pendiente): el backend va a firmar
