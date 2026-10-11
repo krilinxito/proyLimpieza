@@ -7,13 +7,13 @@
 // `global`, sin `password_hash` (sección 7). Tampoco hay DELETE: una cuenta se
 // da de baja con `activo: false`, porque órdenes, pagos y entregas siguen
 // apuntando a quien las registró, y un borrado dejaría esas filas sin dueño.
-import bcrypt from 'bcrypt';
 import type { Request, Response } from 'express';
 import { sesionDe } from '../middleware/auth.js';
 import * as sucursales from '../models/sucursales.model.js';
 import * as usuarios from '../models/usuarios.model.js';
 import { UsernameOcupadoError, type CambiosUsuario, type Usuario } from '../models/usuarios.model.js';
 import { ApiError, CODIGOS_ERROR } from '../utils/ApiError.js';
+import { hashearContrasena } from '../utils/contrasenas.js';
 import type { Rol } from '../utils/jwt.js';
 import {
   LARGO_MINIMO_CONTRASENA,
@@ -23,11 +23,8 @@ import {
   textoHasta,
 } from '../utils/validacion.js';
 
-// El mismo coste que usa la semilla (`db/seed.ts`). El login compara con
-// `bcrypt.compare`, que lee el coste del propio hash, así que cualquiera de los
-// dos sirve para entrar; se mantienen iguales para que ninguna cuenta quede más
-// barata de atacar que otra.
-const COSTE_BCRYPT = 10;
+// El hash de la contraseña sale de `utils/contrasenas.ts`, con el mismo costo
+// que la semilla (SPEC-ALE186-022).
 
 // Los largos de las columnas en el schema (`VARCHAR(n)`).
 const MAX_NOMBRE = 150;
@@ -178,7 +175,7 @@ export async function postUsuario(req: Request, res: Response): Promise<void> {
   try {
     resultado = await usuarios.registrar({
       ...datos,
-      passwordHash: await bcrypt.hash(contrasena, COSTE_BCRYPT),
+      passwordHash: await hashearContrasena(contrasena),
       // De la sesión, nunca del cuerpo: el cuerpo podría atribuirle el alta a otro.
       creadoPor: sesionDe(req).id,
     });
@@ -246,7 +243,7 @@ export async function patchUsuario(req: Request, res: Response): Promise<void> {
   }
 
   if ('password' in cuerpo) {
-    cambios.passwordHash = await bcrypt.hash(leerContrasena(cuerpo.password), COSTE_BCRYPT);
+    cambios.passwordHash = await hashearContrasena(leerContrasena(cuerpo.password));
   }
 
   const usuario = await usuarios.actualizar(id, cambios, sesionDe(req).id);

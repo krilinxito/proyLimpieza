@@ -9,14 +9,14 @@
 //
 // Es idempotente: se puede correr las veces que haga falta sin duplicar nada.
 import { pathToFileURL } from 'node:url';
-import bcrypt from 'bcrypt';
 import * as sucursales from '../models/sucursales.model.js';
 import * as usuarios from '../models/usuarios.model.js';
+import { hashearContrasena } from '../utils/contrasenas.js';
 import { pool } from './pool.js';
 
-// El coste de producción. Acá sí interesa el de verdad: este hash se queda en
-// la base durante años, y es el de la cuenta con más permisos del sistema.
-const COSTE_BCRYPT = 10;
+// El costo de bcrypt es el de `utils/contrasenas.ts` (SPEC-ALE186-022): el de
+// producción, salvo con NODE_ENV=test. Acá importa que sea el de verdad: este
+// hash se queda en la base durante años, y es el de la cuenta con más permisos.
 
 const LARGO_MINIMO = 8;
 
@@ -78,7 +78,7 @@ export async function sembrar(env: NodeJS.ProcessEnv): Promise<Semilla> {
   const admin = await usuarios.crear({
     nombreCompleto: datos.nombreCompleto,
     username: datos.username,
-    passwordHash: await bcrypt.hash(datos.contrasena, COSTE_BCRYPT),
+    passwordHash: await hashearContrasena(datos.contrasena),
     rol: 'ADMIN',
     sucursalId: null,
   });
