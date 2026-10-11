@@ -379,7 +379,15 @@ de acceso**. Lo que no está ahí no llega nunca al dispositivo.
 - **Bucket `global`** — `clientes` (el mismo cliente puede dejar ropa en sucursales
   distintas en visitas distintas, y el alta por teléfono tiene que encontrarlo desde
   cualquiera; la ropa de cada orden, eso sí, se retira donde se dejó), más `sucursales` y
-  `usuarios` **sin `password_hash`**, con lista explícita de columnas.
+  `usuarios` **sin `password_hash`**, con lista explícita de columnas. Desde SPEC-ALE186-024
+  solo se entrega a **cuentas activas**, igual que `sucursal`: su consulta `parameters` es
+  `SELECT FROM usuarios WHERE id = request.user_id() AND activo = true`, **sin columnas** a
+  propósito (cada columna sería un parámetro del bucket, y PowerSync exige que todas las `data`
+  lo usen: "Query must cover all bucket parameters").
+- **Después de cambiar `sync-rules.yaml`, reiniciar PowerSync** (`docker compose restart
+  powersync`): lee las reglas solo al arrancar. No se pierde nada: arma la versión nueva en una
+  ranura de replicación aparte y cambia cuando termina. Antes de reiniciar, el archivo se puede
+  validar con el validador que trae el propio contenedor (ver la bitácora de SPEC-ALE186-024).
 - **`auditoria` no se sincroniza a ningún dispositivo.** Se consulta por API, solo admin.
 - **El admin no descarga el histórico**, porque su dashboard es online (sección 8).
 
@@ -558,6 +566,18 @@ Nada se implementa sin una spec aprobada.
   Se detecta con `docker port lavanderia-postgres`: si no lista nada, es esto. Se arregla
   moviendo `POSTGRES_PORT` (y el puerto de `DATABASE_URL`) a uno libre, p. ej. 5434, y
   recreando con `docker compose up -d --force-recreate postgres`.
+- **PowerSync rechaza los tokens de 3 días** (encontrado en SPEC-ALE186-024, sin resolver).
+  PowerSync 1.25 no acepta un token que dure más de 24 h: lo rechaza con 401
+  `PSYNC_S2104 Token must expire in a maximum of 86400 seconds, got 259200s`. Ese límite está
+  fijo en su código (`token_max_expiration: '1d'`) y no se configura en `powersync.yaml`. El
+  backend emite el `tokenPowerSync` con el mismo `JWT_EXPIRES_IN` que el de la API (3 días, por
+  la sesión que sobrevive sin internet, sección 6), así que con la configuración actual ninguna
+  tablet baja datos de un PowerSync real. Los tests no lo vieron porque el frontend prueba con
+  un PowerSync simulado. El arreglo tiene dos lados: el backend tiene que emitir el token de
+  PowerSync con menos de 24 h (el de la API puede seguir en 3 días: es el que sirve sin
+  internet; el de PowerSync solo se usa CON conexión), y el frontend tiene que pedir uno nuevo
+  cuando vence (`fetchCredentials`, con la renovación que ya está pendiente). Va en una spec
+  propia, coordinada entre los dos.
 - **La autenticación de PowerSync usa un secreto compartido HS256**, pensado para poder
   probar el servicio antes de que exista el backend. En producción va RS256 con un
   `jwks_uri` servido por la API.
@@ -604,10 +624,9 @@ repartido en specs del roadmap del backend:
 - **Escalabilidad:** resuelto. El índice que faltaba en `auditoria.registro_id` lo agregó
   SPEC-ALE186-020, SPEC-ALE186-021 hizo que los filtros por "día de Bolivia" busquen en los
   índices de fecha, y SPEC-ALE186-023 le puso tiempos límite al pool.
-- **Confidencialidad:** el bucket `global` baja todos los clientes (con teléfono y carnet) a
-  todas las tablets, y no mira `activo`: una cuenta dada de baja sigue bajándolos mientras su
-  token de PowerSync no venza (spec `sync-global-activos`). Los logs de errores ya no llevan
-  los valores de las filas (SPEC-ALE186-023: solo mensaje, código, restricción, tabla y stack).
+- **Confidencialidad:** resuelto. El bucket `global` solo baja a cuentas activas
+  (SPEC-ALE186-024), y los logs de errores ya no llevan los valores de las filas
+  (SPEC-ALE186-023: solo mensaje, código, restricción, tabla y stack).
 - **Herramientas de desarrollo:** `npm audit` todavía marca Vitest (`tinypool`, `@vitest/mocker`)
   y `nodemon` (`braces`). No viajan a producción —`npm audit --omit=dev` del backend da 0—, pero
   arreglarlas exige Vitest 5, un cambio mayor en los dos workspaces: va en una spec propia.
@@ -627,10 +646,12 @@ implemente una spec de las de abajo actualiza su línea cuando la mergee.
   con el frontend en su puerto de siempre no hay que hacer nada. Si corre en otro puerto o
   dominio, hay que agregarlo ahí (separado por comas), o el navegador bloqueará las llamadas con
   un error de CORS en la consola. En producción la variable es obligatoria.
-- **Sync rules del bucket `global`** (spec `sync-global-activos`, pendiente): va a dejar de bajar
-  clientes, sucursales y usuarios a una cuenta dada de baja. Para las activas no cambia nada,
-  pero toca `docker/powersync/sync-rules.yaml`: después de mergear, reiniciar PowerSync y
-  probar que la tablet siga bajando clientes.
+- **Sync rules del bucket `global`** (SPEC-ALE186-024, hecho): ya no baja clientes, sucursales
+  ni usuarios a una cuenta dada de baja. Para las activas no cambia nada. **Después del pull,
+  `docker compose restart powersync`**, para que lea las reglas nuevas.
+- **El token de PowerSync dura más de lo que PowerSync acepta** (encontrado en SPEC-ALE186-024,
+  **sin resolver**): ver "PowerSync rechaza los tokens de 3 días" en la deuda, arriba. Afecta la
+  bajada de datos a la tablet con un backend real.
 - **Usuario de la base sin privilegios** (spec `usuario-base-app`, pendiente): va a cambiar el
   usuario de `DATABASE_URL` en el `.env`. Habrá que actualizar el `.env` de cada uno.
 - **Tokens de PowerSync con RS256** (spec `powersync-rs256`, pendiente): el backend va a firmar
