@@ -6,13 +6,30 @@
 // paralelo y sin depender de que el 4000 esté libre.
 import cors from 'cors';
 import express, { type Express } from 'express';
+import helmet from 'helmet';
+import { config } from './config.js';
 import { apiRouter } from './routes/index.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 
-export function createApp(): Express {
+export interface OpcionesApp {
+  /** Desde qué orígenes puede llamar un navegador. Por defecto, los del .env. */
+  corsOrigenes?: string[];
+}
+
+export function createApp(opciones: OpcionesApp = {}): Express {
   const app = express();
 
-  app.use(cors());
+  // Cabeceras de seguridad estándar (SPEC-ALE186-023): que el navegador no
+  // adivine tipos de archivo, que la API no se pueda meter en un iframe, y sin
+  // `X-Powered-By`, que le cuenta a cualquiera que esto es Express.
+  app.use(helmet());
+
+  // CORS (SPEC-ALE186-023): solo los orígenes de la lista. Un pedido desde otra
+  // página web sale sin `Access-Control-Allow-Origin`, y el NAVEGADOR no le deja
+  // leer la respuesta. Es una protección del navegador, no del servidor: curl o
+  // otro servidor, que no mandan `Origin`, se atienden igual, y para eso está la
+  // autenticación.
+  app.use(cors({ origin: opciones.corsOrigenes ?? config.corsOrigenes }));
   app.use(express.json());
 
   app.use('/api', apiRouter);

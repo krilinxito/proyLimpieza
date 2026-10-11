@@ -23,6 +23,34 @@ export function notFoundHandler(_req: Request, res: Response): void {
  * argumentos de la función. Con tres, esto sería un middleware más y los
  * errores quedarían sin atender.
  */
+/** Lo que se copia de un error al log. Lista blanca: ver `paraElLog`. */
+const CAMPOS_SEGUROS = ['name', 'message', 'code', 'constraint', 'table', 'stack'] as const;
+
+/**
+ * La versión de un error que se puede escribir en el log — SPEC-ALE186-023.
+ *
+ * Un error de Postgres trae en `detail` los valores de la fila que chocó
+ * ("Key (telefono)=(71234567) already exists."), y en `where` o en los
+ * parámetros, datos de la consulta. Los logs se leen, se copian y se guardan
+ * por meses con menos cuidado que la base: un teléfono o un carnet ahí es un
+ * dato personal fuera de control.
+ *
+ * Por eso se copia una LISTA BLANCA de campos, y no se borran los peligrosos:
+ * si una versión futura de `pg` agrega un campo nuevo con datos, no se cuela.
+ * Con `code`, `constraint` y `table` alcanza para saber qué falló; para ver
+ * con qué valores, está la base, con sus permisos.
+ */
+export function paraElLog(err: unknown): Record<string, unknown> | string {
+  if (!(err instanceof Error)) return String(err);
+
+  const seguro: Record<string, unknown> = {};
+  for (const campo of CAMPOS_SEGUROS) {
+    const valor: unknown = Reflect.get(err, campo);
+    if (valor !== undefined) seguro[campo] = valor;
+  }
+  return seguro;
+}
+
 export function errorHandler(
   err: unknown,
   _req: Request,
@@ -38,7 +66,7 @@ export function errorHandler(
   // mantiene el sistema; al cliente le llega solo el mensaje genérico. Un stack
   // trace en la respuesta le cuenta a cualquiera cómo está hecha la API por
   // dentro, y a la persona del mostrador no le sirve de nada.
-  console.error('[error no controlado]', err);
+  console.error('[error no controlado]', paraElLog(err));
 
   const generico = new ApiError(
     500,

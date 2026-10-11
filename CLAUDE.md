@@ -596,16 +596,21 @@ repartido en specs del roadmap del backend:
 
 - **Antes de producción:** `proxy-addr` (dentro de Express) tiene una vulnerabilidad crítica
   que hoy no aplica porque no usamos `trust proxy`, pero sí aplicará detrás de un proxy
-  (`npm audit fix`). CORS acepta cualquier origen. El backend se conecta a Postgres como
+  (resuelto en SPEC-ALE186-023, junto con CORS, `helmet`, los tiempos límite del pool y los logs
+  sin datos de las filas). El backend se conecta a Postgres como
   superusuario: debería tener un usuario propio sin privilegios y sin `UPDATE`/`DELETE` sobre
   `auditoria`. API y PowerSync comparten el secreto de los tokens (va RS256). No hay HTTPS ni
   respaldos de la base (dependen del hosting).
-- **Escalabilidad:** el pool no tiene `statement_timeout`. (El índice que faltaba en
-  `auditoria.registro_id` lo agregó SPEC-ALE186-020, y SPEC-ALE186-021 hizo que los filtros
-  por "día de Bolivia" busquen en los índices de fecha en vez de recorrer la tabla.)
+- **Escalabilidad:** resuelto. El índice que faltaba en `auditoria.registro_id` lo agregó
+  SPEC-ALE186-020, SPEC-ALE186-021 hizo que los filtros por "día de Bolivia" busquen en los
+  índices de fecha, y SPEC-ALE186-023 le puso tiempos límite al pool.
 - **Confidencialidad:** el bucket `global` baja todos los clientes (con teléfono y carnet) a
   todas las tablets, y no mira `activo`: una cuenta dada de baja sigue bajándolos mientras su
-  token de PowerSync no venza. Los logs de errores pueden llevar datos personales.
+  token de PowerSync no venza (spec `sync-global-activos`). Los logs de errores ya no llevan
+  los valores de las filas (SPEC-ALE186-023: solo mensaje, código, restricción, tabla y stack).
+- **Herramientas de desarrollo:** `npm audit` todavía marca Vitest (`tinypool`, `@vitest/mocker`)
+  y `nodemon` (`braces`). No viajan a producción —`npm audit --omit=dev` del backend da 0—, pero
+  arreglarlas exige Vitest 5, un cambio mayor en los dos workspaces: va en una spec propia.
 
 ### Avisos para el frontend
 
@@ -617,10 +622,12 @@ implemente una spec de las de abajo actualiza su línea cuando la mergee.
 - **El reloj de la tablet** (SPEC-ALE186-015, hecho del lado del backend): `login` y `renovar`
   devuelven `ahora`, la hora del servidor. Falta que la tablet mida su desfase y lo aplique al
   registrar (ver "El reloj de la tablet" más arriba).
-- **CORS restringido** (spec `endurecer-api`, pendiente): la API va a aceptar solo los orígenes
-  de una variable del `.env`. En desarrollo será `http://localhost:5173`. Si el frontend corre
-  en otro puerto o dominio, hay que agregarlo ahí, o el navegador bloqueará las llamadas.
-- **Sync rules del bucket `global`** (spec `endurecer-api`, pendiente): va a dejar de bajar
+- **CORS restringido** (SPEC-ALE186-023, hecho): la API acepta pedidos del navegador solo desde
+  los orígenes de `CORS_ORIGENES` en el `.env`. Si no está, vale `http://localhost:5173`, así que
+  con el frontend en su puerto de siempre no hay que hacer nada. Si corre en otro puerto o
+  dominio, hay que agregarlo ahí (separado por comas), o el navegador bloqueará las llamadas con
+  un error de CORS en la consola. En producción la variable es obligatoria.
+- **Sync rules del bucket `global`** (spec `sync-global-activos`, pendiente): va a dejar de bajar
   clientes, sucursales y usuarios a una cuenta dada de baja. Para las activas no cambia nada,
   pero toca `docker/powersync/sync-rules.yaml`: después de mergear, reiniciar PowerSync y
   probar que la tablet siga bajando clientes.
