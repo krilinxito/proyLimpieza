@@ -6,6 +6,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
+import jwt from 'jsonwebtoken';
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -110,7 +111,48 @@ export interface ConfigAuth {
   /** El secreto YA decodificado a bytes. Ver el comentario de abajo. */
   secreto: Buffer;
   audiencia: string;
+  /** Cuánto dura el token de la API (`JWT_EXPIRES_IN`). Es el que sirve sin internet. */
   expiraEn: string;
+  /** Cuánto dura el token de PowerSync (`PS_JWT_EXPIRES_IN`), nunca más de 24 h — SPEC-ALE186-024/025. */
+  expiraEnPowerSync: string;
+}
+
+/**
+ * PowerSync 1.25 rechaza con 401 (`PSYNC_S2104`) todo token que dure más de esto. El límite
+ * está fijo en su código (`token_max_expiration: '1d'`): no se configura en powersync.yaml.
+ */
+const MAXIMO_POWERSYNC_SEGUNDOS = 24 * 60 * 60;
+
+/**
+ * Cuántos segundos dura un plazo como "12h", "30m" o "3600".
+ *
+ * En vez de interpretar el formato a mano, firma un token descartable con ese plazo y lee
+ * `exp - iat`: así se mide EXACTAMENTE como lo va a medir `jsonwebtoken` al firmar los
+ * tokens de verdad, sin un segundo intérprete que pueda entender "12h" distinto.
+ */
+function duracionEnSegundos(plazo: string, variable: string): number {
+  try {
+    const firmado = jwt.sign({}, 'solo-para-medir', { expiresIn: plazo as jwt.SignOptions['expiresIn'] });
+    const { exp, iat } = jwt.decode(firmado) as { exp: number; iat: number };
+    return exp - iat;
+  } catch {
+    throw new Error(`${variable} no es un plazo válido: llegó "${plazo}". Usá por ejemplo 12h o 30m.`);
+  }
+}
+
+/** El plazo del token de PowerSync: por defecto 12 h, y error si pasa de 24 h. */
+function leerExpiraEnPowerSync(env: NodeJS.ProcessEnv): string {
+  const plazo = env.PS_JWT_EXPIRES_IN?.trim() || '12h';
+  const segundos = duracionEnSegundos(plazo, 'PS_JWT_EXPIRES_IN');
+
+  if (segundos <= 0 || segundos > MAXIMO_POWERSYNC_SEGUNDOS) {
+    throw new Error(
+      `PS_JWT_EXPIRES_IN vale "${plazo}", y PowerSync no acepta tokens de más de 24 horas: ` +
+        'los rechaza todos y ninguna tablet baja datos. Usá un plazo menor, por ejemplo 12h. ' +
+        'El que dura días es JWT_EXPIRES_IN, el de la API.',
+    );
+  }
+  return plazo;
 }
 
 /** 32 bytes es el tamaño de la salida de HS256: por debajo, la clave es el eslabón débil. */
@@ -156,7 +198,12 @@ export function readAuthConfig(env: NodeJS.ProcessEnv): ConfigAuth {
     );
   }
 
-  return { secreto, audiencia, expiraEn: env.JWT_EXPIRES_IN?.trim() || '3d' };
+  return {
+    secreto,
+    audiencia,
+    expiraEn: env.JWT_EXPIRES_IN?.trim() || '3d',
+    expiraEnPowerSync: leerExpiraEnPowerSync(env),
+  };
 }
 
 export const authConfig = readAuthConfig(process.env);
