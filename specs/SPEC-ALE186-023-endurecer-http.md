@@ -2,7 +2,7 @@
 id: SPEC-ALE186-023
 name: Endurecer la API HTTP antes de producción
 slug: endurecer-http
-status: approved
+status: in-progress
 owner: ale186
 created: 2026-10-11
 scope:
