@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-010
 name: Renovar la sesión sin pedir la contraseña
 slug: renovar-sesion
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-16
 scope:
