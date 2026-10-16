@@ -68,10 +68,15 @@ export function desfaseDelReloj(): number {
   return leerDesfase();
 }
 
+/** La hora de ahora según el servidor, en milisegundos como `Date.now()`. */
+export function ahoraOficialMs(): number {
+  return Date.now() + leerDesfase();
+}
+
 /**
  * La hora de ahora según el servidor, en ISO 8601 UTC ("2026-10-16T14:05:00.000Z"), el formato
  * que exige el backend. Sin desfase medido, es la hora de la tablet.
  */
 export function horaOficial(): string {
-  return new Date(Date.now() + leerDesfase()).toISOString();
+  return new Date(ahoraOficialMs()).toISOString();
 }
