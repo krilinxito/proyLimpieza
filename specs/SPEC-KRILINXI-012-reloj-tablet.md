@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-012
 name: Corregir el reloj de la tablet con la hora del servidor
 slug: reloj-tablet
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-16
 scope:
