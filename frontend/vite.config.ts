@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -69,5 +69,22 @@ export default defineConfig({
     // Los tests no leen el .env del desarrollador: si dependieran de él, pasarían o
     // fallarían según la máquina. El módulo de entorno se prueba con valores explícitos.
     env: { VITE_API_URL: 'http://localhost:4000', VITE_POWERSYNC_URL: 'http://localhost:8080' },
+    // Dos grupos que corren uno detrás del otro (SPEC-KRILINXI-011). El test del build compila
+    // la app entera con todos los núcleos; si corriera a la vez que los de pantalla, les robaría
+    // CPU y a los que esperan un texto con el tope de 1 s se les acabaría el tiempo.
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'app',
+          exclude: [...configDefaults.exclude, 'src/pwa/build.test.ts'],
+          sequence: { groupOrder: 0 },
+        },
+      },
+      {
+        extends: true,
+        test: { name: 'build', include: ['src/pwa/build.test.ts'], sequence: { groupOrder: 1 } },
+      },
+    ],
   },
 });

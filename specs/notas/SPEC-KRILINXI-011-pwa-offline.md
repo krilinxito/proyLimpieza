@@ -181,7 +181,12 @@ comprueba que exista `localStorage` antes de limpiarlo.
   hace de `ServiceWorker`; un objeto con `register` hace de `navigator`). Son casos únicos:
   ninguna otra spec va a necesitar un service worker falso.
 - **`build.test.ts`** es el que da confianza en el resultado. La próxima spec que toque
-  `vite.config.ts` lo va a sentir si rompe el precache.
+  `vite.config.ts` lo va a sentir si rompe el precache. Corre **solo y al final**: en
+  `vite.config.ts`, `test.projects` lo pone en un grupo aparte (`groupOrder: 1`). Al cerrar la
+  spec, una de ocho corridas completas falló en un test de SPEC-KRILINXI-007 que espera un
+  texto con el tope de 1 s de `findBy…`, y la compilación en paralelo es la sospechosa (no se
+  guardó el mensaje exacto de esa falla). Es el mismo problema de CPU saturada que ya describe
+  SPEC-ALE186-022 para el backend.
 - **Tocado:** `src/test/setup.ts`, para que los tests en entorno `node` no fallen al limpiar
   un `localStorage` que no existe.
 
