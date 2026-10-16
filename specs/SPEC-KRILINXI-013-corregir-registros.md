@@ -8,8 +8,8 @@ created: 2026-10-16
 scope:
   - frontend/src/features/pendientes/**
   - frontend/src/lib/powersync/**
-  - frontend/src/features/ordenes/components/**
-  - frontend/src/features/clientes/components/**
+  - frontend/src/features/ordenes/api/ordenesLocal.ts
+  - frontend/src/features/clientes/api/clientesLocal.ts
   - frontend/src/test/**
   - CLAUDE.md
 priority: high

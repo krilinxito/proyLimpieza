@@ -143,6 +143,13 @@ nunca la API ni PowerSync. Una versión nueva se aplica al recargar o volver a a
 recargar sola, y no toca la sesión ni la base local. El service worker solo existe en
 `npm run build`: en `npm run dev` y en los tests no se registra.
 
+SPEC-KRILINXI-013 cerró `/para-corregir`: cada registro rechazado se **corrige** (el formulario
+arranca con lo que se había enviado y valida con las reglas de su pantalla de origen) o se
+**descarta** con confirmación. Un alta se vuelve a escribir con `INSERT OR REPLACE` y **el mismo
+id**, así lo que dependía de ella (el adelanto de una orden) le sigue apuntando; una edición, con
+`UPDATE` y solo lo que cambió. La escritura y el borrado de `para_corregir` van juntos en
+`ejecutarJuntas` de la base local. La parte pura vive en `features/pendientes/correccion.ts`.
+
 SPEC-KRILINXI-012 corrige el reloj de la tablet: `lib/reloj` guarda el desfase con la hora
 del servidor que traen `login` y `renovar`, y `horaOficial()` es de donde salen
 `fecha_entrada`, `fecha_pago` y `fecha_entrega`, también sin internet. Ningún archivo de
@@ -285,7 +292,7 @@ Nunca concatenes valores dentro de una consulta. Siempre `$1, $2`.
 
 ```
 frontend/src/
-  features/     ordenes/ clientes/ entregas/ pagos/ auth/ estadisticas/
+  features/     ordenes/ clientes/ entregas/ pagos/ auth/ pendientes/ estadisticas/
                 cada una con components/ hooks/ api/ types.ts
   components/   UI compartida: botones, inputs, modales de confirmación.
   lib/          api (el único cliente HTTP), powersync/ (schema local, conector), env,
@@ -599,10 +606,12 @@ Nada se implementa sin una spec aprobada.
 - **La autenticación de PowerSync usa un secreto compartido HS256**, pensado para poder
   probar el servicio antes de que exista el backend. En producción va RS256 con un
   `jwks_uri` servido por la API.
-- **Corregir lo que el servidor rechazó.** SPEC-KRILINXI-007 lo guarda en `para_corregir`
-  (solo local, sin columna nueva en Postgres) y lo muestra en `/para-corregir`, pero
-  todavía no se puede editar y volver a enviar: hoy el empleado lee el motivo y avisa. Va en
-  una spec propia (`corregir-registros`).
+- **Corregir lo que el servidor rechazó: lo que queda.** Desde SPEC-KRILINXI-013 se corrige y
+  se vuelve a guardar desde `/para-corregir`, pero hay dos casos que la pantalla no resuelve: un
+  cambio de estado rechazado (se rehace desde "Ropa en el local") y un cliente nuevo rechazado
+  porque su teléfono ya era de otro cliente. En ese segundo caso la ropa que se registró para él
+  también vuelve rechazada, y corregirla exigiría cambiarle el cliente, que el formulario no
+  ofrece: hoy se descarta y se vuelve a registrar.
 - **El reloj de la tablet.** `fecha_entrada`, `fecha_pago` y `fecha_entrega` las pone la
   tablet y son las oficiales. Desde SPEC-KRILINXI-012 salen de `horaOficial()`
   (`frontend/src/lib/reloj.ts`): el reloj de la tablet más el desfase medido con el `ahora` de
