@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-011
 name: La app abre sin internet (PWA)
 slug: pwa-offline
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-16
 scope:
