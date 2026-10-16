@@ -8,21 +8,28 @@ const URL_POWERSYNC = 'http://localhost:8080';
 
 describe('Conector: credenciales — SPEC-KRILINXI-004', () => {
   it('entrega el token de PowerSync de la sesión y la dirección del servicio', async () => {
-    const conector = crearConector(URL_POWERSYNC, () => 'token-powersync');
+    const conector = crearConector(URL_POWERSYNC, async () => 'token-powersync');
     expect(await conector.fetchCredentials()).toEqual({ endpoint: URL_POWERSYNC, token: 'token-powersync' });
   });
 
   it('sin sesión no entrega ningún token, y así PowerSync no se conecta', async () => {
-    const conector = crearConector(URL_POWERSYNC, () => null);
+    const conector = crearConector(URL_POWERSYNC, async () => null);
     expect(await conector.fetchCredentials()).toBeNull();
   });
 
   it('pregunta por el token en cada conexión: un token renovado se usa sin reconstruir nada', async () => {
     let token = 'viejo';
-    const conector = crearConector(URL_POWERSYNC, () => token);
+    const conector = crearConector(URL_POWERSYNC, async () => token);
     await conector.fetchCredentials();
     token = 'nuevo';
     expect(await conector.fetchCredentials()).toMatchObject({ token: 'nuevo' });
+  });
+});
+
+describe('Conector: credenciales que no se pueden conseguir — SPEC-KRILINXI-010', () => {
+  it('si conseguir el token falla (renovar sin internet), lanza: es lo que hace reintentar a PowerSync', async () => {
+    const conector = crearConector(URL_POWERSYNC, () => Promise.reject(new Error('sin conexión')));
+    await expect(conector.fetchCredentials()).rejects.toThrow('sin conexión');
   });
 });
 
@@ -34,7 +41,7 @@ describe('Conector: credenciales — SPEC-KRILINXI-004', () => {
 async function prepararSubida(responder: (pedido: PedidoFalso) => RespuestaFalsa = () => ({ status: 201, data: {} })) {
   const servidor = simularApi(responder);
   const prueba = await baseLocalDePrueba();
-  const subir = () => crearConector(URL_POWERSYNC, () => 'token').uploadData(prueba.db);
+  const subir = () => crearConector(URL_POWERSYNC, async () => 'token').uploadData(prueba.db);
   const cola = async () => (await prueba.db.getCrudBatch(100))?.crud ?? [];
   const paraCorregir = () =>
     prueba.control.base.consultar('SELECT tabla, registro_id, operacion, datos, codigo, mensaje FROM para_corregir');

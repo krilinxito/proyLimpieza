@@ -2,8 +2,8 @@
  * El conector: lo que PowerSync le pregunta a la app.
  *
  * - `fetchCredentials`: "¿con qué token me presento al servicio?". Es el `tokenPowerSync`
- *   que guardó el login (SPEC-KRILINXI-003), no el de la API: cada uno lo verifica un
- *   servidor distinto (CLAUDE.md §6).
+ *   de la sesión (SPEC-KRILINXI-003), no el de la API: cada uno lo verifica un servidor
+ *   distinto (CLAUDE.md §6). Quién lo da decide si hay que renovarlo antes (SPEC-KRILINXI-010).
  * - `uploadData`: "subí lo que se escribió en el dispositivo" — SPEC-KRILINXI-007. Cada
  *   cambio de la cola va a su endpoint por `lib/api`, que pone el token y traduce los errores.
  */
@@ -97,13 +97,13 @@ export async function subirCola(db: CommonPowerSyncDatabase): Promise<void> {
   }
 }
 
-export function crearConector(url: string, obtenerToken: () => string | null): PowerSyncBackendConnector {
+export function crearConector(url: string, obtenerToken: () => Promise<string | null>): PowerSyncBackendConnector {
   return {
     async fetchCredentials() {
-      // Se consulta en cada conexión, nunca se guarda: si mañana la sesión se renueva, el
-      // token nuevo se usa sin tocar este archivo. Sin sesión, `null` le dice a PowerSync
-      // que no hay nadie adentro, y no se conecta.
-      const token = obtenerToken();
+      // Se consulta en cada conexión, nunca se guarda: así un token renovado se usa sin tocar
+      // este archivo. Sin sesión, `null` le dice a PowerSync que no hay nadie adentro, y no se
+      // conecta. Si `obtenerToken` lanza (renovar sin internet), PowerSync reintenta más tarde.
+      const token = await obtenerToken();
       return token ? { endpoint: url, token } : null;
     },
 

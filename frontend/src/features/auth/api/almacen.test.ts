@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { borrarSesion, guardarSesion, leerSesion } from './almacen';
-import { sesionDePrueba } from '../../../test/sesion';
+import { sesionDePrueba, TOKEN_POWERSYNC_DE_PRUEBA } from '../../../test/sesion';
 
 const CLAVE = 'lavanderia.sesion';
 
@@ -16,7 +16,7 @@ describe('almacén de la sesión — SPEC-KRILINXI-003', () => {
     const guardada: unknown = JSON.parse(localStorage.getItem(CLAVE) ?? 'null');
     expect(guardada).toMatchObject({
       token: 'token-api-de-prueba',
-      tokenPowerSync: 'token-powersync-de-prueba',
+      tokenPowerSync: TOKEN_POWERSYNC_DE_PRUEBA,
       usuario: { rol: 'ADMIN', sucursalId: null, nombreCompleto: 'Ana Administradora' },
     });
   });

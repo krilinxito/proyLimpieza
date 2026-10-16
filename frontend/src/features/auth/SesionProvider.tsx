@@ -9,6 +9,7 @@ import {
 import { borrarSesion, guardarSesion, leerSesion } from './api/almacen';
 import { login } from './api/login';
 import { ContextoSesion, type ValorSesion } from './contexto';
+import { crearRenovador } from './renovacion';
 import type { Sesion } from './types';
 
 type Props = {
@@ -26,7 +27,8 @@ type Props = {
  * Al montar lee la sesión del dispositivo, sin llamar a la API: por eso una recarga no pide
  * la contraseña, aunque no haya internet. Le presta el token a `lib/api`. Y mientras hay
  * alguien adentro, mantiene abierta la base local y la sincronización (SPEC-KRILINXI-004):
- * se abre al entrar y se borra al salir o cuando el servidor rechaza la sesión.
+ * se abre al entrar y se borra al salir o cuando el servidor rechaza la sesión. Cuando el
+ * token de PowerSync está por vencer, lo renueva sin pedir la contraseña (SPEC-KRILINXI-010).
  */
 export function SesionProvider({ children, abrirBaseLocal = abrirBaseLocalDelNavegador }: Props) {
   const [sesion, setSesion] = useState<Sesion | null>(leerSesion);
@@ -66,6 +68,14 @@ export function SesionProvider({ children, abrirBaseLocal = abrirBaseLocalDelNav
     setSesion(nueva);
   }, []);
 
+  // Uno solo mientras la app esté abierta: así varias conexiones seguidas comparten la misma
+  // renovación. Guardar el par nuevo pasa por `cambiarSesion`, como el login; como sigue
+  // habiendo alguien, la base local no se cierra ni se reabre.
+  const tokenPowerSyncVigente = useMemo(
+    () => crearRenovador({ leerSesion: () => actual.current, guardarSesion: (nueva) => cambiarSesion(nueva) }),
+    [cambiarSesion],
+  );
+
   useEffect(
     () =>
       conectarSesion({
@@ -92,7 +102,7 @@ export function SesionProvider({ children, abrirBaseLocal = abrirBaseLocalDelNav
         setBase(c.base);
         // Sin `await`, a propósito: la base ya responde con lo guardado. La sincronización
         // va por detrás y sin internet simplemente espera (CLAUDE.md §6).
-        c.conectar(() => actual.current?.tokenPowerSync ?? null).catch((error: unknown) =>
+        c.conectar(tokenPowerSyncVigente).catch((error: unknown) =>
           console.error('No se pudo conectar la sincronización.', error),
         );
       })
@@ -101,7 +111,7 @@ export function SesionProvider({ children, abrirBaseLocal = abrirBaseLocalDelNav
     return () => {
       vigente = false;
     };
-  }, [hayAlguien, abrirBaseLocal]);
+  }, [hayAlguien, abrirBaseLocal, tokenPowerSyncVigente]);
 
   const valor = useMemo<ValorSesion>(
     () => ({
