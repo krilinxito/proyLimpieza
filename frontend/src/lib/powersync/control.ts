@@ -18,6 +18,9 @@ const TODAS_LAS_TABLAS = [...Object.keys(TABLAS), ...Object.keys(TABLAS_SOLO_LOC
 
 export type Fila = Record<string, unknown>;
 
+/** Una escritura: el SQL y sus parámetros. */
+export type Sentencia = { sql: string; parametros?: unknown[] };
+
 /** Cómo va la subida, para el aviso de conexión — SPEC-KRILINXI-007. */
 export type EstadoSubida = {
   /** Si hay conexión con el servicio de sincronización, no solo wifi. */
@@ -31,6 +34,11 @@ export type EstadoSubida = {
 export type BaseLocal = {
   consultar: (sql: string, parametros?: unknown[]) => Promise<Fila[]>;
   ejecutar: (sql: string, parametros?: unknown[]) => Promise<void>;
+  /**
+   * Varias escrituras que van todas o ninguna, en una sola transacción — SPEC-KRILINXI-013.
+   * Para cuando dos escrituras separadas dejarían la base a medias si la segunda falla.
+   */
+  ejecutarJuntas: (sentencias: readonly Sentencia[]) => Promise<void>;
   /**
    * Avisa el estado de la subida ahora y cada vez que cambia (se escribe algo, se sube, se
    * corta la conexión). Devuelve la función que deja de avisar, lista para un `useEffect`.
@@ -61,6 +69,10 @@ export function envolver(db: CommonPowerSyncDatabase, url: string): ControlBaseL
       ejecutar: async (sql, parametros = []) => {
         await db.execute(sql, parametros);
       },
+      ejecutarJuntas: (sentencias) =>
+        db.writeTransaction(async (tx) => {
+          for (const { sql, parametros = [] } of sentencias) await tx.execute(sql, parametros);
+        }),
       observarEstado: (alCambiar) => observarEstado(db, alCambiar),
     },
     conectar: (obtenerToken) => db.connect(crearConector(url, obtenerToken)),

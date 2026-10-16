@@ -53,27 +53,49 @@ function leerMonto(texto: string): Centavos | null {
   }
 }
 
-/** Si ya hay una orden de esa sucursal con esa boleta. La boleta es única por sucursal (§6). */
-async function boletaOcupada(base: BaseLocal, sucursalId: string, numeroBoleta: string): Promise<boolean> {
-  const filas = await base.consultar('SELECT 1 FROM ordenes WHERE sucursal_id = ? AND numero_boleta = ? LIMIT 1', [
-    sucursalId,
-    numeroBoleta,
-  ]);
+/**
+ * Si ya hay una orden de esa sucursal con esa boleta. La boleta es única por sucursal (§6).
+ * `excluirOrdenId` deja afuera a la orden que se está corrigiendo (SPEC-KRILINXI-013): su
+ * propia fila puede seguir en la base con la boleta que el servidor rechazó.
+ */
+async function boletaOcupada(
+  base: BaseLocal,
+  sucursalId: string,
+  numeroBoleta: string,
+  excluirOrdenId: string | null,
+): Promise<boolean> {
+  const filas = await base.consultar(
+    'SELECT 1 FROM ordenes WHERE sucursal_id = ? AND numero_boleta = ? AND id IS NOT ? LIMIT 1',
+    [sucursalId, numeroBoleta, excluirOrdenId],
+  );
   return filas.length > 0;
 }
 
+/** Lo que el empleado escribe de la ropa, sin el cliente ni el adelanto. */
+export type DatosDeLaRopa = Pick<DatosRopa, 'numeroBoleta' | 'descripcion' | 'precio' | 'fechaEstimada'>;
+
+export type RopaValidada = {
+  errores: ErroresRopa;
+  /** Los valores ya limpios. `precio` es null si no es un monto (y entonces hay error). */
+  valores: { numeroBoleta: string; descripcion: string; precio: Centavos | null; fechaEstimada: string | null };
+};
+
 /**
- * Valida todo y, solo si todo está bien, escribe: primero la orden, después el adelanto.
- * Si el adelanto está mal no se guarda nada, ni siquiera la orden.
+ * Las validaciones de la ropa, en un solo lugar: las usan registrar ropa y la corrección de
+ * lo que el servidor rechazó (SPEC-KRILINXI-013), así el empleado lee el mismo mensaje en
+ * las dos pantallas.
  */
-export async function registrarRopa(base: BaseLocal, quien: QuienRegistra, datos: DatosRopa): Promise<ResultadoRegistro> {
+export async function validarRopa(
+  base: BaseLocal,
+  sucursalId: string,
+  datos: DatosDeLaRopa,
+  excluirOrdenId: string | null = null,
+): Promise<RopaValidada> {
   const numeroBoleta = datos.numeroBoleta.trim();
   const descripcion = datos.descripcion.trim();
   const fechaEstimada = datos.fechaEstimada.trim();
-  const hayAdelanto = datos.adelanto.trim() !== '';
 
   const errores: ErroresRopa = {};
-  if (!datos.cliente) errores.cliente = MENSAJES.sinCliente;
   if (numeroBoleta === '') errores.numeroBoleta = MENSAJES.sinBoleta;
   else if (numeroBoleta.length > LARGO_MAXIMO_BOLETA) errores.numeroBoleta = MENSAJES.boletaLarga;
   if (descripcion === '') errores.descripcion = MENSAJES.sinDescripcion;
@@ -83,17 +105,32 @@ export async function registrarRopa(base: BaseLocal, quien: QuienRegistra, datos
 
   if (fechaEstimada !== '' && !esFechaValida(fechaEstimada)) errores.fechaEstimada = MENSAJES.fecha;
 
+  // La boleta repetida se consulta solo si el número en sí está bien: es la única
+  // validación que necesita la base.
+  if (!errores.numeroBoleta && (await boletaOcupada(base, sucursalId, numeroBoleta, excluirOrdenId))) {
+    errores.numeroBoleta = MENSAJES.boletaOcupada;
+  }
+
+  return { errores, valores: { numeroBoleta, descripcion, precio, fechaEstimada: fechaEstimada === '' ? null : fechaEstimada } };
+}
+
+/**
+ * Valida todo y, solo si todo está bien, escribe: primero la orden, después el adelanto.
+ * Si el adelanto está mal no se guarda nada, ni siquiera la orden.
+ */
+export async function registrarRopa(base: BaseLocal, quien: QuienRegistra, datos: DatosRopa): Promise<ResultadoRegistro> {
+  const hayAdelanto = datos.adelanto.trim() !== '';
+  const validada = await validarRopa(base, quien.sucursalId, datos);
+  const { numeroBoleta, descripcion, precio, fechaEstimada } = validada.valores;
+
+  const errores: ErroresRopa = { ...validada.errores };
+  if (!datos.cliente) errores.cliente = MENSAJES.sinCliente;
+
   const adelanto = hayAdelanto ? leerMonto(datos.adelanto) : 0;
   if (hayAdelanto) {
     if (adelanto === null || adelanto <= 0) errores.adelanto = MENSAJES.adelanto;
     else if (precio !== null && adelanto > precio) errores.adelanto = MENSAJES.adelantoMayor;
     if (!datos.metodoAdelanto) errores.metodoAdelanto = MENSAJES.sinMetodo;
-  }
-
-  // La boleta repetida se consulta solo si el número en sí está bien: es la única
-  // validación que necesita la base.
-  if (!errores.numeroBoleta && (await boletaOcupada(base, quien.sucursalId, numeroBoleta))) {
-    errores.numeroBoleta = MENSAJES.boletaOcupada;
   }
 
   // Los `=== null` repiten lo que ya dicen los errores, pero así TypeScript sabe que de aquí
@@ -119,7 +156,7 @@ export async function registrarRopa(base: BaseLocal, quien: QuienRegistra, datos
       quien.usuarioId,
       descripcion,
       ahora,
-      fechaEstimada === '' ? null : fechaEstimada,
+      fechaEstimada,
       aDecimal(precio),
     ],
   );
@@ -146,7 +183,7 @@ export async function registrarRopa(base: BaseLocal, quien: QuienRegistra, datos
       precioTotal: precio,
       adelanto,
       saldo: calcularSaldo({ precioTotal: precio, precioFinal: null, pagos: adelanto > 0 ? [adelanto] : [] }),
-      fechaEstimada: fechaEstimada === '' ? null : fechaEstimada,
+      fechaEstimada,
     },
   };
 }
