@@ -129,7 +129,12 @@ y pago final. Se puede entregar con saldo pendiente: la confirmación dice cuán
 debiendo. **El frontend nunca escribe `ordenes.estado = 'ENTREGADO'`**: lo hace el servidor, y
 en la tablet se ve por `estadoEfectivo`. Con eso, el flujo del mostrador está completo
 (registrar → avanzar → cobrar → entregar). Las pantallas del mostrador son solo para EMPLEADO.
-Falta la renovación del token.
+SPEC-KRILINXI-010 renueva la sesión sin pedir la contraseña: cada vez que PowerSync pide
+credenciales, `features/auth/renovacion.ts` mira el `exp` del `tokenPowerSync` y, si le quedan
+menos de 2 minutos (o no se lee), cambia el par en `/renovar` con el token de la API —una sola
+renovación aunque lleguen varios pedidos—. Sin internet lanza y PowerSync reintenta, sin tocar la
+sesión; solo un 401 vuelve a pedir el ingreso. El aviso de Salir dice cuántos registros sin
+guardar se perderían.
 
 Además existen el modelo de datos (`context/lavanderia_schema.sql`) y el entorno Docker. El
 desarrollo avanza spec a spec con el flujo de la sección 12.
@@ -550,7 +555,8 @@ Nada se implementa sin una spec aprobada.
   401, y si después entra OTRA persona en la tablet, lo pendiente se sube con su token y el
   backend la anota a ella como quien recibió o cobró. Se aceptó así en SPEC-KRILINXI-007: la
   alternativa era perder el trabajo. Salir confirmando, en cambio, sigue borrando la base
-  aunque haya cosas sin subir: el aviso de salida debería decirlo, o impedirlo.
+  aunque haya cosas sin subir; desde SPEC-KRILINXI-010 el aviso de salida lo dice, con el
+  número de registros que se perderían, pero no lo impide.
 
 - **El monorepo tiene DOS versiones de TypeScript, y la raíz fija una a propósito.**
   El frontend usa TypeScript 7 y el backend 5.9. Al instalar, npm hoistea a la raíz una
@@ -644,25 +650,10 @@ implemente una spec de las de abajo actualiza su línea cuando la mergee.
 - **Sync rules del bucket `global`** (SPEC-ALE186-024, hecho): ya no baja clientes, sucursales
   ni usuarios a una cuenta dada de baja. Para las activas no cambia nada. **Después del pull,
   `docker compose restart powersync`**, para que lea las reglas nuevas.
-- **Renovar el token de PowerSync** (SPEC-ALE186-025 hizo el lado del backend; **falta el
-  frontend**). Desde esa spec, `login` y `renovar` devuelven el `tokenPowerSync` con 12 h de
-  vida (antes duraba 3 días y PowerSync lo rechazaba siempre con 401 `PSYNC_S2104`: ninguna
-  tablet bajaba datos de un PowerSync real). El `token` de la API sigue durando 3 días. Para que
-  la sincronización siga después de las 12 h, el frontend tiene que:
-  1. En `fetchCredentials` (`frontend/src/lib/powersync/conector.ts`): si el `tokenPowerSync`
-     guardado está vencido o vence en menos de un par de minutos (mirar su `exp`), llamar a
-     `POST /api/auth/renovar` con el `token` de la API, en vez de devolver el vencido.
-     PowerSync vuelve a llamar a `fetchCredentials` cuando necesita credenciales.
-  2. Guardar el par nuevo (`token` y `tokenPowerSync`) en la sesión, como hace el login. La
-     respuesta trae también `usuario` y `ahora`.
-  3. **No cerrar la sesión** por un `tokenPowerSync` vencido: sin internet no se usa, y con
-     internet se renueva solo.
-  4. Pedir la contraseña **solo si `/renovar` responde 401** (cuenta dada de baja, o el token de
-     la API también venció: más de 3 días sin conexión). Si falla por falta de conexión,
-     reintentar después, sin cerrar nada.
-  Sin esto, la tablet baja datos durante las primeras 12 h de cada sesión y después deja de
-  bajarlos hasta un login nuevo. Comprobado contra el PowerSync local: con el token por defecto,
-  PowerSync responde 200 y entrega el bucket `global`.
+- **Renovar el token de PowerSync** (SPEC-ALE186-025 en el backend, SPEC-KRILINXI-010 en el
+  frontend, hecho). `login` y `renovar` devuelven el `tokenPowerSync` con 12 h de vida y el
+  `token` de la API con 3 días; la tablet renueva el par sola en `fetchCredentials` cuando al de
+  PowerSync le quedan menos de 2 minutos, y pide la contraseña solo si `/renovar` responde 401.
 - **Usuario de la base sin privilegios** (spec `usuario-base-app`, pendiente): va a cambiar el
   usuario de `DATABASE_URL` en el `.env`. Habrá que actualizar el `.env` de cada uno.
 - **Tokens de PowerSync con RS256** (spec `powersync-rs256`, pendiente): el backend va a firmar
