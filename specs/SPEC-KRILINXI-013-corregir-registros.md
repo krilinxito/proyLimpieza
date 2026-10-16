@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-013
 name: Corregir y volver a enviar lo que el servidor rechazó
 slug: corregir-registros
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-16
 scope:
