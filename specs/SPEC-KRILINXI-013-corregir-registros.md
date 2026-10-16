@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-013
 name: Corregir y volver a enviar lo que el servidor rechazó
 slug: corregir-registros
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-16
 scope:
@@ -14,7 +14,11 @@ scope:
   - CLAUDE.md
 priority: high
 depends_on: []
-tests: []
+tests:
+  - frontend/src/features/pendientes/api/corregirLocal.test.ts
+  - frontend/src/features/pendientes/components/PantallaParaCorregir.test.tsx
+  - frontend/src/test/controlFalso.ts
+  - frontend/src/test/rechazos.ts
 ---
 
 ## Descripción
