@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { App } from './App';
 import { SesionProvider } from './features/auth/SesionProvider';
+import { registrarServiceWorker } from './pwa/registrar';
 import './index.css';
 
 const raiz = document.getElementById('root');
@@ -20,3 +21,7 @@ createRoot(raiz).render(
     </BrowserRouter>
   </StrictMode>,
 );
+
+// Para que la app abra sin internet (SPEC-KRILINXI-011). Solo en la app compilada: en
+// `npm run dev` y en los tests no hace nada.
+void registrarServiceWorker({ produccion: import.meta.env.PROD, navegador: navigator, base: import.meta.env.BASE_URL });

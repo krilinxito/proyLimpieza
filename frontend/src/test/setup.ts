@@ -4,7 +4,8 @@ import '@testing-library/jest-dom/vitest';
 import { afterEach } from 'vitest';
 
 // jsdom conserva el localStorage entre tests del mismo archivo. Sin esto, la sesión que
-// guardó un test seguiría adentro en el siguiente (SPEC-KRILINXI-003).
+// guardó un test seguiría adentro en el siguiente (SPEC-KRILINXI-003). Los que corren en
+// Node (`// @vitest-environment node`, como el del build de SPEC-KRILINXI-011) no tienen.
 afterEach(() => {
-  localStorage.clear();
+  if (typeof localStorage !== 'undefined') localStorage.clear();
 });
