@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { simularApi } from '../../../test/apiFalsa';
+import { HORA_DEL_SERVIDOR_ISO, tabletConRelojCorrido } from '../../../test/reloj';
 import { baseLocalDePrueba } from '../../../test/baseLocalDePrueba';
 import {
   clienteDePrueba,
@@ -186,5 +187,18 @@ describe('La ropa sin conexión — SPEC-KRILINXI-008', () => {
     await cambiarEstado(control.base, SUCURSAL_DE_PRUEBA, recibida.id, 'EN_PROCESO');
     await cobrar(control.base, QUIEN, recibida.id, { monto: '1', metodo: 'QR' });
     expect(servidor.pedidos).toEqual([]);
+  });
+});
+
+describe('Cobrar con la hora del servidor — SPEC-KRILINXI-012', () => {
+  it('con el reloj atrasado y sin internet, el cobro lleva la hora del servidor', async () => {
+    simularApi(() => 'sin-conexion');
+    tabletConRelojCorrido(-7 * 60_000);
+    const { control, recibida } = await sucursalConRopa();
+
+    expect(await cobrar(control.base, QUIEN, recibida.id, { monto: '10', metodo: 'EFECTIVO' })).toEqual({ tipo: 'hecho' });
+
+    const filas = await control.base.consultar('SELECT fecha_pago FROM pagos WHERE orden_id = ? AND monto = ?', [recibida.id, '10.00']);
+    expect(filas).toEqual([{ fecha_pago: HORA_DEL_SERVIDOR_ISO }]);
   });
 });

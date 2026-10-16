@@ -12,6 +12,7 @@
  */
 import type { BaseLocal } from '../../../lib/powersync';
 import { aDecimal, parsearMonto, type Centavos } from '../../../lib/money';
+import { horaOficial } from '../../../lib/reloj';
 import { insertarPago } from '../../pagos/api/pagosLocal';
 import { calcularSaldo } from '../../pagos/saldo';
 import type { DatosRopa, ErroresRopa, QuienRegistra, ResultadoRegistro } from '../types';
@@ -102,8 +103,9 @@ export async function registrarRopa(base: BaseLocal, quien: QuienRegistra, datos
   }
 
   const ordenId = crypto.randomUUID();
-  // ISO 8601 con zona ("2026-10-03T14:05:00.000Z"): el formato que exige el backend.
-  const ahora = new Date().toISOString();
+  // La hora del servidor aunque el reloj de la tablet esté mal, en el formato ISO 8601 con zona
+  // que exige el backend (SPEC-KRILINXI-012).
+  const ahora = horaOficial();
 
   await base.ejecutar(
     `INSERT INTO ordenes (id, numero_boleta, cliente_id, sucursal_id, usuario_recepcion_id, descripcion,

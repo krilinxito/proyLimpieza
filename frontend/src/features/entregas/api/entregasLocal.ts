@@ -15,6 +15,7 @@
  */
 import type { BaseLocal } from '../../../lib/powersync';
 import { aDecimal, parsearMonto, sumar, type Centavos } from '../../../lib/money';
+import { horaOficial } from '../../../lib/reloj';
 import { obtenerOrden } from '../../ordenes/api/ropaLocal';
 import type { QuienRegistra } from '../../ordenes/types';
 import { insertarPago } from '../../pagos/api/pagosLocal';
@@ -121,8 +122,9 @@ export async function registrarEntrega(
   const resultado = await prepararEntrega(base, quien.sucursalId, ordenId, datos);
   if (resultado.tipo !== 'lista') return resultado;
   const entrega: EntregaLista = resultado.entrega;
-  // ISO 8601 con zona: el formato que exige el backend.
-  const ahora = new Date().toISOString();
+  // La hora del servidor aunque el reloj de la tablet esté mal, en el formato ISO 8601 con zona
+  // que exige el backend (SPEC-KRILINXI-012).
+  const ahora = horaOficial();
 
   await base.ejecutar(
     `INSERT INTO entregas (id, orden_id, sucursal_id, fecha_entrega, tipo_retiro,
