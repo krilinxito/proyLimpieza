@@ -6,10 +6,11 @@ import { useBaseLocal } from '../../lib/powersync';
 import { cuerpoError, simularApi, type RespuestaFalsa } from '../../test/apiFalsa';
 import { controlFalso } from '../../test/controlFalso';
 import { renderEnRuta } from '../../test/render';
-import { sesionDePrueba } from '../../test/sesion';
+import { jwtDePrueba, sesionDePrueba, TOKEN_POWERSYNC_DE_PRUEBA } from '../../test/sesion';
+import { leerSesion } from './api/almacen';
 
-/** El token que el conector de PowerSync recibiría ahora mismo. */
-function tokenQueEntrega(baseLocal: ReturnType<typeof controlFalso>): string | null {
+/** El token que el conector de PowerSync recibiría ahora mismo (renovándolo si hiciera falta). */
+function tokenQueEntrega(baseLocal: ReturnType<typeof controlFalso>): Promise<string | null> {
   const obtenerToken = baseLocal.conectar.mock.calls.at(-1)?.[0];
   if (!obtenerToken) throw new Error('conectar no se llamó');
   return obtenerToken();
@@ -22,7 +23,7 @@ describe('Sesión y base local — SPEC-KRILINXI-004', () => {
 
     await waitFor(() => expect(baseLocal.conectar).toHaveBeenCalledOnce());
     // El de PowerSync, no el de la API: cada uno lo verifica un servidor distinto.
-    expect(tokenQueEntrega(baseLocal)).toBe('token-powersync-de-prueba');
+    expect(await tokenQueEntrega(baseLocal)).toBe(TOKEN_POWERSYNC_DE_PRUEBA);
   });
 
   it('sin sesión no se conecta', async () => {
@@ -34,7 +35,8 @@ describe('Sesión y base local — SPEC-KRILINXI-004', () => {
   });
 
   it('al entrar se conecta con el token que acaba de llegar del login', async () => {
-    simularApi(() => ({ status: 200, data: { ...sesionDePrueba(), tokenPowerSync: 'recien-emitido' } }));
+    const recienEmitido = jwtDePrueba(Date.now() + 12 * 3600_000, 'recien-emitido');
+    simularApi(() => ({ status: 200, data: { ...sesionDePrueba(), tokenPowerSync: recienEmitido } }));
     const baseLocal = controlFalso();
     renderEnRuta(<App />, '/ingresar', { baseLocal, sesion: null });
 
@@ -43,7 +45,7 @@ describe('Sesión y base local — SPEC-KRILINXI-004', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
 
     await waitFor(() => expect(baseLocal.conectar).toHaveBeenCalledOnce());
-    expect(tokenQueEntrega(baseLocal)).toBe('recien-emitido');
+    expect(await tokenQueEntrega(baseLocal)).toBe(recienEmitido);
   });
 
   it('las pantallas tienen la base aunque la sincronización no termine nunca (sin internet)', async () => {
@@ -128,13 +130,14 @@ describe('Sesión rechazada con trabajo sin subir — SPEC-KRILINXI-007', () => 
 
     // Vuelve a ingresar: la misma base se abre y se conecta con la sesión nueva, y la cola
     // que quedó sube con ese token.
-    respuesta = { status: 200, data: { ...sesionDePrueba(), tokenPowerSync: 'token-nuevo' } };
+    const tokenNuevo = jwtDePrueba(Date.now() + 12 * 3600_000, 'nuevo');
+    respuesta = { status: 200, data: { ...sesionDePrueba(), tokenPowerSync: tokenNuevo } };
     fireEvent.change(screen.getByLabelText('Usuario'), { target: { value: 'elena' } });
     fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'secreta' } });
     fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
 
     await waitFor(() => expect(baseLocal.conectar).toHaveBeenCalledTimes(2));
-    expect(tokenQueEntrega(baseLocal)).toBe('token-nuevo');
+    expect(await tokenQueEntrega(baseLocal)).toBe(tokenNuevo);
     expect(baseLocal.desconectarYBorrar).not.toHaveBeenCalled();
   });
 
@@ -148,5 +151,69 @@ describe('Sesión rechazada con trabajo sin subir — SPEC-KRILINXI-007', () => 
     fireEvent.click(screen.getByRole('button', { name: 'Sí, salir' }));
 
     await waitFor(() => expect(baseLocal.desconectarYBorrar).toHaveBeenCalledOnce());
+  });
+});
+
+/**
+ * La renovación vista desde la app entera — SPEC-KRILINXI-010. El renovador en sí (cuándo,
+ * cuántas veces) lo prueba `renovacion.test.ts`; aquí, qué le pasa a la sesión y a la base.
+ */
+describe('Renovar la sesión sin pedir la contraseña — SPEC-KRILINXI-010', () => {
+  const POR_VENCER = jwtDePrueba(Date.now() - 60_000, 'vencido');
+
+  function conTokenVencido() {
+    return { ...sesionDePrueba(), token: 'token-api-viejo', tokenPowerSync: POR_VENCER };
+  }
+
+  it('una renovación exitosa guarda el par nuevo y el usuario, sin cerrar ni reabrir la base local', async () => {
+    const nuevo = jwtDePrueba(Date.now() + 12 * 3600_000, 'nuevo');
+    simularApi((pedido) =>
+      pedido.ruta === '/auth/renovar'
+        ? {
+            status: 200,
+            data: { ...sesionDePrueba({ nombreCompleto: 'Elena Renovada' }), token: 'token-api-nuevo', tokenPowerSync: nuevo },
+          }
+        : { status: 404 },
+    );
+    const baseLocal = controlFalso();
+    renderEnRuta(<App />, '/', { baseLocal, sesion: conTokenVencido() });
+    await waitFor(() => expect(baseLocal.conectar).toHaveBeenCalledOnce());
+
+    expect(await act(() => tokenQueEntrega(baseLocal))).toBe(nuevo);
+
+    expect(leerSesion()).toMatchObject({ token: 'token-api-nuevo', tokenPowerSync: nuevo, usuario: { nombreCompleto: 'Elena Renovada' } });
+    expect(await screen.findByText('Elena Renovada')).toBeInTheDocument();
+    expect(baseLocal.conectar).toHaveBeenCalledOnce();
+    expect(baseLocal.desconectar).not.toHaveBeenCalled();
+    expect(baseLocal.desconectarYBorrar).not.toHaveBeenCalled();
+  });
+
+  it('sin conexión la sesión sigue abierta y la base intacta: PowerSync volverá a pedir', async () => {
+    simularApi(() => 'sin-conexion');
+    const baseLocal = controlFalso();
+    renderEnRuta(<App />, '/', { baseLocal, sesion: conTokenVencido() });
+    await waitFor(() => expect(baseLocal.conectar).toHaveBeenCalledOnce());
+
+    await act(() => expect(tokenQueEntrega(baseLocal)).rejects.toThrow());
+
+    expect(leerSesion()).toMatchObject({ tokenPowerSync: POR_VENCER });
+    expect(screen.getByRole('button', { name: 'Salir' })).toBeInTheDocument();
+    expect(baseLocal.desconectar).not.toHaveBeenCalled();
+    expect(baseLocal.desconectarYBorrar).not.toHaveBeenCalled();
+  });
+
+  it('con 401 vuelve a pedir el ingreso, y con cambios sin subir no borra la base', async () => {
+    simularApi(() => ({ status: 401, data: cuerpoError('NO_AUTENTICADO', 'Tu cuenta fue dada de baja.') }));
+    const baseLocal = controlFalso();
+    baseLocal.hayCambiosSinSubir.mockResolvedValue(true);
+    renderEnRuta(<App />, '/', { baseLocal, sesion: conTokenVencido() });
+    await waitFor(() => expect(baseLocal.conectar).toHaveBeenCalledOnce());
+
+    expect(await act(() => tokenQueEntrega(baseLocal))).toBeNull();
+
+    expect(await screen.findByRole('heading', { name: 'Ingresar al sistema' })).toBeInTheDocument();
+    expect(leerSesion()).toBeNull();
+    await waitFor(() => expect(baseLocal.desconectar).toHaveBeenCalledOnce());
+    expect(baseLocal.desconectarYBorrar).not.toHaveBeenCalled();
   });
 });

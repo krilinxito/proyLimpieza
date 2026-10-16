@@ -24,7 +24,7 @@ export function controlFalso() {
         return () => {};
       }),
     },
-    conectar: vi.fn(async (_obtenerToken: () => string | null) => {}),
+    conectar: vi.fn(async (_obtenerToken: () => Promise<string | null>) => {}),
     desconectarYBorrar: vi.fn(async () => {}),
     desconectar: vi.fn(async () => {}),
     hayCambiosSinSubir: vi.fn(async () => false),

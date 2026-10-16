@@ -42,9 +42,10 @@ export type ControlBaseLocal = {
   base: BaseLocal;
   /**
    * Arranca la sincronización. `obtenerToken` se consulta cada vez que PowerSync se
-   * conecta, así usa siempre el token vigente de la sesión.
+   * conecta, así usa siempre el token vigente de la sesión. Es async porque puede tener que
+   * renovarlo antes (SPEC-KRILINXI-010).
    */
-  conectar: (obtenerToken: () => string | null) => Promise<void>;
+  conectar: (obtenerToken: () => Promise<string | null>) => Promise<void>;
   /** Corta la sincronización y borra todos los datos del dispositivo (CLAUDE.md §6). */
   desconectarYBorrar: () => Promise<void>;
   /** Corta la sincronización y deja los datos: la cola sigue ahí para la próxima sesión. */

@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-010
 name: Renovar la sesión sin pedir la contraseña
 slug: renovar-sesion
-status: draft
+status: finished
 owner: krilinxito
 created: 2026-10-16
 scope:
@@ -14,7 +14,12 @@ scope:
   - CLAUDE.md
 priority: high
 depends_on: []
-tests: []
+tests:
+  - frontend/src/features/auth/SesionProvider.test.tsx
+  - frontend/src/features/auth/components/BarraSesion.test.tsx
+  - frontend/src/features/auth/renovacion.test.ts
+  - frontend/src/lib/powersync/conector.test.ts
+  - frontend/src/test/sesion.ts
 ---
 
 ## Descripción
