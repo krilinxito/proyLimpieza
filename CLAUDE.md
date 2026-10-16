@@ -131,6 +131,13 @@ en la tablet se ve por `estadoEfectivo`. Con eso, el flujo del mostrador está c
 (registrar → avanzar → cobrar → entregar). Las pantallas del mostrador son solo para EMPLEADO.
 Falta la renovación del token.
 
+SPEC-KRILINXI-011 hizo de verdad la PWA: con `vite-plugin-pwa` y un service worker propio
+(`frontend/src/pwa/sw.ts`), después de una primera visita con conexión la app abre sin
+internet en cualquier pantalla. Se precachea todo el build, también los WASM de PowerSync, y
+nunca la API ni PowerSync. Una versión nueva se aplica al recargar o volver a abrir, sin
+recargar sola, y no toca la sesión ni la base local. El service worker solo existe en
+`npm run build`: en `npm run dev` y en los tests no se registra.
+
 Además existen el modelo de datos (`context/lavanderia_schema.sql`) y el entorno Docker. El
 desarrollo avanza spec a spec con el flujo de la sección 12.
 
@@ -196,8 +203,11 @@ PERN con TypeScript de punta a punta.
 **Backend** — Node + Express + `pg` (SQL directo, sin ORM) + JWT + cors, con nodemon
 en `npm run dev`.
 
-**Frontend** — React + Vite + TypeScript + Tailwind + axios, empaquetado como **PWA**,
-con el SDK web de PowerSync para la base local.
+**Frontend** — React + Vite + TypeScript + Tailwind + axios, empaquetado como **PWA**
+(`vite-plugin-pwa`, SPEC-KRILINXI-011: manifest para instalarla en la tablet y un service
+worker propio en `src/pwa/`), con el SDK web de PowerSync para la base local. Los WASM de
+PowerSync pesan hasta 2,5 MB: el tope del precache está en 5 MB por archivo en
+`vite.config.ts`, y el test del build (`src/pwa/build.test.ts`) falla si alguno queda afuera.
 
 **Datos** — PostgreSQL 16 en Docker (el schema declara compatibilidad desde la 12) y
 **PowerSync Service 1.25.0** self-hosted para la sincronización offline. El tag está fijo
@@ -268,8 +278,10 @@ frontend/src/
   features/     ordenes/ clientes/ entregas/ pagos/ auth/ estadisticas/
                 cada una con components/ hooks/ api/ types.ts
   components/   UI compartida: botones, inputs, modales de confirmación.
-  lib/          powersync/ (schema local, connector), axios, money.
-  hooks/        Transversales: useOnline, useSession.
+  lib/          api (el único cliente HTTP), powersync/ (schema local, conector), env,
+                money, dominio.
+  hooks/        Transversales: useConexion, useSession.
+  pwa/          El service worker y su registro (SPEC-KRILINXI-011).
   pages/        Composición de rutas.
 ```
 
