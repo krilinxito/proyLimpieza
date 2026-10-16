@@ -12,6 +12,7 @@
 import type { BaseLocal, Fila } from '../../../lib/powersync';
 import { esEstadoOrden, esMetodoPago, esTipoPago, type EstadoOrden, type MetodoPago } from '../../../lib/dominio';
 import { desdeDecimal, parsearMonto, sumar, type Centavos } from '../../../lib/money';
+import { horaOficial } from '../../../lib/reloj';
 import { normalizarTelefono } from '../../clientes/telefono';
 import { insertarPago } from '../../pagos/api/pagosLocal';
 import { calcularSaldo } from '../../pagos/saldo';
@@ -189,7 +190,7 @@ export async function cobrar(
     monto: cuanto,
     tipo: 'ADELANTO',
     metodo: datos.metodo,
-    fechaPago: new Date().toISOString(),
+    fechaPago: horaOficial(),
   });
   return { tipo: 'hecho' };
 }

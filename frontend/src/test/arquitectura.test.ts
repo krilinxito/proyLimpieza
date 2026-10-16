@@ -73,3 +73,39 @@ describe('Componentes de features sin acceso a la base local — SPEC-KRILINXI-0
     expect(encontrados).toEqual([]);
   });
 });
+
+/**
+ * Las fechas que se guardan salen de `horaOficial()` (`lib/reloj`), no del reloj de la tablet
+ * a secas: si la tablet está mal, la fecha quedaría mal (CLAUDE.md §13) — SPEC-KRILINXI-012.
+ *
+ * Es más estricto que "las fechas que se guardan": ningún archivo de features lee la hora de
+ * ahora por su cuenta. Si alguno la necesita para otra cosa (como el vencimiento del token en
+ * `features/auth/renovacion.ts`), la recibe como argumento, que además lo hace testeable.
+ * `new Date(algo)` sí se permite: convierte una fecha que ya existe, no lee el reloj.
+ */
+const DE_FEATURES = archivosFuente('features');
+
+/** Sin comentarios: que un comentario diga "Date.now()" no es leer el reloj. */
+function sinComentarios(fuente: string): string {
+  return fuente.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+}
+
+describe('Las features no leen el reloj de la tablet — SPEC-KRILINXI-012', () => {
+  it('revisa los archivos que escriben fechas', () => {
+    const rutas = DE_FEATURES.map(({ ruta }) => ruta);
+    expect(rutas).toEqual(
+      expect.arrayContaining([
+        'features/ordenes/api/ordenesLocal.ts',
+        'features/ordenes/api/ropaLocal.ts',
+        'features/entregas/api/entregasLocal.ts',
+      ]),
+    );
+  });
+
+  it('ninguno llama a new Date() sin argumentos ni a Date.now()', () => {
+    const culpables = DE_FEATURES.filter(({ fuente }) => /new Date\(\s*\)|Date\.now\(\s*\)/.test(sinComentarios(fuente))).map(
+      ({ ruta }) => ruta,
+    );
+    expect(culpables).toEqual([]);
+  });
+});

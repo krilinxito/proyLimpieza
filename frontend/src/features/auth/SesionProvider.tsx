@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { conectarSesion } from '../../lib/api';
+import { ahoraOficialMs } from '../../lib/reloj';
 import {
   abrirBaseLocal as abrirBaseLocalDelNavegador,
   ContextoBaseLocal,
@@ -72,7 +73,14 @@ export function SesionProvider({ children, abrirBaseLocal = abrirBaseLocalDelNav
   // renovación. Guardar el par nuevo pasa por `cambiarSesion`, como el login; como sigue
   // habiendo alguien, la base local no se cierra ni se reabre.
   const tokenPowerSyncVigente = useMemo(
-    () => crearRenovador({ leerSesion: () => actual.current, guardarSesion: (nueva) => cambiarSesion(nueva) }),
+    () =>
+      crearRenovador({
+        leerSesion: () => actual.current,
+        guardarSesion: (nueva) => cambiarSesion(nueva),
+        // El `exp` del token está en la hora del servidor: se compara con la hora corregida, o
+        // una tablet atrasada creería vigente un token ya vencido (SPEC-KRILINXI-012).
+        ahora: ahoraOficialMs,
+      }),
     [cambiarSesion],
   );
 

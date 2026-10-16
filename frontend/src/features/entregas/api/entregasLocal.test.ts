@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { obtenerOrden } from '../../ordenes/api/ropaLocal';
 import { simularApi } from '../../../test/apiFalsa';
 import { baseLocalDePrueba } from '../../../test/baseLocalDePrueba';
+import { HORA_DEL_SERVIDOR_ISO, tabletConRelojCorrido } from '../../../test/reloj';
 import {
   clienteDePrueba,
   entregaDePrueba,
@@ -201,5 +202,22 @@ describe('Entregar sin conexión — SPEC-KRILINXI-009', () => {
     const { control, lista } = await preparar();
     await registrarEntrega(control.base, QUIEN, lista.id, datosEntrega({ pagoFinal: '10', metodoPago: 'EFECTIVO' }));
     expect(servidor.pedidos).toEqual([]);
+  });
+});
+
+describe('Entregar con la hora del servidor — SPEC-KRILINXI-012', () => {
+  it('con el reloj adelantado y sin internet, la entrega y el pago final llevan la hora del servidor', async () => {
+    simularApi(() => 'sin-conexion');
+    tabletConRelojCorrido(10 * 60_000);
+    const { control, lista } = await preparar();
+
+    await registrarEntrega(control.base, QUIEN, lista.id, datosEntrega({ pagoFinal: '30', metodoPago: 'EFECTIVO' }));
+
+    expect(await control.base.consultar('SELECT fecha_entrega FROM entregas WHERE orden_id = ?', [lista.id])).toEqual([
+      { fecha_entrega: HORA_DEL_SERVIDOR_ISO },
+    ]);
+    expect(
+      await control.base.consultar("SELECT fecha_pago FROM pagos WHERE orden_id = ? AND tipo = 'PAGO_FINAL'", [lista.id]),
+    ).toEqual([{ fecha_pago: HORA_DEL_SERVIDOR_ISO }]);
   });
 });

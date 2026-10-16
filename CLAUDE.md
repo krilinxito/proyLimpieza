@@ -143,6 +143,11 @@ nunca la API ni PowerSync. Una versión nueva se aplica al recargar o volver a a
 recargar sola, y no toca la sesión ni la base local. El service worker solo existe en
 `npm run build`: en `npm run dev` y en los tests no se registra.
 
+SPEC-KRILINXI-012 corrige el reloj de la tablet: `lib/reloj` guarda el desfase con la hora
+del servidor que traen `login` y `renovar`, y `horaOficial()` es de donde salen
+`fecha_entrada`, `fecha_pago` y `fecha_entrega`, también sin internet. Ningún archivo de
+`features/` lee el reloj por su cuenta (lo vigila un test de arquitectura).
+
 Además existen el modelo de datos (`context/lavanderia_schema.sql`) y el entorno Docker. El
 desarrollo avanza spec a spec con el flujo de la sección 12.
 
@@ -598,14 +603,14 @@ Nada se implementa sin una spec aprobada.
   (solo local, sin columna nueva en Postgres) y lo muestra en `/para-corregir`, pero
   todavía no se puede editar y volver a enviar: hoy el empleado lee el motivo y avisa. Va en
   una spec propia (`corregir-registros`).
-- **El reloj de la tablet (pedido al frontend).** `fecha_entrada`, `fecha_pago` y
-  `fecha_entrega` las pone la tablet, y son las oficiales. Si su reloj está mal, quedan mal.
-  SPEC-ALE186-014 rechaza en el servidor una `fecha_entrada` más de 5 minutos en el futuro,
-  pero la corrección de verdad es del dispositivo: cada vez que tenga conexión, medir el
-  desfase contra la hora del servidor y aplicarlo al registrar, también sin internet. El
-  backend ya la expone desde SPEC-ALE186-015: `ahora` (ISO en UTC) en las respuestas de
-  `login` y `renovar`, sacado de `now()` de Postgres, el mismo reloj que valida la fecha
-  futura. Falta el lado de la tablet.
+- **El reloj de la tablet.** `fecha_entrada`, `fecha_pago` y `fecha_entrega` las pone la
+  tablet y son las oficiales. Desde SPEC-KRILINXI-012 salen de `horaOficial()`
+  (`frontend/src/lib/reloj.ts`): el reloj de la tablet más el desfase medido con el `ahora` de
+  `login` y `renovar` (SPEC-ALE186-015), guardado en el dispositivo y aplicado también sin
+  internet. Lo que queda: una tablet que nunca se conectó con el reloj ya mal no tiene con qué
+  corregirse hasta su primer login, y un reloj que cambia mucho entre dos conexiones (alguien
+  lo mueve a mano) arrastra ese error hasta la próxima renovación. Para eso sigue el rechazo
+  del servidor a una `fecha_entrada` más de 5 minutos en el futuro (SPEC-ALE186-014).
 - **El límite de intentos del login vive en memoria** (SPEC-ALE186-016). Se hizo antes de
   las migraciones, cuando una tabla nueva exigía `down -v`; desde SPEC-ALE186-019 moverlo a la
   base es posible, pero solo hace falta si hay más de una instancia. El costo: se pierde al reiniciar el servidor (quien
@@ -651,9 +656,11 @@ implemente una spec de las de abajo actualiza su línea cuando la mergee.
 
 - **Después de cada `git pull`, `npm run migrar --workspace backend`** (SPEC-ALE186-019, hecho).
   Si a la base le falta una migración, el backend no arranca.
-- **El reloj de la tablet** (SPEC-ALE186-015, hecho del lado del backend): `login` y `renovar`
-  devuelven `ahora`, la hora del servidor. Falta que la tablet mida su desfase y lo aplique al
-  registrar (ver "El reloj de la tablet" más arriba).
+- **El reloj de la tablet** (SPEC-ALE186-015 en el backend, SPEC-KRILINXI-012 en el frontend,
+  hecho): la tablet mide su desfase con el `ahora` de `login` y `renovar` y lo aplica a las
+  fechas que registra. Si se cambia el nombre o el formato de `ahora`, hay que avisar al
+  frontend: sin él, la tablet se queda con el último desfase que midió y deja de recalibrarse,
+  sin decir nada.
 - **CORS restringido** (SPEC-ALE186-023, hecho): la API acepta pedidos del navegador solo desde
   los orígenes de `CORS_ORIGENES` en el `.env`. Si no está, vale `http://localhost:5173`, así que
   con el frontend en su puerto de siempre no hay que hacer nada. Si corre en otro puerto o

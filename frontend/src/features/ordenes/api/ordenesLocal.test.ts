@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { simularApi } from '../../../test/apiFalsa';
 import { baseLocalDePrueba } from '../../../test/baseLocalDePrueba';
+import { HORA_DEL_SERVIDOR_ISO, tabletConRelojCorrido } from '../../../test/reloj';
 import type { DatosRopa, QuienRegistra } from '../types';
 import { MENSAJES, registrarRopa } from './ordenesLocal';
 
@@ -189,5 +190,20 @@ describe('Registrar ropa sin conexión — SPEC-KRILINXI-006', () => {
       await registrarRopa(control.base, QUIEN, datosRopa({ adelanto: '10', metodoAdelanto: 'EFECTIVO' })),
     ).toMatchObject({ tipo: 'registrada' });
     expect(servidor.pedidos).toEqual([]);
+  });
+});
+
+describe('Registrar ropa con la hora del servidor — SPEC-KRILINXI-012', () => {
+  it('con el reloj 10 minutos adelantado, sin internet, la orden y el adelanto llevan la hora del servidor', async () => {
+    simularApi(() => 'sin-conexion');
+    tabletConRelojCorrido(10 * 60_000);
+    const { control } = await baseLocalDePrueba();
+
+    await registrarRopa(control.base, QUIEN, datosRopa({ adelanto: '20', metodoAdelanto: 'EFECTIVO' }));
+
+    const [orden] = await control.base.consultar('SELECT fecha_entrada FROM ordenes');
+    const [pago] = await control.base.consultar('SELECT fecha_pago FROM pagos');
+    expect(orden?.fecha_entrada).toBe(HORA_DEL_SERVIDOR_ISO);
+    expect(pago?.fecha_pago).toBe(HORA_DEL_SERVIDOR_ISO);
   });
 });

@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-012
 name: Corregir el reloj de la tablet con la hora del servidor
 slug: reloj-tablet
-status: draft
+status: finished
 owner: krilinxito
 created: 2026-10-16
 scope:
@@ -17,7 +17,14 @@ scope:
 priority: medium
 depends_on:
   - SPEC-KRILINXI-010
-tests: []
+tests:
+  - frontend/src/features/auth/relojDeLaTablet.test.tsx
+  - frontend/src/features/entregas/api/entregasLocal.test.ts
+  - frontend/src/features/ordenes/api/ordenesLocal.test.ts
+  - frontend/src/features/ordenes/api/ropaLocal.test.ts
+  - frontend/src/lib/reloj.test.ts
+  - frontend/src/test/arquitectura.test.ts
+  - frontend/src/test/reloj.ts
 ---
 
 ## Descripción
