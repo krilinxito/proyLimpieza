@@ -4,7 +4,8 @@ import { baseLocalDePrueba } from '../../../test/baseLocalDePrueba';
 import { clienteDePrueba, ordenDePrueba, SUCURSAL_DE_PRUEBA } from '../../../test/filasDePrueba';
 import { subirAceptando, subirRechazando } from '../../../test/rechazos';
 import { MENSAJES } from '../../ordenes/api/ordenesLocal';
-import { descartarRegistro, guardarCorreccion, MENSAJES_CORRECCION, prepararCorreccion } from './corregirLocal';
+import { MENSAJES_CORRECCION, prepararCorreccion } from '../correccion';
+import { descartarRegistro, guardarCorreccion } from './corregirLocal';
 import { listarParaCorregir, type RegistroParaCorregir } from './paraCorregirLocal';
 
 const BOLETA_REPETIDA = 'Ese número de boleta ya está usado en esta sucursal. Revisá el papel y volvé a escribirlo.';

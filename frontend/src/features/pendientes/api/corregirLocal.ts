@@ -20,106 +20,24 @@
  *    corrige aquí: si el servidor lo rechazó es que la ropa ya está en otro estado, y eso se
  *    mira y se rehace desde "Ropa en el local".
  *
- * Las validaciones son las mismas que en la pantalla de origen, con sus mismos textos
+ * Qué campos se corrigen de cada tabla está en `../correccion.ts`. Las validaciones son las mismas que en la pantalla de origen, con sus mismos textos
  * (`validarRopa`, los mensajes de clientes, cobros y entregas).
  */
 import type { BaseLocal, Fila, Sentencia } from '../../../lib/powersync';
-import { aDecimal, desdeDecimal, parsearMonto, type Centavos } from '../../../lib/money';
+import { aDecimal, parsearMonto, type Centavos } from '../../../lib/money';
 import { esMetodoPago, esTipoRetiro } from '../../../lib/dominio';
 import { buscarPorTelefono, FALTA_NOMBRE, FALTA_TELEFONO } from '../../clientes/api/clientesLocal';
 import { normalizarTelefono } from '../../clientes/telefono';
 import { MENSAJES_ENTREGA } from '../../entregas/api/entregasLocal';
 import { MENSAJES_ACCION } from '../../ordenes/api/ropaLocal';
 import { validarRopa } from '../../ordenes/api/ordenesLocal';
-import type { RegistroParaCorregir } from './paraCorregirLocal';
-
-/** Cómo se escribe cada dato en el formulario. */
-export type TipoCampo = 'texto' | 'monto' | 'fecha' | 'metodo' | 'retiro';
-
-/** Un dato que el empleado puede corregir. `clave` es la columna de la base. */
-export type Campo = { clave: string; etiqueta: string; tipo: TipoCampo };
-
-/** Lo que muestra "Corregir": el formulario, o por qué este registro no se corrige aquí. */
-export type Correccion =
-  | { tipo: 'formulario'; campos: Campo[]; valores: Record<string, string> }
-  | { tipo: 'sin-formulario'; mensaje: string };
-
-export type ResultadoCorreccion =
-  | { tipo: 'guardada' }
-  | { tipo: 'invalida'; errores: Record<string, string> }
-  | { tipo: 'no-se-puede'; mensaje: string };
-
-export const MENSAJES_CORRECCION = {
-  estado:
-    'Un cambio de estado no se corrige aquí: puede que la ropa ya esté en otro paso. Buscá la boleta en "Ropa en el local", fijate cómo está y, si hace falta, hacé el cambio de nuevo desde ahí.',
-  desconocido: 'Este registro no se puede corregir desde aquí. Avisale al encargado o descartalo.',
-  sinCambios: 'No cambiaste ningún dato. Corregí lo que está mal o descartá el registro.',
-  yaNoEsta: 'Ese registro ya no está en esta tablet. Descartalo y, si hace falta, volvé a hacerlo.',
-  telefonoOcupado: (nombre: string) => `Ese teléfono ya es de ${nombre}. Revisalo y volvé a escribirlo.`,
-} as const;
-
-/** Los datos que se corrigen de cada tabla, con las mismas etiquetas que su pantalla de origen. */
-const CAMPOS: Record<string, readonly Campo[]> = {
-  ordenes: [
-    { clave: 'numero_boleta', etiqueta: 'Número de la boleta', tipo: 'texto' },
-    { clave: 'descripcion', etiqueta: 'Qué ropa deja', tipo: 'texto' },
-    { clave: 'precio_total', etiqueta: 'Precio (Bs)', tipo: 'monto' },
-    { clave: 'fecha_estimada_salida', etiqueta: 'Para cuándo estará lista (si se sabe)', tipo: 'fecha' },
-  ],
-  clientes: [
-    { clave: 'nombre', etiqueta: 'Nombre completo', tipo: 'texto' },
-    { clave: 'telefono', etiqueta: 'Teléfono', tipo: 'texto' },
-    { clave: 'carnet', etiqueta: 'Carnet (si lo da)', tipo: 'texto' },
-  ],
-  pagos: [
-    { clave: 'monto', etiqueta: 'Cuánto paga (Bs)', tipo: 'monto' },
-    { clave: 'metodo', etiqueta: '¿Cómo paga?', tipo: 'metodo' },
-  ],
-  entregas: [
-    { clave: 'tipo_retiro', etiqueta: '¿El cliente trae la boleta?', tipo: 'retiro' },
-    { clave: 'retirado_por_nombre', etiqueta: 'Nombre de quien retira', tipo: 'texto' },
-    { clave: 'retirado_por_carnet', etiqueta: 'Carnet de quien retira', tipo: 'texto' },
-    { clave: 'precio_final', etiqueta: 'Precio final (Bs)', tipo: 'monto' },
-  ],
-};
+import { CAMPOS, MENSAJES_CORRECCION, paraFormulario, prepararCorreccion, type ResultadoCorreccion } from '../correccion';
+import type { RegistroParaCorregir } from '../types';
 
 // Los nombres de tabla y columna no pueden ir como `?`: van en el texto del SQL. Por eso solo
-// se aceptan las tablas de arriba y columnas con forma de columna (CLAUDE.md §5: nunca
+// se aceptan las tablas de `CAMPOS` y columnas con forma de columna (CLAUDE.md §5: nunca
 // concatenar un valor; esto no es un valor, y aun así se comprueba).
 const COLUMNA = /^[a-z_]+$/;
-
-/** Un dato guardado, como se escribe en el formulario. */
-function paraFormulario(tipo: TipoCampo, valor: unknown): string {
-  if (typeof valor !== 'string') return '';
-  if (tipo === 'monto') {
-    try {
-      // "25.50" → "25,50": como lo escribe el empleado, sin punto de miles para que
-      // `parsearMonto` lo vuelva a aceptar tal cual.
-      return aDecimal(desdeDecimal(valor)).replace('.', ',');
-    } catch {
-      return valor;
-    }
-  }
-  return valor;
-}
-
-/** Los campos que se muestran: todos en un alta, y en una edición solo los que se cambiaron. */
-function camposDe(registro: RegistroParaCorregir): Campo[] {
-  const campos = CAMPOS[registro.tabla] ?? [];
-  return registro.operacion === 'PUT' ? [...campos] : campos.filter((c) => c.clave in registro.datos);
-}
-
-/** Lo que muestra "Corregir" para este registro, con los datos que se habían enviado. */
-export function prepararCorreccion(registro: RegistroParaCorregir): Correccion {
-  const editable = registro.registroId !== '' && (registro.operacion === 'PUT' || registro.operacion === 'PATCH');
-  const campos = editable ? camposDe(registro) : [];
-  if (campos.length === 0) {
-    const esEstado = registro.tabla === 'ordenes' && 'estado' in registro.datos;
-    return { tipo: 'sin-formulario', mensaje: esEstado ? MENSAJES_CORRECCION.estado : MENSAJES_CORRECCION.desconocido };
-  }
-  const valores = Object.fromEntries(campos.map((c) => [c.clave, paraFormulario(c.tipo, registro.datos[c.clave])]));
-  return { tipo: 'formulario', campos, valores };
-}
 
 function leerMonto(texto: string): Centavos | null {
   try {
