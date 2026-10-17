@@ -3,11 +3,11 @@ import { FormularioIngreso } from '../features/auth/components/FormularioIngreso
 import { AvisoSoloEmpleado } from '../features/auth/components/AvisoSoloEmpleado';
 import { PantallaClientes } from '../features/clientes/components/PantallaClientes';
 import { PantallaEntregar } from '../features/entregas/components/PantallaEntregar';
+import { PantallaEstadisticas } from '../features/estadisticas/components/PantallaEstadisticas';
 import { PantallaRegistrarRopa } from '../features/ordenes/components/PantallaRegistrarRopa';
 import { PantallaRopa } from '../features/ordenes/components/PantallaRopa';
 import { PantallaParaCorregir } from '../features/pendientes/components/PantallaParaCorregir';
 import { ROLES, type Rol } from '../lib/dominio';
-import { EnConstruccion } from './EnConstruccion';
 import { Inicio } from './Inicio';
 import { Pantalla } from './Pantalla';
 
@@ -138,7 +138,11 @@ export const RUTAS: readonly Ruta[] = [
     titulo: 'Estadísticas',
     enMenu: true,
     acceso: SOLO_ADMIN,
-    elemento: <EnConstruccion titulo="Estadísticas" />,
+    elemento: (
+      <Pantalla titulo="Estadísticas">
+        <PantallaEstadisticas />
+      </Pantalla>
+    ),
   },
 ];
 

@@ -29,8 +29,9 @@ function esObjeto(valor: unknown): valor is Objeto {
 }
 const esTexto = (valor: unknown): valor is string => typeof valor === 'string';
 const esNumero = (valor: unknown): valor is number => typeof valor === 'number' && Number.isFinite(valor);
-// Un monto del servidor: "125.50". Ni un número de JavaScript ni otro formato.
-const esMonto = (valor: unknown): valor is string => esTexto(valor) && /^-?\d+\.\d{2}$/.test(valor);
+// Un monto del servidor: "125.50". Ni un número de JavaScript ni otro formato, ni negativo:
+// en el panel no hay montos negativos, y `desdeDecimal` (para mostrarlos) no los acepta.
+const esMonto = (valor: unknown): valor is string => esTexto(valor) && /^\d+\.\d{2}$/.test(valor);
 const esTramo = (valor: unknown): valor is Tramo => TRAMOS.some((t) => t === valor);
 
 /** Cada elemento de la lista, con la forma pedida; si uno no la tiene, la lista entera no vale. */
