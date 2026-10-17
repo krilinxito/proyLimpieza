@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-023
 name: 'Marco de la app: barra, menú y pie'
 slug: marco-app
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-17
 scope:
@@ -20,7 +20,13 @@ scope:
 priority: high
 depends_on:
   - SPEC-KRILINXI-022
-tests: []
+tests:
+  - frontend/src/App.test.tsx
+  - frontend/src/components/sinDatos.test.ts
+  - frontend/src/features/entregas/components/PantallaEntregar.test.tsx
+  - frontend/src/features/pendientes/components/PantallaParaCorregir.test.tsx
+  - frontend/src/pages/Marco.test.tsx
+  - frontend/src/pages/rutas.test.ts
 ---
 
 ## Descripción
