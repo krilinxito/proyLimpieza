@@ -1,5 +1,6 @@
 import { useEffect, useId } from 'react';
 import { Boton } from './Boton';
+import { Icono } from './iconos';
 
 type Props = {
   abierto: boolean;
@@ -51,7 +52,7 @@ export function ModalConfirmacion({
 
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center bg-slate-900/60 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-texto/60 p-4 backdrop-blur-sm"
       onClick={(evento) => {
         // Solo el fondo: un click dentro del cuadro también burbujea hasta aquí.
         if (evento.target === evento.currentTarget) onCancelar();
@@ -62,12 +63,18 @@ export function ModalConfirmacion({
         aria-modal="true"
         aria-labelledby={`${id}-titulo`}
         aria-describedby={`${id}-mensaje`}
-        className="w-full max-w-lg rounded-lg bg-white p-6"
+        className="w-full max-w-lg rounded-2xl border border-borde-suave bg-superficie p-6 shadow-2xl"
       >
-        <h2 id={`${id}-titulo`} className="text-2xl font-bold text-slate-900">
-          {titulo}
+        {/* En lo que no tiene vuelta atrás, el ícono de advertencia refuerza al botón rojo. */}
+        <h2 id={`${id}-titulo`} className="flex items-start gap-3 text-2xl font-bold text-texto">
+          {peligroso && (
+            <span className="text-peligro-texto">
+              <Icono nombre="advertencia" tamano="size-8" />
+            </span>
+          )}
+          <span>{titulo}</span>
         </h2>
-        <p id={`${id}-mensaje`} className="mt-3 text-xl text-slate-700">
+        <p id={`${id}-mensaje`} className="mt-3 text-xl text-texto-suave">
           {mensaje}
         </p>
         <div className="mt-6 grid gap-3">

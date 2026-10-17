@@ -87,3 +87,36 @@ describe('Boton — SPEC-KRILINXI-002', () => {
     expect(accion).not.toHaveBeenCalled();
   });
 });
+
+describe('Boton con el tema — SPEC-KRILINXI-022', () => {
+  it('con teclado muestra un anillo de foco', () => {
+    render(<Boton>Cobrar</Boton>);
+    expect(screen.getByRole('button', { name: 'Cobrar' })).toHaveClass('focus-visible:outline-3', 'focus-visible:outline-foco');
+  });
+
+  it('deshabilitado se distingue por algo más que el color: el borde punteado y el cursor', () => {
+    render(<Boton disabled>Cobrar</Boton>);
+    expect(screen.getByRole('button', { name: 'Cobrar' })).toHaveClass('disabled:border-dashed', 'disabled:cursor-not-allowed');
+  });
+
+  it.each(['primario', 'secundario', 'peligro'] as const)('la variante %s mantiene el alto y el texto grandes', (variante) => {
+    render(<Boton variante={variante}>Cobrar</Boton>);
+    expect(screen.getByRole('button', { name: 'Cobrar' })).toHaveClass('min-h-14', 'text-xl');
+  });
+
+  it('con ícono, el nombre del botón sigue siendo solo su texto', () => {
+    render(<Boton icono="cobrar">Cobrar</Boton>);
+    const boton = screen.getByRole('button', { name: 'Cobrar' });
+    expect(boton.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('el ícono se queda mientras está ocupado, y el texto cambia al de espera', () => {
+    render(
+      <Boton icono="cobrar" ocupado textoOcupado="Cobrando…">
+        Cobrar
+      </Boton>,
+    );
+    const boton = screen.getByRole('button', { name: 'Cobrando…' });
+    expect(boton.querySelector('svg')).not.toBeNull();
+  });
+});

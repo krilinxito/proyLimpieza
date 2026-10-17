@@ -1,28 +1,30 @@
+import { Aviso } from './Aviso';
+
 /**
  * Los avisos de las pantallas del admin que escriben directo a la API — SPEC-KRILINXI-017.
  * Compartidos por el personal y las sucursales, para que digan lo mismo con las mismas palabras.
  */
 
-/** Sin red: los botones de cambio están deshabilitados y esto dice por qué. */
+/**
+ * Sin red: los botones de cambio están deshabilitados y esto dice por qué. Es información y no
+ * advertencia (SPEC-KRILINXI-022): no pasó nada malo, y un `alert` interrumpiría al lector de
+ * pantalla cada vez que la pantalla se abre sin internet.
+ */
 export function AvisoSinRed() {
   return (
-    <p role="status" className="mt-6 rounded-lg border-2 border-amber-600 bg-amber-50 p-4 text-xl text-amber-900">
-      Para hacer cambios hace falta internet. Lo que está en la lista se puede mirar igual.
-    </p>
+    <div className="mt-6">
+      <Aviso tipo="informacion">Para hacer cambios hace falta internet. Lo que está en la lista se puede mirar igual.</Aviso>
+    </div>
   );
 }
 
 /** Cómo terminó el último cambio: bien (verde) o mal (rojo). */
 export function AvisoResultado({ aviso }: { aviso: { tipo: 'bien' | 'mal'; texto: string } | null }) {
   if (!aviso) return null;
-  return aviso.tipo === 'bien' ? (
-    <p role="status" className="mt-6 rounded-lg bg-green-50 p-4 text-xl text-green-900">
-      {aviso.texto}
-    </p>
-  ) : (
-    <p role="alert" className="mt-6 rounded-lg bg-red-50 p-4 text-xl text-red-800">
-      {aviso.texto}
-    </p>
+  return (
+    <div className="mt-6">
+      <Aviso tipo={aviso.tipo === 'bien' ? 'exito' : 'error'}>{aviso.texto}</Aviso>
+    </div>
   );
 }
 

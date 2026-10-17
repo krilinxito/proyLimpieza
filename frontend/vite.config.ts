@@ -25,8 +25,9 @@ export default defineConfig({
       devOptions: { enabled: false },
       injectManifest: {
         // Todo lo que arma el build: HTML, JS (también los workers de PowerSync), CSS, los
-        // WASM, los íconos y el manifest. Con esto guardado, la app abre sin conexión.
-        globPatterns: ['**/*.{html,js,css,wasm,png,webmanifest}'],
+        // WASM, los íconos, el manifest y la letra (SPEC-KRILINXI-022). Con esto guardado, la app
+        // abre sin conexión, y con su letra: sin el woff2, sin internet caería a la del sistema.
+        globPatterns: ['**/*.{html,js,css,wasm,png,webmanifest,woff2}'],
         maximumFileSizeToCacheInBytes: TOPE_POR_ARCHIVO,
         // Un script clásico, no un módulo: lo entienden todos los navegadores de tablet.
         rollupFormat: 'iife',
