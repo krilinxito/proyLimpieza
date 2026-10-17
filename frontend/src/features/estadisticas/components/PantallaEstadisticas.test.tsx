@@ -232,19 +232,20 @@ describe('Panel de estadísticas: volumen, productividad y clientes — SPEC-KRI
     expect(await within(clientes).findByText('Página 2 de 3')).toBeInTheDocument();
   });
 
-  it('cambiar el período vuelve a pedir las tres, y los clientes desde la página 1', async () => {
+  it('cambiar el período o la sucursal vuelve a pedir las tres, y los clientes desde la página 1', async () => {
     const servidor = simularEstadisticas({ clientes: { status: 200, data: clientesDePrueba({ total: 45 }) } });
     await abrirPanel();
     const clientes = await screen.findByRole('region', { name: 'Clientes atendidos' });
     fireEvent.click(await within(clientes).findByRole('button', { name: 'Siguientes' }));
     await within(clientes).findByText('Página 2 de 3');
 
+    fireEvent.click(screen.getByRole('radio', { name: 'Centro' }));
     fireEvent.change(screen.getByLabelText('Desde'), { target: { value: '2026-10-01' } });
     fireEvent.change(screen.getByLabelText('Hasta'), { target: { value: '2026-10-15' } });
     fireEvent.click(screen.getByRole('button', { name: 'Ver estas fechas' }));
 
     await screen.findByRole('heading', { name: 'Clientes atendidos del 01/10/2026 al 15/10/2026' });
-    const elegido = { desde: '2026-10-01', hasta: '2026-10-15' };
+    const elegido = { desde: '2026-10-01', hasta: '2026-10-15', sucursal_id: SUCURSAL_CENTRO };
     const ultimoDe = (ruta: string) => servidor.pedidos.filter((p) => p.ruta === ruta).at(-1)?.parametros;
     await waitFor(() => expect(ultimoDe('/estadisticas/clientes')).toEqual({ ...elegido, pagina: 1, por_pagina: 20 }));
     expect(ultimoDe('/estadisticas/volumen')).toEqual(elegido);
