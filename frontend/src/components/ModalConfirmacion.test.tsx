@@ -76,3 +76,18 @@ describe('ModalConfirmacion — SPEC-KRILINXI-002', () => {
     expect(onCancelar).not.toHaveBeenCalled();
   });
 });
+
+describe('ModalConfirmacion con el tema — SPEC-KRILINXI-022', () => {
+  it('es una tarjeta sobre un fondo oscurecido', () => {
+    renderAnular();
+    const dialogo = screen.getByRole('dialog');
+    expect(dialogo).toHaveClass('bg-superficie', 'rounded-2xl');
+    expect(dialogo.parentElement).toHaveClass('bg-texto/60');
+  });
+
+  it('si es peligroso, avisa con el ícono, y el título se sigue leyendo igual', () => {
+    renderAnular();
+    const dialogo = screen.getByRole('dialog', { name: '¿Anular la orden 001234?' });
+    expect(dialogo.querySelector('h2 svg')).toHaveAttribute('aria-hidden', 'true');
+  });
+});

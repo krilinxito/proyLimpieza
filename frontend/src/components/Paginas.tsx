@@ -24,7 +24,7 @@ export function Paginas({ pagina, total, porPagina, irAPagina, nombre }: Props) 
       <Boton variante="secundario" onClick={() => irAPagina(pagina - 1)} disabled={pagina <= 1}>
         Anteriores
       </Boton>
-      <p className="text-xl text-slate-800">
+      <p className="text-xl text-texto">
         Página {pagina} de {paginas}
       </p>
       <Boton variante="secundario" onClick={() => irAPagina(pagina + 1)} disabled={pagina >= paginas}>

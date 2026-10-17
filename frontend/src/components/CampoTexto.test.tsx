@@ -53,3 +53,20 @@ describe('CampoTexto — SPEC-KRILINXI-002', () => {
     expect(screen.getByLabelText('Teléfono')).toHaveAttribute('inputmode', 'numeric');
   });
 });
+
+describe('CampoTexto con el tema — SPEC-KRILINXI-022', () => {
+  it('el error lleva el ícono de alerta, en el tono de peligro, y se sigue leyendo solo su texto', () => {
+    render(<CampoTexto etiqueta="Teléfono" value="" onChange={() => {}} error="Escribí el teléfono del cliente." />);
+    const input = screen.getByLabelText('Teléfono');
+    expect(input).toHaveClass('border-peligro');
+    expect(input).toHaveAccessibleDescription('Escribí el teléfono del cliente.');
+    const error = screen.getByText('Escribí el teléfono del cliente.').closest('p');
+    expect(error).toHaveClass('text-peligro-texto');
+    expect(error?.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('con teclado, el campo muestra el anillo de foco', () => {
+    render(<CampoTexto etiqueta="Nombre" value="" onChange={() => {}} />);
+    expect(screen.getByLabelText('Nombre')).toHaveClass('focus-visible:outline-foco', 'border-borde');
+  });
+});
