@@ -69,6 +69,13 @@ export default defineConfig({
     // Los tests no leen el .env del desarrollador: si dependieran de él, pasarían o
     // fallarían según la máquina. El módulo de entorno se prueba con valores explícitos.
     env: { VITE_API_URL: 'http://localhost:4000', VITE_POWERSYNC_URL: 'http://localhost:8080' },
+    // La mitad de los núcleos, no todos (SPEC-KRILINXI-019). Cada archivo de pantalla abre su
+    // propio SQLite y monta la App entera; con un proceso por núcleo, la primera lectura de la
+    // base local a veces pasaba el tope de 1 s de `findBy…` y el test fallaba sin estar mal (la
+    // mitad de las corridas completas, en una máquina de 16 núcleos). Con la mitad: 0 de 8, y la
+    // suite tarda casi lo mismo, porque esos procesos de más solo competían por la CPU. Es mejor
+    // que subir los tiempos de espera: un test que espera lo que no corresponde sigue fallando.
+    maxWorkers: '50%',
     // Dos grupos que corren uno detrás del otro (SPEC-KRILINXI-011). El test del build compila
     // la app entera con todos los núcleos; si corriera a la vez que los de pantalla, les robaría
     // CPU y a los que esperan un texto con el tope de 1 s se les acabaría el tiempo.

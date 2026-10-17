@@ -1,5 +1,5 @@
 /**
- * Doble de la base local para los tests — SPEC-KRILINXI-004
+ * Doble de la base local para los tests — SPEC-KRILINXI-004 (modo lento: SPEC-KRILINXI-019)
  *
  * `baseLocalDePrueba()` es **la base de PowerSync de verdad**, con el mismo schema y la
  * misma capa de acceso (`envolver`) que el navegador. Lo único que cambia es el driver:
@@ -35,6 +35,44 @@ import { onTestFinished } from 'vitest';
 import { envolver } from '../lib/powersync/control';
 import { SCHEMA_LOCAL, TABLAS } from '../lib/powersync/schema';
 
+/**
+ * Modo lento — SPEC-KRILINXI-019. Con `LENTO_MS=200 npx vitest run`, cada consulta de la base de
+ * prueba, y cada aviso de que cambió algo (`observarEstado`), tarda **al azar** entre 0 y eso.
+ *
+ * Al azar y no parejo, a propósito: una carrera es entre dos cosas que llegan por caminos
+ * distintos (la lista y el aviso de conexión, la lista del local y una búsqueda). Con una demora
+ * pareja llegan en el mismo orden de siempre y la carrera no se ve; al azar, en algunas corridas
+ * llegan al revés, y un test que mira con `getBy…` algo que todavía no llegó falla. Correlo varias
+ * veces: cada corrida es un orden distinto. Un test que espera bien lo que afirma pasa siempre.
+ * Sin la variable, no cambia nada.
+ */
+const LENTO_MS = Number(process.env.LENTO_MS ?? 0);
+
+const demora = () => new Promise((r) => setTimeout(r, Math.random() * LENTO_MS));
+
+function conLentitud(control: ReturnType<typeof envolver>): ReturnType<typeof envolver> {
+  if (!(LENTO_MS > 0)) return control;
+  const { base } = control;
+  return {
+    ...control,
+    base: {
+      ...base,
+      consultar: async (sql, parametros) => {
+        await demora();
+        return base.consultar(sql, parametros);
+      },
+      // Los avisos se demoran, pero en fila: llegan tarde y en el mismo orden, como en la base
+      // de verdad. Desordenarlos daría fallos que en la tablet no pueden pasar.
+      observarEstado: (alCambiar) => {
+        let fila: Promise<unknown> = Promise.resolve();
+        return base.observarEstado((estado) => {
+          fila = fila.then(demora).then(() => alCambiar(estado));
+        });
+      },
+    },
+  };
+}
+
 export async function baseLocalDePrueba() {
   const carpeta = mkdtempSync(join(tmpdir(), 'lavanderia-test-'));
   const db = new PowerSyncDatabase({
@@ -68,6 +106,7 @@ export async function baseLocalDePrueba() {
     }
   }
 
-  return { control: envolver(db, 'http://powersync.invalid'), db, sembrar };
+  const control = envolver(db, 'http://powersync.invalid');
+  return { control: conLentitud(control), db, sembrar };
 }
 

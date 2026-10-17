@@ -89,7 +89,9 @@ describe('Corregir lo que no se pudo guardar — SPEC-KRILINXI-013', () => {
   it('corregir abre los datos enviados; guardado sin internet, sale de la lista y del aviso', async () => {
     const { abrir } = await abrirConUnaBoletaRechazada();
     await abrir();
-    expect(screen.getByRole('link', { name: /1 registro no se pudo guardar/ })).toBeInTheDocument();
+    // El aviso lo calcula otro suscriptor de la base, aparte de la lista: que la lista ya esté no
+    // dice que el aviso también. Se espera a él (SPEC-KRILINXI-019 lo encontró con LENTO_MS).
+    expect(await screen.findByRole('link', { name: /1 registro no se pudo guardar/ })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Corregir' }));
     const boleta = screen.getByLabelText('Número de la boleta');
