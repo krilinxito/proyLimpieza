@@ -162,6 +162,11 @@ pendiente** (`DESDE_SIEMPRE`), porque esas dos filtran por `fecha_entrada`. Las 
 filtro sí salen de la base local, y un test de arquitectura vigila que nada más de la feature
 la toque. Para los tests, `test/estadisticasDePrueba.ts` arma respuestas válidas y
 `simularEstadisticas()` las sirve; el servidor falso ahora anota los `parametros` de la query.
+SPEC-KRILINXI-016 completó el panel con el volumen por día, lo que hizo cada persona (una fila
+por sucursal del registro) y los clientes atendidos, paginados aparte. Sin fechas elegidas, esas
+tres miran los **últimos 30 días**. Lo que se pide online pasa por `usePedidoOnline`
+(`features/estadisticas/hooks/`): cargando, sin conexión, error, la recarga con `online` y el
+descarte de la respuesta vieja, en un solo lugar.
 
 SPEC-KRILINXI-012 corrige el reloj de la tablet: `lib/reloj` guarda el desfase con la hora
 del servidor que traen `login` y `renovar`, y `horaOficial()` es de donde salen

@@ -8,6 +8,7 @@ created: 2026-10-16
 scope:
   - frontend/src/features/estadisticas/**
   - frontend/src/test/**
+  - CLAUDE.md
 priority: medium
 depends_on:
   - SPEC-KRILINXI-015
@@ -31,6 +32,8 @@ Usa el mismo patrón online, los mismos filtros de período y sucursal y el mism
 - [ ] El sistema no muestra palabras del sistema (sinJerga) en las secciones nuevas
 
 ## Notas
+
+**Decidido al implementar:** sin fechas elegidas, volumen, productividad y clientes miran los **últimos 30 días** contando hoy (los mismos que usa el backend sin `desde`), no solo hoy: con un día, el volumen sería una barra y la lista de clientes casi nada. Con fechas elegidas, usan las mismas que el resto del panel.
 
 <!--
 Convención de trazabilidad: todo test relacionado con esta spec debe llevar su id
