@@ -153,3 +153,75 @@ describe('Pantalla de clientes: el idioma del mostrador — SPEC-KRILINXI-005', 
     sinJerga();
   });
 });
+
+describe('Pantalla de clientes: cambiar datos — SPEC-KRILINXI-014', () => {
+  /** Rosa encontrada y el formulario de cambiar datos abierto. */
+  async function abrirEdicion() {
+    const prueba = await abrirClientes();
+    await buscar('70123456');
+    fireEvent.click(await screen.findByRole('button', { name: 'Cambiar datos' }));
+    await screen.findByRole('form', { name: 'Cambiar datos del cliente' });
+    return prueba;
+  }
+
+  it('el cliente encontrado tiene "Cambiar datos", que abre el formulario con su nombre y teléfono', async () => {
+    await abrirEdicion();
+
+    expect(screen.getByLabelText('Nombre completo')).toHaveValue('Rosa Quispe');
+    expect(screen.getByLabelText('Teléfono')).toHaveValue('70123456');
+    sinJerga();
+  });
+
+  it('guarda sin internet, muestra los datos nuevos al momento y deja el cambio para subir', async () => {
+    const { db, servidor } = await abrirEdicion();
+    escribir('Nombre completo', 'Rosa Quispe Mamani');
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+    expect(await screen.findByText('Datos del cliente guardados.')).toBeInTheDocument();
+    expect(await datosMostrados()).toContainEqual(['Nombre', 'Rosa Quispe Mamani']);
+    // Nada fue al servidor: queda en la cola, como una edición con solo el nombre.
+    expect(servidor.pedidos).toEqual([]);
+    const cola = await db.getCrudBatch();
+    expect(cola?.crud.map((c) => [c.op, c.opData])).toEqual([['PATCH', { nombre: 'Rosa Quispe Mamani' }]]);
+    sinJerga();
+  });
+
+  it('el teléfono se guarda normalizado', async () => {
+    await abrirEdicion();
+    escribir('Teléfono', '70 99-88 77');
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+    expect(await datosMostrados()).toContainEqual(['Teléfono', '70998877']);
+  });
+
+  it('sin ningún cambio no guarda nada, y lo dice', async () => {
+    const { db } = await abrirEdicion();
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+    expect(await screen.findByText('No cambiaste ningún dato: quedó como estaba.')).toBeInTheDocument();
+    expect(await db.getCrudBatch()).toBeNull();
+  });
+
+  it('un teléfono de otro cliente se avisa en el campo, diciendo de quién es', async () => {
+    const { db, sembrar } = await abrirClientes();
+    await sembrar('clientes', [{ id: randomUUID(), nombre: 'Juan Mamani', telefono: '70555555', carnet: null }]);
+    await buscar('70123456');
+    fireEvent.click(await screen.findByRole('button', { name: 'Cambiar datos' }));
+    escribir('Teléfono', '70555555');
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+    expect(await screen.findByText('Ese teléfono ya es de Juan Mamani. Revisalo y volvé a escribirlo.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Teléfono')).toHaveAttribute('aria-invalid', 'true');
+    expect(await db.getCrudBatch()).toBeNull();
+    sinJerga();
+  });
+
+  it('Cancelar vuelve al cliente sin guardar nada', async () => {
+    const { db } = await abrirEdicion();
+    escribir('Nombre completo', 'Otra');
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+    expect(await datosMostrados()).toContainEqual(['Nombre', 'Rosa Quispe']);
+    expect(await db.getCrudBatch()).toBeNull();
+  });
+});
