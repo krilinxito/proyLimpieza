@@ -173,6 +173,12 @@ local y las altas, ediciones, bajas y cierres van **directo a la API** con `envi
 botones se deshabilitan (`hooks/useEnLinea`); después de guardar, el aviso dice que la lista puede
 tardar unos segundos en mostrarlo. El teléfono de una cuenta no baja a la tablet: al editar arranca
 vacío. Una sucursal cerrada se puede volver a abrir. `usePedidoOnline` vive en `src/hooks/`.
+SPEC-KRILINXI-018 agregó `/quien-hizo-que` (solo ADMIN): la auditoría, pedida online con
+`usePedidoOnline`, paginada, con "Solo lo que hay que revisar" a la vista y el resto de los filtros
+en "Buscar con más detalle". Cada registro se dice en palabras (`features/auditoria/describir.ts`);
+clientes, personal y sucursales se nombran con la base local, pero ropa, cobros y entregas solo por su
+tipo: el admin no los tiene en la tablet. Sin fechas, los últimos 30 días. Con eso, todo lo que hace el
+backend tiene su pantalla en el frontend.
 
 SPEC-KRILINXI-012 corrige el reloj de la tablet: `lib/reloj` guarda el desfase con la hora
 del servidor que traen `login` y `renovar`, y `horaOficial()` es de donde salen
@@ -667,6 +673,11 @@ Nada se implementa sin una spec aprobada.
   `conAuditoria`, no queda auditada. La semilla del primer admin no se audita a propósito
   (no hay sesión de quien atribuirla).
 
+- **La auditoría no dice qué boleta** (SPEC-KRILINXI-018). `GET /api/auditoria` trae la tabla y el
+  id del registro, y el admin no tiene en su tablet la ropa, los cobros ni las entregas, así que
+  `/quien-hizo-que` dice "Registró ropa · Centro" sin el número de boleta. El arreglo es del backend:
+  que cada registro traiga un resumen (boleta y cliente), armado en la misma consulta. Va en una spec
+  propia (`auditoria-resumen`); el frontend solo tendría que mostrarlo.
 - **Un test intermitente en el frontend** (anotado en SPEC-KRILINXI-016, 2026-10-16). "con boleta
   y pagando lo que falta: confirma, guarda entrega y pago…" (`PantallaEntregar.test.tsx`,
   SPEC-KRILINXI-009) falló 2 veces en unas 10 corridas completas de `npm test`, tardando ~3 s, y
