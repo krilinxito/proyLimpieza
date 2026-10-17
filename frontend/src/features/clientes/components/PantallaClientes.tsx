@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Aviso } from '../../../components/Aviso';
 import { Boton } from '../../../components/Boton';
 import { CampoTexto } from '../../../components/CampoTexto';
 import { useClientes } from '../hooks/useClientes';
@@ -79,22 +80,26 @@ export function PantallaClientes({ alElegir }: Props = {}) {
       </form>
 
       {errorGeneral && (
-        <p role="alert" className="mt-4 rounded-lg bg-red-50 p-4 text-xl text-red-800">
-          {errorGeneral}
-        </p>
+        <div className="mt-4">
+          <Aviso tipo="error">{errorGeneral}</Aviso>
+        </div>
       )}
 
       <section aria-live="polite" className="mt-6">
         {paso.tipo === 'encontrado' && (
           <>
             <TarjetaCliente cliente={paso.cliente} />
-            <Acciones cliente={paso.cliente} alElegir={alElegir} alEditar={() => setPaso({ tipo: 'editando', cliente: paso.cliente })} />
+            <Acciones
+              cliente={paso.cliente}
+              alElegir={alElegir}
+              alEditar={() => setPaso({ tipo: 'editando', cliente: paso.cliente })}
+            />
           </>
         )}
 
         {paso.tipo === 'no-encontrado' && (
           <>
-            <p className="text-xl text-slate-900">No hay ningún cliente con el teléfono {paso.telefono}.</p>
+            <p className="text-xl text-texto">No hay ningún cliente con el teléfono {paso.telefono}.</p>
             <div className="mt-4">
               <Boton onClick={() => setPaso({ tipo: 'alta', telefono: paso.telefono })}>Registrar cliente nuevo</Boton>
             </div>
@@ -118,11 +123,13 @@ export function PantallaClientes({ alElegir }: Props = {}) {
 
         {paso.tipo === 'registrado' && (
           <>
-            <p role="status" className="rounded-lg bg-green-50 p-4 text-xl text-green-900">
-              Cliente registrado.
-            </p>
+            <Aviso tipo="exito">Cliente registrado.</Aviso>
             <TarjetaCliente cliente={paso.cliente} />
-            <Acciones cliente={paso.cliente} alElegir={alElegir} alEditar={() => setPaso({ tipo: 'editando', cliente: paso.cliente })} />
+            <Acciones
+              cliente={paso.cliente}
+              alElegir={alElegir}
+              alEditar={() => setPaso({ tipo: 'editando', cliente: paso.cliente })}
+            />
           </>
         )}
 
@@ -133,8 +140,16 @@ export function PantallaClientes({ alElegir }: Props = {}) {
             alTerminar={(resultado) =>
               setPaso(
                 resultado.tipo === 'editado'
-                  ? { tipo: 'editado', cliente: resultado.cliente, aviso: 'Datos del cliente guardados.' }
-                  : { tipo: 'editado', cliente: paso.cliente, aviso: 'No cambiaste ningún dato: quedó como estaba.' },
+                  ? {
+                      tipo: 'editado',
+                      cliente: resultado.cliente,
+                      aviso: 'Datos del cliente guardados.',
+                    }
+                  : {
+                      tipo: 'editado',
+                      cliente: paso.cliente,
+                      aviso: 'No cambiaste ningún dato: quedó como estaba.',
+                    },
               )
             }
             alCancelar={() => setPaso({ tipo: 'encontrado', cliente: paso.cliente })}
@@ -143,21 +158,27 @@ export function PantallaClientes({ alElegir }: Props = {}) {
 
         {paso.tipo === 'editado' && (
           <>
-            <p role="status" className="rounded-lg bg-green-50 p-4 text-xl text-green-900">
-              {paso.aviso}
-            </p>
+            <Aviso tipo="exito">{paso.aviso}</Aviso>
             <TarjetaCliente cliente={paso.cliente} />
-            <Acciones cliente={paso.cliente} alElegir={alElegir} alEditar={() => setPaso({ tipo: 'editando', cliente: paso.cliente })} />
+            <Acciones
+              cliente={paso.cliente}
+              alElegir={alElegir}
+              alEditar={() => setPaso({ tipo: 'editando', cliente: paso.cliente })}
+            />
           </>
         )}
 
         {paso.tipo === 'telefono-ocupado' && (
           <>
-            <p role="alert" className="rounded-lg bg-amber-50 p-4 text-xl text-amber-900">
+            <Aviso tipo="advertencia">
               Ese teléfono ya está registrado a nombre de {paso.cliente.nombre}. No hace falta registrarlo otra vez.
-            </p>
+            </Aviso>
             <TarjetaCliente cliente={paso.cliente} />
-            <Acciones cliente={paso.cliente} alElegir={alElegir} alEditar={() => setPaso({ tipo: 'editando', cliente: paso.cliente })} />
+            <Acciones
+              cliente={paso.cliente}
+              alElegir={alElegir}
+              alEditar={() => setPaso({ tipo: 'editando', cliente: paso.cliente })}
+            />
           </>
         )}
       </section>
@@ -169,7 +190,15 @@ export function PantallaClientes({ alElegir }: Props = {}) {
  * Lo que se puede hacer con un cliente en pantalla: "Cambiar datos" siempre
  * (SPEC-KRILINXI-014) y "Es este cliente" solo cuando la búsqueda se usa para elegir.
  */
-function Acciones({ cliente, alElegir, alEditar }: { cliente: Cliente; alElegir: Props['alElegir']; alEditar: () => void }) {
+function Acciones({
+  cliente,
+  alElegir,
+  alEditar,
+}: {
+  cliente: Cliente;
+  alElegir: Props['alElegir'];
+  alEditar: () => void;
+}) {
   return (
     <div className="mt-4 grid gap-3">
       {alElegir && <Boton onClick={() => alElegir(cliente)}>Es este cliente</Boton>}

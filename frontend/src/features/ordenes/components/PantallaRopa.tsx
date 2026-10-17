@@ -64,13 +64,13 @@ export function PantallaRopa({ accionesExtra }: Props = {}) {
         </div>
       </form>
 
-      <h2 className="mt-8 text-2xl font-bold text-slate-900">
+      <h2 className="mt-8 text-2xl font-bold text-texto">
         {busqueda === null ? 'Ropa en el local' : `Resultados para "${busqueda.trim()}"`}
       </h2>
 
-      {ordenes === null && <p className="mt-4 text-xl text-slate-700">Buscando…</p>}
+      {ordenes === null && <p className="mt-4 text-xl text-texto-suave">Buscando…</p>}
       {ordenes?.length === 0 && (
-        <p className="mt-4 text-xl text-slate-700">
+        <p className="mt-4 text-xl text-texto-suave">
           {busqueda === null ? 'No hay ropa en el local.' : 'No se encontró ninguna boleta con ese número o teléfono.'}
         </p>
       )}

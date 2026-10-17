@@ -176,3 +176,18 @@ describe('Entregar: solo en el mostrador — SPEC-KRILINXI-009', () => {
     expect(screen.getByText(/para quien atiende en una sucursal/)).toBeInTheDocument();
   });
 });
+
+describe('Entregar con el tema — SPEC-KRILINXI-025', () => {
+  it('el formulario elegido se distingue por algo más que el color, y el resumen es un aviso de éxito', async () => {
+    await abrir();
+    const formulario = await abrirEntrega();
+    const opcion = within(formulario).getByLabelText('Trae la boleta');
+    fireEvent.click(opcion);
+    expect(opcion.closest('label')).toHaveClass('font-semibold', 'border-marca');
+    await pedirConfirmacion(formulario);
+    fireEvent.click(screen.getByRole('button', { name: 'Sí, entregar' }));
+
+    const hecho = await screen.findByText(/^Ropa entregada: boleta/);
+    expect(hecho.closest('[role="status"]')).toHaveClass('bg-exito-fondo');
+  });
+});

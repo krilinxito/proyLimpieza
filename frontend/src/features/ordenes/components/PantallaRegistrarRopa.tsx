@@ -20,7 +20,7 @@ export function PantallaRegistrarRopa() {
   if (paso.tipo === 'cliente') {
     return (
       <>
-        <p className="mt-4 text-xl text-slate-700">Buscá al cliente por su teléfono.</p>
+        <p className="mt-4 text-xl text-texto-suave">Buscá al cliente por su teléfono.</p>
         <PantallaClientes alElegir={(cliente) => setPaso({ tipo: 'ropa', cliente })} />
       </>
     );
@@ -30,7 +30,7 @@ export function PantallaRegistrarRopa() {
     return <ResumenRopa ropa={paso.ropa} alRegistrarOtra={() => setPaso({ tipo: 'cliente' })} />;
   }
 
-  if (!registro.lista) return <p className="mt-6 text-xl text-slate-700">Preparando…</p>;
+  if (!registro.lista) return <p className="mt-6 text-xl text-texto-suave">Preparando…</p>;
 
   return (
     <FormularioRopa

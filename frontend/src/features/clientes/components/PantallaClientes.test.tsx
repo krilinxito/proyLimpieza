@@ -225,3 +225,20 @@ describe('Pantalla de clientes: cambiar datos — SPEC-KRILINXI-014', () => {
     expect(await db.getCrudBatch()).toBeNull();
   });
 });
+
+describe('Pantalla de clientes con el tema — SPEC-KRILINXI-025', () => {
+  it('el cliente encontrado se muestra en una tarjeta del tema', async () => {
+    await abrirClientes();
+    await buscar('70123456');
+    const nombre = await screen.findByText('Rosa Quispe', { selector: 'dd' });
+    expect(nombre.closest('.rounded-2xl')).toHaveClass('bg-superficie');
+  });
+
+  it('el alta es una tarjeta con su título, y el formulario conserva su nombre', async () => {
+    await abrirClientes();
+    await buscar('70999999');
+    fireEvent.click(await screen.findByRole('button', { name: 'Registrar cliente nuevo' }));
+    const tarjeta = await screen.findByRole('region', { name: 'Registrar cliente nuevo' });
+    expect(within(tarjeta).getByRole('form', { name: 'Registrar cliente nuevo' })).toBeInTheDocument();
+  });
+});

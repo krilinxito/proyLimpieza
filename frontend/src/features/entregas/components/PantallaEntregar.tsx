@@ -25,7 +25,7 @@ export function PantallaEntregar() {
 
   return (
     <>
-      <p className="mt-4 text-xl text-slate-700">Buscá la boleta o el teléfono del cliente.</p>
+      <p className="mt-4 text-xl text-texto-suave">Buscá la boleta o el teléfono del cliente.</p>
       <PantallaRopa accionesExtra={(orden) => <AccionEntregar orden={orden} alEntregar={setEntregada} />} />
     </>
   );

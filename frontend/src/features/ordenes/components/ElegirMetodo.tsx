@@ -18,13 +18,13 @@ export function ElegirMetodo({ value, onChange, error, pregunta = '¿Cómo paga 
   const grupo = useId();
   return (
     <fieldset className="mt-4" aria-describedby={error ? `${grupo}-error` : undefined}>
-      <legend className="text-xl font-semibold text-slate-900">{pregunta}</legend>
+      <legend className="text-xl font-semibold text-texto">{pregunta}</legend>
       <div className="mt-2 grid grid-cols-2 gap-3">
         {METODOS_PAGO.map((metodo) => (
           <label
             key={metodo}
             className={`flex min-h-14 items-center gap-3 rounded-lg border-2 px-4 text-xl ${
-              value === metodo ? 'border-sky-700 bg-sky-50' : 'border-slate-400 bg-white'
+              value === metodo ? 'border-marca bg-marca-suave font-semibold' : 'border-borde bg-superficie'
             }`}
           >
             <input
@@ -39,7 +39,7 @@ export function ElegirMetodo({ value, onChange, error, pregunta = '¿Cómo paga 
         ))}
       </div>
       {error && (
-        <p id={`${grupo}-error`} className="mt-2 text-lg text-red-700">
+        <p id={`${grupo}-error`} className="mt-2 text-lg font-semibold text-peligro-texto">
           {error}
         </p>
       )}

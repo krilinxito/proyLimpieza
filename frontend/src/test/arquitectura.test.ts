@@ -189,12 +189,21 @@ describe('Los componentes no usan estilos en línea — SPEC-KRILINXI-020', () =
  * Crece con la ola estética: cada spec que pasa pantallas al tema agrega acá sus carpetas. Cuando
  * estén todas, la lista será `components`, `pages` y `features`.
  */
-const CON_EL_TEMA = ['components', 'pages', 'features/auth'];
+const CON_EL_TEMA = [
+  'components',
+  'pages',
+  'features/auth',
+  // El mostrador — SPEC-KRILINXI-025.
+  'features/ordenes',
+  'features/entregas',
+  'features/clientes',
+  'features/pagos',
+];
 
 const PALETA_CRUDA =
   /\b(?:bg|text|border|ring|outline|fill|stroke|divide|decoration|placeholder|accent|caret|shadow|from|via|to)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3}\b|\b(?:bg|text|border)-(?:white|black)\b/;
 
-describe('Lo que ya pasó al tema no usa la paleta cruda — SPEC-KRILINXI-022 y SPEC-KRILINXI-024', () => {
+describe('Lo que ya pasó al tema no usa la paleta cruda — SPEC-KRILINXI-022, SPEC-KRILINXI-024 y SPEC-KRILINXI-025', () => {
   const ARCHIVOS = archivosFuente(...CON_EL_TEMA);
 
   it('revisa los componentes, las páginas y el ingreso, no una lista vacía', () => {
@@ -205,6 +214,9 @@ describe('Lo que ya pasó al tema no usa la paleta cruda — SPEC-KRILINXI-022 y
         'pages/Inicio.tsx',
         'pages/NoEncontrada.tsx',
         'features/auth/components/FormularioIngreso.tsx',
+        'features/ordenes/components/DetalleOrden.tsx',
+        'features/entregas/components/FormularioEntrega.tsx',
+        'features/clientes/components/TarjetaCliente.tsx',
       ]),
     );
   });

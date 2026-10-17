@@ -1,15 +1,34 @@
+import type { ReactNode } from 'react';
+import { Tarjeta } from '../../../components/Tarjeta';
 import type { Cliente } from '../types';
 
-/** Los datos de un cliente, grandes y en una lista que se lee de un vistazo. */
-export function TarjetaCliente({ cliente }: { cliente: Cliente }) {
+type Props = {
+  cliente: Cliente;
+  /** Si va con encabezado ("Cliente", en Registrar ropa). */
+  titulo?: string;
+  /** Lo que va debajo de los datos, dentro de la misma tarjeta: "Cambiar de cliente". */
+  children?: ReactNode;
+};
+
+/**
+ * Los datos de un cliente, grandes y en una lista que se lee de un vistazo. Una `Tarjeta` del
+ * tema (SPEC-KRILINXI-025) con lugar para la acción que corresponda, así no quedan tarjetas
+ * dentro de tarjetas.
+ */
+export function TarjetaCliente({ cliente, titulo, children }: Props) {
   return (
-    <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 rounded-lg border-2 border-slate-300 bg-white p-4 text-xl">
-      <dt className="font-semibold text-slate-700">Nombre</dt>
-      <dd className="text-slate-900">{cliente.nombre}</dd>
-      <dt className="font-semibold text-slate-700">Teléfono</dt>
-      <dd className="text-slate-900">{cliente.telefono}</dd>
-      <dt className="font-semibold text-slate-700">Carnet</dt>
-      <dd className="text-slate-900">{cliente.carnet ?? 'No lo dio'}</dd>
-    </dl>
+    <div className="mt-4">
+      <Tarjeta titulo={titulo}>
+        <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-xl">
+          <dt className="font-semibold text-texto-suave">Nombre</dt>
+          <dd className="text-texto">{cliente.nombre}</dd>
+          <dt className="font-semibold text-texto-suave">Teléfono</dt>
+          <dd className="text-texto">{cliente.telefono}</dd>
+          <dt className="font-semibold text-texto-suave">Carnet</dt>
+          <dd className="text-texto">{cliente.carnet ?? 'No lo dio'}</dd>
+        </dl>
+        {children && <div className="mt-4">{children}</div>}
+      </Tarjeta>
+    </div>
   );
 }
