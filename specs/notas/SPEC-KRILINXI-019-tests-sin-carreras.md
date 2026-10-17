@@ -2,11 +2,9 @@
 id: SPEC-KRILINXI-019
 spec: specs/SPEC-KRILINXI-019-tests-sin-carreras.md
 explica:
-  - agrupar por el error
   - competir por la CPU no es lo mismo que ser lento (maxWorkers)
   - modo lento al azar para destapar carreras
-  - reproducir)
-  - un test intermitente es una pregunta (medir
+  - un test intermitente es una pregunta y no ruido
 ---
 
 # SPEC-KRILINXI-019 — Una suite del frontend sin carreras
