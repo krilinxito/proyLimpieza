@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-019
 name: Una suite del frontend sin carreras
 slug: tests-sin-carreras
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-17
 scope:
