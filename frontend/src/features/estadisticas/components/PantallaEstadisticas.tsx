@@ -5,12 +5,16 @@ import { useSucursales } from '../hooks/useSucursales';
 import { describirPeriodo, FILTRO_INICIAL, type Filtro } from '../periodo';
 import { FiltroPanel } from './FiltroPanel';
 import { SeccionIngresos } from './SeccionIngresos';
+import { SeccionClientes } from './SeccionClientes';
+import { SeccionProductividad } from './SeccionProductividad';
 import { SeccionSaldos } from './SeccionSaldos';
 import { SeccionSinRecoger } from './SeccionSinRecoger';
+import { SeccionVolumen } from './SeccionVolumen';
 
 /**
  * El panel del admin — SPEC-KRILINXI-015: cuánto se cobró, cuánto falta cobrar y qué ropa
- * sigue sin recoger. Se lee de la API, no de la tablet (CLAUDE.md §8): sin internet lo dice,
+ * sigue sin recoger; y desde SPEC-KRILINXI-016, cuánta ropa entró por día, lo que hizo cada
+ * persona y los clientes atendidos. Se lee de la API, no de la tablet (CLAUDE.md §8): sin internet lo dice,
  * en vez de mostrar números que no son.
  */
 export function PantallaEstadisticas() {
@@ -48,6 +52,10 @@ export function PantallaEstadisticas() {
           <SeccionIngresos ingresos={estado.datos.ingresos} periodo={describirPeriodo(filtro, 'ingresos')} />
           <SeccionSaldos saldos={estado.datos.saldos} periodo={describirPeriodo(filtro, 'pendientes')} />
           <SeccionSinRecoger sinRecoger={estado.datos.sinRecoger} periodo={describirPeriodo(filtro, 'pendientes')} />
+          <SeccionVolumen volumen={estado.datos.volumen} periodo={describirPeriodo(filtro, 'historia')} />
+          <SeccionProductividad productividad={estado.datos.productividad} periodo={describirPeriodo(filtro, 'historia')} />
+          {/* Solo con el panel listo: sin internet ya lo dice el aviso de arriba, una sola vez. */}
+          <SeccionClientes filtro={filtro} periodo={describirPeriodo(filtro, 'historia')} />
         </>
       )}
     </>
