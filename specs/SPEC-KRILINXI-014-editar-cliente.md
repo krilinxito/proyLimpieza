@@ -2,15 +2,21 @@
 id: SPEC-KRILINXI-014
 name: Editar los datos de un cliente
 slug: editar-cliente
-status: draft
+status: finished
 owner: krilinxito
 created: 2026-10-16
 scope:
   - frontend/src/features/clientes/**
   - frontend/src/test/**
+  - frontend/src/features/pendientes/api/corregirLocal.ts
+  - frontend/src/features/pendientes/api/corregirLocal.test.ts
+  - frontend/src/features/pendientes/correccion.ts
+  - CLAUDE.md
 priority: medium
 depends_on: []
-tests: []
+tests:
+  - frontend/src/features/clientes/api/clientesLocal.test.ts
+  - frontend/src/features/clientes/components/PantallaClientes.test.tsx
 ---
 
 ## Descripción

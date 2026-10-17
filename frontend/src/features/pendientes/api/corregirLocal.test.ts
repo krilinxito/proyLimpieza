@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { baseLocalDePrueba } from '../../../test/baseLocalDePrueba';
 import { clienteDePrueba, ordenDePrueba, SUCURSAL_DE_PRUEBA } from '../../../test/filasDePrueba';
 import { subirAceptando, subirRechazando } from '../../../test/rechazos';
+import { telefonoDeOtro } from '../../clientes/api/clientesLocal';
 import { MENSAJES } from '../../ordenes/api/ordenesLocal';
 import { MENSAJES_CORRECCION, prepararCorreccion } from '../correccion';
 import { descartarRegistro, guardarCorreccion } from './corregirLocal';
@@ -231,7 +232,7 @@ describe('Corregir una edición rechazada — SPEC-KRILINXI-013', () => {
 
     expect(
       await guardarCorreccion(control.base, SUCURSAL_DE_PRUEBA, await elRechazado(control.base), { telefono: '70555555' }),
-    ).toEqual({ tipo: 'invalida', errores: { telefono: MENSAJES_CORRECCION.telefonoOcupado('Juan Mamani') } });
+    ).toEqual({ tipo: 'invalida', errores: { telefono: telefonoDeOtro('Juan Mamani') } });
   });
 });
 

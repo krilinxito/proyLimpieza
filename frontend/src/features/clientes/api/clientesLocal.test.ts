@@ -2,7 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { simularApi } from '../../../test/apiFalsa';
 import { baseLocalDePrueba } from '../../../test/baseLocalDePrueba';
-import { buscarPorTelefono, registrarCliente } from './clientesLocal';
+import { subirAceptando } from '../../../test/rechazos';
+import { buscarPorTelefono, editarCliente, registrarCliente, telefonoDeOtro } from './clientesLocal';
 
 // Una persona que ya estaba en el sistema: bajó por la sincronización, no está en la cola.
 const ROSA = { id: randomUUID(), nombre: 'Rosa Quispe', telefono: '70123456', carnet: '4455667' };
@@ -114,5 +115,65 @@ describe('Clientes sin conexión — SPEC-KRILINXI-005', () => {
       tipo: 'registrado',
     });
     expect(servidor.pedidos).toEqual([]);
+  });
+});
+
+describe('Editar un cliente en la base local — SPEC-KRILINXI-014', () => {
+  // La de los tests de arriba: ya sincronizada, fuera de la cola.
+  const rosa = ROSA;
+
+  it('guarda el cambio y lo encola como edición con solo lo que cambió', async () => {
+    const { control, db } = await baseConRosa();
+
+    const resultado = await editarCliente(control.base, rosa, { nombre: 'Rosa Quispe Mamani', telefono: '70123456' });
+
+    expect(resultado).toEqual({ tipo: 'editado', cliente: { ...rosa, nombre: 'Rosa Quispe Mamani' } });
+    expect(await control.base.consultar('SELECT nombre FROM clientes')).toEqual([{ nombre: 'Rosa Quispe Mamani' }]);
+    // Lo que sube: un PATCH con el nombre y nada más.
+    expect(await subirAceptando(db)).toEqual([
+      expect.objectContaining({ metodo: 'PATCH', ruta: `/clientes/${rosa.id}`, cuerpo: { nombre: 'Rosa Quispe Mamani' } }),
+    ]);
+  });
+
+  it('normaliza el teléfono antes de guardarlo y de compararlo', async () => {
+    const { control, db } = await baseConRosa();
+
+    // "70 12-34 56" es el mismo teléfono que tiene: no es un cambio.
+    expect(await editarCliente(control.base, rosa, { nombre: rosa.nombre, telefono: '70 12-34 56' })).toEqual({
+      tipo: 'sin-cambios',
+    });
+    const resultado = await editarCliente(control.base, rosa, { nombre: rosa.nombre, telefono: '70 99-88 77' });
+
+    expect(resultado).toEqual({ tipo: 'editado', cliente: { ...rosa, telefono: '70998877' } });
+    expect((await subirAceptando(db)).map((p) => p.cuerpo)).toEqual([{ telefono: '70998877' }]);
+  });
+
+  it('sin ningún cambio no escribe ni encola nada', async () => {
+    const { control, db } = await baseConRosa();
+
+    expect(await editarCliente(control.base, rosa, { nombre: '  Rosa Quispe ', telefono: '70123456' })).toEqual({
+      tipo: 'sin-cambios',
+    });
+    expect(await db.getCrudBatch()).toBeNull();
+  });
+
+  it('rechaza un teléfono que ya es de otro cliente, diciendo de quién es', async () => {
+    const { control, db, sembrar } = await baseConRosa();
+    await sembrar('clientes', [{ id: randomUUID(), nombre: 'Juan Mamani', telefono: '70555555' }]);
+
+    expect(await editarCliente(control.base, rosa, { nombre: rosa.nombre, telefono: '70555555' })).toEqual({
+      tipo: 'invalido',
+      errores: { telefono: telefonoDeOtro('Juan Mamani') },
+    });
+    expect(await db.getCrudBatch()).toBeNull();
+  });
+
+  it('no deja el nombre ni el teléfono vacíos', async () => {
+    const { control } = await baseConRosa();
+
+    expect(await editarCliente(control.base, rosa, { nombre: ' ', telefono: '-' })).toEqual({
+      tipo: 'invalido',
+      errores: { nombre: 'Escribí el nombre del cliente.', telefono: 'Escribí el número de teléfono del cliente.' },
+    });
   });
 });

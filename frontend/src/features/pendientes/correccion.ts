@@ -31,7 +31,6 @@ export const MENSAJES_CORRECCION = {
   desconocido: 'Este registro no se puede corregir desde aquí. Avisale al encargado o descartalo.',
   sinCambios: 'No cambiaste ningún dato. Corregí lo que está mal o descartá el registro.',
   yaNoEsta: 'Ese registro ya no está en esta tablet. Descartalo y, si hace falta, volvé a hacerlo.',
-  telefonoOcupado: (nombre: string) => `Ese teléfono ya es de ${nombre}. Revisalo y volvé a escribirlo.`,
 } as const;
 
 /** Los datos que se corrigen de cada tabla, con las mismas etiquetas que su pantalla de origen. */

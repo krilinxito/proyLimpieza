@@ -5,6 +5,7 @@ import { useClientes } from '../hooks/useClientes';
 import { normalizarTelefono } from '../telefono';
 import type { Cliente } from '../types';
 import { FormularioAltaCliente } from './FormularioAltaCliente';
+import { FormularioEditarCliente } from './FormularioEditarCliente';
 import { TarjetaCliente } from './TarjetaCliente';
 
 const FALTA_TELEFONO = 'Escribí el número de teléfono del cliente.';
@@ -17,7 +18,10 @@ type Paso =
   | { tipo: 'no-encontrado'; telefono: string }
   | { tipo: 'alta'; telefono: string }
   | { tipo: 'registrado'; cliente: Cliente }
-  | { tipo: 'telefono-ocupado'; cliente: Cliente };
+  | { tipo: 'telefono-ocupado'; cliente: Cliente }
+  /** SPEC-KRILINXI-014: cambiando sus datos, y cómo terminó. */
+  | { tipo: 'editando'; cliente: Cliente }
+  | { tipo: 'editado'; cliente: Cliente; aviso: string };
 
 type Props = {
   /**
@@ -84,7 +88,7 @@ export function PantallaClientes({ alElegir }: Props = {}) {
         {paso.tipo === 'encontrado' && (
           <>
             <TarjetaCliente cliente={paso.cliente} />
-            <BotonElegir cliente={paso.cliente} alElegir={alElegir} />
+            <Acciones cliente={paso.cliente} alElegir={alElegir} alEditar={() => setPaso({ tipo: 'editando', cliente: paso.cliente })} />
           </>
         )}
 
@@ -118,7 +122,32 @@ export function PantallaClientes({ alElegir }: Props = {}) {
               Cliente registrado.
             </p>
             <TarjetaCliente cliente={paso.cliente} />
-            <BotonElegir cliente={paso.cliente} alElegir={alElegir} />
+            <Acciones cliente={paso.cliente} alElegir={alElegir} alEditar={() => setPaso({ tipo: 'editando', cliente: paso.cliente })} />
+          </>
+        )}
+
+        {paso.tipo === 'editando' && clientes.lista && (
+          <FormularioEditarCliente
+            cliente={paso.cliente}
+            editar={clientes.editar}
+            alTerminar={(resultado) =>
+              setPaso(
+                resultado.tipo === 'editado'
+                  ? { tipo: 'editado', cliente: resultado.cliente, aviso: 'Datos del cliente guardados.' }
+                  : { tipo: 'editado', cliente: paso.cliente, aviso: 'No cambiaste ningún dato: quedó como estaba.' },
+              )
+            }
+            alCancelar={() => setPaso({ tipo: 'encontrado', cliente: paso.cliente })}
+          />
+        )}
+
+        {paso.tipo === 'editado' && (
+          <>
+            <p role="status" className="rounded-lg bg-green-50 p-4 text-xl text-green-900">
+              {paso.aviso}
+            </p>
+            <TarjetaCliente cliente={paso.cliente} />
+            <Acciones cliente={paso.cliente} alElegir={alElegir} alEditar={() => setPaso({ tipo: 'editando', cliente: paso.cliente })} />
           </>
         )}
 
@@ -128,7 +157,7 @@ export function PantallaClientes({ alElegir }: Props = {}) {
               Ese teléfono ya está registrado a nombre de {paso.cliente.nombre}. No hace falta registrarlo otra vez.
             </p>
             <TarjetaCliente cliente={paso.cliente} />
-            <BotonElegir cliente={paso.cliente} alElegir={alElegir} />
+            <Acciones cliente={paso.cliente} alElegir={alElegir} alEditar={() => setPaso({ tipo: 'editando', cliente: paso.cliente })} />
           </>
         )}
       </section>
@@ -136,12 +165,17 @@ export function PantallaClientes({ alElegir }: Props = {}) {
   );
 }
 
-/** "Es este cliente": solo aparece cuando la búsqueda se usa para elegir. */
-function BotonElegir({ cliente, alElegir }: { cliente: Cliente; alElegir: Props['alElegir'] }) {
-  if (!alElegir) return null;
+/**
+ * Lo que se puede hacer con un cliente en pantalla: "Cambiar datos" siempre
+ * (SPEC-KRILINXI-014) y "Es este cliente" solo cuando la búsqueda se usa para elegir.
+ */
+function Acciones({ cliente, alElegir, alEditar }: { cliente: Cliente; alElegir: Props['alElegir']; alEditar: () => void }) {
   return (
-    <div className="mt-4">
-      <Boton onClick={() => alElegir(cliente)}>Es este cliente</Boton>
+    <div className="mt-4 grid gap-3">
+      {alElegir && <Boton onClick={() => alElegir(cliente)}>Es este cliente</Boton>}
+      <Boton variante="secundario" onClick={alEditar}>
+        Cambiar datos
+      </Boton>
     </div>
   );
 }
