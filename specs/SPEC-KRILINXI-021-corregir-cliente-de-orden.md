@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-021
 name: Corregir la ropa de un cliente que ya existía
 slug: corregir-cliente-de-orden
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-17
 scope:
