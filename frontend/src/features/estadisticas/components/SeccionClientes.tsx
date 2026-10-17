@@ -1,4 +1,5 @@
 import { Boton } from '../../../components/Boton';
+import { Paginas } from '../../../components/Paginas';
 import { useClientesAtendidos } from '../hooks/useClientesAtendidos';
 import { fechaParaLeer, type Filtro } from '../periodo';
 import type { Atenciones } from '../types';
@@ -63,37 +64,9 @@ export function SeccionClientes({ filtro, periodo }: { filtro: Filtro; periodo: 
               </li>
             ))}
           </ul>
-          <Paginas pagina={pagina} total={estado.datos.total} porPagina={estado.datos.porPagina} irAPagina={irAPagina} />
+          <Paginas pagina={pagina} total={estado.datos.total} porPagina={estado.datos.porPagina} irAPagina={irAPagina} nombre="Páginas de clientes" />
         </>
       )}
     </section>
-  );
-}
-
-function Paginas({
-  pagina,
-  total,
-  porPagina,
-  irAPagina,
-}: {
-  pagina: number;
-  total: number;
-  porPagina: number;
-  irAPagina: (pagina: number) => void;
-}) {
-  const paginas = Math.max(1, Math.ceil(total / porPagina));
-  if (paginas === 1) return null;
-  return (
-    <nav aria-label="Páginas de clientes" className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-      <Boton variante="secundario" onClick={() => irAPagina(pagina - 1)} disabled={pagina <= 1}>
-        Anteriores
-      </Boton>
-      <p className="text-xl text-slate-800">
-        Página {pagina} de {paginas}
-      </p>
-      <Boton variante="secundario" onClick={() => irAPagina(pagina + 1)} disabled={pagina >= paginas}>
-        Siguientes
-      </Boton>
-    </nav>
   );
 }

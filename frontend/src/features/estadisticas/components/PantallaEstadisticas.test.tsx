@@ -177,7 +177,10 @@ describe('Panel de estadísticas: volumen, productividad y clientes — SPEC-KRI
     const de = (ruta: string) => servidor.pedidos.find((p) => p.ruta === ruta)?.parametros;
     expect(de('/estadisticas/volumen')).toEqual(ultimos30);
     expect(de('/estadisticas/productividad')).toEqual(ultimos30);
-    expect(de('/estadisticas/clientes')).toEqual({ ...ultimos30, pagina: 1, por_pagina: 20 });
+    // El título de la sección se dibuja antes de que su pedido llegue al servidor (axios pasa por
+    // sus interceptores, que son asíncronos): se espera el pedido, no el título. SPEC-KRILINXI-018
+    // lo corrigió, porque fallaba de vez en cuando.
+    await waitFor(() => expect(de('/estadisticas/clientes')).toEqual({ ...ultimos30, pagina: 1, por_pagina: 20 }));
   });
 
   it('muestra cada día del período, también los que quedaron en 0, con sus anuladas', async () => {
@@ -239,7 +242,9 @@ describe('Panel de estadísticas: volumen, productividad y clientes — SPEC-KRI
     fireEvent.click(await within(clientes).findByRole('button', { name: 'Siguientes' }));
     await within(clientes).findByText('Página 2 de 3');
 
-    fireEvent.click(screen.getByRole('radio', { name: 'Centro' }));
+    // Las sucursales del filtro se leen de la base local: hay que esperarlas (SPEC-KRILINXI-018 lo
+    // corrigió: con `getByRole` este test fallaba 1 de cada 3 o 4 veces).
+    fireEvent.click(await screen.findByRole('radio', { name: 'Centro' }));
     fireEvent.change(screen.getByLabelText('Desde'), { target: { value: '2026-10-01' } });
     fireEvent.change(screen.getByLabelText('Hasta'), { target: { value: '2026-10-15' } });
     fireEvent.click(screen.getByRole('button', { name: 'Ver estas fechas' }));

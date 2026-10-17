@@ -1,0 +1,33 @@
+import { antes, cuando, queHizo, sobreQue, textoRevision } from '../describir';
+import type { NombresConocidos, RegistroAuditoria } from '../types';
+
+/** Un registro: quién, qué hizo, sobre qué, dónde y cuándo; y lo que había antes, si cambió algo. */
+export function TarjetaRegistro({ registro, nombres }: { registro: RegistroAuditoria; nombres: NombresConocidos }) {
+  const que = sobreQue(registro, nombres);
+  const sucursal = registro.sucursalId ? nombres.sucursales.get(registro.sucursalId) : null;
+  const { paso, llego } = cuando(registro);
+  const cambios = antes(registro, nombres);
+  const revision = textoRevision(registro.revision);
+
+  return (
+    <li className={`rounded-lg border-2 bg-white p-4 text-xl ${revision ? 'border-amber-600' : 'border-slate-300'}`}>
+      <p className="font-semibold text-slate-900">
+        {registro.usuario.nombreCompleto}: {queHizo(registro)}
+        {que && ` — ${que}`}
+      </p>
+      <p className="mt-1 text-slate-800">
+        {paso}
+        {sucursal && ` · ${sucursal}`}
+      </p>
+      {llego && <p className="mt-1 text-lg text-slate-700">Se guardó en el sistema el {llego} (la tablet estaba sin internet).</p>}
+      {cambios.length > 0 && (
+        <ul className="mt-2 grid gap-1 text-lg text-slate-700">
+          {cambios.map((c, i) => (
+            <li key={i}>{c}</li>
+          ))}
+        </ul>
+      )}
+      {revision && <p className="mt-2 rounded bg-amber-50 p-2 text-lg font-semibold text-amber-900">{revision}</p>}
+    </li>
+  );
+}
