@@ -294,6 +294,9 @@ azar cada consulta y cada aviso de la base de prueba, así que un test que afirm
 todavía no llegó falla en alguna corrida, en vez de una vez cada tanto. Si la traza pasa por `waitFor`
 es tiempo, no carrera; con valores altos (400) aparecen falsos positivos de ese tipo. Si un test falla de vez en cuando, **guardá la salida completa antes de
 reintentar** (`npx vitest run > salida.txt 2>&1`): el mensaje de error es la mitad del diagnóstico.
+Para comprobar que la suite está estable, 10 corridas seguidas (desde `frontend/`, unos 6 minutos; con
+`LENTO_MS=200` delante, en modo lento): `for i in $(seq 1 10); do npx vitest run > corrida-$i.txt 2>&1 ||
+echo "falló la $i"; done`. Que no imprima nada es la señal de que pasaron todas.
 
 **`test:db` se corre sola, nunca a la vez que otra suite** (SPEC-ALE186-022). Corre sus
 archivos en paralelo contra el Postgres de Docker; si al mismo tiempo corren los tests del
