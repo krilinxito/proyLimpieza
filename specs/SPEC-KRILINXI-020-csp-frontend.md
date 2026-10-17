@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-020
 name: Política de seguridad del contenido (CSP) para la PWA
 slug: csp-frontend
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-17
 scope:
