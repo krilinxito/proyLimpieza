@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-015
 name: 'Panel de estadísticas: ingresos, saldos y ropa sin recoger'
 slug: estadisticas-panel
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-16
 scope:
