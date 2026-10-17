@@ -14,6 +14,7 @@ scope:
   - frontend/src/lib/api.ts
   - frontend/src/lib/api.test.ts
   - frontend/src/features/estadisticas/**
+  - frontend/src/App.test.tsx
   - CLAUDE.md
 priority: medium
 depends_on:

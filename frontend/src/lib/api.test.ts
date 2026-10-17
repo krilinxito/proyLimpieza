@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { api, conectarSesion, ErrorApi, ErrorSinConexion } from './api';
+import { api, conectarSesion, enviar, ErrorApi, ErrorSinConexion } from './api';
 import { cuerpoError, simularApi } from '../test/apiFalsa';
 import { archivosFuente } from '../test/arquitectura';
 
@@ -106,5 +106,34 @@ describe('lib/api: único dueño de VITE_API_URL — SPEC-KRILINXI-003', () => {
       .filter(({ fuente }) => /VITE_API_URL|apiUrl/.test(fuente))
       .map(({ ruta }) => ruta);
     expect(intrusos).toEqual([]);
+  });
+});
+
+describe('enviar: una escritura online y cómo terminó — SPEC-KRILINXI-017', () => {
+  it('devuelve hecho con lo que respondió el servidor', async () => {
+    simularApi(() => ({ status: 201, data: { id: 'x' } }));
+    expect(await enviar(async () => (await api.post('/sucursales', {})).data)).toEqual({ tipo: 'hecho', datos: { id: 'x' } });
+  });
+
+  it('un rechazo trae el código y el mensaje del servidor', async () => {
+    simularApi(() => ({ status: 409, data: cuerpoError('USERNAME_DUPLICADO', 'Ese nombre de usuario ya lo usa otra persona.') }));
+    expect(await enviar(() => api.post('/usuarios', {}))).toEqual({
+      tipo: 'rechazado',
+      codigo: 'USERNAME_DUPLICADO',
+      mensaje: 'Ese nombre de usuario ya lo usa otra persona.',
+    });
+  });
+
+  it('sin internet lo dice como un resultado, no como una excepción', async () => {
+    simularApi(() => 'sin-conexion');
+    expect(await enviar(() => api.post('/usuarios', {}))).toEqual({ tipo: 'sin-conexion' });
+  });
+
+  it('un error de programación no se esconde', async () => {
+    await expect(
+      enviar(async () => {
+        throw new TypeError('roto');
+      }),
+    ).rejects.toThrow('roto');
   });
 });

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Boton } from '../../../components/Boton';
 import { usePanel } from '../hooks/usePanel';
-import { useSucursales } from '../hooks/useSucursales';
+import { useSucursalesAbiertas } from '../../sucursales/hooks/useSucursales';
 import { describirPeriodo, FILTRO_INICIAL, type Filtro } from '../periodo';
 import { FiltroPanel } from './FiltroPanel';
 import { SeccionIngresos } from './SeccionIngresos';
@@ -19,7 +19,7 @@ import { SeccionVolumen } from './SeccionVolumen';
  */
 export function PantallaEstadisticas() {
   const [filtro, setFiltro] = useState<Filtro>(FILTRO_INICIAL);
-  const sucursales = useSucursales();
+  const sucursales = useSucursalesAbiertas();
   const { estado, recargar } = usePanel(filtro);
 
   return (
