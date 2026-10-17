@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-021
 name: Corregir la ropa de un cliente que ya existía
 slug: corregir-cliente-de-orden
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-17
 scope:
@@ -13,7 +13,12 @@ scope:
 priority: medium
 depends_on:
   - SPEC-KRILINXI-019
-tests: []
+tests:
+  - frontend/src/features/clientes/api/clientesLocal.test.ts
+  - frontend/src/features/pendientes/api/mismoCliente.test.ts
+  - frontend/src/features/pendientes/components/PantallaParaCorregir.test.tsx
+  - frontend/src/test/clienteRepetido.ts
+  - frontend/src/test/rechazos.ts
 ---
 
 ## Descripción
