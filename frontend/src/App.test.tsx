@@ -12,7 +12,8 @@ describe('App — SPEC-KRILINXI-001', () => {
   it('muestra el menú del mostrador en la ruta raíz', () => {
     renderEnRuta(<App />, '/');
     expect(screen.getByRole('heading', { name: 'Lavandería' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Registrar ropa' })).toBeInTheDocument();
+    // En el contenido: el menú del marco también lo nombra (SPEC-KRILINXI-023).
+    expect(within(screen.getByRole('main')).getByRole('link', { name: 'Registrar ropa' })).toBeInTheDocument();
   });
 
   it('muestra una pantalla en español cuando la dirección no existe', () => {
@@ -64,8 +65,10 @@ describe('App: rutas protegidas — SPEC-KRILINXI-003', () => {
 });
 
 describe('App: menú por rol — SPEC-KRILINXI-003', () => {
+  // Los botones del Inicio, en el contenido. El menú del marco, que suma "Inicio" primero, se
+  // prueba en `pages/Marco.test.tsx` (SPEC-KRILINXI-023).
   const nombresDelMenu = () =>
-    within(screen.getByRole('navigation'))
+    within(screen.getByRole('main'))
       .getAllByRole('link')
       .map((enlace) => enlace.textContent);
 
