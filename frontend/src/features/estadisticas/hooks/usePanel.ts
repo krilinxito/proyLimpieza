@@ -1,8 +1,8 @@
 import { useCallback } from 'react';
-import { pedirIngresos, pedirProductividad, pedirSaldos, pedirSinRecoger, pedirVolumen } from '../api/estadisticasApi';
+import { ERROR_ESTADISTICAS, pedirIngresos, pedirProductividad, pedirSaldos, pedirSinRecoger, pedirVolumen } from '../api/estadisticasApi';
 import { hoyEnBolivia, parametrosHistoria, parametrosIngresos, parametrosPendientes, type Filtro } from '../periodo';
 import type { Panel } from '../types';
-import { usePedidoOnline, type EstadoPedido } from './usePedidoOnline';
+import { usePedidoOnline, type EstadoPedido } from '../../../hooks/usePedidoOnline';
 
 export type EstadoPanel = EstadoPedido<Panel>;
 
@@ -28,5 +28,5 @@ export function usePanel(filtro: Filtro): { estado: EstadoPanel; recargar: () =>
     return { ingresos, saldos, sinRecoger, volumen, productividad };
   }, [filtro]);
 
-  return usePedidoOnline(pedir);
+  return usePedidoOnline(pedir, ERROR_ESTADISTICAS);
 }

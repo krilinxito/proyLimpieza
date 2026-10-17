@@ -37,6 +37,19 @@ export class ErrorSinConexion extends Error {
   }
 }
 
+/**
+ * El servidor respondió bien (2xx), pero con algo que no tiene la forma acordada — SPEC-KRILINXI-015,
+ * movida aquí en SPEC-KRILINXI-017 junto con `usePedidoOnline`, que la reconoce y no puede
+ * depender de una feature. Quien
+ * comprueba la respuesta la lanza, con un mensaje para la pantalla, en vez de mostrarla a medias.
+ */
+export class RespuestaRara extends Error {
+  constructor(mensaje = 'La respuesta llegó incompleta. Probá de nuevo y, si sigue pasando, avisale al encargado.') {
+    super(mensaje);
+    this.name = 'RespuestaRara';
+  }
+}
+
 // Para cuando el servidor responde algo que no es nuestro formato de error: un proxy
 // caído que devuelve HTML, por ejemplo.
 const ERROR_DESCONOCIDO = 'El servidor tuvo un problema. Probá de nuevo en un momento.';
@@ -104,4 +117,32 @@ function traducirError(error: unknown): Error {
   return cuerpo
     ? new ErrorApi(respuesta.status, cuerpo.codigo, cuerpo.mensaje)
     : new ErrorApi(respuesta.status, 'ERROR_INTERNO', ERROR_DESCONOCIDO);
+}
+
+/**
+ * Cómo terminó una escritura que va directo a la API (las del admin, SPEC-KRILINXI-017). Ninguno
+ * es una excepción: los tres son respuestas normales que la pantalla tiene que mostrar.
+ */
+export type Envio<T> =
+  | { tipo: 'hecho'; datos: T }
+  /** El servidor dijo que no. `mensaje` ya está escrito para la pantalla; `codigo`, para el código. */
+  | { tipo: 'rechazado'; codigo: string; mensaje: string }
+  | { tipo: 'sin-conexion' };
+
+/**
+ * Manda una escritura online y traduce cómo terminó — SPEC-KRILINXI-017.
+ *
+ * El mostrador escribe en la base local y sube por la cola (CLAUDE.md §6). El admin no: dar de
+ * alta una cuenta lleva su contraseña, que no puede quedar guardada en el dispositivo, y el admin
+ * trabaja con conexión (§8). Lo que no sea `ErrorApi` ni `ErrorSinConexion` (un error de
+ * programación) se deja pasar: no es una respuesta del servidor, y esconderlo sería peor.
+ */
+export async function enviar<T>(peticion: () => Promise<T>): Promise<Envio<T>> {
+  try {
+    return { tipo: 'hecho', datos: await peticion() };
+  } catch (error) {
+    if (error instanceof ErrorSinConexion) return { tipo: 'sin-conexion' };
+    if (error instanceof ErrorApi) return { tipo: 'rechazado', codigo: error.codigo, mensaje: error.message };
+    throw error;
+  }
 }

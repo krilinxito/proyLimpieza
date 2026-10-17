@@ -114,12 +114,12 @@ describe('Las features no leen el reloj de la tablet — SPEC-KRILINXI-012', () 
  * Las estadísticas se leen de la API, nunca de la base local (CLAUDE.md §8) — SPEC-KRILINXI-015.
  *
  * Sin internet, el panel tiene que decir "Las estadísticas necesitan conexión": si alguna
- * métrica saliera de la tablet, mostraría números a medias (solo lo que bajó) sin avisar. La
- * única excepción de la feature es el catálogo de sucursales del filtro, que sí es de la base
- * local, y vive aparte justamente para que esta regla se pueda escribir.
+ * métrica saliera de la tablet, mostraría números a medias (solo lo que bajó) sin avisar. El
+ * catálogo de sucursales del filtro sí es de la base local, pero desde SPEC-KRILINXI-017 lo da
+ * la feature de sucursales (`useSucursalesAbiertas`): ningún archivo de esta feature la toca.
  */
 const DE_ESTADISTICAS = archivosFuente('features/estadisticas');
-const LEEN_LA_BASE_LOCAL = ['features/estadisticas/api/sucursalesLocal.ts', 'features/estadisticas/hooks/useSucursales.ts'];
+const LEEN_LA_BASE_LOCAL: string[] = [];
 
 describe('Las estadísticas no salen de la base local — SPEC-KRILINXI-015', () => {
   it('revisa la feature entera', () => {
@@ -139,5 +139,29 @@ describe('Las estadísticas no salen de la base local — SPEC-KRILINXI-015', ()
   it('las métricas se piden con lib/api', () => {
     const cliente = DE_ESTADISTICAS.find(({ ruta }) => ruta === 'features/estadisticas/api/estadisticasApi.ts');
     expect(cliente?.fuente).toMatch(/from\s+['"]\.\.\/\.\.\/\.\.\/lib\/api['"]/);
+  });
+});
+
+/**
+ * El admin escribe directo a la API, nunca en la base local — SPEC-KRILINXI-017.
+ *
+ * El alta de una cuenta y el cambio de contraseña llevan la contraseña. Si se escribieran en la
+ * base local, quedaría en la cola de subida (una tabla del SQLite de la tablet) hasta subir. Por
+ * eso las features del personal y de las sucursales solo LEEN la base local: ninguna escribe.
+ */
+const DEL_ADMIN = archivosFuente('features/usuarios', 'features/sucursales');
+
+describe('El personal y las sucursales no escriben en la base local — SPEC-KRILINXI-017', () => {
+  it('revisa las dos features', () => {
+    expect(DEL_ADMIN.map(({ ruta }) => ruta)).toEqual(
+      expect.arrayContaining(['features/usuarios/api/cuentasApi.ts', 'features/sucursales/api/sucursalesApi.ts']),
+    );
+  });
+
+  it('ninguna llama a ejecutar ni arma un INSERT, UPDATE o DELETE', () => {
+    const culpables = DEL_ADMIN.filter(({ fuente }) =>
+      /\.ejecutar(Juntas)?\(|\b(INSERT|UPDATE|DELETE)\b/.test(sinComentarios(fuente)),
+    ).map(({ ruta }) => ruta);
+    expect(culpables).toEqual([]);
   });
 });

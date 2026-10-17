@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-017
 name: Administrar el personal y las sucursales
 slug: personal-sucursales-admin
-status: draft
+status: finished
 owner: krilinxito
 created: 2026-10-16
 scope:
@@ -10,11 +10,25 @@ scope:
   - frontend/src/features/sucursales/**
   - frontend/src/pages/rutas.tsx
   - frontend/src/test/**
+  - frontend/src/hooks/**
+  - frontend/src/lib/api.ts
+  - frontend/src/lib/api.test.ts
+  - frontend/src/features/estadisticas/**
+  - frontend/src/App.test.tsx
+  - frontend/src/components/AvisosAdmin.tsx
   - CLAUDE.md
 priority: medium
 depends_on:
   - SPEC-KRILINXI-015
-tests: []
+tests:
+  - frontend/src/App.test.tsx
+  - frontend/src/features/sucursales/api/sucursales.test.ts
+  - frontend/src/features/sucursales/components/PantallaSucursales.test.tsx
+  - frontend/src/features/usuarios/api/cuentas.test.ts
+  - frontend/src/features/usuarios/components/PantallaPersonal.test.tsx
+  - frontend/src/lib/api.test.ts
+  - frontend/src/test/arquitectura.test.ts
+  - frontend/src/test/red.ts
 ---
 
 ## Descripción
@@ -34,12 +48,19 @@ Esta spec agrega 'Personal' y 'Sucursales' al menú del admin. Las listas se lee
 - [ ] El sistema lista las sucursales desde la base local y permite darlas de alta y editar su nombre, dirección y teléfono por API
 - [ ] El sistema pide confirmación antes de cerrar una sucursal y, si la API la rechaza porque todavía tiene ropa, explica que hay que entregar o anular esa ropa primero
 - [ ] El sistema no ofrece una sucursal cerrada al elegir la sucursal de una cuenta
+- [ ] El sistema permite volver a abrir una sucursal cerrada, con confirmación (agregado al implementar)
 - [ ] El sistema traduce los rechazos de la API (usuario o nombre de sucursal repetido, datos inválidos) a mensajes que dicen qué hacer
 - [ ] El sistema no guarda la contraseña en la base local ni en la cola de subida
 - [ ] El sistema deshabilita los botones de alta, edición y baja sin conexión y dice 'Para hacer cambios hace falta internet'
 - [ ] El sistema no muestra palabras del sistema (sinJerga) en ninguna de las dos pantallas
 
 ## Notas
+
+**Decidido al implementar:**
+- El teléfono de una cuenta no baja a la tablet (no está en las sync rules): al editar, el campo arranca vacío y dice "dejalo vacío para no cambiarlo". Lo mismo con la contraseña.
+- Una sucursal cerrada se puede volver a abrir desde la pantalla (`activa: true`, que el backend ya admitía).
+- Las pantallas leen de la base local: después de guardar, el aviso dice que la lista puede tardar unos segundos en mostrar el cambio (hasta que PowerSync lo baja).
+- `usePedidoOnline` pasó a `src/hooks/` para la auditoría (SPEC-KRILINXI-018); esta spec no lo usa, porque sus lecturas son locales.
 
 <!--
 Convención de trazabilidad: todo test relacionado con esta spec debe llevar su id

@@ -165,8 +165,14 @@ la toque. Para los tests, `test/estadisticasDePrueba.ts` arma respuestas válida
 SPEC-KRILINXI-016 completó el panel con el volumen por día, lo que hizo cada persona (una fila
 por sucursal del registro) y los clientes atendidos, paginados aparte. Sin fechas elegidas, esas
 tres miran los **últimos 30 días**. Lo que se pide online pasa por `usePedidoOnline`
-(`features/estadisticas/hooks/`): cargando, sin conexión, error, la recarga con `online` y el
+(hoy en `src/hooks/`): cargando, sin conexión, error, la recarga con `online` y el
 descarte de la respuesta vieja, en un solo lugar.
+SPEC-KRILINXI-017 agregó `/personal` y `/sucursales` (solo ADMIN): las listas se leen de la base
+local y las altas, ediciones, bajas y cierres van **directo a la API** con `enviar()` de `lib/api`
+(hecho, rechazado o sin conexión), nunca por la cola: llevan la contraseña (ver §6). Sin red, los
+botones se deshabilitan (`hooks/useEnLinea`); después de guardar, el aviso dice que la lista puede
+tardar unos segundos en mostrarlo. El teléfono de una cuenta no baja a la tablet: al editar arranca
+vacío. Una sucursal cerrada se puede volver a abrir. `usePedidoOnline` vive en `src/hooks/`.
 
 SPEC-KRILINXI-012 corrige el reloj de la tablet: `lib/reloj` guarda el desfase con la hora
 del servidor que traen `login` y `renovar`, y `horaOficial()` es de donde salen
@@ -311,11 +317,12 @@ Nunca concatenes valores dentro de una consulta. Siempre `$1, $2`.
 ```
 frontend/src/
   features/     ordenes/ clientes/ entregas/ pagos/ auth/ pendientes/ estadisticas/
+                usuarios/ sucursales/
                 cada una con components/ hooks/ api/ types.ts
   components/   UI compartida: botones, inputs, modales de confirmación.
   lib/          api (el único cliente HTTP), powersync/ (schema local, conector), env,
                 money, dominio.
-  hooks/        Transversales: useConexion, useSession.
+  hooks/        Transversales: useConexion, useSession, useEnLinea, usePedidoOnline.
   pwa/          El service worker y su registro (SPEC-KRILINXI-011).
   pages/        Composición de rutas.
 ```
@@ -351,6 +358,14 @@ nadie lo note hasta que se corta internet.
 **Escrituras: primero local, después la cola.** Se escribe en SQLite, PowerSync encola el
 cambio y lo manda a la API cuando hay conexión. La UI no espera al servidor: la orden
 está creada apenas se guarda local.
+
+**La excepción: lo que escribe el admin va directo a la API** (SPEC-KRILINXI-017). El alta de
+una cuenta y el cambio de contraseña llevan la contraseña, y la cola es una tabla del SQLite de la
+tablet: pasar por ahí la dejaría guardada en el dispositivo hasta subir. Además el admin trabaja con
+conexión (§8) y necesita que el servidor diga que no al momento (un usuario repetido, una sucursal con
+ropa adentro). Por eso `/personal` y `/sucursales` leen de la base local pero escriben con `enviar()`
+de `lib/api`, y un test de arquitectura vigila que esas dos features nunca escriban en la base local.
+Lo que escriben aparece en la lista cuando PowerSync lo baja, unos segundos después.
 
 **Los ids los genera el cliente.** `crypto.randomUUID()` antes de insertar. Por eso todas
 las PKs son `UUID` y no `SERIAL`: una fila creada sin internet necesita identidad propia
