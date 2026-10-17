@@ -190,6 +190,14 @@ fuente (Atkinson Hyperlegible, propia, sin pedir nada afuera) viven en `src/inde
 test calcula el contraste de cada texto sobre su fondo. `components/` pinta solo con el tema (lo vigila
 un test de arquitectura) y suma `Aviso`, `Tarjeta`, `Insignia` e `Icono` (ver `components/README.md`).
 Las pantallas todavía usan la paleta cruda: pasan al tema en las specs siguientes de la ola.
+SPEC-KRILINXI-023 armó el **marco** de todas las pantallas (`pages/Marco.tsx`, una ruta de diseño
+que `App.tsx` pone por encima de las demás): cabecera con el negocio, la sucursal, quién atiende y
+Salir; el menú, que en pantalla ancha (desde 1024px) es una barra lateral y en chica un botón
+"Menú" que abre un cajón; el aviso de conexión; y un pie con la sucursal y la versión de
+`frontend/package.json`. El marco es dueño del único `<main>`: `Pantalla` es solo el `h1` y el
+contenido. Los destinos salen de `RUTAS` (`destinosDelMenu`), y cada ruta del menú declara su
+`icono` y su `descripcion`. Como el menú nombra las mismas pantallas que el Inicio, **un test que
+busca un enlace o un texto de una pantalla lo busca dentro de `getByRole('main')`** o por su rol.
 
 SPEC-KRILINXI-012 corrige el reloj de la tablet: `lib/reloj` guarda el desfase con la hora
 del servidor que traen `login` y `renovar`, y `horaOficial()` es de donde salen
@@ -365,11 +373,13 @@ frontend/src/
                 cada una con components/ hooks/ api/ types.ts
   components/   UI compartida: botones, inputs, modales de confirmación, avisos, tarjetas,
                 insignias e íconos. Pinta solo con los colores del tema (SPEC-KRILINXI-022).
+                marco/: las piezas de la cabecera, el menú y el pie (SPEC-KRILINXI-023).
   lib/          api (el único cliente HTTP), powersync/ (schema local, conector), env,
                 money, dominio.
   hooks/        Transversales: useConexion, useSession, useEnLinea, usePedidoOnline.
   pwa/          El service worker y su registro (SPEC-KRILINXI-011).
-  pages/        Composición de rutas.
+  pages/        Composición de rutas: el registro (`rutas.tsx`) y el marco (`Marco.tsx`), que
+                junta los datos y se los pasa a `components/marco/`.
 ```
 
 **Los colores salen del tema** (`src/index.css`, `@theme`; SPEC-KRILINXI-022): `bg-marca`,
