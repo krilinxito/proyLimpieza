@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react';
+import { PantallaAuditoria } from '../features/auditoria/components/PantallaAuditoria';
 import { FormularioIngreso } from '../features/auth/components/FormularioIngreso';
 import { AvisoSoloEmpleado } from '../features/auth/components/AvisoSoloEmpleado';
 import { PantallaClientes } from '../features/clientes/components/PantallaClientes';
@@ -154,6 +155,17 @@ export const RUTAS: readonly Ruta[] = [
     elemento: (
       <Pantalla titulo="Sucursales">
         <PantallaSucursales />
+      </Pantalla>
+    ),
+  },
+  {
+    camino: '/quien-hizo-que',
+    titulo: '¿Quién hizo qué?',
+    enMenu: true,
+    acceso: SOLO_ADMIN,
+    elemento: (
+      <Pantalla titulo="¿Quién hizo qué?">
+        <PantallaAuditoria />
       </Pantalla>
     ),
   },
