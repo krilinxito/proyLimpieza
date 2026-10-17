@@ -11,6 +11,7 @@ scope:
   - frontend/src/pwa/**
   - frontend/src/lib/env.ts
   - frontend/src/lib/env.test.ts
+  - frontend/src/lib/api.test.ts
   - frontend/src/test/**
   - frontend/src/features/estadisticas/components/SeccionVolumen.tsx
   - frontend/src/features/estadisticas/components/PantallaEstadisticas.test.tsx

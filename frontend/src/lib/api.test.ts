@@ -97,8 +97,10 @@ describe('lib/api: sesión rechazada — SPEC-KRILINXI-003', () => {
 });
 
 describe('lib/api: único dueño de VITE_API_URL — SPEC-KRILINXI-003', () => {
-  // `lib/env` es quien la LEE; `lib/api` es el único que la USA. Nadie más la nombra.
-  const PERMITIDOS = ['lib/env.ts', 'lib/api.ts'];
+  // `lib/env` es quien la LEE; `lib/api` es el único que la USA. Nadie más la nombra, salvo
+  // `pwa/csp.ts` (SPEC-KRILINXI-020): no hace pedidos, la usa al compilar para decirle al
+  // navegador que con ese origen sí se puede hablar.
+  const PERMITIDOS = ['lib/env.ts', 'lib/api.ts', 'pwa/csp.ts'];
 
   it('ningún otro archivo usa VITE_API_URL ni entorno.apiUrl', () => {
     const intrusos = archivosFuente()

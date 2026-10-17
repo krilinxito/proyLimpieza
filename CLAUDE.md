@@ -179,6 +179,9 @@ en "Buscar con más detalle". Cada registro se dice en palabras (`features/audit
 clientes, personal y sucursales se nombran con la base local, pero ropa, cobros y entregas solo por su
 tipo: el admin no los tiene en la tablet. Sin fechas, los últimos 30 días. Con eso, todo lo que hace el
 backend tiene su pantalla en el frontend.
+SPEC-KRILINXI-019 estabilizó la suite del frontend (mitad de los núcleos, modo lento `LENTO_MS`, §4)
+y arregló en `PantallaRopa` una búsqueda que una lectura vieja podía pisar. SPEC-KRILINXI-020 agregó la
+política de seguridad del contenido al build (§4).
 
 SPEC-KRILINXI-012 corrige el reloj de la tablet: `lib/reloj` guarda el desfase con la hora
 del servidor que traen `login` y `renovar`, y `horaOficial()` es de donde salen
@@ -297,6 +300,20 @@ reintentar** (`npx vitest run > salida.txt 2>&1`): el mensaje de error es la mit
 Para comprobar que la suite está estable, 10 corridas seguidas (desde `frontend/`, unos 6 minutos; con
 `LENTO_MS=200` delante, en modo lento): `for i in $(seq 1 10); do npx vitest run > corrida-$i.txt 2>&1 ||
 echo "falló la $i"; done`. Que no imprima nada es la señal de que pasaron todas.
+
+**La app compilada trae una política de seguridad del contenido (CSP)** (SPEC-KRILINXI-020,
+`frontend/src/pwa/csp.ts`): un `<meta>` que el build pone en `index.html`, y que en `npm run dev` no
+existe. Solo permite archivos del propio sitio y conexiones a `VITE_API_URL` y `VITE_POWERSYNC_URL`;
+nada en línea ni `eval` (el WASM de PowerSync no lo necesitó). Tres consecuencias para quien programa:
+- **Nada de `style={…}`**: el navegador lo ignora en la tablet sin avisar. Para algo variable, una
+  clase de una lista escrita entera (`anchoDeBarra` en `SeccionVolumen.tsx`). Un test de
+  arquitectura lo vigila.
+- **Un servicio externo nuevo** (otra API, un mapa, una fuente de Google) va en `directivas()` de
+  `csp.ts`, o el navegador lo bloquea.
+- **Antes de un release, la prueba a mano en un navegador** (jsdom no aplica la CSP): `npm run build
+  && npx vite preview --port 4173`, abrir `http://localhost:4173` en Chrome con alguien adentro, y en
+  las herramientas del navegador (pestaña Consola) no tiene que haber ningún error de "Content
+  Security Policy". Después, en la pestaña Red, "Sin conexión", recargar: la app tiene que abrir.
 
 **`test:db` se corre sola, nunca a la vez que otra suite** (SPEC-ALE186-022). Corre sus
 archivos en paralelo contra el Postgres de Docker; si al mismo tiempo corren los tests del
@@ -747,5 +764,8 @@ implemente una spec de las de abajo actualiza su línea cuando la mergee.
   `.env` y un cambio en `docker/powersync/powersync.yaml`; cada uno tendrá que generar sus
   claves y reiniciar PowerSync.
 - **Del frontend, no del backend:** la sesión vive en `localStorage`, así que un XSS en el
-  frontend podría robar el token. Conviene revisarlo (Content-Security-Policy, nada de HTML
-  sin escapar).
+  frontend podría robar el token. Desde SPEC-KRILINXI-020 la app compilada trae una
+  Content-Security-Policy (ver §4). Lo que queda: va como `<meta>` porque no hay servidor web en el
+  repo, y un `<meta>` no admite `frame-ancestors` (que otra página meta la app en un marco) ni
+  avisos de violación. **Cuando haya un servidor de producción, la política pasa a una cabecera
+  HTTP** con esas dos directivas.
