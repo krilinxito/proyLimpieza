@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Boton } from '../../../components/Boton';
 import { CampoTexto } from '../../../components/CampoTexto';
@@ -14,6 +14,8 @@ type Props = {
   guardar: (valores: Record<string, string>) => Promise<ResultadoCorreccion>;
   alGuardar: () => void;
   alVolver: () => void;
+  /** Algo para mostrar antes del formulario: "Es el mismo cliente" (SPEC-KRILINXI-021). */
+  antesDelFormulario?: ReactNode;
 };
 
 /** "Trae la boleta" / "No trae la boleta", como en la pantalla de entregar. */
@@ -51,7 +53,7 @@ function ElegirRetiro({ value, onChange, error }: { value: string; onChange: (va
  * SPEC-KRILINXI-013. Arranca con lo que se había enviado; valida quien guarda
  * (`api/corregirLocal`) y este formulario muestra lo que le contesta, campo por campo.
  */
-export function FormularioCorreccion({ registro, guardar, alGuardar, alVolver }: Props) {
+export function FormularioCorreccion({ registro, guardar, alGuardar, alVolver, antesDelFormulario }: Props) {
   const correccion = prepararCorreccion(registro);
   const [valores, setValores] = useState<Record<string, string>>(correccion.tipo === 'formulario' ? correccion.valores : {});
   const [errores, setErrores] = useState<Record<string, string>>({});
@@ -143,6 +145,7 @@ export function FormularioCorreccion({ registro, guardar, alGuardar, alVolver }:
   return (
     <form onSubmit={enviar} noValidate aria-label="Corregir el registro" className="grid gap-2">
       {encabezado}
+      {antesDelFormulario}
       <p className="mt-2 text-xl text-slate-700">Corregí lo que está mal y volvé a guardarlo.</p>
       {correccion.campos.map(campo)}
       {errorGeneral && (

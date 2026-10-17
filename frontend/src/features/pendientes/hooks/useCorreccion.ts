@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { useSession } from '../../../hooks/useSession';
 import { useBaseLocal } from '../../../lib/powersync';
-import { descartarRegistro, guardarCorreccion } from '../api/corregirLocal';
+import { buscarMismoCliente, descartarRegistro, guardarCorreccion, usarMismoCliente } from '../api/corregirLocal';
+import type { Cliente } from '../../clientes/types';
 import type { ResultadoCorreccion } from '../correccion';
 import type { RegistroParaCorregir } from '../types';
 
@@ -12,6 +13,10 @@ export type Correcciones =
       lista: true;
       guardar: (registro: RegistroParaCorregir, valores: Record<string, string>) => Promise<ResultadoCorreccion>;
       descartar: (registro: RegistroParaCorregir) => Promise<void>;
+      /** SPEC-KRILINXI-021: el cliente que ya existe con el teléfono de uno rechazado, o null. */
+      buscarMismoCliente: (registro: RegistroParaCorregir) => Promise<Cliente | null>;
+      /** SPEC-KRILINXI-021: pasa la ropa del rechazado al que ya existe. */
+      usarMismoCliente: (registro: RegistroParaCorregir, existente: Cliente) => Promise<{ boletas: number }>;
     };
 
 /**
@@ -30,6 +35,8 @@ export function useCorreccion(): Correcciones {
       lista: true,
       guardar: (registro, valores) => guardarCorreccion(base, sucursalId, registro, valores),
       descartar: (registro) => descartarRegistro(base, registro.id),
+      buscarMismoCliente: (registro) => buscarMismoCliente(base, registro),
+      usarMismoCliente: (registro, existente) => usarMismoCliente(base, registro, existente),
     };
   }, [base, sucursalId]);
 }

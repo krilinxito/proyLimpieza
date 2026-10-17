@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { simularApi } from '../../../test/apiFalsa';
 import { baseLocalDePrueba } from '../../../test/baseLocalDePrueba';
 import { subirAceptando } from '../../../test/rechazos';
-import { buscarPorTelefono, editarCliente, registrarCliente, telefonoDeOtro } from './clientesLocal';
+import { buscarPorTelefono, editarCliente, registrarCliente, telefonoDeOtro, validarCliente } from './clientesLocal';
 
 // Una persona que ya estaba en el sistema: bajó por la sincronización, no está en la cola.
 const ROSA = { id: randomUUID(), nombre: 'Rosa Quispe', telefono: '70123456', carnet: '4455667' };
@@ -175,5 +175,20 @@ describe('Editar un cliente en la base local — SPEC-KRILINXI-014', () => {
       tipo: 'invalido',
       errores: { nombre: 'Escribí el nombre del cliente.', telefono: 'Escribí el número de teléfono del cliente.' },
     });
+  });
+});
+
+describe('Un teléfono repetido en la tablet — SPEC-KRILINXI-021', () => {
+  it('validarCliente encuentra al otro dueño del teléfono aunque el propio también esté en la tablet', async () => {
+    // El cliente rechazado sigue en la tablet hasta la próxima sincronización, y el de la otra
+    // tablet ya bajó: dos filas con el mismo teléfono. La del propio no tiene que tapar a la otra.
+    const { control, sembrar } = await baseLocalDePrueba();
+    const propio = { id: '00000000-0000-4000-8000-000000000001', nombre: 'Rosa Q.', telefono: '70123456' };
+    const otro = { id: '00000000-0000-4000-8000-000000000002', nombre: 'Rosa Quispe', telefono: '70123456' };
+    await sembrar('clientes', [propio, otro]);
+
+    const { ocupadoPor } = await validarCliente(control.base, { nombre: 'Rosa Q.', telefono: '70123456' }, propio.id);
+
+    expect(ocupadoPor?.id).toBe(otro.id);
   });
 });

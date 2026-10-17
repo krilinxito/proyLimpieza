@@ -14,4 +14,6 @@ export type RegistroParaCorregir = {
   operacion: string;
   /** y lo que se intentó subir. */
   datos: Record<string, unknown>;
+  /** Por qué se rechazó, para el código (`TELEFONO_DUPLICADO`); el mensaje es para la pantalla. SPEC-KRILINXI-021. */
+  codigo: string;
 };

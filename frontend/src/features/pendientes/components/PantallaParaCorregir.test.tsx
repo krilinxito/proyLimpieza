@@ -7,6 +7,7 @@ import { cuerpoError, simularApi } from '../../../test/apiFalsa';
 import { baseLocalDePrueba } from '../../../test/baseLocalDePrueba';
 import { sinJerga } from '../../../test/jerga';
 import { ordenDePrueba, SUCURSAL_DE_PRUEBA } from '../../../test/filasDePrueba';
+import { dosTabletsConLaMismaRosa, ROSA_DE_LA_OTRA_TABLET } from '../../../test/clienteRepetido';
 import { subirRechazando } from '../../../test/rechazos';
 import { renderEnRuta } from '../../../test/render';
 import { MENSAJES } from '../../ordenes/api/ordenesLocal';
@@ -166,5 +167,59 @@ describe('Corregir lo que no se pudo guardar — SPEC-KRILINXI-013', () => {
     expect(screen.getByRole('link', { name: 'Ir a Ropa en el local' })).toHaveAttribute('href', '/ropa');
     expect(screen.queryByRole('button', { name: 'Volver a guardar' })).not.toBeInTheDocument();
     sinJerga();
+  });
+});
+
+describe('Es el mismo cliente — SPEC-KRILINXI-021', () => {
+  async function abrirElClienteRechazado(opciones?: { bajaLaOtra?: boolean }) {
+    const prueba = await dosTabletsConLaMismaRosa(opciones);
+    renderEnRuta(<App />, '/para-corregir', { baseLocal: prueba.control });
+    const tarjeta = (await screen.findByText('Cliente Rosa Q. (70123456)')).closest('li');
+    if (!tarjeta) throw new Error('No está la tarjeta del cliente rechazado.');
+    fireEvent.click(within(tarjeta).getByRole('button', { name: 'Corregir' }));
+    return prueba;
+  }
+
+  it('muestra al cliente que ya existe, con su nombre y teléfono para comparar', async () => {
+    await abrirElClienteRechazado();
+    const panel = await screen.findByRole('region', { name: 'Es el mismo cliente' });
+    expect(within(panel).getByText('Rosa Quispe (70123456)')).toBeInTheDocument();
+    expect(within(panel).getByRole('button', { name: 'Es el mismo cliente' })).toBeInTheDocument();
+    sinJerga();
+  });
+
+  it('al confirmar, la ropa pasa a ese cliente y todo sale de la lista, sin internet', async () => {
+    const { db } = await abrirElClienteRechazado();
+    fireEvent.click(await screen.findByRole('button', { name: 'Es el mismo cliente' }));
+    const dialogo = screen.getByRole('dialog', { name: '¿Es Rosa Quispe?' });
+    expect(dialogo).toHaveTextContent('La ropa de este registro pasa a nombre de Rosa Quispe');
+    sinJerga();
+    fireEvent.click(screen.getByRole('button', { name: 'Sí, es la misma persona' }));
+
+    expect(await screen.findByText('Listo: la ropa quedó a nombre de Rosa Quispe y se va a guardar de nuevo.')).toBeInTheDocument();
+    expect(await screen.findByText('No hay nada para corregir. Todo se guardó bien.')).toBeInTheDocument();
+    // En la cola: la ropa con el otro cliente, y su adelanto. El cliente repetido, no.
+    const cola = await db.getCrudBatch(10);
+    expect(cola?.crud.map((c) => c.table)).toEqual(['ordenes', 'pagos']);
+    expect(cola?.crud[0]?.opData).toEqual(expect.objectContaining({ cliente_id: ROSA_DE_LA_OTRA_TABLET }));
+    sinJerga();
+  });
+
+  it('en Ropa en el local, la boleta figura con el cliente que existe', async () => {
+    await abrirElClienteRechazado();
+    fireEvent.click(await screen.findByRole('button', { name: 'Es el mismo cliente' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sí, es la misma persona' }));
+    await screen.findByText(/la ropa quedó a nombre de Rosa Quispe/);
+
+    fireEvent.click(await screen.findByRole('link', { name: 'Volver al inicio' }));
+    fireEvent.click(await screen.findByRole('link', { name: 'Ropa en el local' }));
+
+    expect(await screen.findByRole('button', { name: 'Boleta 001234, Rosa Quispe' })).toBeInTheDocument();
+  });
+
+  it('si la tablet no conoce a otro cliente con ese teléfono, no lo ofrece y deja corregir el teléfono', async () => {
+    await abrirElClienteRechazado({ bajaLaOtra: false });
+    expect(await screen.findByLabelText('Teléfono')).toHaveValue('70123456');
+    expect(screen.queryByRole('region', { name: 'Es el mismo cliente' })).not.toBeInTheDocument();
   });
 });

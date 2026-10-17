@@ -26,7 +26,9 @@
 import type { BaseLocal, Fila, Sentencia } from '../../../lib/powersync';
 import { aDecimal, parsearMonto, type Centavos } from '../../../lib/money';
 import { esMetodoPago, esTipoRetiro } from '../../../lib/dominio';
-import { telefonoDeOtro, validarCliente } from '../../clientes/api/clientesLocal';
+import { buscarPorTelefono, telefonoDeOtro, validarCliente } from '../../clientes/api/clientesLocal';
+import type { Cliente } from '../../clientes/types';
+import { listarParaCorregir } from './paraCorregirLocal';
 import { MENSAJES_ENTREGA } from '../../entregas/api/entregasLocal';
 import { MENSAJES_ACCION } from '../../ordenes/api/ropaLocal';
 import { validarRopa } from '../../ordenes/api/ordenesLocal';
@@ -216,6 +218,51 @@ function completarDesde(fila: Fila): Record<string, string> {
       return [clave, paraFormulario(campo?.tipo ?? 'texto', valor)];
     }),
   );
+}
+
+/**
+ * El caso que la corrección común no resuelve — SPEC-KRILINXI-021. Dos tablets dan de alta al
+ * mismo cliente sin internet; al subir, el servidor acepta una y rechaza la otra por teléfono
+ * repetido, y la ropa registrada para el rechazado vuelve rechazada también ("ese cliente no
+ * está registrado"). Lo que corresponde no es corregir nada del cliente: es decir que es el
+ * mismo, y pasar su ropa al que ya existe.
+ *
+ * Devuelve ese cliente si la tablet lo conoce (bajó por el bucket `global`), o null.
+ */
+export async function buscarMismoCliente(base: BaseLocal, registro: RegistroParaCorregir): Promise<Cliente | null> {
+  if (registro.tabla !== 'clientes' || registro.operacion !== 'PUT' || registro.codigo !== 'TELEFONO_DUPLICADO') return null;
+  const telefono = typeof registro.datos.telefono === 'string' ? registro.datos.telefono : '';
+  // Sin contar al propio: su fila rechazada puede seguir en la tablet con ese mismo teléfono.
+  return buscarPorTelefono(base, telefono, registro.registroId);
+}
+
+/**
+ * Descarta el cliente rechazado y vuelve a escribir la ropa que le apuntaba con el cliente que ya
+ * existe —con el mismo id de cada orden (→ SPEC-KRILINXI-013)—, y después sus cobros y entregas
+ * rechazados, tal cual. Todo en una transacción: o queda todo corregido y fuera de la lista, o
+ * no cambia nada. El orden de las sentencias es el de la cola: primero la ropa, después lo que le
+ * apunta, así suben en ese orden.
+ */
+export async function usarMismoCliente(
+  base: BaseLocal,
+  registro: RegistroParaCorregir,
+  existente: Cliente,
+): Promise<{ boletas: number }> {
+  const todos = await listarParaCorregir(base);
+  const altas = todos.filter((r) => r.operacion === 'PUT' && r.id !== registro.id);
+  const ordenes = altas.filter((r) => r.tabla === 'ordenes' && r.datos.cliente_id === registro.registroId);
+  const idsDeOrdenes = new Set(ordenes.map((o) => o.registroId));
+  const loQueLesApunta = altas.filter(
+    (r) => (r.tabla === 'pagos' || r.tabla === 'entregas') && idsDeOrdenes.has(String(r.datos.orden_id)),
+  );
+
+  const sentencias: Sentencia[] = [
+    borrarDeLaLista(registro.id),
+    ...ordenes.flatMap((o) => [reescribirAlta(o, { cliente_id: existente.id }), borrarDeLaLista(o.id)]),
+    ...loQueLesApunta.flatMap((r) => [reescribirAlta(r, {}), borrarDeLaLista(r.id)]),
+  ];
+  await base.ejecutarJuntas(sentencias);
+  return { boletas: ordenes.length };
 }
 
 /** Saca el registro de la lista sin mandar nada. Lo que tenía no se va a guardar nunca. */
