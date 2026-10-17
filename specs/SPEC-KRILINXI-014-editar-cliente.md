@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-014
 name: Editar los datos de un cliente
 slug: editar-cliente
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-16
 scope:
