@@ -1,5 +1,6 @@
 /**
- * Lo que devuelven `/api/estadisticas/ingresos`, `/saldos` y `/sin-recoger` — SPEC-KRILINXI-015.
+ * Lo que devuelven `/api/estadisticas/ingresos`, `/saldos` y `/sin-recoger` — SPEC-KRILINXI-015 —,
+ * y `/volumen`, `/productividad` y `/clientes` — SPEC-KRILINXI-016.
  *
  * Es el contrato de SPEC-ALE186-008, campo por campo. Los montos llegan como texto decimal
  * ("125.50"), ya sumados en Postgres: el front los muestra, no los suma (CLAUDE.md §8).
@@ -65,7 +66,54 @@ export type SinRecoger = {
   }[];
 };
 
-export type Panel = { ingresos: Ingresos; saldos: Saldos; sinRecoger: SinRecoger };
+/** `/volumen` — SPEC-ALE186-013. Un día por cada día del período, también los que quedan en 0. */
+export type Volumen = {
+  desde: string;
+  hasta: string;
+  total: number;
+  anuladas: number;
+  porDia: { fecha: string; ordenes: number; anuladas: number }[];
+};
+
+/** `/productividad` — SPEC-ALE186-013. Una fila por persona y por sucursal del registro. */
+export type Productividad = {
+  desde: string;
+  hasta: string;
+  porEmpleado: {
+    usuario: { id: string; nombreCompleto: string };
+    sucursal: { id: string; nombre: string };
+    ordenesRecibidas: number;
+    cobros: number;
+    montoCobrado: MontoTexto;
+    entregas: number;
+  }[];
+};
+
+/** Lo que vino un cliente: en total o en una sucursal. `ultimaVisita` es `YYYY-MM-DD HH:MM:SS` de Bolivia. */
+export type Atenciones = { ordenes: number; gastado: MontoTexto; ultimaVisita: string };
+
+/** `/clientes` — SPEC-ALE186-017, paginada. */
+export type ClientesAtendidos = {
+  desde: string;
+  hasta: string;
+  pagina: number;
+  porPagina: number;
+  /** Todos los clientes con atenciones, no solo los de esta página. */
+  total: number;
+  clientes: (Atenciones & {
+    cliente: { id: string; nombre: string; telefono: string };
+    porSucursal: (Atenciones & { sucursal: { id: string; nombre: string } })[];
+  })[];
+};
+
+export type Panel = {
+  ingresos: Ingresos;
+  saldos: Saldos;
+  sinRecoger: SinRecoger;
+  /** SPEC-KRILINXI-016. Los clientes van aparte: se paginan sin volver a pedir el resto. */
+  volumen: Volumen;
+  productividad: Productividad;
+};
 
 /** Una sucursal para el filtro, leída de la base local. */
 export type SucursalElegible = { id: string; nombre: string };

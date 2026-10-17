@@ -47,11 +47,14 @@ describe('Panel de estadísticas — SPEC-KRILINXI-015', () => {
     await abrirPanel();
     await screen.findByRole('heading', { name: 'Cobrado de hoy' });
 
-    expect(Object.fromEntries(servidor.pedidos.map((p) => [p.ruta, p.parametros]))).toEqual({
-      '/estadisticas/ingresos': { desde: HOY, hasta: HOY },
-      '/estadisticas/saldos': { desde: DESDE_SIEMPRE, hasta: HOY },
-      '/estadisticas/sin-recoger': { desde: DESDE_SIEMPRE, hasta: HOY },
-    });
+    // Solo las tres de esta spec: volumen, productividad y clientes las revisa SPEC-KRILINXI-016.
+    expect(Object.fromEntries(servidor.pedidos.map((p) => [p.ruta, p.parametros]))).toEqual(
+      expect.objectContaining({
+        '/estadisticas/ingresos': { desde: HOY, hasta: HOY },
+        '/estadisticas/saldos': { desde: DESDE_SIEMPRE, hasta: HOY },
+        '/estadisticas/sin-recoger': { desde: DESDE_SIEMPRE, hasta: HOY },
+      }),
+    );
   });
 
   it('muestra los ingresos por sucursal y por forma de pago, con los totales tal como llegan', async () => {

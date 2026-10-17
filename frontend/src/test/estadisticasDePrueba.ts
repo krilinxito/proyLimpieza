@@ -1,5 +1,6 @@
 /**
- * Respuestas de prueba de `/api/estadisticas/*` — SPEC-KRILINXI-015
+ * Respuestas de prueba de `/api/estadisticas/*` — SPEC-KRILINXI-015, con volumen, productividad
+ * y clientes desde SPEC-KRILINXI-016
  *
  * Cada función arma una respuesta **válida** según el contrato de SPEC-ALE186-008, y el test
  * cambia solo lo que le importa:
@@ -90,7 +91,94 @@ export function sinRecogerDePrueba(cambios: Record<string, unknown> = {}) {
   };
 }
 
-type Respuestas = { ingresos?: RespuestaFalsa; saldos?: RespuestaFalsa; sinRecoger?: RespuestaFalsa };
+/** Tres días: el 15 con 4 boletas (1 anulada), el 16 sin ninguna. Los días en 0 vienen igual. */
+export function volumenDePrueba(cambios: Record<string, unknown> = {}) {
+  return {
+    desde: '2026-10-14',
+    hasta: '2026-10-16',
+    total: 6,
+    anuladas: 1,
+    porDia: [
+      { fecha: '2026-10-14', ordenes: 2, anuladas: 0 },
+      { fecha: '2026-10-15', ordenes: 4, anuladas: 1 },
+      { fecha: '2026-10-16', ordenes: 0, anuladas: 0 },
+    ],
+    ...cambios,
+  };
+}
+
+export const SUCURSAL_NORTE = '00000000-0000-4000-8000-0000000000c2';
+const ANA = { id: '00000000-0000-4000-8000-0000000000e1', nombreCompleto: 'Ana Flores' };
+
+/** Ana trabajó en dos sucursales: una fila por cada una (la regla del registro, SPEC-ALE186-012). */
+export function productividadDePrueba(cambios: Record<string, unknown> = {}) {
+  return {
+    desde: '2026-09-17',
+    hasta: '2026-10-16',
+    porEmpleado: [
+      {
+        usuario: ANA,
+        sucursal: { id: SUCURSAL_CENTRO, nombre: 'Centro' },
+        ordenesRecibidas: 12,
+        cobros: 9,
+        montoCobrado: '340.50',
+        entregas: 7,
+      },
+      {
+        usuario: ANA,
+        sucursal: { id: SUCURSAL_NORTE, nombre: 'Norte' },
+        ordenesRecibidas: 3,
+        cobros: 1,
+        montoCobrado: '20.00',
+        entregas: 0,
+      },
+    ],
+    ...cambios,
+  };
+}
+
+/** Rosa vino 3 veces: 2 al Centro y 1 al Norte. `total` cuenta todos los clientes, no solo esta página. */
+export function clientesDePrueba(cambios: Record<string, unknown> = {}) {
+  return {
+    desde: '2026-09-17',
+    hasta: '2026-10-16',
+    pagina: 1,
+    porPagina: 20,
+    total: 1,
+    clientes: [
+      {
+        cliente: { id: '00000000-0000-4000-8000-0000000000d1', nombre: 'Rosa Quispe', telefono: '70123456' },
+        ordenes: 3,
+        gastado: '150.00',
+        ultimaVisita: '2026-10-15 18:30:00',
+        porSucursal: [
+          {
+            sucursal: { id: SUCURSAL_CENTRO, nombre: 'Centro' },
+            ordenes: 2,
+            gastado: '100.00',
+            ultimaVisita: '2026-10-15 18:30:00',
+          },
+          {
+            sucursal: { id: SUCURSAL_NORTE, nombre: 'Norte' },
+            ordenes: 1,
+            gastado: '50.00',
+            ultimaVisita: '2026-09-20 10:00:00',
+          },
+        ],
+      },
+    ],
+    ...cambios,
+  };
+}
+
+type Respuestas = {
+  ingresos?: RespuestaFalsa;
+  saldos?: RespuestaFalsa;
+  sinRecoger?: RespuestaFalsa;
+  volumen?: RespuestaFalsa;
+  productividad?: RespuestaFalsa;
+  clientes?: RespuestaFalsa;
+};
 
 const ok = (data: unknown): RespuestaFalsa => ({ status: 200, data });
 
@@ -104,6 +192,12 @@ export function simularEstadisticas(respuestas: Respuestas | 'sin-conexion' = {}
         return respuestas.saldos ?? ok(saldosDePrueba());
       case '/estadisticas/sin-recoger':
         return respuestas.sinRecoger ?? ok(sinRecogerDePrueba());
+      case '/estadisticas/volumen':
+        return respuestas.volumen ?? ok(volumenDePrueba());
+      case '/estadisticas/productividad':
+        return respuestas.productividad ?? ok(productividadDePrueba());
+      case '/estadisticas/clientes':
+        return respuestas.clientes ?? ok(clientesDePrueba());
       default:
         return { status: 404 };
     }

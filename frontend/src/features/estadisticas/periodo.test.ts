@@ -5,6 +5,7 @@ import {
   FILTRO_INICIAL,
   hoyEnBolivia,
   MENSAJES_PERIODO,
+  parametrosHistoria,
   parametrosIngresos,
   parametrosPendientes,
   validarFechas,
@@ -41,5 +42,21 @@ describe('El período de las estadísticas — SPEC-KRILINXI-015', () => {
     expect(validarFechas('', '2026-10-15')).toEqual({ error: MENSAJES_PERIODO.faltaFecha });
     expect(validarFechas('2026-10-16', '2026-10-15')).toEqual({ error: MENSAJES_PERIODO.alReves });
     expect(validarFechas('2026-10-15', '2026-10-15')).toEqual({ desde: '2026-10-15', hasta: '2026-10-15' });
+  });
+});
+
+describe('El período de la historia: volumen, productividad y clientes — SPEC-KRILINXI-016', () => {
+  it('sin elegir nada son los últimos 30 días contando hoy, también cruzando un cambio de mes', () => {
+    expect(parametrosHistoria(FILTRO_INICIAL, '2026-10-16')).toEqual({ desde: '2026-09-17', hasta: '2026-10-16' });
+    expect(parametrosHistoria(FILTRO_INICIAL, '2026-03-01')).toEqual({ desde: '2026-01-31', hasta: '2026-03-01' });
+  });
+
+  it('con fechas y sucursal elegidas, usa esas como el resto del panel', () => {
+    const filtro = { fechas: { desde: '2026-10-01', hasta: '2026-10-15' }, sucursalId: SUCURSAL };
+    expect(parametrosHistoria(filtro, '2026-10-16')).toEqual({ desde: '2026-10-01', hasta: '2026-10-15', sucursal_id: SUCURSAL });
+  });
+
+  it('lo dice en el título', () => {
+    expect(describirPeriodo(FILTRO_INICIAL, 'historia')).toBe('de los últimos 30 días');
   });
 });

@@ -45,9 +45,9 @@ export function PantallaEstadisticas() {
 
       {estado.tipo === 'listo' && (
         <>
-          <SeccionIngresos ingresos={estado.panel.ingresos} periodo={describirPeriodo(filtro, 'ingresos')} />
-          <SeccionSaldos saldos={estado.panel.saldos} periodo={describirPeriodo(filtro, 'pendientes')} />
-          <SeccionSinRecoger sinRecoger={estado.panel.sinRecoger} periodo={describirPeriodo(filtro, 'pendientes')} />
+          <SeccionIngresos ingresos={estado.datos.ingresos} periodo={describirPeriodo(filtro, 'ingresos')} />
+          <SeccionSaldos saldos={estado.datos.saldos} periodo={describirPeriodo(filtro, 'pendientes')} />
+          <SeccionSinRecoger sinRecoger={estado.datos.sinRecoger} periodo={describirPeriodo(filtro, 'pendientes')} />
         </>
       )}
     </>
