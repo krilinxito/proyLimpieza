@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-024
 name: Inicio, ingreso y página no encontrada con el tema
 slug: inicio-ingreso
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-17
 scope:
@@ -18,7 +18,12 @@ scope:
 priority: high
 depends_on:
   - SPEC-KRILINXI-023
-tests: []
+tests:
+  - frontend/src/App.test.tsx
+  - frontend/src/components/EnlaceBoton.test.tsx
+  - frontend/src/estilos.test.tsx
+  - frontend/src/pages/Inicio.test.tsx
+  - frontend/src/test/arquitectura.test.ts
 ---
 
 ## Descripción
