@@ -185,6 +185,12 @@ política de seguridad del contenido al build (§4). SPEC-KRILINXI-021 resolvió
 dado de alta en dos tablets: "Es el mismo cliente" pasa su ropa (y sus cobros) al cliente que ya existe,
 en una transacción. `buscarPorTelefono` excluye al propio cliente dentro de la consulta.
 
+SPEC-KRILINXI-022 abrió la ola estética con el **tema**: los colores, la letra de base (18px) y la
+fuente (Atkinson Hyperlegible, propia, sin pedir nada afuera) viven en `src/index.css` (`@theme`), y un
+test calcula el contraste de cada texto sobre su fondo. `components/` pinta solo con el tema (lo vigila
+un test de arquitectura) y suma `Aviso`, `Tarjeta`, `Insignia` e `Icono` (ver `components/README.md`).
+Las pantallas todavía usan la paleta cruda: pasan al tema en las specs siguientes de la ola.
+
 SPEC-KRILINXI-012 corrige el reloj de la tablet: `lib/reloj` guarda el desfase con la hora
 del servidor que traen `login` y `renovar`, y `horaOficial()` es de donde salen
 `fecha_entrada`, `fecha_pago` y `fecha_entrega`, también sin internet. Ningún archivo de
@@ -357,13 +363,18 @@ frontend/src/
   features/     ordenes/ clientes/ entregas/ pagos/ auth/ pendientes/ estadisticas/
                 usuarios/ sucursales/
                 cada una con components/ hooks/ api/ types.ts
-  components/   UI compartida: botones, inputs, modales de confirmación.
+  components/   UI compartida: botones, inputs, modales de confirmación, avisos, tarjetas,
+                insignias e íconos. Pinta solo con los colores del tema (SPEC-KRILINXI-022).
   lib/          api (el único cliente HTTP), powersync/ (schema local, conector), env,
                 money, dominio.
   hooks/        Transversales: useConexion, useSession, useEnLinea, usePedidoOnline.
   pwa/          El service worker y su registro (SPEC-KRILINXI-011).
   pages/        Composición de rutas.
 ```
+
+**Los colores salen del tema** (`src/index.css`, `@theme`; SPEC-KRILINXI-022): `bg-marca`,
+`text-peligro-texto`, no `bg-sky-700`. Un color nuevo se agrega al tema con su par de contraste en
+`test/tema.test.ts`. Un aviso es un `Aviso`, no un `<p>` con colores a mano.
 
 Regla equivalente en el front: **ningún componente llama a axios ni consulta PowerSync
 directamente.** Pasa siempre por `features/<x>/api` o por un hook. Un componente que
