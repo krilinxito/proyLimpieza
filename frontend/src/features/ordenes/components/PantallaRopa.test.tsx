@@ -158,3 +158,35 @@ describe('Ropa en el local: rutas — SPEC-KRILINXI-008', () => {
     expect(screen.getByText(/para quien atiende en una sucursal/)).toBeInTheDocument();
   });
 });
+
+describe('Ropa en el local: una lectura vieja no pisa la búsqueda — SPEC-KRILINXI-019', () => {
+  it('si la lista del local llega después que la búsqueda, se muestra la búsqueda', async () => {
+    simularApi(() => 'sin-conexion');
+    const prueba = await baseLocalDePrueba();
+    const rosa = clienteDePrueba({ nombre: 'Rosa Quispe', telefono: '70123456' });
+    const entregada = ordenDePrueba({ cliente_id: rosa.id, numero_boleta: '001234', estado: 'LISTO' });
+    await prueba.sembrar('clientes', [rosa]);
+    await prueba.sembrar('ordenes', [entregada]);
+    await prueba.sembrar('entregas', [entregaDePrueba({ orden_id: entregada.id })]);
+
+    // La lista del local (la consulta sin filtro de boleta) tarda; la búsqueda, no. Así la
+    // respuesta vieja llega siempre última, que es lo que en la suite pasaba de vez en cuando.
+    const { base } = prueba.control;
+    const lenta = {
+      ...base,
+      consultar: async (sql: string, parametros?: unknown[]) => {
+        if (/FROM ordenes/.test(sql) && !/numero_boleta = \?/.test(sql)) await new Promise((r) => setTimeout(r, 300));
+        return base.consultar(sql, parametros);
+      },
+    };
+    renderEnRuta(<App />, '/ropa', { baseLocal: { ...prueba.control, base: lenta } });
+
+    fireEvent.change(await screen.findByLabelText('Número de boleta o teléfono del cliente'), { target: { value: '001234' } });
+    fireEvent.click(await screen.findByRole('button', { name: 'Buscar' }));
+
+    expect(await screen.findByRole('button', { name: 'Boleta 001234, Rosa Quispe' })).toBeInTheDocument();
+    // Y sigue ahí cuando llega la lista vieja.
+    await new Promise((r) => setTimeout(r, 400));
+    expect(screen.getByRole('button', { name: 'Boleta 001234, Rosa Quispe' })).toBeInTheDocument();
+  });
+});

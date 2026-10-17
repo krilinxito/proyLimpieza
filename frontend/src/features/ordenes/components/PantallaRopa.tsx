@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { Boton } from '../../../components/Boton';
 import { CampoTexto } from '../../../components/CampoTexto';
 import { useRopa } from '../hooks/useRopa';
@@ -23,15 +23,20 @@ export function PantallaRopa({ accionesExtra }: Props = {}) {
   const [ordenes, setOrdenes] = useState<OrdenVista[] | null>(null);
   const [abierta, setAbierta] = useState<string | null>(null);
 
-  const cargar = useCallback(async () => {
-    if (!ropa.lista) return;
-    setOrdenes(busqueda === null ? await ropa.abiertas() : await ropa.buscar(busqueda));
-  }, [ropa, busqueda]);
-
   useEffect(() => {
     // Al volver del detalle también se recarga: algo pudo haber cambiado.
-    if (abierta === null) cargar().catch((error: unknown) => console.error('No se pudo leer la ropa.', error));
-  }, [cargar, abierta]);
+    if (abierta !== null || !ropa.lista) return;
+    // Si el empleado busca mientras la lista del local todavía se está leyendo, la lectura vieja
+    // puede llegar después y pisar los resultados ("No se encontró" con la boleta ahí). Al
+    // cambiar lo que se pide, la respuesta anterior se descarta — SPEC-KRILINXI-019.
+    let vigente = true;
+    (busqueda === null ? ropa.abiertas() : ropa.buscar(busqueda))
+      .then((lista) => vigente && setOrdenes(lista))
+      .catch((error: unknown) => console.error('No se pudo leer la ropa.', error));
+    return () => {
+      vigente = false;
+    };
+  }, [ropa, busqueda, abierta]);
 
   if (abierta !== null) {
     return <DetalleOrden ordenId={abierta} alVolver={() => setAbierta(null)} accionesExtra={accionesExtra} />;

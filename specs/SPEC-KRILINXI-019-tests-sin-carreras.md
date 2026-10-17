@@ -10,6 +10,7 @@ scope:
   - frontend/src/**/*.test.tsx
   - frontend/src/test/**
   - frontend/vite.config.ts
+  - frontend/src/features/ordenes/components/PantallaRopa.tsx
   - CLAUDE.md
 priority: high
 depends_on: []
