@@ -149,6 +149,10 @@ arranca con lo que se había enviado y valida con las reglas de su pantalla de o
 id**, así lo que dependía de ella (el adelanto de una orden) le sigue apuntando; una edición, con
 `UPDATE` y solo lo que cambió. La escritura y el borrado de `para_corregir` van juntos en
 `ejecutarJuntas` de la base local. La parte pura vive en `features/pendientes/correccion.ts`.
+SPEC-KRILINXI-014 agregó "Cambiar datos" en la tarjeta del cliente (nombre y teléfono): se
+escribe solo lo que cambió, y si no cambió nada no se escribe, porque un `UPDATE` que deja todo
+igual igual encola un PATCH vacío. `validarCliente` (`features/clientes/api/clientesLocal.ts`)
+es la única validación del cliente: la usan el alta, la edición y la corrección.
 
 SPEC-KRILINXI-012 corrige el reloj de la tablet: `lib/reloj` guarda el desfase con la hora
 del servidor que traen `login` y `renovar`, y `horaOficial()` es de donde salen

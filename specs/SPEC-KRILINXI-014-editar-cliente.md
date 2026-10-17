@@ -8,6 +8,10 @@ created: 2026-10-16
 scope:
   - frontend/src/features/clientes/**
   - frontend/src/test/**
+  - frontend/src/features/pendientes/api/corregirLocal.ts
+  - frontend/src/features/pendientes/api/corregirLocal.test.ts
+  - frontend/src/features/pendientes/correccion.ts
+  - CLAUDE.md
 priority: medium
 depends_on: []
 tests: []
