@@ -141,3 +141,27 @@ describe('Las estadísticas no salen de la base local — SPEC-KRILINXI-015', ()
     expect(cliente?.fuente).toMatch(/from\s+['"]\.\.\/\.\.\/\.\.\/lib\/api['"]/);
   });
 });
+
+/**
+ * El admin escribe directo a la API, nunca en la base local — SPEC-KRILINXI-017.
+ *
+ * El alta de una cuenta y el cambio de contraseña llevan la contraseña. Si se escribieran en la
+ * base local, quedaría en la cola de subida (una tabla del SQLite de la tablet) hasta subir. Por
+ * eso las features del personal y de las sucursales solo LEEN la base local: ninguna escribe.
+ */
+const DEL_ADMIN = archivosFuente('features/usuarios', 'features/sucursales');
+
+describe('El personal y las sucursales no escriben en la base local — SPEC-KRILINXI-017', () => {
+  it('revisa las dos features', () => {
+    expect(DEL_ADMIN.map(({ ruta }) => ruta)).toEqual(
+      expect.arrayContaining(['features/usuarios/api/cuentasApi.ts', 'features/sucursales/api/sucursalesApi.ts']),
+    );
+  });
+
+  it('ninguna llama a ejecutar ni arma un INSERT, UPDATE o DELETE', () => {
+    const culpables = DEL_ADMIN.filter(({ fuente }) =>
+      /\.ejecutar(Juntas)?\(|\b(INSERT|UPDATE|DELETE)\b/.test(sinComentarios(fuente)),
+    ).map(({ ruta }) => ruta);
+    expect(culpables).toEqual([]);
+  });
+});
