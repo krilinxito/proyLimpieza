@@ -4,6 +4,7 @@ import { App } from '../../../App';
 import { cuerpoError } from '../../../test/apiFalsa';
 import { baseLocalDePrueba } from '../../../test/baseLocalDePrueba';
 import {
+  clientesDePrueba,
   ingresosDePrueba,
   saldosDePrueba,
   simularEstadisticas,
@@ -47,11 +48,14 @@ describe('Panel de estadísticas — SPEC-KRILINXI-015', () => {
     await abrirPanel();
     await screen.findByRole('heading', { name: 'Cobrado de hoy' });
 
-    expect(Object.fromEntries(servidor.pedidos.map((p) => [p.ruta, p.parametros]))).toEqual({
-      '/estadisticas/ingresos': { desde: HOY, hasta: HOY },
-      '/estadisticas/saldos': { desde: DESDE_SIEMPRE, hasta: HOY },
-      '/estadisticas/sin-recoger': { desde: DESDE_SIEMPRE, hasta: HOY },
-    });
+    // Solo las tres de esta spec: volumen, productividad y clientes las revisa SPEC-KRILINXI-016.
+    expect(Object.fromEntries(servidor.pedidos.map((p) => [p.ruta, p.parametros]))).toEqual(
+      expect.objectContaining({
+        '/estadisticas/ingresos': { desde: HOY, hasta: HOY },
+        '/estadisticas/saldos': { desde: DESDE_SIEMPRE, hasta: HOY },
+        '/estadisticas/sin-recoger': { desde: DESDE_SIEMPRE, hasta: HOY },
+      }),
+    );
   });
 
   it('muestra los ingresos por sucursal y por forma de pago, con los totales tal como llegan', async () => {
@@ -105,8 +109,12 @@ describe('Panel de estadísticas — SPEC-KRILINXI-015', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Ver estas fechas' }));
 
     expect(await screen.findByRole('heading', { name: 'Cobrado del 01/10/2026 al 15/10/2026' })).toBeInTheDocument();
-    const ultimos = servidor.pedidos.slice(-3).map((p) => p.parametros);
-    expect(ultimos).toEqual(Array(3).fill({ desde: '2026-10-01', hasta: '2026-10-15', sucursal_id: SUCURSAL_CENTRO }));
+    // El último pedido de cada una de las tres secciones de esta spec.
+    const ultimoDe = (ruta: string) => servidor.pedidos.filter((p) => p.ruta === ruta).at(-1)?.parametros;
+    const elegido = { desde: '2026-10-01', hasta: '2026-10-15', sucursal_id: SUCURSAL_CENTRO };
+    expect(['/estadisticas/ingresos', '/estadisticas/saldos', '/estadisticas/sin-recoger'].map(ultimoDe)).toEqual(
+      Array(3).fill(elegido),
+    );
   });
 
   it('unas fechas al revés no se piden: se avisa qué corregir', async () => {
@@ -155,6 +163,117 @@ describe('Panel de estadísticas — SPEC-KRILINXI-015', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Probar de nuevo' }));
     await waitFor(() => expect(screen.queryByText(mensaje)).not.toBeInTheDocument());
     expect(await screen.findByRole('heading', { name: 'Cobrado de hoy' })).toBeInTheDocument();
+    sinJerga();
+  });
+});
+
+describe('Panel de estadísticas: volumen, productividad y clientes — SPEC-KRILINXI-016', () => {
+  it('sin elegir nada pide los últimos 30 días, y la primera página de clientes', async () => {
+    const servidor = simularEstadisticas();
+    await abrirPanel();
+    await screen.findByRole('heading', { name: 'Clientes atendidos de los últimos 30 días' });
+
+    const ultimos30 = { desde: '2026-09-17', hasta: HOY };
+    const de = (ruta: string) => servidor.pedidos.find((p) => p.ruta === ruta)?.parametros;
+    expect(de('/estadisticas/volumen')).toEqual(ultimos30);
+    expect(de('/estadisticas/productividad')).toEqual(ultimos30);
+    expect(de('/estadisticas/clientes')).toEqual({ ...ultimos30, pagina: 1, por_pagina: 20 });
+  });
+
+  it('muestra cada día del período, también los que quedaron en 0, con sus anuladas', async () => {
+    simularEstadisticas();
+    await abrirPanel();
+    await screen.findByRole('heading', { name: 'Ropa recibida de los últimos 30 días' });
+
+    const volumen = seccion('Ropa recibida');
+    expect(within(volumen).getByText('6 boletas')).toBeInTheDocument();
+    expect(within(volumen).getByText('De esas, 1 anulada.')).toBeInTheDocument();
+    expect(within(volumen).getByText('15/10/2026').nextElementSibling).toHaveTextContent('4 boletas (1 anulada)');
+    expect(within(volumen).getByText('16/10/2026').nextElementSibling).toHaveTextContent('0 boletas');
+    sinJerga();
+  });
+
+  it('muestra una fila por persona y por sucursal: quien trabajó en dos sale dos veces', async () => {
+    simularEstadisticas();
+    await abrirPanel();
+    await screen.findByRole('heading', { name: 'Lo que hizo cada persona de los últimos 30 días' });
+
+    const personas = seccion('Lo que hizo cada persona');
+    expect(within(personas).getByText('Ana Flores — Centro')).toBeInTheDocument();
+    expect(within(personas).getByText('Ana Flores — Norte')).toBeInTheDocument();
+    expect(within(personas).getByText('Recibió 12 · Cobró 9 veces (Bs 340,50) · Entregó 7')).toBeInTheDocument();
+    sinJerga();
+  });
+
+  it('muestra los clientes con sus atenciones, cuánto pagaron, su última visita y cada sucursal', async () => {
+    simularEstadisticas();
+    await abrirPanel();
+
+    const clientes = await screen.findByRole('region', { name: 'Clientes atendidos' });
+    expect(await within(clientes).findByText('Rosa Quispe (70123456)')).toBeInTheDocument();
+    expect(within(clientes).getByText('Vino 3 veces · Pagó Bs 150,00 · Última vez: 15/10/2026 18:30')).toBeInTheDocument();
+    expect(within(clientes).getByText('Norte: Vino 1 vez · Pagó Bs 50,00 · Última vez: 20/09/2026 10:00')).toBeInTheDocument();
+    sinJerga();
+  });
+
+  it('pagina los clientes pidiendo a la API la página que corresponde, sin volver a pedir el resto', async () => {
+    const servidor = simularEstadisticas({ clientes: { status: 200, data: clientesDePrueba({ total: 45 }) } });
+    await abrirPanel();
+    const clientes = await screen.findByRole('region', { name: 'Clientes atendidos' });
+    expect(await within(clientes).findByText('Página 1 de 3')).toBeInTheDocument();
+    const antes = servidor.pedidos.length;
+
+    fireEvent.click(within(clientes).getByRole('button', { name: 'Siguientes' }));
+
+    await waitFor(() => expect(servidor.pedidos).toHaveLength(antes + 1));
+    expect(servidor.pedidos.at(-1)).toEqual(
+      expect.objectContaining({ ruta: '/estadisticas/clientes', parametros: expect.objectContaining({ pagina: 2 }) }),
+    );
+    expect(await within(clientes).findByText('Página 2 de 3')).toBeInTheDocument();
+  });
+
+  it('cambiar el período o la sucursal vuelve a pedir las tres, y los clientes desde la página 1', async () => {
+    const servidor = simularEstadisticas({ clientes: { status: 200, data: clientesDePrueba({ total: 45 }) } });
+    await abrirPanel();
+    const clientes = await screen.findByRole('region', { name: 'Clientes atendidos' });
+    fireEvent.click(await within(clientes).findByRole('button', { name: 'Siguientes' }));
+    await within(clientes).findByText('Página 2 de 3');
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Centro' }));
+    fireEvent.change(screen.getByLabelText('Desde'), { target: { value: '2026-10-01' } });
+    fireEvent.change(screen.getByLabelText('Hasta'), { target: { value: '2026-10-15' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Ver estas fechas' }));
+
+    await screen.findByRole('heading', { name: 'Clientes atendidos del 01/10/2026 al 15/10/2026' });
+    const elegido = { desde: '2026-10-01', hasta: '2026-10-15', sucursal_id: SUCURSAL_CENTRO };
+    const ultimoDe = (ruta: string) => servidor.pedidos.filter((p) => p.ruta === ruta).at(-1)?.parametros;
+    await waitFor(() => expect(ultimoDe('/estadisticas/clientes')).toEqual({ ...elegido, pagina: 1, por_pagina: 20 }));
+    expect(ultimoDe('/estadisticas/volumen')).toEqual(elegido);
+    expect(ultimoDe('/estadisticas/productividad')).toEqual(elegido);
+  });
+
+  it('sin internet estas secciones tampoco muestran números', async () => {
+    simularEstadisticas('sin-conexion');
+    await abrirPanel();
+
+    expect(await screen.findByText('Las estadísticas necesitan conexión.')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Ropa recibida' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Clientes atendidos' })).not.toBeInTheDocument();
+  });
+
+  it('si se corta internet al pasar de página, los clientes lo dicen y se puede probar de nuevo', async () => {
+    simularEstadisticas({ clientes: { status: 200, data: clientesDePrueba({ total: 45 }) } });
+    await abrirPanel();
+    const clientes = await screen.findByRole('region', { name: 'Clientes atendidos' });
+    await within(clientes).findByText('Página 1 de 3');
+
+    simularEstadisticas('sin-conexion');
+    fireEvent.click(within(clientes).getByRole('button', { name: 'Siguientes' }));
+
+    expect(await within(clientes).findByText('Las estadísticas necesitan conexión.')).toBeInTheDocument();
+    simularEstadisticas({ clientes: { status: 200, data: clientesDePrueba({ total: 45, pagina: 2 }) } });
+    fireEvent.click(within(clientes).getByRole('button', { name: 'Probar de nuevo' }));
+    expect(await within(clientes).findByText('Rosa Quispe (70123456)')).toBeInTheDocument();
     sinJerga();
   });
 });

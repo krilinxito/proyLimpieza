@@ -162,6 +162,11 @@ pendiente** (`DESDE_SIEMPRE`), porque esas dos filtran por `fecha_entrada`. Las 
 filtro sí salen de la base local, y un test de arquitectura vigila que nada más de la feature
 la toque. Para los tests, `test/estadisticasDePrueba.ts` arma respuestas válidas y
 `simularEstadisticas()` las sirve; el servidor falso ahora anota los `parametros` de la query.
+SPEC-KRILINXI-016 completó el panel con el volumen por día, lo que hizo cada persona (una fila
+por sucursal del registro) y los clientes atendidos, paginados aparte. Sin fechas elegidas, esas
+tres miran los **últimos 30 días**. Lo que se pide online pasa por `usePedidoOnline`
+(`features/estadisticas/hooks/`): cargando, sin conexión, error, la recarga con `online` y el
+descarte de la respuesta vieja, en un solo lugar.
 
 SPEC-KRILINXI-012 corrige el reloj de la tablet: `lib/reloj` guarda el desfase con la hora
 del servidor que traen `login` y `renovar`, y `horaOficial()` es de donde salen
@@ -646,6 +651,14 @@ Nada se implementa sin una spec aprobada.
   escritura que alguien haga a mano en la base, o por un camino que no pase por
   `conAuditoria`, no queda auditada. La semilla del primer admin no se audita a propósito
   (no hay sesión de quien atribuirla).
+
+- **Un test intermitente en el frontend** (anotado en SPEC-KRILINXI-016, 2026-10-16). "con boleta
+  y pagando lo que falta: confirma, guarda entrega y pago…" (`PantallaEntregar.test.tsx`,
+  SPEC-KRILINXI-009) falló 2 veces en unas 10 corridas completas de `npm test`, tardando ~3 s, y
+  nunca corrido solo. No se capturó el mensaje. La sospecha es que su última espera (`findBy`,
+  1000 ms por defecto) se queda corta con la máquina cargada, porque después de confirmar la app
+  escribe la entrega y el pago en SQLite. Si vuelve a fallar, **guardá la salida completa** antes
+  de reintentar; si se confirma, el arreglo es subir `asyncUtilTimeout` en `src/test/setup.ts`.
 
 ### Revisión del backend (2026-10-09)
 

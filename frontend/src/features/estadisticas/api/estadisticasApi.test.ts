@@ -2,13 +2,27 @@ import { describe, expect, it } from 'vitest';
 import { ErrorSinConexion } from '../../../lib/api';
 import { simularApi } from '../../../test/apiFalsa';
 import {
+  clientesDePrueba,
   ingresosDePrueba,
+  productividadDePrueba,
   saldosDePrueba,
   simularEstadisticas,
   sinRecogerDePrueba,
   SUCURSAL_CENTRO,
+  volumenDePrueba,
 } from '../../../test/estadisticasDePrueba';
-import { leerIngresos, leerSaldos, leerSinRecoger, pedirIngresos, pedirSaldos, RespuestaRara } from './estadisticasApi';
+import {
+  leerClientes,
+  leerIngresos,
+  leerProductividad,
+  leerSaldos,
+  leerSinRecoger,
+  leerVolumen,
+  pedirClientes,
+  pedirIngresos,
+  pedirSaldos,
+  RespuestaRara,
+} from './estadisticasApi';
 
 describe('Estadísticas: pedirlas a la API — SPEC-KRILINXI-015', () => {
   it('pide cada métrica a su ruta, con el período y la sucursal como parámetros', async () => {
@@ -58,5 +72,30 @@ describe('Estadísticas: leer las respuestas del contrato — SPEC-KRILINXI-015'
   ])('rechaza %s', (_caso, armar) => {
     const datos = armar();
     expect(leerIngresos(datos) ?? leerSaldos(datos)).toBeNull();
+  });
+});
+
+describe('Estadísticas: volumen, productividad y clientes — SPEC-KRILINXI-016', () => {
+  it('acepta las respuestas válidas de las tres', () => {
+    expect(leerVolumen(volumenDePrueba())).not.toBeNull();
+    expect(leerProductividad(productividadDePrueba())).not.toBeNull();
+    expect(leerClientes(clientesDePrueba())).not.toBeNull();
+  });
+
+  it.each<[string, () => unknown, (datos: unknown) => unknown]>([
+    ['un día sin fecha', () => volumenDePrueba({ porDia: [{ ordenes: 1, anuladas: 0 }] }), leerVolumen],
+    ['una cantidad de boletas con decimales', () => volumenDePrueba({ total: 1.5 }), leerVolumen],
+    ['un monto cobrado como número', () =>
+      productividadDePrueba({ porEmpleado: [{ ...productividadDePrueba().porEmpleado[0], montoCobrado: 340.5 }] }), leerProductividad],
+    ['una sucursal sin nombre dentro de un cliente', () =>
+      clientesDePrueba({ clientes: [{ ...clientesDePrueba().clientes[0], porSucursal: [{ sucursal: { id: 'x' }, ordenes: 1, gastado: '1.00', ultimaVisita: 'x' }] }] }), leerClientes],
+  ])('rechaza %s', (_caso, armar, leer) => {
+    expect(leer(armar())).toBeNull();
+  });
+
+  it('pide una página de clientes con el período y cuántos por página', async () => {
+    const servidor = simularEstadisticas();
+    await pedirClientes({ desde: '2026-09-17', hasta: '2026-10-16' }, 3);
+    expect(servidor.pedidos[0]?.parametros).toEqual({ desde: '2026-09-17', hasta: '2026-10-16', pagina: 3, por_pagina: 20 });
   });
 });

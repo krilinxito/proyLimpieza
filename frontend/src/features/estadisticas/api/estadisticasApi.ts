@@ -1,5 +1,5 @@
 /**
- * Las métricas del panel del admin, pedidas a la API — SPEC-KRILINXI-015.
+ * Las métricas del panel del admin, pedidas a la API — SPEC-KRILINXI-015 y SPEC-KRILINXI-016.
  *
  * Es la única excepción a "todo se lee de la base local" (CLAUDE.md §8): sincronizar años de
  * cobros a un navegador solo para sumarlos no tiene sentido, y el admin trabaja con conexión.
@@ -13,7 +13,17 @@
 import { api } from '../../../lib/api';
 import { METODOS_PAGO } from '../../../lib/dominio';
 import type { Parametros } from '../periodo';
-import { TRAMOS, type Ingresos, type Saldos, type SinRecoger, type Tramo } from '../types';
+import {
+  TRAMOS,
+  type Atenciones,
+  type ClientesAtendidos,
+  type Ingresos,
+  type Productividad,
+  type Saldos,
+  type SinRecoger,
+  type Tramo,
+  type Volumen,
+} from '../types';
 
 export class RespuestaRara extends Error {
   constructor() {
@@ -112,7 +122,71 @@ export function leerSinRecoger(datos: unknown): SinRecoger | null {
   return { desde: datos.desde, hasta: datos.hasta, cantidad: datos.cantidad, porAntiguedad, ordenes };
 }
 
-async function pedir<T>(ruta: string, parametros: Parametros, leer: (datos: unknown) => T | null): Promise<T> {
+const esFecha = (valor: unknown): valor is string => esTexto(valor) && /^\d{4}-\d{2}-\d{2}$/.test(valor);
+const esEntero = (valor: unknown): valor is number => esNumero(valor) && Number.isInteger(valor) && valor >= 0;
+
+/** `{ id, nombre }` de una sucursal, o null. */
+function sucursalDe(valor: unknown): { id: string; nombre: string } | null {
+  return esObjeto(valor) && esTexto(valor.id) && esTexto(valor.nombre) ? { id: valor.id, nombre: valor.nombre } : null;
+}
+
+export function leerVolumen(datos: unknown): Volumen | null {
+  if (!esObjeto(datos) || !esTexto(datos.desde) || !esTexto(datos.hasta)) return null;
+  if (!esEntero(datos.total) || !esEntero(datos.anuladas)) return null;
+  const porDia = lista(datos.porDia, (d) =>
+    esFecha(d.fecha) && esEntero(d.ordenes) && esEntero(d.anuladas) ? { fecha: d.fecha, ordenes: d.ordenes, anuladas: d.anuladas } : null,
+  );
+  if (!porDia) return null;
+  return { desde: datos.desde, hasta: datos.hasta, total: datos.total, anuladas: datos.anuladas, porDia };
+}
+
+export function leerProductividad(datos: unknown): Productividad | null {
+  if (!esObjeto(datos) || !esTexto(datos.desde) || !esTexto(datos.hasta)) return null;
+  const porEmpleado = lista(datos.porEmpleado, (f) => {
+    const { usuario } = f;
+    const sucursal = sucursalDe(f.sucursal);
+    if (!esObjeto(usuario) || !esTexto(usuario.id) || !esTexto(usuario.nombreCompleto) || !sucursal) return null;
+    if (!esEntero(f.ordenesRecibidas) || !esEntero(f.cobros) || !esMonto(f.montoCobrado) || !esEntero(f.entregas)) return null;
+    return {
+      usuario: { id: usuario.id, nombreCompleto: usuario.nombreCompleto },
+      sucursal,
+      ordenesRecibidas: f.ordenesRecibidas,
+      cobros: f.cobros,
+      montoCobrado: f.montoCobrado,
+      entregas: f.entregas,
+    };
+  });
+  if (!porEmpleado) return null;
+  return { desde: datos.desde, hasta: datos.hasta, porEmpleado };
+}
+
+/** Las tres cifras de una atención, o null. */
+function atencionesDe(f: Objeto): Atenciones | null {
+  return esEntero(f.ordenes) && esMonto(f.gastado) && esTexto(f.ultimaVisita)
+    ? { ordenes: f.ordenes, gastado: f.gastado, ultimaVisita: f.ultimaVisita }
+    : null;
+}
+
+export function leerClientes(datos: unknown): ClientesAtendidos | null {
+  if (!esObjeto(datos) || !esTexto(datos.desde) || !esTexto(datos.hasta)) return null;
+  if (!esEntero(datos.pagina) || !esEntero(datos.porPagina) || !esEntero(datos.total)) return null;
+  const clientes = lista(datos.clientes, (c) => {
+    const { cliente } = c;
+    const totales = atencionesDe(c);
+    if (!esObjeto(cliente) || !esTexto(cliente.id) || !esTexto(cliente.nombre) || !esTexto(cliente.telefono) || !totales) return null;
+    const porSucursal = lista(c.porSucursal, (s) => {
+      const sucursal = sucursalDe(s.sucursal);
+      const enEsa = atencionesDe(s);
+      return sucursal && enEsa ? { ...enEsa, sucursal } : null;
+    });
+    if (!porSucursal) return null;
+    return { ...totales, cliente: { id: cliente.id, nombre: cliente.nombre, telefono: cliente.telefono }, porSucursal };
+  });
+  if (!clientes) return null;
+  return { desde: datos.desde, hasta: datos.hasta, pagina: datos.pagina, porPagina: datos.porPagina, total: datos.total, clientes };
+}
+
+async function pedir<T>(ruta: string, parametros: Parametros | ParametrosPaginados, leer: (datos: unknown) => T | null): Promise<T> {
   const { data } = await api.get<unknown>(ruta, { params: parametros });
   const leido = leer(data);
   if (leido === null) throw new RespuestaRara();
@@ -122,3 +196,14 @@ async function pedir<T>(ruta: string, parametros: Parametros, leer: (datos: unkn
 export const pedirIngresos = (parametros: Parametros) => pedir('/estadisticas/ingresos', parametros, leerIngresos);
 export const pedirSaldos = (parametros: Parametros) => pedir('/estadisticas/saldos', parametros, leerSaldos);
 export const pedirSinRecoger = (parametros: Parametros) => pedir('/estadisticas/sin-recoger', parametros, leerSinRecoger);
+export const pedirVolumen = (parametros: Parametros) => pedir('/estadisticas/volumen', parametros, leerVolumen);
+export const pedirProductividad = (parametros: Parametros) => pedir('/estadisticas/productividad', parametros, leerProductividad);
+
+/** Cuántos clientes por página. El backend admite hasta 200; 20 se leen sin bajar demasiado. */
+export const CLIENTES_POR_PAGINA = 20;
+
+type ParametrosPaginados = Parametros & { pagina: number; por_pagina: number };
+
+/** Una página de clientes, desde 1. */
+export const pedirClientes = (parametros: Parametros, pagina: number) =>
+  pedir('/estadisticas/clientes', { ...parametros, pagina, por_pagina: CLIENTES_POR_PAGINA }, leerClientes);

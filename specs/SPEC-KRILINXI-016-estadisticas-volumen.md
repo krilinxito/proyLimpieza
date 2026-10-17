@@ -2,16 +2,21 @@
 id: SPEC-KRILINXI-016
 name: Estadísticas de volumen, productividad y clientes
 slug: estadisticas-volumen
-status: draft
+status: finished
 owner: krilinxito
 created: 2026-10-16
 scope:
   - frontend/src/features/estadisticas/**
   - frontend/src/test/**
+  - CLAUDE.md
 priority: medium
 depends_on:
   - SPEC-KRILINXI-015
-tests: []
+tests:
+  - frontend/src/features/estadisticas/api/estadisticasApi.test.ts
+  - frontend/src/features/estadisticas/components/PantallaEstadisticas.test.tsx
+  - frontend/src/features/estadisticas/periodo.test.ts
+  - frontend/src/test/estadisticasDePrueba.ts
 ---
 
 ## Descripción
@@ -31,6 +36,8 @@ Usa el mismo patrón online, los mismos filtros de período y sucursal y el mism
 - [ ] El sistema no muestra palabras del sistema (sinJerga) en las secciones nuevas
 
 ## Notas
+
+**Decidido al implementar:** sin fechas elegidas, volumen, productividad y clientes miran los **últimos 30 días** contando hoy (los mismos que usa el backend sin `desde`), no solo hoy: con un día, el volumen sería una barra y la lista de clientes casi nada. Con fechas elegidas, usan las mismas que el resto del panel.
 
 <!--
 Convención de trazabilidad: todo test relacionado con esta spec debe llevar su id

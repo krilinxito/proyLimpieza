@@ -9,7 +9,11 @@
  *    El backend filtra esas dos por `fecha_entrada`: con "hoy", una deuda de hace un mes no
  *    aparecería, y el tramo "más de 30 días" quedaría siempre en cero.
  *
- * Cuando el admin elige fechas, las tres secciones usan esas.
+ *  - **los últimos 30 días** para volumen, productividad y clientes (SPEC-KRILINXI-016): cuentan
+ *    lo que ya pasó, y con un solo día el volumen sería una barra y la lista de clientes, casi
+ *    nada. Son los mismos 30 días que usa el backend cuando no recibe `desde`.
+ *
+ * Cuando el admin elige fechas, todas las secciones usan esas.
  */
 import { ahoraOficialMs } from '../../lib/reloj';
 
@@ -55,6 +59,21 @@ export function parametrosPendientes(filtro: Filtro, hoy: string): Parametros {
   return conSucursal(filtro.fechas ?? { desde: DESDE_SIEMPRE, hasta: hoy }, filtro.sucursalId);
 }
 
+/** Cuántos días mira la historia por defecto, contando hoy (SPEC-KRILINXI-016). */
+export const DIAS_DE_HISTORIA = 30;
+
+/** `YYYY-MM-DD` menos `dias` días. En UTC, que no tiene cambios de hora. */
+export function restarDias(fecha: string, dias: number): string {
+  const enUtc = new Date(`${fecha}T00:00:00Z`);
+  enUtc.setUTCDate(enUtc.getUTCDate() - dias);
+  return enUtc.toISOString().slice(0, 10);
+}
+
+/** Para volumen, productividad y clientes: las fechas elegidas, o los últimos 30 días. */
+export function parametrosHistoria(filtro: Filtro, hoy: string): Parametros {
+  return conSucursal(filtro.fechas ?? { desde: restarDias(hoy, DIAS_DE_HISTORIA - 1), hasta: hoy }, filtro.sucursalId);
+}
+
 /** "2026-10-16" → "16/10/2026": como se lee una fecha en el mostrador. */
 export function fechaParaLeer(fecha: string): string {
   const [anio, mes, dia] = fecha.slice(0, 10).split('-');
@@ -62,11 +81,12 @@ export function fechaParaLeer(fecha: string): string {
 }
 
 /** Lo que dice el título de cada sección: qué período está mirando. */
-export function describirPeriodo(filtro: Filtro, seccion: 'ingresos' | 'pendientes'): string {
+export function describirPeriodo(filtro: Filtro, seccion: 'ingresos' | 'pendientes' | 'historia'): string {
   if (filtro.fechas) {
     const { desde, hasta } = filtro.fechas;
     return desde === hasta ? `del ${fechaParaLeer(desde)}` : `del ${fechaParaLeer(desde)} al ${fechaParaLeer(hasta)}`;
   }
+  if (seccion === 'historia') return `de los últimos ${DIAS_DE_HISTORIA} días`;
   return seccion === 'ingresos' ? 'de hoy' : 'hasta hoy';
 }
 
