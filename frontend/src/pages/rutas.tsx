@@ -7,6 +7,8 @@ import { PantallaEstadisticas } from '../features/estadisticas/components/Pantal
 import { PantallaRegistrarRopa } from '../features/ordenes/components/PantallaRegistrarRopa';
 import { PantallaRopa } from '../features/ordenes/components/PantallaRopa';
 import { PantallaParaCorregir } from '../features/pendientes/components/PantallaParaCorregir';
+import { PantallaSucursales } from '../features/sucursales/components/PantallaSucursales';
+import { PantallaPersonal } from '../features/usuarios/components/PantallaPersonal';
 import { ROLES, type Rol } from '../lib/dominio';
 import { Inicio } from './Inicio';
 import { Pantalla } from './Pantalla';
@@ -130,6 +132,28 @@ export const RUTAS: readonly Ruta[] = [
     elemento: (
       <Pantalla titulo="Registros para corregir">
         <PantallaParaCorregir />
+      </Pantalla>
+    ),
+  },
+  {
+    camino: '/personal',
+    titulo: 'Personal',
+    enMenu: true,
+    acceso: SOLO_ADMIN,
+    elemento: (
+      <Pantalla titulo="Personal">
+        <PantallaPersonal />
+      </Pantalla>
+    ),
+  },
+  {
+    camino: '/sucursales',
+    titulo: 'Sucursales',
+    enMenu: true,
+    acceso: SOLO_ADMIN,
+    elemento: (
+      <Pantalla titulo="Sucursales">
+        <PantallaSucursales />
       </Pantalla>
     ),
   },

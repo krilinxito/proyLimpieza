@@ -78,8 +78,17 @@ describe('App: menú por rol — SPEC-KRILINXI-003', () => {
     renderEnRuta(<App />, '/', { sesion: sesionDePrueba({ rol: 'ADMIN' }) });
     // Ni Ropa en el local, ni Cobrar (SPEC-KRILINXI-008), ni Entregar ropa (SPEC-KRILINXI-009):
     // son del mostrador.
-    expect(nombresDelMenu()).toEqual(['Clientes', 'Estadísticas']);
+    // Personal y Sucursales desde SPEC-KRILINXI-017.
+    expect(nombresDelMenu()).toEqual(['Clientes', 'Personal', 'Sucursales', 'Estadísticas']);
   });
+
+  it.each(['/personal', '/sucursales'])(
+    'un EMPLEADO que escribe %s ve que esa parte es solo para el administrador (SPEC-KRILINXI-017)',
+    (camino) => {
+      renderEnRuta(<App />, camino, { sesion: sesionDePrueba({ rol: 'EMPLEADO' }) });
+      expect(screen.getByText(/solo para el administrador/)).toBeInTheDocument();
+    },
+  );
 
   it('un EMPLEADO que escribe /estadisticas ve que esa parte es solo para el administrador', () => {
     renderEnRuta(<App />, '/estadisticas', { sesion: sesionDePrueba({ rol: 'EMPLEADO' }) });
