@@ -30,3 +30,15 @@ export type ResultadoAlta =
   | { tipo: 'registrado'; cliente: Cliente }
   | { tipo: 'invalido'; errores: ErroresAlta }
   | { tipo: 'telefono-ocupado'; cliente: Cliente };
+
+/** Lo que se puede cambiar de un cliente ya registrado (SPEC-KRILINXI-014), tal cual se escribe. */
+export type DatosEdicion = {
+  nombre: string;
+  telefono: string;
+};
+
+/** Cómo terminó una edición. Igual que el alta, ninguno es una excepción. */
+export type ResultadoEdicion =
+  | { tipo: 'editado'; cliente: Cliente }
+  | { tipo: 'sin-cambios' }
+  | { tipo: 'invalido'; errores: ErroresAlta };

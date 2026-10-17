@@ -12,7 +12,7 @@
  */
 import type { BaseLocal, Fila } from '../../../lib/powersync';
 import { normalizarTelefono } from '../telefono';
-import type { Cliente, DatosAlta, ErroresAlta, ResultadoAlta } from '../types';
+import type { Cliente, DatosAlta, DatosEdicion, ErroresAlta, ResultadoAlta, ResultadoEdicion } from '../types';
 
 // Los mismos textos que responde el backend (SPEC-ALE186-003): el empleado lee lo mismo
 // lo detecte el dispositivo o el servidor. Exportados para la corrección de lo rechazado
@@ -42,6 +42,45 @@ export async function buscarPorTelefono(base: BaseLocal, telefono: string): Prom
   return fila ? aCliente(fila) : null;
 }
 
+/** El mensaje cuando el teléfono ya es de otro cliente: dice de quién es y qué hacer. */
+export const telefonoDeOtro = (nombre: string) => `Ese teléfono ya es de ${nombre}. Revisalo y volvé a escribirlo.`;
+
+export type ClienteValidado = {
+  errores: ErroresAlta;
+  /** Los valores ya limpios: el nombre sin espacios de más, el teléfono solo con dígitos. */
+  nombre: string;
+  telefono: string;
+  /** El cliente que ya tiene ese teléfono, si es otro. */
+  ocupadoPor: Cliente | null;
+};
+
+/**
+ * Las validaciones del cliente, en un solo lugar: las usan el alta, la edición
+ * (SPEC-KRILINXI-014) y la corrección de lo rechazado (SPEC-KRILINXI-013). `excluirId` es el
+ * cliente que se está editando: su propio teléfono no cuenta como ocupado.
+ *
+ * El teléfono ocupado no va en `errores`: el alta lo trata como "ya existe, es este", y la
+ * edición como un error del campo. Lo decide quien llama.
+ */
+export async function validarCliente(
+  base: BaseLocal,
+  datos: { nombre: string; telefono: string },
+  excluirId: string | null = null,
+): Promise<ClienteValidado> {
+  const nombre = datos.nombre.trim();
+  const telefono = normalizarTelefono(datos.telefono);
+
+  const errores: ErroresAlta = {};
+  if (nombre === '') errores.nombre = FALTA_NOMBRE;
+  if (telefono === '') errores.telefono = FALTA_TELEFONO;
+
+  // El teléfono es único en todo el sistema (CLAUDE.md §3). El servidor lo vuelve a
+  // comprobar, pero aquí el empleado se entera al momento y ve a quién pertenece.
+  const duenio = telefono === '' ? null : await buscarPorTelefono(base, telefono);
+  const ocupadoPor = duenio && duenio.id !== excluirId ? duenio : null;
+  return { errores, nombre, telefono, ocupadoPor };
+}
+
 /**
  * Da de alta un cliente en la base local.
  *
@@ -53,19 +92,10 @@ export async function buscarPorTelefono(base: BaseLocal, telefono: string): Prom
  * sesión, nunca del dispositivo— y bajan con la siguiente sincronización.
  */
 export async function registrarCliente(base: BaseLocal, datos: DatosAlta): Promise<ResultadoAlta> {
-  const nombre = datos.nombre.trim();
-  const telefono = normalizarTelefono(datos.telefono);
   const carnet = datos.carnet.trim();
-
-  const errores: ErroresAlta = {};
-  if (nombre === '') errores.nombre = FALTA_NOMBRE;
-  if (telefono === '') errores.telefono = FALTA_TELEFONO;
+  const { errores, nombre, telefono, ocupadoPor } = await validarCliente(base, datos);
   if (errores.nombre || errores.telefono) return { tipo: 'invalido', errores };
-
-  // El teléfono es único en todo el sistema (CLAUDE.md §3). El servidor lo vuelve a
-  // comprobar, pero aquí el empleado se entera al momento y ve a quién pertenece.
-  const existente = await buscarPorTelefono(base, telefono);
-  if (existente) return { tipo: 'telefono-ocupado', cliente: existente };
+  if (ocupadoPor) return { tipo: 'telefono-ocupado', cliente: ocupadoPor };
 
   const cliente: Cliente = { id: crypto.randomUUID(), nombre, telefono, carnet: carnet === '' ? null : carnet };
   await base.ejecutar('INSERT INTO clientes (id, nombre, telefono, carnet) VALUES (?, ?, ?, ?)', [
@@ -75,4 +105,30 @@ export async function registrarCliente(base: BaseLocal, datos: DatosAlta): Promi
     cliente.carnet,
   ]);
   return { tipo: 'registrado', cliente };
+}
+
+/**
+ * Cambia el nombre o el teléfono de un cliente en la base local — SPEC-KRILINXI-014.
+ *
+ * Escribe solo las columnas que cambiaron: PowerSync encola el `UPDATE` como un PATCH con
+ * esas columnas, y el servidor recibe solo lo que cambió (`PATCH /api/clientes/:id`). Si no
+ * cambió nada no escribe: un `UPDATE` que deja todo igual igual encolaría un PATCH vacío
+ * (SPEC-KRILINXI-013).
+ */
+export async function editarCliente(base: BaseLocal, cliente: Cliente, datos: DatosEdicion): Promise<ResultadoEdicion> {
+  const { errores, nombre, telefono, ocupadoPor } = await validarCliente(base, datos, cliente.id);
+  if (!errores.telefono && ocupadoPor) errores.telefono = telefonoDeOtro(ocupadoPor.nombre);
+  if (errores.nombre || errores.telefono) return { tipo: 'invalido', errores };
+
+  const cambios: [columna: 'nombre' | 'telefono', valor: string][] = [];
+  if (nombre !== cliente.nombre) cambios.push(['nombre', nombre]);
+  if (telefono !== cliente.telefono) cambios.push(['telefono', telefono]);
+  if (cambios.length === 0) return { tipo: 'sin-cambios' };
+
+  // Las columnas salen de la lista de arriba, nunca de lo que escribió el empleado.
+  await base.ejecutar(`UPDATE clientes SET ${cambios.map(([c]) => `${c} = ?`).join(', ')} WHERE id = ?`, [
+    ...cambios.map(([, valor]) => valor),
+    cliente.id,
+  ]);
+  return { tipo: 'editado', cliente: { ...cliente, nombre, telefono } };
 }

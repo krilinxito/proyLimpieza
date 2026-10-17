@@ -26,8 +26,7 @@
 import type { BaseLocal, Fila, Sentencia } from '../../../lib/powersync';
 import { aDecimal, parsearMonto, type Centavos } from '../../../lib/money';
 import { esMetodoPago, esTipoRetiro } from '../../../lib/dominio';
-import { buscarPorTelefono, FALTA_NOMBRE, FALTA_TELEFONO } from '../../clientes/api/clientesLocal';
-import { normalizarTelefono } from '../../clientes/telefono';
+import { telefonoDeOtro, validarCliente } from '../../clientes/api/clientesLocal';
 import { MENSAJES_ENTREGA } from '../../entregas/api/entregasLocal';
 import { MENSAJES_ACCION } from '../../ordenes/api/ropaLocal';
 import { validarRopa } from '../../ordenes/api/ordenesLocal';
@@ -83,19 +82,12 @@ async function validarOrden(
   };
 }
 
-async function validarCliente(base: BaseLocal, clienteId: string, v: Record<string, string>): Promise<Validacion> {
-  const nombre = (v.nombre ?? '').trim();
-  const telefono = normalizarTelefono(v.telefono ?? '');
+async function validarDatosCliente(base: BaseLocal, clienteId: string, v: Record<string, string>): Promise<Validacion> {
   const carnet = (v.carnet ?? '').trim();
-  const errores: Record<string, string> = {};
-  if (nombre === '') errores.nombre = FALTA_NOMBRE;
-  if (telefono === '') errores.telefono = FALTA_TELEFONO;
-  else {
-    // El teléfono es único en todo el sistema (CLAUDE.md §3). Su propia fila no cuenta.
-    const duenio = await buscarPorTelefono(base, telefono);
-    if (duenio && duenio.id !== clienteId) errores.telefono = MENSAJES_CORRECCION.telefonoOcupado(duenio.nombre);
-  }
-  return { errores, datos: { nombre, telefono, carnet: carnet === '' ? null : carnet } };
+  const validado = await validarCliente(base, { nombre: v.nombre ?? '', telefono: v.telefono ?? '' }, clienteId);
+  const errores: Record<string, string> = { ...validado.errores };
+  if (!errores.telefono && validado.ocupadoPor) errores.telefono = telefonoDeOtro(validado.ocupadoPor.nombre);
+  return { errores, datos: { nombre: validado.nombre, telefono: validado.telefono, carnet: carnet === '' ? null : carnet } };
 }
 
 function validarPago(v: Record<string, string>): Validacion {
@@ -143,7 +135,7 @@ function validar(
     case 'ordenes':
       return validarOrden(base, sucursalId, registro.registroId, valores);
     case 'clientes':
-      return validarCliente(base, registro.registroId, valores);
+      return validarDatosCliente(base, registro.registroId, valores);
     case 'pagos':
       return validarPago(valores);
     default:
