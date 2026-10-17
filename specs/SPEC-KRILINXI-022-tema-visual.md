@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-022
 name: Tema visual y piezas base de la interfaz
 slug: tema-visual
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-17
 scope:
