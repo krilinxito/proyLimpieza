@@ -6,6 +6,7 @@ import type { RegistroParaCorregir } from '../types';
 import { useCorreccion } from '../hooks/useCorreccion';
 import { useParaCorregir } from '../hooks/useParaCorregir';
 import { FormularioCorreccion } from './FormularioCorreccion';
+import { MismoCliente } from './MismoCliente';
 
 /** "2026-10-03T14:05:00.000Z" → "03/10/2026 10:05", en la hora de la tablet. */
 function cuando(fecha: string): string {
@@ -39,6 +40,23 @@ export function PantallaParaCorregir() {
           setAviso('Listo: la corrección quedó guardada en esta tablet. Si no hay internet, se manda cuando vuelva la conexión.');
         }}
         alVolver={() => setCorrigiendo(null)}
+        antesDelFormulario={
+          <MismoCliente
+            registro={corrigiendo}
+            buscar={correccion.buscarMismoCliente}
+            usar={correccion.usarMismoCliente}
+            alUsar={(existente, boletas) => {
+              setCorrigiendo(null);
+              setAviso(
+                boletas === 1
+                  ? `Listo: la ropa quedó a nombre de ${existente.nombre} y se va a guardar de nuevo.`
+                  : boletas > 1
+                    ? `Listo: ${boletas} boletas quedaron a nombre de ${existente.nombre} y se van a guardar de nuevo.`
+                    : `Listo: se usa a ${existente.nombre}, que ya estaba registrado.`,
+              );
+            }}
+          />
+        }
       />
     );
   }
