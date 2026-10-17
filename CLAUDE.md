@@ -652,6 +652,14 @@ Nada se implementa sin una spec aprobada.
   `conAuditoria`, no queda auditada. La semilla del primer admin no se audita a propósito
   (no hay sesión de quien atribuirla).
 
+- **Un test intermitente en el frontend** (anotado en SPEC-KRILINXI-016, 2026-10-16). "con boleta
+  y pagando lo que falta: confirma, guarda entrega y pago…" (`PantallaEntregar.test.tsx`,
+  SPEC-KRILINXI-009) falló 2 veces en unas 10 corridas completas de `npm test`, tardando ~3 s, y
+  nunca corrido solo. No se capturó el mensaje. La sospecha es que su última espera (`findBy`,
+  1000 ms por defecto) se queda corta con la máquina cargada, porque después de confirmar la app
+  escribe la entrega y el pago en SQLite. Si vuelve a fallar, **guardá la salida completa** antes
+  de reintentar; si se confirma, el arreglo es subir `asyncUtilTimeout` en `src/test/setup.ts`.
+
 ### Revisión del backend (2026-10-09)
 
 Una revisión de seguridad, confidencialidad y escalabilidad del backend no encontró
