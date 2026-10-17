@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-015
 name: 'Panel de estadísticas: ingresos, saldos y ropa sin recoger'
 slug: estadisticas-panel
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-16
 scope:
@@ -14,7 +14,13 @@ scope:
   - CLAUDE.md
 priority: high
 depends_on: []
-tests: []
+tests:
+  - frontend/src/features/estadisticas/api/estadisticasApi.test.ts
+  - frontend/src/features/estadisticas/components/PantallaEstadisticas.test.tsx
+  - frontend/src/features/estadisticas/periodo.test.ts
+  - frontend/src/test/apiFalsa.ts
+  - frontend/src/test/arquitectura.test.ts
+  - frontend/src/test/estadisticasDePrueba.ts
 ---
 
 ## Descripción
