@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-019
 name: Una suite del frontend sin carreras
 slug: tests-sin-carreras
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-17
 scope:
@@ -14,7 +14,10 @@ scope:
   - CLAUDE.md
 priority: high
 depends_on: []
-tests: []
+tests:
+  - frontend/src/features/ordenes/components/PantallaRopa.test.tsx
+  - frontend/src/features/pendientes/components/PantallaParaCorregir.test.tsx
+  - frontend/src/test/baseLocalDePrueba.ts
 ---
 
 ## Descripción
