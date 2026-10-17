@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-025
 name: Pantallas del mostrador con el tema
 slug: estilo-mostrador
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-17
 scope:
