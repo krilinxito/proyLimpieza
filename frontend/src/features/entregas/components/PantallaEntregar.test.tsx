@@ -146,7 +146,8 @@ describe('Entregar: después de entregar — SPEC-KRILINXI-009', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Entregar otra ropa' }));
 
     // Ya no está en la ropa del local…
-    await screen.findByText('Ropa en el local');
+    // El título de la lista; el texto suelto también es el del menú desde SPEC-KRILINXI-023.
+    await screen.findByRole('heading', { name: 'Ropa en el local' });
     expect(screen.queryByRole('button', { name: 'Boleta 001234, Rosa Quispe' })).not.toBeInTheDocument();
 
     // …y buscándola, figura Entregado y sin acciones.

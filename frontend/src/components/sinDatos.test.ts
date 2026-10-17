@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readdirSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { archivosFuente } from '../test/arquitectura';
 
 /**
  * Los componentes compartidos no piden datos: todo les llega por props (CLAUDE.md §5).
@@ -9,11 +8,9 @@ import { resolve } from 'node:path';
  * código fuente y falle si alguien la rompe. No prueba comportamiento: prueba que ninguna
  * pieza de `components/` importe algo que hable con la API, con PowerSync o con una feature.
  */
-const CARPETA = import.meta.dirname;
-
-const componentes = readdirSync(CARPETA).filter(
-  (archivo) => /\.tsx?$/.test(archivo) && !/\.test\.tsx?$/.test(archivo),
-);
+// Con subcarpetas: desde SPEC-KRILINXI-023 el marco vive en `components/marco/`, y antes solo se
+// leía el primer nivel. `archivosFuente` recorre todo y deja afuera los tests.
+const componentes = archivosFuente('components');
 
 const PROHIBIDOS = [
   { que: 'axios', patron: /from\s+['"]axios['"]/ },
@@ -23,12 +20,13 @@ const PROHIBIDOS = [
 ];
 
 describe('Componentes compartidos sin acceso a datos — SPEC-KRILINXI-002', () => {
-  it('hay componentes que revisar', () => {
-    expect(componentes.length).toBeGreaterThan(0);
+  it('hay componentes que revisar, también los de las subcarpetas (SPEC-KRILINXI-023)', () => {
+    expect(componentes.map(({ ruta }) => ruta)).toEqual(
+      expect.arrayContaining(['components/Boton.tsx', 'components/marco/Cabecera.tsx', 'components/marco/MenuCompacto.tsx']),
+    );
   });
 
-  it.each(componentes)('%s no llama a axios, PowerSync, fetch ni a una feature', (archivo) => {
-    const fuente = readFileSync(resolve(CARPETA, archivo), 'utf8');
+  it.each(componentes.map((c) => [c.ruta, c.fuente]))('%s no llama a axios, PowerSync, fetch ni a una feature', (_ruta, fuente) => {
     const encontrados = PROHIBIDOS.filter(({ patron }) => patron.test(fuente)).map(({ que }) => que);
     expect(encontrados).toEqual([]);
   });

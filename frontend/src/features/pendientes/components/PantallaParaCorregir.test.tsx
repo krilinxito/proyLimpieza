@@ -212,7 +212,9 @@ describe('Es el mismo cliente — SPEC-KRILINXI-021', () => {
     await screen.findByText(/la ropa quedó a nombre de Rosa Quispe/);
 
     fireEvent.click(await screen.findByRole('link', { name: 'Volver al inicio' }));
-    fireEvent.click(await screen.findByRole('link', { name: 'Ropa en el local' }));
+    // El botón del Inicio, no el del menú (que también se llama así desde SPEC-KRILINXI-023).
+    await screen.findByRole('heading', { name: 'Lavandería' });
+    fireEvent.click(within(screen.getByRole('main')).getByRole('link', { name: 'Ropa en el local' }));
 
     expect(await screen.findByRole('button', { name: 'Boleta 001234, Rosa Quispe' })).toBeInTheDocument();
   });

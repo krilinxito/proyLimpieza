@@ -1,18 +1,10 @@
 import { Route, Routes } from 'react-router-dom';
-import { AvisoConexion } from './components/AvisoConexion';
 import { AvisoSoloAdministrador } from './features/auth/components/AvisoSoloAdministrador';
-import { BarraSesion } from './features/auth/components/BarraSesion';
 import { RutaProtegida } from './features/auth/components/RutaProtegida';
-import { useConexion } from './hooks/useConexion';
+import { Marco } from './pages/Marco';
 import { NoEncontrada } from './pages/NoEncontrada';
 import { Pantalla } from './pages/Pantalla';
 import { RUTAS, type Ruta } from './pages/rutas';
-
-/** El aviso de conexión con los números de la base local (SPEC-KRILINXI-007). */
-function EstadoConexion() {
-  const estado = useConexion();
-  return estado && <AvisoConexion {...estado} />;
-}
 
 /** Lo que se monta para una ruta: tal cual si es pública, detrás del portero si no. */
 function elementoDe(ruta: Ruta) {
@@ -28,8 +20,6 @@ function elementoDe(ruta: Ruta) {
         )
       }
     >
-      <BarraSesion />
-      <EstadoConexion />
       {ruta.elemento}
     </RutaProtegida>
   );
@@ -38,14 +28,19 @@ function elementoDe(ruta: Ruta) {
 /**
  * Solo compone: recorre el registro de rutas y monta una <Route> por cada una. Añadir una
  * pantalla es añadir una entrada en `pages/rutas.tsx`, no tocar este archivo.
+ *
+ * Todas cuelgan del marco (SPEC-KRILINXI-023): una ruta sin `path` que solo pone cabecera, menú
+ * y pie alrededor de la pantalla que toque.
  */
 export function App() {
   return (
     <Routes>
-      {RUTAS.map((ruta) => (
-        <Route key={ruta.camino} path={ruta.camino} element={elementoDe(ruta)} />
-      ))}
-      <Route path="*" element={<NoEncontrada />} />
+      <Route element={<Marco />}>
+        {RUTAS.map((ruta) => (
+          <Route key={ruta.camino} path={ruta.camino} element={elementoDe(ruta)} />
+        ))}
+        <Route path="*" element={<NoEncontrada />} />
+      </Route>
     </Routes>
   );
 }

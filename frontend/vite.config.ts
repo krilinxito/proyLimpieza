@@ -3,12 +3,16 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { cspEnElBuild } from './src/pwa/csp';
+import paquete from './package.json' with { type: 'json' };
 
 // Los WASM del SQLite de PowerSync pesan hasta 2,5 MB, y Workbox por defecto no guarda nada
 // de más de 2 MiB. Sin subir el tope, la app abriría sin internet pero la base local no.
 const TOPE_POR_ARCHIVO = 5 * 1024 * 1024;
 
 export default defineConfig({
+  // La versión de la app, para el pie (SPEC-KRILINXI-023). Vite reemplaza el nombre por el texto
+  // al compilar, igual en los tests: se lee en `src/pages/version.ts`.
+  define: { __VERSION_APP__: JSON.stringify(paquete.version) },
   plugins: [
     react(),
     tailwindcss(),

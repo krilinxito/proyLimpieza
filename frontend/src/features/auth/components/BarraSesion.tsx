@@ -18,7 +18,8 @@ function avisoDeSalida(pendientes: number): string {
 }
 
 /**
- * Arriba de cada pantalla: quién está atendiendo, y cómo salir.
+ * Quién está atendiendo, y cómo salir. Va dentro de la cabecera del marco (SPEC-KRILINXI-023),
+ * por eso no es un `<header>` propio: dos cabeceras serían dos "banner" para el lector de pantalla.
  *
  * Salir pide confirmación porque sin internet no tiene vuelta atrás: el login necesita al
  * servidor, así que quien sale sin conexión deja la tablet sin poder usarse.
@@ -31,12 +32,12 @@ export function BarraSesion() {
   if (!sesion) return null;
 
   return (
-    <header className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-6 pt-4">
-      <p className="text-xl text-slate-700">
-        Atiende: <strong className="text-slate-900">{sesion.usuario.nombreCompleto}</strong>
+    <div className="flex items-center gap-4">
+      <p className="text-xl text-texto-suave">
+        Atiende: <strong className="text-texto">{sesion.usuario.nombreCompleto}</strong>
       </p>
-      <div className="w-32">
-        <Boton variante="secundario" onClick={() => setConfirmando(true)}>
+      <div className="w-auto">
+        <Boton variante="secundario" icono="salir" onClick={() => setConfirmando(true)}>
           Salir
         </Boton>
       </div>
@@ -48,6 +49,6 @@ export function BarraSesion() {
         onConfirmar={salir}
         onCancelar={() => setConfirmando(false)}
       />
-    </header>
+    </div>
   );
 }
