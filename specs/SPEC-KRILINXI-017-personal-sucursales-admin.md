@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-017
 name: Administrar el personal y las sucursales
 slug: personal-sucursales-admin
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-16
 scope:
