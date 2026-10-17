@@ -63,7 +63,7 @@ function leerDatos(json: unknown): Record<string, unknown> {
 }
 
 function aRegistro(fila: Fila): RegistroParaCorregir | null {
-  const { id, tabla, registro_id, operacion, datos, mensaje, fecha } = fila;
+  const { id, tabla, registro_id, operacion, datos, mensaje, fecha, codigo } = fila;
   if (typeof id !== 'string' || typeof tabla !== 'string') return null;
   const enviados = leerDatos(datos);
   return {
@@ -75,11 +75,12 @@ function aRegistro(fila: Fila): RegistroParaCorregir | null {
     registroId: texto(registro_id) ?? '',
     operacion: texto(operacion) ?? '',
     datos: enviados,
+    codigo: texto(codigo) ?? '',
   };
 }
 
 /** Todos, del más viejo al más nuevo: en el orden en que se intentaron guardar. */
 export async function listarParaCorregir(base: BaseLocal): Promise<RegistroParaCorregir[]> {
-  const filas = await base.consultar('SELECT id, tabla, registro_id, operacion, datos, mensaje, fecha FROM para_corregir ORDER BY fecha');
+  const filas = await base.consultar('SELECT id, tabla, registro_id, operacion, datos, mensaje, fecha, codigo FROM para_corregir ORDER BY fecha');
   return filas.map(aRegistro).filter((r): r is RegistroParaCorregir => r !== null);
 }
