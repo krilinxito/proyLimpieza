@@ -30,13 +30,21 @@ function aCliente(fila: Fila): Cliente | null {
   return { id, nombre, telefono, carnet: typeof carnet === 'string' && carnet !== '' ? carnet : null };
 }
 
-/** El cliente con ese teléfono, o null. Acepta el teléfono como lo escriba el empleado. */
-export async function buscarPorTelefono(base: BaseLocal, telefono: string): Promise<Cliente | null> {
+/**
+ * El cliente con ese teléfono, o null. Acepta el teléfono como lo escriba el empleado.
+ *
+ * `excluirId` deja afuera a un cliente, y tiene que ir **dentro** de la consulta
+ * (SPEC-KRILINXI-021): la tablet puede tener dos filas con el mismo teléfono por un rato (un alta
+ * rechazada que todavía no se revirtió y el cliente de otra tablet que ya bajó). Filtrar después
+ * del `LIMIT 1` podía devolver justo al excluido y decir que el teléfono estaba libre.
+ */
+export async function buscarPorTelefono(base: BaseLocal, telefono: string, excluirId: string | null = null): Promise<Cliente | null> {
   const normalizado = normalizarTelefono(telefono);
   if (normalizado === '') return null;
 
-  const filas = await base.consultar('SELECT id, nombre, telefono, carnet FROM clientes WHERE telefono = ? LIMIT 1', [
+  const filas = await base.consultar('SELECT id, nombre, telefono, carnet FROM clientes WHERE telefono = ? AND id IS NOT ? LIMIT 1', [
     normalizado,
+    excluirId,
   ]);
   const [fila] = filas;
   return fila ? aCliente(fila) : null;
@@ -76,8 +84,7 @@ export async function validarCliente(
 
   // El teléfono es único en todo el sistema (CLAUDE.md §3). El servidor lo vuelve a
   // comprobar, pero aquí el empleado se entera al momento y ve a quién pertenece.
-  const duenio = telefono === '' ? null : await buscarPorTelefono(base, telefono);
-  const ocupadoPor = duenio && duenio.id !== excluirId ? duenio : null;
+  const ocupadoPor = telefono === '' ? null : await buscarPorTelefono(base, telefono, excluirId);
   return { errores, nombre, telefono, ocupadoPor };
 }
 
