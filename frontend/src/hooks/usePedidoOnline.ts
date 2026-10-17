@@ -20,8 +20,9 @@ function estadoDeError(error: unknown, mensajeGeneral: string): EstadoPedido<nev
 /**
  * Un pedido a la API que necesita conexión — SPEC-KRILINXI-016 (salió de `usePanel`,
  * SPEC-KRILINXI-015, cuando la lista de clientes necesitó lo mismo con su propia paginación).
- * Transversal desde SPEC-KRILINXI-017, cuando el personal y las sucursales también lo usaron:
- * por eso vive en `hooks/` y no en una feature (CLAUDE.md §5).
+ * Vive en `hooks/` (lo transversal, CLAUDE.md §5) desde SPEC-KRILINXI-017: la consulta de la
+ * auditoría (SPEC-KRILINXI-018) también lee online, y un hook de una feature no se importa
+ * desde otra. Es para LEER: las escrituras online del admin (personal, sucursales) no lo usan.
  *
  * `pedir` se vuelve a llamar cada vez que cambia (envolvela en `useCallback` con lo que la
  * hace distinta: el filtro, la página), cuando el navegador avisa que volvió internet

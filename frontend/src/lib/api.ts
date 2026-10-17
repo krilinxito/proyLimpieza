@@ -39,7 +39,8 @@ export class ErrorSinConexion extends Error {
 
 /**
  * El servidor respondió bien (2xx), pero con algo que no tiene la forma acordada — SPEC-KRILINXI-015,
- * movida aquí en SPEC-KRILINXI-017 para que la usen todas las pantallas que leen online. Quien
+ * movida aquí en SPEC-KRILINXI-017 junto con `usePedidoOnline`, que la reconoce y no puede
+ * depender de una feature. Quien
  * comprueba la respuesta la lanza, con un mensaje para la pantalla, en vez de mostrarla a medias.
  */
 export class RespuestaRara extends Error {
