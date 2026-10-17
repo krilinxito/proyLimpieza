@@ -65,12 +65,14 @@ describe('App: rutas protegidas — SPEC-KRILINXI-003', () => {
 });
 
 describe('App: menú por rol — SPEC-KRILINXI-003', () => {
-  // Los botones del Inicio, en el contenido. El menú del marco, que suma "Inicio" primero, se
-  // prueba en `pages/Marco.test.tsx` (SPEC-KRILINXI-023).
+  // Las tarjetas del Inicio, en el contenido. El menú del marco, que suma "Inicio" primero, se
+  // prueba en `pages/Marco.test.tsx` (SPEC-KRILINXI-023). Desde SPEC-KRILINXI-024 cada tarjeta
+  // trae también su descripción, así que su texto ya no es solo el nombre: el nombre accesible
+  // sale del elemento al que apunta `aria-labelledby`, y es ese el que se lee.
   const nombresDelMenu = () =>
-    within(screen.getByRole('main'))
+    within(screen.getByRole('navigation', { name: 'Tareas' }))
       .getAllByRole('link')
-      .map((enlace) => enlace.textContent);
+      .map((enlace) => document.getElementById(enlace.getAttribute('aria-labelledby') ?? '')?.textContent);
 
   it('un EMPLEADO ve Registrar ropa, Ropa en el local, Entregar ropa, Cobrar y Clientes (SPEC-KRILINXI-008)', () => {
     renderEnRuta(<App />, '/', { sesion: sesionDePrueba({ rol: 'EMPLEADO' }) });

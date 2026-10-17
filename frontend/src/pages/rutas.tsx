@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
 import { PantallaAuditoria } from '../features/auditoria/components/PantallaAuditoria';
-import { FormularioIngreso } from '../features/auth/components/FormularioIngreso';
+import { PantallaIngreso } from '../features/auth/components/PantallaIngreso';
 import { AvisoSoloEmpleado } from '../features/auth/components/AvisoSoloEmpleado';
 import { PantallaClientes } from '../features/clientes/components/PantallaClientes';
 import { PantallaEntregar } from '../features/entregas/components/PantallaEntregar';
@@ -78,11 +78,8 @@ export const RUTAS: readonly Ruta[] = [
     titulo: 'Ingresar al sistema',
     enMenu: false,
     acceso: 'publica',
-    elemento: (
-      <Pantalla titulo="Ingresar al sistema">
-        <FormularioIngreso />
-      </Pantalla>
-    ),
+    // Su propia pantalla, con el título dentro de la tarjeta (SPEC-KRILINXI-024).
+    elemento: <PantallaIngreso />,
   },
   {
     camino: '/registrar-ropa',
