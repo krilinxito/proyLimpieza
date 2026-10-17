@@ -17,7 +17,8 @@ Desde SPEC-KRILINXI-022:
 - `Aviso` — un aviso con `tipo` (`informacion`, `exito`, `advertencia`, `error`). Siempre lleva
   texto; error y advertencia son `role="alert"`, información y éxito `role="status"`. No
   escribas otro `<p className="bg-red-50 …">`: usá este.
-- `Tarjeta` — agrupa lo que va junto. Con `titulo` es una sección con encabezado.
+- `Tarjeta` — agrupa lo que va junto. Con `titulo` es una sección con encabezado; `nivel={3}` si va
+  dentro de otra sección que ya tiene su `h2` (SPEC-KRILINXI-025).
 - `Insignia` — una etiqueta corta con `tono` (`neutro`, `informacion`, `exito`, `advertencia`,
   `peligro`). No sabe de órdenes: qué tono lleva cada estado lo decide la feature.
 - `EnlaceBoton` — un enlace a otra pantalla con aspecto de botón ("Volver al inicio"). Si lleva a

@@ -203,6 +203,10 @@ SPEC-KRILINXI-024 pasó al tema la entrada a la app: el Inicio son tarjetas de t
 título), el ingreso es una tarjeta centrada (`PantallaIngreso`) y "Volver al inicio" es un
 `EnlaceBoton`. La regla de la paleta cruda cubre la lista `CON_EL_TEMA` de
 `test/arquitectura.test.ts`: cada spec de la ola que pasa pantallas al tema agrega ahí sus carpetas.
+SPEC-KRILINXI-025 pasó al tema el mostrador (registrar, ropa, cobrar, entregar, clientes): el estado
+de cada orden es una `Insignia` con el tono de `TONO_ESTADO` (`features/ordenes/estado.ts`, junto a
+`estadoEfectivo`), el detalle agrupa en `Tarjeta` (con `nivel={3}` dentro de una sección que ya tiene
+su `h2`) y los mensajes son `Aviso`. Cada dato del detalle sigue siendo un par `<dt>`/`<dd>`.
 
 SPEC-KRILINXI-012 corrige el reloj de la tablet: `lib/reloj` guarda el desfase con la hora
 del servidor que traen `login` y `renovar`, y `horaOficial()` es de donde salen
@@ -601,6 +605,9 @@ Requisitos concretos, no buenas intenciones:
 - **Formato de error uniforme** en toda la API, con el mismo shape para que el frontend lo
   trate en un solo sitio.
 - **Nada de `any`.** Si el tipo no se sabe, `unknown` y se estrecha.
+- **No hay configuración de Prettier**, pero el código sigue un estilo: comillas simples y líneas de
+  hasta 120 columnas. Si formateás con Prettier, pasale `--single-quote --print-width 120` y solo a
+  los archivos que tocaste: con sus valores por defecto reescribe archivos enteros.
 - **Ningún secreto en el repositorio.** Todo por `.env`, con `.env.example` versionado y
   al día.
 
