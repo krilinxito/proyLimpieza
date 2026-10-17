@@ -181,7 +181,9 @@ tipo: el admin no los tiene en la tablet. Sin fechas, los últimos 30 días. Con
 backend tiene su pantalla en el frontend.
 SPEC-KRILINXI-019 estabilizó la suite del frontend (mitad de los núcleos, modo lento `LENTO_MS`, §4)
 y arregló en `PantallaRopa` una búsqueda que una lectura vieja podía pisar. SPEC-KRILINXI-020 agregó la
-política de seguridad del contenido al build (§4).
+política de seguridad del contenido al build (§4). SPEC-KRILINXI-021 resolvió en `/para-corregir` el cliente
+dado de alta en dos tablets: "Es el mismo cliente" pasa su ropa (y sus cobros) al cliente que ya existe,
+en una transacción. `buscarPorTelefono` excluye al propio cliente dentro de la consulta.
 
 SPEC-KRILINXI-012 corrige el reloj de la tablet: `lib/reloj` guarda el desfase con la hora
 del servidor que traen `login` y `renovar`, y `horaOficial()` es de donde salen
@@ -676,11 +678,9 @@ Nada se implementa sin una spec aprobada.
   probar el servicio antes de que exista el backend. En producción va RS256 con un
   `jwks_uri` servido por la API.
 - **Corregir lo que el servidor rechazó: lo que queda.** Desde SPEC-KRILINXI-013 se corrige y
-  se vuelve a guardar desde `/para-corregir`, pero hay dos casos que la pantalla no resuelve: un
-  cambio de estado rechazado (se rehace desde "Ropa en el local") y un cliente nuevo rechazado
-  porque su teléfono ya era de otro cliente. En ese segundo caso la ropa que se registró para él
-  también vuelve rechazada, y corregirla exigiría cambiarle el cliente, que el formulario no
-  ofrece: hoy se descarta y se vuelve a registrar.
+  se vuelve a guardar desde `/para-corregir`, y desde SPEC-KRILINXI-021 también el cliente dado de
+  alta en dos tablets ("Es el mismo cliente": su ropa pasa al que ya existe). Queda un caso: un
+  cambio de estado rechazado no se corrige ahí, se rehace desde "Ropa en el local".
 - **El reloj de la tablet.** `fecha_entrada`, `fecha_pago` y `fecha_entrega` las pone la
   tablet y son las oficiales. Desde SPEC-KRILINXI-012 salen de `horaOficial()`
   (`frontend/src/lib/reloj.ts`): el reloj de la tablet más el desfase medido con el `ahora` de
