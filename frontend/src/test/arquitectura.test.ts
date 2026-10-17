@@ -182,21 +182,31 @@ describe('Los componentes no usan estilos en línea — SPEC-KRILINXI-020', () =
 });
 
 /**
- * Los componentes compartidos pintan con el tema — SPEC-KRILINXI-022. Los colores salen de
- * `index.css` (`bg-marca`, `text-peligro-texto`…), no de la paleta de Tailwind (`bg-sky-700`):
+ * La app pinta con el tema — SPEC-KRILINXI-022, extendida en SPEC-KRILINXI-024. Los colores salen
+ * de `index.css` (`bg-marca`, `text-peligro-texto`…), no de la paleta de Tailwind (`bg-sky-700`):
  * así cambiar un color es una línea, y el test del tema (`tema.test.ts`) garantiza que se lea.
  *
- * Por ahora solo `components/`: las pantallas pasan al tema en sus propias specs, y cuando
- * terminen, esta regla se extiende a `features/` y `pages/` cambiando la lista de carpetas.
+ * Crece con la ola estética: cada spec que pasa pantallas al tema agrega acá sus carpetas. Cuando
+ * estén todas, la lista será `components`, `pages` y `features`.
  */
+const CON_EL_TEMA = ['components', 'pages', 'features/auth'];
+
 const PALETA_CRUDA =
   /\b(?:bg|text|border|ring|outline|fill|stroke|divide|decoration|placeholder|accent|caret|shadow|from|via|to)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3}\b|\b(?:bg|text|border)-(?:white|black)\b/;
 
-describe('Los componentes compartidos usan los colores del tema — SPEC-KRILINXI-022', () => {
-  const COMPARTIDOS = archivosFuente('components');
+describe('Lo que ya pasó al tema no usa la paleta cruda — SPEC-KRILINXI-022 y SPEC-KRILINXI-024', () => {
+  const ARCHIVOS = archivosFuente(...CON_EL_TEMA);
 
-  it('revisa los componentes, no una lista vacía', () => {
-    expect(COMPARTIDOS.map(({ ruta }) => ruta)).toEqual(expect.arrayContaining(['components/Boton.tsx', 'components/Aviso.tsx']));
+  it('revisa los componentes, las páginas y el ingreso, no una lista vacía', () => {
+    expect(ARCHIVOS.map(({ ruta }) => ruta)).toEqual(
+      expect.arrayContaining([
+        'components/Boton.tsx',
+        'components/Aviso.tsx',
+        'pages/Inicio.tsx',
+        'pages/NoEncontrada.tsx',
+        'features/auth/components/FormularioIngreso.tsx',
+      ]),
+    );
   });
 
   it('el patrón reconoce la paleta cruda y deja pasar el tema', () => {
@@ -206,8 +216,8 @@ describe('Los componentes compartidos usan los colores del tema — SPEC-KRILINX
     expect(PALETA_CRUDA.test('bg-marca text-peligro-texto border-borde-suave')).toBe(false);
   });
 
-  it('ningún componente compartido usa la paleta cruda de Tailwind', () => {
-    const culpables = COMPARTIDOS.filter(({ fuente }) => PALETA_CRUDA.test(sinComentarios(fuente))).map(({ ruta }) => ruta);
+  it('ningún archivo de esas carpetas usa la paleta cruda de Tailwind', () => {
+    const culpables = ARCHIVOS.filter(({ fuente }) => PALETA_CRUDA.test(sinComentarios(fuente))).map(({ ruta }) => ruta);
     expect(culpables).toEqual([]);
   });
 });

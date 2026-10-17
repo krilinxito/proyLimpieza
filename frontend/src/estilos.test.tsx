@@ -38,7 +38,8 @@ describe('Estilos con Tailwind — SPEC-KRILINXI-001', () => {
     expect(css.length).toBeGreaterThan(0);
   });
 
-  it.each(['text-3xl', 'bg-sky-700', 'rounded-lg'])(
+  // Desde SPEC-KRILINXI-024, clases del tema (SPEC-KRILINXI-022): `bg-marca` sale de `--color-marca`.
+  it.each(['text-3xl', 'bg-marca', 'rounded-2xl'])(
     'genera una regla para la utilidad %s que usan las pantallas',
     (utilidad) => {
       expect(css).toMatch(new RegExp(`\\.${utilidad}\\{[^}]+\\}`));
@@ -55,6 +56,6 @@ describe('Estilos con Tailwind — SPEC-KRILINXI-001', () => {
 
   it('las pantallas llevan puestas esas clases', () => {
     renderEnRuta(<Inicio />);
-    expect(screen.getByRole('link', { name: 'Registrar ropa' })).toHaveClass('bg-sky-700');
+    expect(screen.getByRole('link', { name: 'Registrar ropa' })).toHaveClass('bg-superficie', 'rounded-2xl');
   });
 });

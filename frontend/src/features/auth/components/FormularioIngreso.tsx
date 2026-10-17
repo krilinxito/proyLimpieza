@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Aviso } from '../../../components/Aviso';
 import { Boton } from '../../../components/Boton';
 import { CampoTexto } from '../../../components/CampoTexto';
 import { useSession } from '../../../hooks/useSession';
@@ -78,9 +79,9 @@ export function FormularioIngreso() {
         autoComplete="current-password"
       />
       {errorGeneral && (
-        <p role="alert" className="mt-4 rounded-lg bg-red-50 p-4 text-xl text-red-800">
-          {errorGeneral}
-        </p>
+        <div className="mt-4">
+          <Aviso tipo="error">{errorGeneral}</Aviso>
+        </div>
       )}
       <div className="mt-6">
         <Boton type="submit" ocupado={enviando} textoOcupado="Entrando…">

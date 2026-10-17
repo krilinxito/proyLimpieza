@@ -1,15 +1,14 @@
-import { Link } from 'react-router-dom';
+import { Aviso } from '../../../components/Aviso';
+import { EnlaceBoton } from '../../../components/EnlaceBoton';
 
 /** Lo que ve un empleado que llega a una pantalla del administrador escribiendo la dirección. */
 export function AvisoSoloAdministrador() {
   return (
-    <>
-      <p className="mt-4 text-xl text-slate-700">
-        Esta parte es solo para el administrador. Si necesitás estos datos, pedíselos al encargado.
-      </p>
-      <Link to="/" className="mt-6 inline-block text-xl font-semibold text-sky-700 underline">
+    <div className="mt-6 grid justify-items-start gap-6">
+      <Aviso tipo="informacion">Esta parte es solo para el administrador. Si necesitás estos datos, pedíselos al encargado.</Aviso>
+      <EnlaceBoton a="/" icono="inicio">
         Volver al inicio
-      </Link>
-    </>
+      </EnlaceBoton>
+    </div>
   );
 }

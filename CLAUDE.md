@@ -198,6 +198,11 @@ Salir; el menú, que en pantalla ancha (desde 1024px) es una barra lateral y en 
 contenido. Los destinos salen de `RUTAS` (`destinosDelMenu`), y cada ruta del menú declara su
 `icono` y su `descripcion`. Como el menú nombra las mismas pantallas que el Inicio, **un test que
 busca un enlace o un texto de una pantalla lo busca dentro de `getByRole('main')`** o por su rol.
+SPEC-KRILINXI-024 pasó al tema la entrada a la app: el Inicio son tarjetas de tareas (las de
+`destinosDelMenu`, con su ícono y su `descripcion`; el nombre accesible de cada una es solo el
+título), el ingreso es una tarjeta centrada (`PantallaIngreso`) y "Volver al inicio" es un
+`EnlaceBoton`. La regla de la paleta cruda cubre la lista `CON_EL_TEMA` de
+`test/arquitectura.test.ts`: cada spec de la ola que pasa pantallas al tema agrega ahí sus carpetas.
 
 SPEC-KRILINXI-012 corrige el reloj de la tablet: `lib/reloj` guarda el desfase con la hora
 del servidor que traen `login` y `renovar`, y `horaOficial()` es de donde salen
