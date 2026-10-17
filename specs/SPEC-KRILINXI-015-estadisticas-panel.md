@@ -27,7 +27,7 @@ Esta spec arma la pantalla y, sobre todo, **fija el patrón online del admin** q
 
 - [ ] El sistema muestra el panel de estadísticas en /estadisticas al ADMIN, en lugar del aviso de pantalla en construcción
 - [ ] El sistema pide a la API los ingresos, los saldos pendientes y la ropa sin recoger con el período y la sucursal elegidos
-- [ ] El sistema muestra por defecto el período del día de hoy en Bolivia y todas las sucursales
+- [ ] El sistema muestra por defecto los ingresos del día de hoy en Bolivia y, para saldos y ropa sin recoger, todo lo pendiente hasta hoy, de todas las sucursales; al elegir fechas, las tres secciones usan esas (decidido al implementar: saldos y sin recoger filtran por la fecha de entrada de la ropa, y con "hoy" no se vería nada de lo que lleva días esperando)
 - [ ] El sistema muestra los ingresos por sucursal y por forma de pago, con los totales tal como llegan de la API, sin sumarlos en el front
 - [ ] El sistema muestra los saldos pendientes y la ropa sin recoger con su antigüedad en días
 - [ ] El sistema muestra 'Las estadísticas necesitan conexión' y ningún número cuando no hay internet, y vuelve a cargar al recuperar la conexión
