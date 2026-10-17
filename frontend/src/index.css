@@ -1,3 +1,90 @@
 /* Tailwind v4 se carga con un único @import; la configuración vive en el plugin de Vite,
    no en un tailwind.config.js. */
 @import 'tailwindcss';
+
+/*
+ * La letra de la app — SPEC-KRILINXI-022. Atkinson Hyperlegible está diseñada para personas
+ * con baja visión: cada letra se distingue de sus parecidas (I, l, 1; O, 0). Los archivos salen
+ * del paquete y el build los copia al sitio, así que abre sin internet y la política de
+ * seguridad no tiene que permitir ninguna fuente de afuera. Solo woff2 y solo latín (que trae
+ * la ñ y los acentos): es lo que guarda el service worker.
+ */
+@font-face {
+  font-family: 'Atkinson Hyperlegible';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('@fontsource/atkinson-hyperlegible/files/atkinson-hyperlegible-latin-400-normal.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Atkinson Hyperlegible';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('@fontsource/atkinson-hyperlegible/files/atkinson-hyperlegible-latin-700-normal.woff2') format('woff2');
+}
+
+/*
+ * El tema — SPEC-KRILINXI-022. Cada color de la app sale de acá: Tailwind convierte
+ * `--color-marca` en `bg-marca`, `text-marca`, `border-marca`… Los componentes usan estos
+ * nombres, nunca la paleta cruda (`sky-700`): cambiar un color es cambiar una línea, y el test
+ * del tema (`src/test/tema.test.ts`) comprueba que cada texto se lea sobre su fondo.
+ *
+ * Los colores van en hexadecimal a propósito: es lo que ese test sabe leer.
+ */
+@theme {
+  --font-sans: 'Atkinson Hyperlegible', ui-sans-serif, system-ui, sans-serif;
+
+  /* La marca: botones principales, la pantalla activa del menú. */
+  --color-marca: #1e40af;
+  --color-marca-fuerte: #1e3a8a;
+  --color-marca-suave: #dbeafe;
+  --color-sobre-marca: #ffffff;
+
+  /* La página y lo que se apoya sobre ella. */
+  --color-fondo: #f1f5f9;
+  --color-superficie: #ffffff;
+  --color-texto: #0f172a;
+  --color-texto-suave: #475569;
+  /* El borde de lo que se toca (campos, botón secundario): 3:1 contra el blanco, como pide WCAG. */
+  --color-borde: #64748b;
+  /* El de lo que solo agrupa (tarjetas): decorativo, sin mínimo de contraste. */
+  --color-borde-suave: #e2e8f0;
+
+  /* El anillo del foco con teclado: naranja, para que se vea sobre el blanco y sobre la marca. */
+  --color-foco: #c2410c;
+
+  /* Los cuatro tonos de aviso, cada uno con su fondo, su texto y su borde. */
+  --color-info-fondo: #eff6ff;
+  --color-info-texto: #1e3a8a;
+  --color-info-borde: #93c5fd;
+
+  --color-exito-fondo: #f0fdf4;
+  --color-exito-texto: #166534;
+  --color-exito-borde: #86efac;
+
+  --color-advertencia-fondo: #fffbeb;
+  --color-advertencia-texto: #92400e;
+  --color-advertencia-borde: #fcd34d;
+
+  --color-peligro-fondo: #fef2f2;
+  --color-peligro-texto: #991b1b;
+  --color-peligro-borde: #fca5a5;
+  /* El botón de lo que no tiene vuelta atrás (anular). */
+  --color-peligro: #b91c1c;
+  --color-peligro-fuerte: #991b1b;
+}
+
+@layer base {
+  html {
+    background-color: var(--color-fondo);
+    color: var(--color-texto);
+  }
+
+  /* 18px de base: se lee de pie, a un brazo de distancia, muchas veces sin anteojos (CLAUDE.md §9). */
+  body {
+    font-size: 1.125rem;
+    line-height: 1.6;
+  }
+}

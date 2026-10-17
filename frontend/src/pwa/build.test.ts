@@ -90,6 +90,20 @@ describe('PWA: lo que queda guardado para abrir sin internet — SPEC-KRILINXI-0
   });
 });
 
+describe('PWA: la letra de la app viaja con ella — SPEC-KRILINXI-022', () => {
+  // El test de arriba ya exige que todo lo de assets/ esté en el precache. Este dice además que
+  // la letra ESTÉ en assets/: si alguien la cambia por una de Google Fonts, el de arriba seguiría
+  // pasando (no habría woff2 que guardar) y la tablet, sin internet, mostraría la del sistema.
+  it('las dos letras (normal y negrita) salen del propio sitio y quedan guardadas', async () => {
+    const sw = await readFile(join(salida, 'sw.js'), 'utf8');
+    const letras = (await readdir(join(salida, 'assets'))).filter((a) => a.endsWith('.woff2'));
+    expect(letras.map((a) => a.replace(/-[\w-]{8}\.woff2$/, ''))).toEqual(
+      expect.arrayContaining(['atkinson-hyperlegible-latin-400-normal', 'atkinson-hyperlegible-latin-700-normal']),
+    );
+    for (const letra of letras) expect(sw, `falta guardar ${letra}`).toContain(`assets/${letra}`);
+  });
+});
+
 describe('PWA: la política de seguridad del contenido — SPEC-KRILINXI-020', () => {
   async function politica(): Promise<string> {
     const html = await readFile(join(salida, 'index.html'), 'utf8');
