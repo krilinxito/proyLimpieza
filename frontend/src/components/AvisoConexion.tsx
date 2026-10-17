@@ -37,13 +37,13 @@ export function AvisoConexion(props: Props) {
   return (
     <div
       role="status"
-      className={`mx-auto mt-2 max-w-3xl rounded-lg px-6 py-3 text-lg ${
-        conectado ? 'bg-slate-100 text-slate-800' : 'bg-amber-100 text-amber-900'
+      className={`mx-auto mt-2 max-w-3xl rounded-xl border-2 px-6 py-3 text-lg ${
+        conectado ? 'border-borde-suave bg-superficie text-texto' : 'border-advertencia-borde bg-advertencia-fondo text-advertencia-texto'
       }`}
     >
       <p>{frase(props)}</p>
       {paraCorregir > 0 && (
-        <Link to="/para-corregir" className="mt-1 inline-block font-semibold text-red-800 underline">
+        <Link to="/para-corregir" className="mt-1 inline-block font-semibold text-peligro-texto underline">
           {cuantos(paraCorregir)} {paraCorregir === 1 ? 'no se pudo guardar' : 'no se pudieron guardar'}. Tocá acá para revisarlos.
         </Link>
       )}
