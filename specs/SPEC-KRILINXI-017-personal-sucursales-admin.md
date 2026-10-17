@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-017
 name: Administrar el personal y las sucursales
 slug: personal-sucursales-admin
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-16
 scope:
@@ -20,7 +20,15 @@ scope:
 priority: medium
 depends_on:
   - SPEC-KRILINXI-015
-tests: []
+tests:
+  - frontend/src/App.test.tsx
+  - frontend/src/features/sucursales/api/sucursales.test.ts
+  - frontend/src/features/sucursales/components/PantallaSucursales.test.tsx
+  - frontend/src/features/usuarios/api/cuentas.test.ts
+  - frontend/src/features/usuarios/components/PantallaPersonal.test.tsx
+  - frontend/src/lib/api.test.ts
+  - frontend/src/test/arquitectura.test.ts
+  - frontend/src/test/red.ts
 ---
 
 ## Descripción
