@@ -2,6 +2,7 @@ import { configDefaults, defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import { cspEnElBuild } from './src/pwa/csp';
 
 // Los WASM del SQLite de PowerSync pesan hasta 2,5 MB, y Workbox por defecto no guarda nada
 // de más de 2 MiB. Sin subir el tope, la app abriría sin internet pero la base local no.
@@ -11,6 +12,8 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    // La política de seguridad del contenido, solo en la app compilada (SPEC-KRILINXI-020).
+    cspEnElBuild(),
     // La app abre sin internet (SPEC-KRILINXI-011). El service worker es nuestro (`src/pwa/sw.ts`)
     // y no uno generado, porque decide cuándo pasar a una versión nueva (`src/pwa/actualizar.ts`).
     // Lo registra `main.tsx` solo en la app compilada: en `npm run dev` no existe.

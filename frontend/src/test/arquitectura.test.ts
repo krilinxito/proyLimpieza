@@ -165,3 +165,18 @@ describe('El personal y las sucursales no escriben en la base local — SPEC-KRI
     expect(culpables).toEqual([]);
   });
 });
+
+/**
+ * Sin estilos en línea — SPEC-KRILINXI-020. La política de seguridad del contenido no los permite
+ * (`style-src 'self'`): un `style={…}` se vería bien en `npm run dev`, donde no hay política, y
+ * en la tablet el navegador lo ignoraría sin avisar. Para algo variable, una clase de una lista
+ * escrita entera (ver `anchoDeBarra` en `SeccionVolumen.tsx`).
+ */
+describe('Los componentes no usan estilos en línea — SPEC-KRILINXI-020', () => {
+  it('ningún archivo tsx de la app tiene style={…}', () => {
+    const culpables = archivosFuente('features', 'components', 'pages')
+      .filter(({ ruta, fuente }) => ruta.endsWith('.tsx') && /\bstyle=\{/.test(sinComentarios(fuente)))
+      .map(({ ruta }) => ruta);
+    expect(culpables).toEqual([]);
+  });
+});

@@ -282,3 +282,17 @@ describe('Panel de estadísticas: volumen, productividad y clientes — SPEC-KRI
     sinJerga();
   });
 });
+
+describe('Las barras del volumen sin estilos en línea — SPEC-KRILINXI-020', () => {
+  it('el ancho va en una clase: la del día con más ropa es la más ancha, y un día sin ropa no tiene barra', async () => {
+    simularEstadisticas();
+    await abrirPanel();
+    const volumen = await screen.findByRole('region', { name: 'Ropa recibida' });
+    const barra = (fecha: string) => within(volumen).getByText(fecha).nextElementSibling?.querySelector('[aria-hidden="true"]');
+
+    expect(barra('15/10/2026')).toHaveClass('w-[60%]');
+    expect(barra('14/10/2026')).toHaveClass('w-[30%]');
+    expect(barra('16/10/2026')).toHaveClass('w-0');
+    expect(volumen.querySelector('[style]')).toBeNull();
+  });
+});

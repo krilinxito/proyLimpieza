@@ -12,6 +12,8 @@ scope:
   - frontend/src/lib/env.ts
   - frontend/src/lib/env.test.ts
   - frontend/src/test/**
+  - frontend/src/features/estadisticas/components/SeccionVolumen.tsx
+  - frontend/src/features/estadisticas/components/PantallaEstadisticas.test.tsx
   - CLAUDE.md
 priority: high
 depends_on:
