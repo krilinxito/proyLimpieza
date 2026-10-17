@@ -1,5 +1,5 @@
 /**
- * Servidor falso para los tests — SPEC-KRILINXI-003
+ * Servidor falso para los tests — SPEC-KRILINXI-003 (y los parámetros de la query, SPEC-KRILINXI-015)
  *
  * Reemplaza el "adapter" de axios, que es la pieza que de verdad manda la petición por la
  * red. Todo lo demás de `lib/api` sigue funcionando de verdad: los interceptores ponen el
@@ -25,6 +25,11 @@ export type PedidoFalso = {
   /** Relativa a `/api`: `/auth/login`. */
   ruta: string;
   cuerpo: unknown;
+  /**
+   * Los parámetros de la query string (`?desde=…`), como los pasó quien pidió — SPEC-KRILINXI-015.
+   * Solo está si el pedido los tiene: así los tests que comparan un pedido entero no cambian.
+   */
+  parametros?: unknown;
   /** La cabecera Authorization tal como salió, o null. */
   autorizacion: string | null;
 };
@@ -43,6 +48,7 @@ export function simularApi(responder: (pedido: PedidoFalso) => RespuestaFalsa) {
       // Para cuando llega aquí, axios ya convirtió el cuerpo a texto JSON.
       cuerpo: typeof config.data === 'string' ? JSON.parse(config.data) : config.data,
       autorizacion: typeof autorizacion === 'string' ? autorizacion : null,
+      ...(config.params === undefined ? {} : { parametros: config.params }),
     };
     pedidos.push(pedido);
 

@@ -109,3 +109,35 @@ describe('Las features no leen el reloj de la tablet — SPEC-KRILINXI-012', () 
     expect(culpables).toEqual([]);
   });
 });
+
+/**
+ * Las estadísticas se leen de la API, nunca de la base local (CLAUDE.md §8) — SPEC-KRILINXI-015.
+ *
+ * Sin internet, el panel tiene que decir "Las estadísticas necesitan conexión": si alguna
+ * métrica saliera de la tablet, mostraría números a medias (solo lo que bajó) sin avisar. La
+ * única excepción de la feature es el catálogo de sucursales del filtro, que sí es de la base
+ * local, y vive aparte justamente para que esta regla se pueda escribir.
+ */
+const DE_ESTADISTICAS = archivosFuente('features/estadisticas');
+const LEEN_LA_BASE_LOCAL = ['features/estadisticas/api/sucursalesLocal.ts', 'features/estadisticas/hooks/useSucursales.ts'];
+
+describe('Las estadísticas no salen de la base local — SPEC-KRILINXI-015', () => {
+  it('revisa la feature entera', () => {
+    expect(DE_ESTADISTICAS.map(({ ruta }) => ruta)).toEqual(
+      expect.arrayContaining(['features/estadisticas/api/estadisticasApi.ts', 'features/estadisticas/hooks/usePanel.ts']),
+    );
+  });
+
+  it('solo la lista de sucursales toca la base local', () => {
+    const culpables = DE_ESTADISTICAS.filter(
+      ({ ruta, fuente }) =>
+        !LEEN_LA_BASE_LOCAL.includes(ruta) && /lib\/powersync|useBaseLocal|\.consultar\(/.test(sinComentarios(fuente)),
+    ).map(({ ruta }) => ruta);
+    expect(culpables).toEqual([]);
+  });
+
+  it('las métricas se piden con lib/api', () => {
+    const cliente = DE_ESTADISTICAS.find(({ ruta }) => ruta === 'features/estadisticas/api/estadisticasApi.ts');
+    expect(cliente?.fuente).toMatch(/from\s+['"]\.\.\/\.\.\/\.\.\/lib\/api['"]/);
+  });
+});

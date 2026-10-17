@@ -153,6 +153,15 @@ SPEC-KRILINXI-014 agregó "Cambiar datos" en la tarjeta del cliente (nombre y te
 escribe solo lo que cambió, y si no cambió nada no se escribe, porque un `UPDATE` que deja todo
 igual igual encola un PATCH vacío. `validarCliente` (`features/clientes/api/clientesLocal.ts`)
 es la única validación del cliente: la usan el alta, la edición y la corrección.
+SPEC-KRILINXI-015 hizo `/estadisticas` (solo ADMIN): ingresos, saldos y ropa sin recoger,
+pedidos a la API con `lib/api` (`features/estadisticas/api/estadisticasApi.ts`, que comprueba
+cada respuesta contra el contrato de SPEC-ALE186-008). Sin internet dice "Las estadísticas
+necesitan conexión" y no muestra ningún número; carga sola al volver (evento `online`). Por
+defecto, los ingresos son los de **hoy** en Bolivia y saldos y sin recoger, **todo lo
+pendiente** (`DESDE_SIEMPRE`), porque esas dos filtran por `fecha_entrada`. Las sucursales del
+filtro sí salen de la base local, y un test de arquitectura vigila que nada más de la feature
+la toque. Para los tests, `test/estadisticasDePrueba.ts` arma respuestas válidas y
+`simularEstadisticas()` las sirve; el servidor falso ahora anota los `parametros` de la query.
 
 SPEC-KRILINXI-012 corrige el reloj de la tablet: `lib/reloj` guarda el desfase con la hora
 del servidor que traen `login` y `renovar`, y `horaOficial()` es de donde salen
