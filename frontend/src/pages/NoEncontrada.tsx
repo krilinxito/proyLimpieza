@@ -1,15 +1,18 @@
-import { Link } from 'react-router-dom';
+import { EnlaceBoton } from '../components/EnlaceBoton';
 import { Pantalla } from './Pantalla';
 
+/** Una dirección que no existe: qué pasó y un solo camino de vuelta (SPEC-KRILINXI-024). */
 export function NoEncontrada() {
   return (
     <Pantalla titulo="Esa página no existe">
-      <p className="mt-4 text-xl text-slate-700">
+      <p className="mt-4 text-xl text-texto-suave">
         Puede que el enlace esté mal escrito. Volvé al inicio y elegí qué querés hacer.
       </p>
-      <Link to="/" className="mt-6 inline-block text-xl font-semibold text-sky-700 underline">
-        Volver al inicio
-      </Link>
+      <div className="mt-8">
+        <EnlaceBoton a="/" icono="inicio">
+          Volver al inicio
+        </EnlaceBoton>
+      </div>
     </Pantalla>
   );
 }

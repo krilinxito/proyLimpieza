@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { EnlaceBoton } from '../components/EnlaceBoton';
 import { Pantalla } from './Pantalla';
 
 /**
@@ -9,10 +9,12 @@ import { Pantalla } from './Pantalla';
 export function EnConstruccion({ titulo }: { titulo: string }) {
   return (
     <Pantalla titulo={titulo}>
-      <p className="mt-4 text-xl text-slate-700">Esta parte todavía no está hecha.</p>
-      <Link to="/" className="mt-6 inline-block text-xl font-semibold text-sky-700 underline">
-        Volver al inicio
-      </Link>
+      <p className="mt-4 text-xl text-texto-suave">Esta parte todavía no está hecha.</p>
+      <div className="mt-8">
+        <EnlaceBoton a="/" icono="inicio">
+          Volver al inicio
+        </EnlaceBoton>
+      </div>
     </Pantalla>
   );
 }
