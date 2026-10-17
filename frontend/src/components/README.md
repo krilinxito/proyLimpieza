@@ -20,6 +20,8 @@ Desde SPEC-KRILINXI-022:
 - `Tarjeta` — agrupa lo que va junto. Con `titulo` es una sección con encabezado.
 - `Insignia` — una etiqueta corta con `tono` (`neutro`, `informacion`, `exito`, `advertencia`,
   `peligro`). No sabe de órdenes: qué tono lleva cada estado lo decide la feature.
+- `EnlaceBoton` — un enlace a otra pantalla con aspecto de botón ("Volver al inicio"). Si lleva a
+  otra pantalla es un enlace, aunque se vea como botón: `Boton` es para acciones (SPEC-KRILINXI-024).
 - `Icono` (`iconos.tsx`) — los íconos de la app por nombre (`<Icono nombre="cobrar" />`).
   Siempre decorativos: van al lado de un texto que diga lo mismo, nunca solos.
 
@@ -36,6 +38,6 @@ Los colores viven en `src/index.css`, en `@theme`, y Tailwind arma las clases co
 | Avisos e insignias | `info-*`, `exito-*`, `advertencia-*`, `peligro-*`, cada uno con `-fondo`, `-texto` y `-borde` |
 | Botón de peligro | `peligro`, `peligro-fuerte` |
 
-**En `components/` no se usa la paleta cruda** (`sky-700`, `slate-400`, `bg-white`): lo vigila
+**En `components/` (y en lo que ya pasó al tema, ver `CON_EL_TEMA`) no se usa la paleta cruda** (`sky-700`, `slate-400`, `bg-white`): lo vigila
 `test/arquitectura.test.ts`. Un color nuevo se agrega al tema, y si es un texto, su par con el
 fondo va en `test/tema.test.ts`, que comprueba el contraste (WCAG AA).
