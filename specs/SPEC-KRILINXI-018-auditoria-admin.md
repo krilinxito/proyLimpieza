@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-018
 name: 'Consultar la auditoría: quién hizo qué'
 slug: auditoria-admin
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-16
 scope:
