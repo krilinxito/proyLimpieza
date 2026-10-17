@@ -285,6 +285,19 @@ corrida: nunca toca la base de desarrollo. Cuándo va un test en cada una:
   Un doble del pool no puede probar nada de eso: solo devuelve lo que el test le dijo.
   Los datos se crean con `tests/helpers/baseReal.ts`.
 
+**La suite del frontend usa la mitad de los núcleos** (`maxWorkers: '50%'` en
+`frontend/vite.config.ts`, SPEC-KRILINXI-019). Cada test de pantalla abre su propio SQLite y monta la
+App; con un proceso por núcleo, la primera lectura de la base local a veces pasaba el segundo de
+espera de `findBy…` y fallaba la mitad de las corridas completas sin que nada estuviera mal.
+**Para buscar una carrera**, `LENTO_MS=200 npx vitest run` (en `frontend/`), varias veces: demora al
+azar cada consulta y cada aviso de la base de prueba, así que un test que afirma con `getBy…` algo que
+todavía no llegó falla en alguna corrida, en vez de una vez cada tanto. Si la traza pasa por `waitFor`
+es tiempo, no carrera; con valores altos (400) aparecen falsos positivos de ese tipo. Si un test falla de vez en cuando, **guardá la salida completa antes de
+reintentar** (`npx vitest run > salida.txt 2>&1`): el mensaje de error es la mitad del diagnóstico.
+Para comprobar que la suite está estable, 10 corridas seguidas (desde `frontend/`, unos 6 minutos; con
+`LENTO_MS=200` delante, en modo lento): `for i in $(seq 1 10); do npx vitest run > corrida-$i.txt 2>&1 ||
+echo "falló la $i"; done`. Que no imprima nada es la señal de que pasaron todas.
+
 **`test:db` se corre sola, nunca a la vez que otra suite** (SPEC-ALE186-022). Corre sus
 archivos en paralelo contra el Postgres de Docker; si al mismo tiempo corren los tests del
 frontend, que usan todos los núcleos, la CPU se satura, Vitest tarda más en cargar los
@@ -678,14 +691,6 @@ Nada se implementa sin una spec aprobada.
   `/quien-hizo-que` dice "Registró ropa · Centro" sin el número de boleta. El arreglo es del backend:
   que cada registro traiga un resumen (boleta y cliente), armado en la misma consulta. Va en una spec
   propia (`auditoria-resumen`); el frontend solo tendría que mostrarlo.
-- **Un test intermitente en el frontend** (anotado en SPEC-KRILINXI-016, 2026-10-16). "con boleta
-  y pagando lo que falta: confirma, guarda entrega y pago…" (`PantallaEntregar.test.tsx`,
-  SPEC-KRILINXI-009) falló 2 veces en unas 10 corridas completas de `npm test`, tardando ~3 s, y
-  nunca corrido solo. No se capturó el mensaje. La sospecha es que su última espera (`findBy`,
-  1000 ms por defecto) se queda corta con la máquina cargada, porque después de confirmar la app
-  escribe la entrega y el pago en SQLite. Si vuelve a fallar, **guardá la salida completa** antes
-  de reintentar; si se confirma, el arreglo es subir `asyncUtilTimeout` en `src/test/setup.ts`.
-
 ### Revisión del backend (2026-10-09)
 
 Una revisión de seguridad, confidencialidad y escalabilidad del backend no encontró
@@ -708,7 +713,8 @@ repartido en specs del roadmap del backend:
   (SPEC-ALE186-023: solo mensaje, código, restricción, tabla y stack).
 - **Herramientas de desarrollo:** `npm audit` todavía marca Vitest (`tinypool`, `@vitest/mocker`)
   y `nodemon` (`braces`). No viajan a producción —`npm audit --omit=dev` del backend da 0—, pero
-  arreglarlas exige Vitest 5, un cambio mayor en los dos workspaces: va en una spec propia.
+  arreglarlas exige Vitest 5. **El frontend ya lo usa (5.0); falta el backend, que sigue en la 3.2**:
+  va en una spec propia del backend.
 
 ### Avisos para el frontend
 
