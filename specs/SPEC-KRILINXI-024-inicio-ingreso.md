@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-024
 name: Inicio, ingreso y página no encontrada con el tema
 slug: inicio-ingreso
-status: approved
+status: in-progress
 owner: krilinxito
 created: 2026-10-17
 scope:
