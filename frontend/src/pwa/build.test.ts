@@ -89,3 +89,33 @@ describe('PWA: lo que queda guardado para abrir sin internet — SPEC-KRILINXI-0
     expect(sw).not.toMatch(/localStorage|indexedDB|deleteDatabase|getDirectory/);
   });
 });
+
+describe('PWA: la política de seguridad del contenido — SPEC-KRILINXI-020', () => {
+  async function politica(): Promise<string> {
+    const html = await readFile(join(salida, 'index.html'), 'utf8');
+    const meta = /<meta http-equiv="Content-Security-Policy" content="([^"]+)"/.exec(html);
+    if (!meta?.[1]) throw new Error('El index.html del build no trae la política de seguridad.');
+    // Vite escribe las comillas del atributo como entidades (&#39;); el navegador las decodifica.
+    return meta[1].replaceAll('&#39;', "'").replaceAll('&quot;', '"').replaceAll('&amp;', '&');
+  }
+
+  it('el index.html del build la trae, antes que cualquier script', async () => {
+    const html = await readFile(join(salida, 'index.html'), 'utf8');
+    expect(html.indexOf('Content-Security-Policy')).toBeGreaterThan(-1);
+    expect(html.indexOf('Content-Security-Policy')).toBeLessThan(html.indexOf('<script'));
+  });
+
+  it('se conecta solo al sitio y a los dos servicios del entorno', async () => {
+    expect(await politica()).toContain("connect-src 'self' http://localhost:4000 http://localhost:8080");
+  });
+
+  it('no permite nada en línea ni conexiones a cualquier origen', async () => {
+    expect(await politica()).not.toMatch(/'unsafe-inline'|'unsafe-eval'|(^|\s)\*(\s|;|$)/);
+  });
+
+  it('el build no trae scripts ni estilos en línea que la política bloquearía', async () => {
+    const html = await readFile(join(salida, 'index.html'), 'utf8');
+    expect(html).not.toMatch(/<script(?![^>]*\bsrc=)[^>]*>/);
+    expect(html).not.toMatch(/<style\b|\sstyle="/);
+  });
+});
