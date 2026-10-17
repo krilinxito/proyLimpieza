@@ -9,6 +9,11 @@ scope:
   - frontend/src/features/auditoria/**
   - frontend/src/pages/rutas.tsx
   - frontend/src/test/**
+  - frontend/src/App.test.tsx
+  - frontend/src/components/Paginas.tsx
+  - frontend/src/features/estadisticas/components/SeccionClientes.tsx
+  - frontend/src/features/estadisticas/components/PantallaEstadisticas.test.tsx
+  - CLAUDE.md
 priority: medium
 depends_on:
   - SPEC-KRILINXI-015
