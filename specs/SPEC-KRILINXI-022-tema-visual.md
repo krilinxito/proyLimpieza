@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-022
 name: Tema visual y piezas base de la interfaz
 slug: tema-visual
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-17
 scope:
@@ -16,7 +16,15 @@ scope:
   - CLAUDE.md
 priority: medium
 depends_on: []
-tests: []
+tests:
+  - frontend/src/components/Boton.test.tsx
+  - frontend/src/components/CampoTexto.test.tsx
+  - frontend/src/components/ModalConfirmacion.test.tsx
+  - frontend/src/components/iconos.test.tsx
+  - frontend/src/components/piezas.test.tsx
+  - frontend/src/pwa/build.test.ts
+  - frontend/src/test/arquitectura.test.ts
+  - frontend/src/test/tema.test.ts
 ---
 
 ## Descripción
