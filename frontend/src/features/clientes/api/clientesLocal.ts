@@ -15,9 +15,10 @@ import { normalizarTelefono } from '../telefono';
 import type { Cliente, DatosAlta, ErroresAlta, ResultadoAlta } from '../types';
 
 // Los mismos textos que responde el backend (SPEC-ALE186-003): el empleado lee lo mismo
-// lo detecte el dispositivo o el servidor.
-const FALTA_NOMBRE = 'Escribí el nombre del cliente.';
-const FALTA_TELEFONO = 'Escribí el número de teléfono del cliente.';
+// lo detecte el dispositivo o el servidor. Exportados para la corrección de lo rechazado
+// (SPEC-KRILINXI-013), que valida lo mismo.
+export const FALTA_NOMBRE = 'Escribí el nombre del cliente.';
+export const FALTA_TELEFONO = 'Escribí el número de teléfono del cliente.';
 
 /**
  * Estrecha una fila de SQLite a `Cliente`. SQLite no garantiza tipos, así que se comprueba

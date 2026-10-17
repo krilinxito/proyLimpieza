@@ -1,21 +1,15 @@
 /**
  * Los registros que el servidor rechazó, leídos de la tabla solo local `para_corregir` —
  * SPEC-KRILINXI-007. Los escribe la subida (`lib/powersync/conector.ts`); aquí solo se leen.
+ * Corregirlos o descartarlos es de `corregirLocal.ts` (SPEC-KRILINXI-013).
  *
  * Mismo patrón que `features/clientes/api/clientesLocal.ts`: la base llega como argumento.
  */
 import type { BaseLocal, Fila } from '../../../lib/powersync';
 import { desdeDecimal, formatearBs } from '../../../lib/money';
+import type { RegistroParaCorregir } from '../types';
 
-export type RegistroParaCorregir = {
-  id: string;
-  /** Qué era, en palabras: "Ropa con la boleta 001234", "Cobro de Bs 20,00". */
-  que: string;
-  /** Por qué no se guardó: el mensaje del servidor, ya escrito para el mostrador. */
-  mensaje: string;
-  /** Cuándo se intentó guardar, en ISO 8601. */
-  fecha: string;
-};
+export type { RegistroParaCorregir };
 
 function texto(valor: unknown): string | null {
   return typeof valor === 'string' && valor !== '' ? valor : null;
@@ -69,18 +63,23 @@ function leerDatos(json: unknown): Record<string, unknown> {
 }
 
 function aRegistro(fila: Fila): RegistroParaCorregir | null {
-  const { id, tabla, datos, mensaje, fecha } = fila;
+  const { id, tabla, registro_id, operacion, datos, mensaje, fecha } = fila;
   if (typeof id !== 'string' || typeof tabla !== 'string') return null;
+  const enviados = leerDatos(datos);
   return {
     id,
-    que: describir(tabla, leerDatos(datos)),
+    que: describir(tabla, enviados),
     mensaje: texto(mensaje) ?? 'No se pudo guardar.',
     fecha: texto(fecha) ?? '',
+    tabla,
+    registroId: texto(registro_id) ?? '',
+    operacion: texto(operacion) ?? '',
+    datos: enviados,
   };
 }
 
 /** Todos, del más viejo al más nuevo: en el orden en que se intentaron guardar. */
 export async function listarParaCorregir(base: BaseLocal): Promise<RegistroParaCorregir[]> {
-  const filas = await base.consultar('SELECT id, tabla, datos, mensaje, fecha FROM para_corregir ORDER BY fecha');
+  const filas = await base.consultar('SELECT id, tabla, registro_id, operacion, datos, mensaje, fecha FROM para_corregir ORDER BY fecha');
   return filas.map(aRegistro).filter((r): r is RegistroParaCorregir => r !== null);
 }
