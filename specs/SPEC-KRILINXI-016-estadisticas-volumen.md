@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-016
 name: Estadísticas de volumen, productividad y clientes
 slug: estadisticas-volumen
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-16
 scope:
@@ -12,7 +12,11 @@ scope:
 priority: medium
 depends_on:
   - SPEC-KRILINXI-015
-tests: []
+tests:
+  - frontend/src/features/estadisticas/api/estadisticasApi.test.ts
+  - frontend/src/features/estadisticas/components/PantallaEstadisticas.test.tsx
+  - frontend/src/features/estadisticas/periodo.test.ts
+  - frontend/src/test/estadisticasDePrueba.ts
 ---
 
 ## Descripción
