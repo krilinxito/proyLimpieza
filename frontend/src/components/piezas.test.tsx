@@ -46,6 +46,16 @@ describe('Tarjeta — SPEC-KRILINXI-022', () => {
     expect(screen.getByRole('heading', { name: 'Datos del cliente' })).toBeInTheDocument();
   });
 
+  it('dentro de otra sección, el título puede ser un h3 (SPEC-KRILINXI-025)', () => {
+    render(
+      <Tarjeta titulo="Cuentas" nivel={3}>
+        <p>Bs 30,00</p>
+      </Tarjeta>,
+    );
+    expect(screen.getByRole('heading', { level: 3, name: 'Cuentas' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Cuentas' })).toBeInTheDocument();
+  });
+
   it('sin título es solo un recuadro, sin sección que anunciar', () => {
     render(
       <Tarjeta>

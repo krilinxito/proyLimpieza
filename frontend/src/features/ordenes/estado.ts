@@ -13,6 +13,7 @@
  *     una cambia sin la otra, el test falla. Validar aquí es cortesía; la garantía la da el
  *     servidor (CLAUDE.md §6).
  */
+import type { TonoInsignia } from '../../components/Insignia';
 import type { EstadoOrden } from '../../lib/dominio';
 
 /** Los estados de los que ya no se sale. */
@@ -35,6 +36,22 @@ export const ORIGENES: Record<EstadoOrden, readonly EstadoOrden[]> = {
 export function estadoEfectivo(estado: EstadoOrden, tieneEntrega: boolean): EstadoOrden {
   return tieneEntrega ? 'ENTREGADO' : estado;
 }
+
+/**
+ * El tono con que se pinta cada estado — SPEC-KRILINXI-025. Es del negocio (qué estado merece
+ * atención), por eso vive acá y no en `components/`: la `Insignia` solo recibe el tono.
+ *
+ * Lo que importa en el mostrador es qué ropa ya se puede entregar (LISTO, éxito) y cuál no se
+ * toca más (ANULADO, peligro). El resto es neutro o información, para no gritar todo a la vez.
+ * El color solo ayuda a encontrarla: la insignia siempre dice el estado en palabras.
+ */
+export const TONO_ESTADO: Record<EstadoOrden, TonoInsignia> = {
+  RECIBIDO: 'neutro',
+  EN_PROCESO: 'informacion',
+  LISTO: 'exito',
+  ENTREGADO: 'neutro',
+  ANULADO: 'peligro',
+};
 
 export function estaCerrada(estado: EstadoOrden): boolean {
   return ESTADOS_CERRADOS.includes(estado);
