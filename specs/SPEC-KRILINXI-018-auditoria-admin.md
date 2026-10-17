@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-018
 name: 'Consultar la auditoría: quién hizo qué'
 slug: auditoria-admin
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-16
 scope:
@@ -17,7 +17,12 @@ scope:
 priority: medium
 depends_on:
   - SPEC-KRILINXI-015
-tests: []
+tests:
+  - frontend/src/App.test.tsx
+  - frontend/src/features/auditoria/components/PantallaAuditoria.test.tsx
+  - frontend/src/features/auditoria/describir.test.ts
+  - frontend/src/features/estadisticas/components/PantallaEstadisticas.test.tsx
+  - frontend/src/test/auditoriaDePrueba.ts
 ---
 
 ## Descripción
