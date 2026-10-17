@@ -1,8 +1,8 @@
 import { useCallback, useState } from 'react';
-import { pedirClientes } from '../api/estadisticasApi';
+import { ERROR_ESTADISTICAS, pedirClientes } from '../api/estadisticasApi';
 import { hoyEnBolivia, parametrosHistoria, type Filtro } from '../periodo';
 import type { ClientesAtendidos } from '../types';
-import { usePedidoOnline, type EstadoPedido } from './usePedidoOnline';
+import { usePedidoOnline, type EstadoPedido } from '../../../hooks/usePedidoOnline';
 
 /**
  * Los clientes atendidos en el período, de a una página — SPEC-KRILINXI-016.
@@ -24,6 +24,6 @@ export function useClientesAtendidos(filtro: Filtro): {
   const irAPagina = useCallback((nueva: number) => setElegida({ filtro, pagina: nueva }), [filtro]);
 
   const pedir = useCallback(() => pedirClientes(parametrosHistoria(filtro, hoyEnBolivia()), pagina), [filtro, pagina]);
-  const { estado, recargar } = usePedidoOnline(pedir);
+  const { estado, recargar } = usePedidoOnline(pedir, ERROR_ESTADISTICAS);
   return { estado, recargar, pagina, irAPagina };
 }

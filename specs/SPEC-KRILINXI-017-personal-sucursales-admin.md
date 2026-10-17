@@ -10,6 +10,10 @@ scope:
   - frontend/src/features/sucursales/**
   - frontend/src/pages/rutas.tsx
   - frontend/src/test/**
+  - frontend/src/hooks/**
+  - frontend/src/lib/api.ts
+  - frontend/src/lib/api.test.ts
+  - frontend/src/features/estadisticas/**
   - CLAUDE.md
 priority: medium
 depends_on:

@@ -10,7 +10,15 @@
  * comprueba que lo que volvió tiene la forma del contrato; si no, se lanza `RespuestaRara`
  * en vez de mostrar un panel a medias.
  */
-import { api } from '../../../lib/api';
+import { api, RespuestaRara } from '../../../lib/api';
+
+export { RespuestaRara };
+
+/** El mensaje de un error de las estadísticas que no trae el suyo (para `usePedidoOnline`). */
+export const ERROR_ESTADISTICAS =
+  'No se pudieron traer las estadísticas. Probá de nuevo y, si sigue pasando, avisale al encargado.';
+
+const INCOMPLETAS = 'Las estadísticas llegaron incompletas. Probá de nuevo y, si sigue pasando, avisale al encargado.';
 import { METODOS_PAGO } from '../../../lib/dominio';
 import type { Parametros } from '../periodo';
 import {
@@ -24,13 +32,6 @@ import {
   type Tramo,
   type Volumen,
 } from '../types';
-
-export class RespuestaRara extends Error {
-  constructor() {
-    super('Las estadísticas llegaron incompletas. Probá de nuevo y, si sigue pasando, avisale al encargado.');
-    this.name = 'RespuestaRara';
-  }
-}
 
 type Objeto = Record<string, unknown>;
 
@@ -189,7 +190,7 @@ export function leerClientes(datos: unknown): ClientesAtendidos | null {
 async function pedir<T>(ruta: string, parametros: Parametros | ParametrosPaginados, leer: (datos: unknown) => T | null): Promise<T> {
   const { data } = await api.get<unknown>(ruta, { params: parametros });
   const leido = leer(data);
-  if (leido === null) throw new RespuestaRara();
+  if (leido === null) throw new RespuestaRara(INCOMPLETAS);
   return leido;
 }
 
