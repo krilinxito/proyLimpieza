@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { App } from '../App';
@@ -7,6 +7,7 @@ import type { Fila } from '../lib/powersync/control';
 import { controlFalso } from '../test/controlFalso';
 import { renderEnRuta } from '../test/render';
 import { sesionDePrueba } from '../test/sesion';
+import { sistemaDePrueba } from '../test/sistemaDePrueba';
 
 const EMPLEADO = sesionDePrueba({ rol: 'EMPLEADO', nombreCompleto: 'Rosa Quispe' });
 const ADMIN = sesionDePrueba({ rol: 'ADMIN', nombreCompleto: 'Ana Mamani' });
@@ -207,5 +208,52 @@ describe('Marco sin sesión — SPEC-KRILINXI-023', () => {
     expect(screen.queryByRole('button', { name: 'Salir' })).not.toBeInTheDocument();
     expect(screen.queryByText(/internet/)).not.toBeInTheDocument();
     expect(screen.getAllByRole('main')).toHaveLength(1);
+  });
+});
+
+describe('Marco: claro u oscuro — SPEC-KRILINXI-030', () => {
+  const html = () => document.documentElement;
+  const cabecera = () => within(screen.getByRole('banner'));
+
+  it('la cabecera tiene el botón en palabras, y cambia el tema al momento', async () => {
+    abrir();
+    fireEvent.click(cabecera().getByRole('button', { name: 'Tema oscuro' }));
+    expect(html().dataset.tema).toBe('oscuro');
+    // `Boton` descarta un segundo toque mientras termina el primero (contra el doble cobro): se
+    // espera a que vuelva a estar disponible, como haría una persona.
+    const volver = cabecera().getByRole('button', { name: 'Tema claro' });
+    await waitFor(() => expect(volver).toBeEnabled());
+    fireEvent.click(volver);
+    expect(html().dataset.tema).toBe('claro');
+  });
+
+  it('la elección se recuerda al volver a abrir la app', () => {
+    abrir();
+    fireEvent.click(cabecera().getByRole('button', { name: 'Tema oscuro' }));
+    cleanup();
+    abrir();
+    expect(cabecera().getByRole('button', { name: 'Tema claro' })).toBeInTheDocument();
+  });
+
+  it('sin elección, sigue a la tablet en vivo: si pasa a oscuro, la app también', () => {
+    const sistema = sistemaDePrueba({ oscuro: false });
+    abrir();
+    act(() => sistema.cambiar({ oscuro: true }));
+    expect(html().dataset.tema).toBe('oscuro');
+    expect(cabecera().getByRole('button', { name: 'Tema claro' })).toBeInTheDocument();
+  });
+
+  it('está también en el ingreso, sin nadie adentro', () => {
+    abrir('/ingresar', null);
+    expect(cabecera().getByRole('button', { name: 'Tema oscuro' })).toBeInTheDocument();
+  });
+
+  it('salir no borra la elección: es de la tablet, no de la persona', async () => {
+    abrir();
+    fireEvent.click(cabecera().getByRole('button', { name: 'Tema oscuro' }));
+    fireEvent.click(cabecera().getByRole('button', { name: 'Salir' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Sí, salir' }));
+    await screen.findByRole('button', { name: 'Entrar' });
+    expect(cabecera().getByRole('button', { name: 'Tema claro' })).toBeInTheDocument();
   });
 });

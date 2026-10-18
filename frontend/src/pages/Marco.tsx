@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { AvisoConexion } from '../components/AvisoConexion';
 import { Cabecera } from '../components/marco/Cabecera';
+import { BotonTema } from '../components/marco/BotonTema';
 import { MenuCompacto } from '../components/marco/MenuCompacto';
 import { MenuPrincipal } from '../components/marco/MenuPrincipal';
 import { Pie } from '../components/marco/Pie';
@@ -12,6 +13,7 @@ import { BarraSesion } from '../features/auth/components/BarraSesion';
 import { useSucursales } from '../features/sucursales/hooks/useSucursales';
 import { useConexion } from '../hooks/useConexion';
 import { useSession } from '../hooks/useSession';
+import { useTema } from '../hooks/useTema';
 import type { Usuario } from '../features/auth/types';
 import { destinosDelMenu, tituloDePestana } from './rutas';
 import { VERSION_APP } from './version';
@@ -59,6 +61,7 @@ export function Marco() {
   const lugar = useLugar(usuario);
   const conSucursal = useSucursalDeTrabajo() !== null;
   const destinos = usuario ? destinosDelMenu(usuario.rol, conSucursal) : [];
+  const { tema, cambiar } = useTema();
 
   useEffect(() => {
     document.title = tituloDePestana(pathname);
@@ -70,6 +73,7 @@ export function Marco() {
       <Cabecera
         lugar={lugar}
         menu={usuario && <MenuCompacto destinos={destinos} />}
+        tema={<BotonTema tema={tema} alCambiar={cambiar} />}
         acciones={
           usuario && (
             <>
