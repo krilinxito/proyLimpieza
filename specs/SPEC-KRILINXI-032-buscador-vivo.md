@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-032
 name: Buscar mientras se escribe
 slug: buscador-vivo
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-18
 scope:
