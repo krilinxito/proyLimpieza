@@ -10,10 +10,12 @@
  * Aquí son cortesía: el empleado se entera al momento, con o sin internet. La garantía
  * sigue siendo del servidor (CLAUDE.md §6).
  */
-import type { BaseLocal } from '../../../lib/powersync';
+import type { BaseLocal, Sentencia } from '../../../lib/powersync';
 import { aDecimal, parsearMonto, type Centavos } from '../../../lib/money';
 import { horaOficial } from '../../../lib/reloj';
-import { insertarPago } from '../../pagos/api/pagosLocal';
+import { clienteNuevo, sentenciaAltaCliente, validarCliente } from '../../clientes/api/clientesLocal';
+import type { Cliente, ClienteElegido } from '../../clientes/types';
+import { sentenciaPago } from '../../pagos/api/pagosLocal';
 import { calcularSaldo } from '../../pagos/saldo';
 import type { DatosRopa, ErroresRopa, QuienRegistra, ResultadoRegistro } from '../types';
 
@@ -114,17 +116,50 @@ export async function validarRopa(
   return { errores, valores: { numeroBoleta, descripcion, precio, fechaEstimada: fechaEstimada === '' ? null : fechaEstimada } };
 }
 
+type ClienteValidadoDeLaRopa =
+  | { tipo: 'listo'; cliente: Cliente; alta: Sentencia | null }
+  | { tipo: 'invalido'; errores: ErroresRopa }
+  | { tipo: 'telefono-ocupado'; cliente: Cliente };
+
 /**
- * Valida todo y, solo si todo está bien, escribe: primero la orden, después el adelanto.
- * Si el adelanto está mal no se guarda nada, ni siquiera la orden.
+ * Quién deja la ropa, listo para guardar — SPEC-KRILINXI-034. Uno que ya existe pasa tal cual; uno
+ * nuevo se valida con las mismas reglas que el alta de /clientes (`validarCliente`), y si su
+ * teléfono ya es de otro, se avisa en vez de guardarlo dos veces.
+ */
+async function prepararCliente(base: BaseLocal, elegido: ClienteElegido | null): Promise<ClienteValidadoDeLaRopa> {
+  if (!elegido) return { tipo: 'invalido', errores: { cliente: MENSAJES.sinCliente } };
+  if (elegido.tipo === 'existente') return { tipo: 'listo', cliente: elegido.cliente, alta: null };
+
+  const { errores, nombre, telefono, ocupadoPor } = await validarCliente(base, elegido.datos);
+  if (errores.nombre || errores.telefono) {
+    return { tipo: 'invalido', errores: { clienteNombre: errores.nombre, clienteTelefono: errores.telefono } };
+  }
+  if (ocupadoPor) return { tipo: 'telefono-ocupado', cliente: ocupadoPor };
+  const cliente = clienteNuevo({ nombre, telefono, carnet: elegido.datos.carnet });
+  return { tipo: 'listo', cliente, alta: sentenciaAltaCliente(cliente) };
+}
+
+/** Saca las claves sin mensaje: `{ clienteNombre: undefined }` no es un error. */
+function soloErrores(errores: ErroresRopa): ErroresRopa {
+  return Object.fromEntries(Object.entries(errores).filter(([, mensaje]) => mensaje !== undefined));
+}
+
+/**
+ * Valida todo y, solo si todo está bien, escribe. Desde SPEC-KRILINXI-034, en una sola transacción
+ * (`ejecutarJuntas`): el alta del cliente si es nuevo, la orden y el adelanto. O se guarda todo o
+ * nada: si el adelanto está mal no se guarda ni la orden, y nunca queda un cliente nuevo sin la ropa
+ * que vino a dejar. La cola sube en ese mismo orden, así la orden llega después de su cliente.
  */
 export async function registrarRopa(base: BaseLocal, quien: QuienRegistra, datos: DatosRopa): Promise<ResultadoRegistro> {
   const hayAdelanto = datos.adelanto.trim() !== '';
-  const validada = await validarRopa(base, quien.sucursalId, datos);
+  const [validada, elCliente] = await Promise.all([
+    validarRopa(base, quien.sucursalId, datos),
+    prepararCliente(base, datos.cliente),
+  ]);
+  if (elCliente.tipo === 'telefono-ocupado') return elCliente;
   const { numeroBoleta, descripcion, precio, fechaEstimada } = validada.valores;
 
-  const errores: ErroresRopa = { ...validada.errores };
-  if (!datos.cliente) errores.cliente = MENSAJES.sinCliente;
+  const errores: ErroresRopa = { ...validada.errores, ...(elCliente.tipo === 'invalido' ? elCliente.errores : {}) };
 
   const adelanto = hayAdelanto ? leerMonto(datos.adelanto) : 0;
   if (hayAdelanto) {
@@ -135,50 +170,57 @@ export async function registrarRopa(base: BaseLocal, quien: QuienRegistra, datos
 
   // Los `=== null` repiten lo que ya dicen los errores, pero así TypeScript sabe que de aquí
   // en adelante cliente, precio y adelanto existen.
-  if (Object.keys(errores).length > 0 || !datos.cliente || precio === null || adelanto === null) {
-    return { tipo: 'invalida', errores };
+  const limpios = soloErrores(errores);
+  if (Object.keys(limpios).length > 0 || elCliente.tipo !== 'listo' || precio === null || adelanto === null) {
+    return { tipo: 'invalida', errores: limpios };
   }
+  const { cliente, alta } = elCliente;
 
   const ordenId = crypto.randomUUID();
   // La hora del servidor aunque el reloj de la tablet esté mal, en el formato ISO 8601 con zona
   // que exige el backend (SPEC-KRILINXI-012).
   const ahora = horaOficial();
 
-  await base.ejecutar(
-    `INSERT INTO ordenes (id, numero_boleta, cliente_id, sucursal_id, usuario_recepcion_id, descripcion,
-                          fecha_entrada, fecha_estimada_salida, precio_total, estado)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'RECIBIDO')`,
-    [
-      ordenId,
-      numeroBoleta,
-      datos.cliente.id,
-      quien.sucursalId,
-      quien.usuarioId,
-      descripcion,
-      ahora,
-      fechaEstimada,
-      aDecimal(precio),
-    ],
-  );
-
+  const sentencias: Sentencia[] = [
+    ...(alta ? [alta] : []),
+    {
+      sql: `INSERT INTO ordenes (id, numero_boleta, cliente_id, sucursal_id, usuario_recepcion_id, descripcion,
+                                 fecha_entrada, fecha_estimada_salida, precio_total, estado)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'RECIBIDO')`,
+      parametros: [
+        ordenId,
+        numeroBoleta,
+        cliente.id,
+        quien.sucursalId,
+        quien.usuarioId,
+        descripcion,
+        ahora,
+        fechaEstimada,
+        aDecimal(precio),
+      ],
+    },
+  ];
   if (hayAdelanto && datos.metodoAdelanto) {
-    await insertarPago(base, {
-      ordenId,
-      sucursalId: quien.sucursalId,
-      usuarioId: quien.usuarioId,
-      monto: adelanto,
-      tipo: 'ADELANTO',
-      metodo: datos.metodoAdelanto,
-      fechaPago: ahora,
-    });
+    sentencias.push(
+      sentenciaPago(crypto.randomUUID(), {
+        ordenId,
+        sucursalId: quien.sucursalId,
+        usuarioId: quien.usuarioId,
+        monto: adelanto,
+        tipo: 'ADELANTO',
+        metodo: datos.metodoAdelanto,
+        fechaPago: ahora,
+      }),
+    );
   }
+  await base.ejecutarJuntas(sentencias);
 
   return {
     tipo: 'registrada',
     ropa: {
       ordenId,
       numeroBoleta,
-      cliente: datos.cliente,
+      cliente,
       descripcion,
       precioTotal: precio,
       adelanto,

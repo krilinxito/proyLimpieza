@@ -1,11 +1,14 @@
 import type { Centavos } from '../../lib/money';
 import type { EstadoOrden, MetodoPago, TipoPago } from '../../lib/dominio';
-import type { Cliente } from '../clientes/types';
+import type { Cliente, ClienteElegido } from '../clientes/types';
 
 /** Lo que escribe el empleado al registrar ropa, tal cual, sin limpiar. */
 export type DatosRopa = {
-  /** El cliente elegido en el paso anterior; null si todavía no eligió. */
-  cliente: Cliente | null;
+  /**
+   * Quién deja la ropa: uno que ya existe o uno nuevo, que se da de alta junto con la ropa
+   * (SPEC-KRILINXI-034). null si todavía no eligió.
+   */
+  cliente: ClienteElegido | null;
   numeroBoleta: string;
   descripcion: string;
   /** Como lo escribió: "25", "25,50" o "25.50". */
@@ -19,7 +22,7 @@ export type DatosRopa = {
 };
 
 /** Qué está mal en cada campo, en palabras del mostrador. */
-export type ErroresRopa = Partial<Record<keyof DatosRopa, string>>;
+export type ErroresRopa = Partial<Record<keyof DatosRopa | 'clienteNombre' | 'clienteTelefono', string>>;
 
 /** Quién registra, y dónde. Sale de la sesión, nunca de lo que se escribe en pantalla. */
 export type QuienRegistra = { usuarioId: string; sucursalId: string };
@@ -37,7 +40,11 @@ export type RopaRegistrada = {
   fechaEstimada: string | null;
 };
 
-export type ResultadoRegistro = { tipo: 'registrada'; ropa: RopaRegistrada } | { tipo: 'invalida'; errores: ErroresRopa };
+export type ResultadoRegistro =
+  | { tipo: 'registrada'; ropa: RopaRegistrada }
+  | { tipo: 'invalida'; errores: ErroresRopa }
+  /** El cliente nuevo tiene el teléfono de otro que ya existe (SPEC-KRILINXI-034): no se guardó nada. */
+  | { tipo: 'telefono-ocupado'; cliente: Cliente };
 
 /** Un pago tal como se muestra en el detalle — SPEC-KRILINXI-008. */
 export type PagoVisto = {

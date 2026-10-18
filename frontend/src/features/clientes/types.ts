@@ -42,3 +42,9 @@ export type ResultadoEdicion =
   | { tipo: 'editado'; cliente: Cliente }
   | { tipo: 'sin-cambios' }
   | { tipo: 'invalido'; errores: ErroresAlta };
+
+/**
+ * El cliente que deja la ropa — SPEC-KRILINXI-034: uno que ya existe, o uno nuevo que se da de
+ * alta en el mismo formulario y se guarda junto con la ropa.
+ */
+export type ClienteElegido = { tipo: 'existente'; cliente: Cliente } | { tipo: 'nuevo'; datos: DatosAlta };
