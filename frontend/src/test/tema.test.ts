@@ -67,6 +67,13 @@ const CONTROLES: [control: string, fondo: string][] = [
   ['peligro', 'superficie'],
 ];
 
+/**
+ * Las marcas de los gráficos (SPEC-KRILINXI-026): una barra también hay que verla, 3:1 contra la
+ * superficie donde se dibuja. Que las series se distingan entre sí con daltonismo no se mide acá:
+ * lo mide el validador de la guía de visualización, y su resultado está en la bitácora.
+ */
+const MARCAS = ['serie-1', 'serie-2', 'serie-3', 'serie-4', 'antiguedad-1', 'antiguedad-2', 'antiguedad-3'];
+
 describe('El tema se lee — SPEC-KRILINXI-022', () => {
   it('la fórmula da lo que dice WCAG en los extremos', () => {
     expect(contraste('#000000', '#ffffff')).toBeCloseTo(21, 5);
@@ -89,5 +96,17 @@ describe('El tema se lee — SPEC-KRILINXI-022', () => {
   it('la letra de la app es Atkinson Hyperlegible, y del propio sitio', () => {
     expect(CSS).toMatch(/--font-sans:\s*'Atkinson Hyperlegible'/);
     expect(CSS).not.toMatch(/fonts\.googleapis|https?:\/\//);
+  });
+});
+
+describe('Los colores de los gráficos se ven — SPEC-KRILINXI-026', () => {
+  it.each(MARCAS)('%s sobre la superficie llega a 3:1', (marca) => {
+    expect(contraste(color(marca), color('superficie'))).toBeGreaterThanOrEqual(3);
+  });
+
+  it('la antigüedad se oscurece de a un paso: más vieja, más oscura', () => {
+    const [nueva, media, vieja] = ['antiguedad-1', 'antiguedad-2', 'antiguedad-3'].map((n) => luminancia(color(n)));
+    expect(nueva).toBeGreaterThan(media ?? 0);
+    expect(media).toBeGreaterThan(vieja ?? 0);
   });
 });

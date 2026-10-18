@@ -74,6 +74,25 @@
   /* El botón de lo que no tiene vuelta atrás (anular). */
   --color-peligro: #b91c1c;
   --color-peligro-fuerte: #991b1b;
+
+  /*
+   * Los gráficos de las estadísticas — SPEC-KRILINXI-026. Son marcas, no texto: cada uno llega a
+   * 3:1 contra la superficie (WCAG 1.4.11), y los rótulos van siempre en `texto` al lado.
+   *
+   * Las series (una por forma de pago, en el orden de METODOS_PAGO) pasan el validador de
+   * daltonismo de la guía de visualización con todas sus parejas, no solo las vecinas: un método
+   * en cero no ocupa lugar, así que cualquier par puede quedar pegado (ver la bitácora). Cambiar
+   * uno es volver a correrlo.
+   */
+  --color-serie-1: #3a83fc;
+  --color-serie-2: #e55108;
+  --color-serie-3: #0f9958;
+  --color-serie-4: #d14ead;
+
+  /* La antigüedad: un solo tono, más oscuro cuanto más vieja la deuda o la ropa. */
+  --color-antiguedad-1: #3987e5;
+  --color-antiguedad-2: #1c5cab;
+  --color-antiguedad-3: #0d366b;
 }
 
 @layer base {

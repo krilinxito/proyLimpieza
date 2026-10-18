@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-026
 name: Estadísticas como tablero con gráficos
 slug: estadisticas-tablero
-status: draft
+status: finished
 owner: krilinxito
 created: 2026-10-17
 scope:
@@ -15,7 +15,11 @@ scope:
 priority: high
 depends_on:
   - SPEC-KRILINXI-024
-tests: []
+tests:
+  - frontend/src/features/estadisticas/components/PantallaEstadisticas.test.tsx
+  - frontend/src/features/estadisticas/components/graficos/escalas.test.ts
+  - frontend/src/test/arquitectura.test.ts
+  - frontend/src/test/tema.test.ts
 ---
 
 ## Descripción

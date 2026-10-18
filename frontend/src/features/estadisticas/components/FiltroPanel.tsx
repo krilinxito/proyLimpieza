@@ -38,15 +38,15 @@ export function FiltroPanel({ filtro, sucursales, alCambiar }: Props) {
   }
 
   return (
-    <form onSubmit={verFechas} noValidate aria-label="Qué mirar" className="mt-6 grid gap-2 rounded-lg border-2 border-slate-300 p-4">
+    <form onSubmit={verFechas} noValidate aria-label="Qué mirar" className="mt-6 grid gap-2 rounded-2xl border border-borde-suave bg-superficie p-5 shadow-sm">
       <fieldset>
-        <legend className="text-xl font-semibold text-slate-900">Sucursal</legend>
+        <legend className="text-xl font-semibold text-texto">Sucursal</legend>
         <div className="mt-2 grid grid-cols-2 gap-3">
           {[{ id: null, nombre: 'Todas' }, ...sucursales].map(({ id, nombre }) => (
             <label
               key={id ?? 'todas'}
               className={`flex min-h-14 items-center gap-3 rounded-lg border-2 px-4 text-xl ${
-                filtro.sucursalId === id ? 'border-sky-700 bg-sky-50' : 'border-slate-400 bg-white'
+                filtro.sucursalId === id ? 'border-marca bg-marca-suave font-semibold' : 'border-borde bg-superficie'
               }`}
             >
               <input

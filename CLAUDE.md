@@ -207,6 +207,15 @@ SPEC-KRILINXI-025 pasó al tema el mostrador (registrar, ropa, cobrar, entregar,
 de cada orden es una `Insignia` con el tono de `TONO_ESTADO` (`features/ordenes/estado.ts`, junto a
 `estadoEfectivo`), el detalle agrupa en `Tarjeta` (con `nivel={3}` dentro de una sección que ya tiene
 su `h2`) y los mensajes son `Aviso`. Cada dato del detalle sigue siendo un par `<dt>`/`<dd>`.
+SPEC-KRILINXI-026 hizo de `/estadisticas` un **tablero**: arriba cuatro indicadores (`Indicadores`), y
+cada sección con su gráfico y, debajo, el detalle de siempre. Los gráficos son **SVG del proyecto, sin
+librería** (`features/estadisticas/components/graficos/`, lo vigila un test de arquitectura): sin
+`viewBox` y con las posiciones en porcentajes como atributos (no son `style`), así se estiran con la
+pantalla y el texto queda de su tamaño. Las cuentas viven en `escalas.ts`, puras y con su test. Ningún
+dato depende del mouse: cada barra es un botón que, al tocarlo o enfocarlo, escribe su detalle, y cada
+gráfico (`Grafico`) tiene nombre y una tabla `sr-only` con los mismos números, que es donde los tests
+leen los valores. Los colores son `serie-1`…`serie-4` (uno por forma de pago, validados con todas sus
+parejas para daltonismo, ver la bitácora) y `antiguedad-1`…`3` en el tema.
 
 SPEC-KRILINXI-012 corrige el reloj de la tablet: `lib/reloj` guarda el desfase con la hora
 del servidor que traen `login` y `renovar`, y `horaOficial()` es de donde salen
@@ -331,8 +340,8 @@ echo "falló la $i"; done`. Que no imprima nada es la señal de que pasaron toda
 existe. Solo permite archivos del propio sitio y conexiones a `VITE_API_URL` y `VITE_POWERSYNC_URL`;
 nada en línea ni `eval` (el WASM de PowerSync no lo necesitó). Tres consecuencias para quien programa:
 - **Nada de `style={…}`**: el navegador lo ignora en la tablet sin avisar. Para algo variable, una
-  clase de una lista escrita entera (`anchoDeBarra` en `SeccionVolumen.tsx`). Un test de
-  arquitectura lo vigila.
+  clase de una lista escrita entera (`COLOR_METODO` en `graficos/colores.ts`) o un atributo de SVG
+  (`width="42%"`, como los gráficos de SPEC-KRILINXI-026). Un test de arquitectura lo vigila.
 - **Un servicio externo nuevo** (otra API, un mapa, una fuente de Google) va en `directivas()` de
   `csp.ts`, o el navegador lo bloquea.
 - **Antes de un release, la prueba a mano en un navegador** (jsdom no aplica la CSP): `npm run build

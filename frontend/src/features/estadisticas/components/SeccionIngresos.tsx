@@ -1,34 +1,80 @@
 import { METODOS_PAGO, TEXTO_METODO_PAGO } from '../../../lib/dominio';
+import { desdeDecimal } from '../../../lib/money';
 import type { Ingresos } from '../types';
+import { BarrasHorizontales } from './graficos/BarrasHorizontales';
+import { COLOR_METODO } from './graficos/colores';
+import { hayDatos } from './graficos/escalas';
+import { Grafico } from './graficos/Grafico';
+import { Leyenda } from './graficos/Leyenda';
 import { bs } from './montos';
+import { SeccionPanel } from './SeccionPanel';
 
-/** Cuánto se cobró, por sucursal y por forma de pago. Los totales vienen sumados del servidor. */
+type DeSucursal = Ingresos['porSucursal'][number];
+
+/** Los métodos con algo cobrado, en su orden fijo. Uno en cero no se rotula ni ocupa lugar. */
+const conIngresos = (s: DeSucursal) => METODOS_PAGO.filter((m) => desdeDecimal(s.porMetodo[m]) > 0);
+
+function detalle(s: DeSucursal): string {
+  const metodos = conIngresos(s).map((m) => `${TEXTO_METODO_PAGO[m]} ${bs(s.porMetodo[m])}`);
+  return `${s.sucursal}: ${bs(s.total)} cobrado${metodos.length ? `. ${metodos.join(', ')}.` : '.'}`;
+}
+
+/**
+ * Cuánto se cobró, por sucursal y por forma de pago — SPEC-KRILINXI-015, como gráfico desde
+ * SPEC-KRILINXI-026: una barra por sucursal, apilada por método. Es "parte de un todo", y con
+ * cuatro partes una barra apilada se compara mejor que una torta.
+ *
+ * Los totales vienen sumados del servidor. Los centavos de `desdeDecimal` son solo para medir las
+ * barras: ningún número que se lee sale de una suma hecha acá.
+ */
 export function SeccionIngresos({ ingresos, periodo }: { ingresos: Ingresos; periodo: string }) {
+  const totales = ingresos.porSucursal.map((s) => desdeDecimal(s.total));
   return (
-    <section aria-label="Cobrado" className="mt-8">
-      <h2 className="text-2xl font-bold text-slate-900">Cobrado {periodo}</h2>
-      <p className="mt-2 text-3xl font-bold text-slate-900">{bs(ingresos.total)}</p>
-      {ingresos.porSucursal.length === 0 ? (
-        <p className="mt-4 text-xl text-slate-700">No hubo cobros en este período.</p>
-      ) : (
-        <ul className="mt-4 grid gap-4">
-          {ingresos.porSucursal.map((s) => (
-            <li key={s.sucursalId} className="rounded-lg border-2 border-slate-300 bg-white p-4">
-              <p className="text-xl font-semibold text-slate-900">
-                {s.sucursal}: {bs(s.total)}
-              </p>
-              <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-xl">
-                {METODOS_PAGO.map((m) => (
-                  <div key={m} className="contents">
-                    <dt className="text-slate-700">{TEXTO_METODO_PAGO[m]}</dt>
-                    <dd className="text-slate-900">{bs(s.porMetodo[m])}</dd>
-                  </div>
-                ))}
-              </dl>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
+    <SeccionPanel nombre="Cobrado" titulo={`Cobrado ${periodo}`}>
+      <p className="mt-2 text-3xl font-bold text-texto">{bs(ingresos.total)}</p>
+      <Grafico
+        nombre="Cobrado por sucursal y forma de pago"
+        vacio={!hayDatos(totales)}
+        pista="Tocá una sucursal para ver cuánto se cobró de cada forma."
+        tabla={{
+          encabezados: ['Sucursal', ...METODOS_PAGO.map((m) => TEXTO_METODO_PAGO[m]), 'Total'],
+          filas: ingresos.porSucursal.map((s) => ({
+            clave: s.sucursalId,
+            celdas: [s.sucursal, ...METODOS_PAGO.map((m) => bs(s.porMetodo[m])), bs(s.total)],
+          })),
+        }}
+      >
+        {(elegir) => (
+          <>
+            <Leyenda
+              nombre="Formas de pago"
+              series={METODOS_PAGO.map((m) => ({ clave: m, texto: TEXTO_METODO_PAGO[m], muestra: COLOR_METODO[m].muestra }))}
+            />
+            <BarrasHorizontales
+              maximo={Math.max(0, ...totales)}
+              elegir={elegir}
+              barras={ingresos.porSucursal.map((s) => ({
+                clave: s.sucursalId,
+                etiqueta: `${s.sucursal}: ${bs(s.total)}`,
+                tramos: METODOS_PAGO.map((m) => ({ clave: m, valor: desdeDecimal(s.porMetodo[m]), clase: COLOR_METODO[m].marca })),
+                detalle: detalle(s),
+                // Cada tramo con su monto, abajo y no adentro: un tramo angosto no tiene lugar para
+                // el número, y escrito sobre el color no siempre se lee.
+                debajo: (
+                  <span className="flex flex-wrap gap-x-5 gap-y-1 text-lg text-texto">
+                    {conIngresos(s).map((m) => (
+                      <span key={m} className="flex items-center gap-2">
+                        <span aria-hidden="true" className={`size-3 shrink-0 rounded-sm ${COLOR_METODO[m].muestra}`} />
+                        {TEXTO_METODO_PAGO[m]} {bs(s.porMetodo[m])}
+                      </span>
+                    ))}
+                  </span>
+                ),
+              }))}
+            />
+          </>
+        )}
+      </Grafico>
+    </SeccionPanel>
   );
 }

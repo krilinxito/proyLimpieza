@@ -170,7 +170,8 @@ describe('El personal y las sucursales no escriben en la base local — SPEC-KRI
  * Sin estilos en línea — SPEC-KRILINXI-020. La política de seguridad del contenido no los permite
  * (`style-src 'self'`): un `style={…}` se vería bien en `npm run dev`, donde no hay política, y
  * en la tablet el navegador lo ignoraría sin avisar. Para algo variable, una clase de una lista
- * escrita entera (ver `anchoDeBarra` en `SeccionVolumen.tsx`).
+ * escrita entera (`COLOR_METODO` en `features/estadisticas/components/graficos/colores.ts`), o un
+ * atributo de SVG, que no es un estilo (`width="42%"`, los gráficos de SPEC-KRILINXI-026).
  */
 describe('Los componentes no usan estilos en línea — SPEC-KRILINXI-020', () => {
   it('ningún archivo tsx de la app tiene style={…}', () => {
@@ -198,12 +199,14 @@ const CON_EL_TEMA = [
   'features/entregas',
   'features/clientes',
   'features/pagos',
+  // El panel del admin — SPEC-KRILINXI-026.
+  'features/estadisticas',
 ];
 
 const PALETA_CRUDA =
   /\b(?:bg|text|border|ring|outline|fill|stroke|divide|decoration|placeholder|accent|caret|shadow|from|via|to)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3}\b|\b(?:bg|text|border)-(?:white|black)\b/;
 
-describe('Lo que ya pasó al tema no usa la paleta cruda — SPEC-KRILINXI-022, SPEC-KRILINXI-024 y SPEC-KRILINXI-025', () => {
+describe('Lo que ya pasó al tema no usa la paleta cruda — SPEC-KRILINXI-022, SPEC-KRILINXI-024, SPEC-KRILINXI-025 y SPEC-KRILINXI-026', () => {
   const ARCHIVOS = archivosFuente(...CON_EL_TEMA);
 
   it('revisa los componentes, las páginas y el ingreso, no una lista vacía', () => {
@@ -217,6 +220,7 @@ describe('Lo que ya pasó al tema no usa la paleta cruda — SPEC-KRILINXI-022, 
         'features/ordenes/components/DetalleOrden.tsx',
         'features/entregas/components/FormularioEntrega.tsx',
         'features/clientes/components/TarjetaCliente.tsx',
+        'features/estadisticas/components/graficos/BarrasHorizontales.tsx',
       ]),
     );
   });
@@ -231,5 +235,30 @@ describe('Lo que ya pasó al tema no usa la paleta cruda — SPEC-KRILINXI-022, 
   it('ningún archivo de esas carpetas usa la paleta cruda de Tailwind', () => {
     const culpables = ARCHIVOS.filter(({ fuente }) => PALETA_CRUDA.test(sinComentarios(fuente))).map(({ ruta }) => ruta);
     expect(culpables).toEqual([]);
+  });
+});
+
+/**
+ * Los gráficos son del proyecto — SPEC-KRILINXI-026. Se dibujan en SVG con React, sin librería: no
+ * suman peso al precache, abren sin internet y no piden permisos nuevos en la política de seguridad.
+ * Si un gráfico necesitara algo de afuera, es una decisión para hablar en una spec, no un import.
+ */
+describe('Los gráficos no traen librerías — SPEC-KRILINXI-026', () => {
+  const GRAFICOS = archivosFuente('features/estadisticas/components/graficos');
+
+  it('revisa la carpeta de los gráficos, no una lista vacía', () => {
+    expect(GRAFICOS.map(({ ruta }) => ruta)).toEqual(
+      expect.arrayContaining(['features/estadisticas/components/graficos/Columnas.tsx', 'features/estadisticas/components/graficos/escalas.ts']),
+    );
+  });
+
+  it('solo importan React, vitest en sus tests, y archivos del propio proyecto', () => {
+    const deAfuera = GRAFICOS.flatMap(({ ruta, fuente }) =>
+      [...fuente.matchAll(/from\s+['"]([^'"]+)['"]/g)]
+        .map(([, modulo]) => modulo ?? '')
+        .filter((modulo) => !modulo.startsWith('.') && modulo !== 'react' && modulo !== 'vitest')
+        .map((modulo) => `${ruta}: ${modulo}`),
+    );
+    expect(deAfuera).toEqual([]);
   });
 });
