@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-028
 name: El ADMIN baja la ropa de la sucursal donde atiende
 slug: sync-admin-atiende
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-18
 scope:
@@ -11,7 +11,8 @@ scope:
   - CLAUDE.md
 priority: high
 depends_on: []
-tests: []
+tests:
+  - backend/tests/unit/syncRules.test.ts
 ---
 
 ## Descripción
