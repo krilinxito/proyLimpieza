@@ -39,6 +39,6 @@ Los colores viven en `src/index.css`, en `@theme`, y Tailwind arma las clases co
 | Avisos e insignias | `info-*`, `exito-*`, `advertencia-*`, `peligro-*`, cada uno con `-fondo`, `-texto` y `-borde` |
 | Botón de peligro | `peligro`, `peligro-fuerte` |
 
-**En `components/` (y en lo que ya pasó al tema, ver `CON_EL_TEMA`) no se usa la paleta cruda** (`sky-700`, `slate-400`, `bg-white`): lo vigila
+**En ninguna parte de la app (`components/`, `pages/` y `features/`, desde SPEC-KRILINXI-027) se usa la paleta cruda** (`sky-700`, `slate-400`, `bg-white`): lo vigila
 `test/arquitectura.test.ts`. Un color nuevo se agrega al tema, y si es un texto, su par con el
 fondo va en `test/tema.test.ts`, que comprueba el contraste (WCAG AA).
