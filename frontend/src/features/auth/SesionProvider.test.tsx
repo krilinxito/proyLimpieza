@@ -182,7 +182,8 @@ describe('Renovar la sesión sin pedir la contraseña — SPEC-KRILINXI-010', ()
     expect(await act(() => tokenQueEntrega(baseLocal))).toBe(nuevo);
 
     expect(leerSesion()).toMatchObject({ token: 'token-api-nuevo', tokenPowerSync: nuevo, usuario: { nombreCompleto: 'Elena Renovada' } });
-    expect(await screen.findByText('Elena Renovada')).toBeInTheDocument();
+    // La cabecera muestra a quien atiende como un círculo con su inicial (SPEC-KRILINXI-030).
+    expect(await screen.findByRole('img', { name: 'Perfil de Elena Renovada' })).toBeInTheDocument();
     expect(baseLocal.conectar).toHaveBeenCalledOnce();
     expect(baseLocal.desconectar).not.toHaveBeenCalled();
     expect(baseLocal.desconectarYBorrar).not.toHaveBeenCalled();

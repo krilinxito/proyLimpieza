@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Boton } from '../../../components/Boton';
 import { ModalConfirmacion } from '../../../components/ModalConfirmacion';
+import { Avatar } from '../../../components/marco/Avatar';
 import { useConexion } from '../../../hooks/useConexion';
 import { useSession } from '../../../hooks/useSession';
 
@@ -33,9 +34,8 @@ export function BarraSesion() {
 
   return (
     <div className="flex items-center gap-4">
-      <p className="text-xl text-texto-suave">
-        Atiende: <strong className="text-texto">{sesion.usuario.nombreCompleto}</strong>
-      </p>
+      {/* Quién atiende, como un círculo con su inicial (SPEC-KRILINXI-030). */}
+      <Avatar nombre={sesion.usuario.nombreCompleto} />
       <div className="w-auto">
         <Boton variante="secundario" icono="salir" onClick={() => setConfirmando(true)}>
           Salir

@@ -15,9 +15,31 @@ import { resolve } from 'node:path';
  */
 const CSS = readFileSync(resolve(import.meta.dirname, '../index.css'), 'utf8');
 
-function color(nombre: string): string {
-  const valor = new RegExp(`--color-${nombre}:\\s*(#[0-9a-fA-F]{6})\\s*;`).exec(CSS)?.[1];
-  if (!valor) throw new Error(`El tema no declara --color-${nombre} en hexadecimal.`);
+/**
+ * Cada tema es un bloque de `index.css` (SPEC-KRILINXI-030): el claro es `@theme`, el oscuro
+ * redefine los mismos tokens bajo `[data-tema='oscuro']`. Los pares se miden en los dos.
+ */
+type NombreTema = 'claro' | 'oscuro';
+const BLOQUES: Record<NombreTema, RegExp> = {
+  claro: /@theme\s*\{([^}]*)\}/,
+  oscuro: /:root\[data-tema='oscuro'\]\s*\{([^}]*)\}/,
+};
+const TEMAS: NombreTema[] = ['claro', 'oscuro'];
+
+function bloque(tema: NombreTema): string {
+  const contenido = BLOQUES[tema].exec(CSS)?.[1];
+  if (!contenido) throw new Error(`index.css no tiene el bloque del tema ${tema}.`);
+  return contenido;
+}
+
+/** Los nombres de color que declara un bloque: `marca`, `texto-suave`… */
+function nombresDeColor(css: string): string[] {
+  return [...css.matchAll(/--color-([a-z0-9-]+):/g)].map((m) => m[1] ?? '');
+}
+
+function color(nombre: string, tema: NombreTema = 'claro'): string {
+  const valor = new RegExp(`--color-${nombre}:\\s*(#[0-9a-fA-F]{6})\\s*;`).exec(bloque(tema))?.[1];
+  if (!valor) throw new Error(`El tema ${tema} no declara --color-${nombre} en hexadecimal.`);
   return valor;
 }
 
@@ -53,6 +75,8 @@ const TEXTOS: [texto: string, fondo: string][] = [
   ['peligro-texto', 'superficie'],
   // El enlace a "para corregir" va dentro del aviso de sin internet (AvisoConexion).
   ['peligro-texto', 'advertencia-fondo'],
+  // La opción elegida (método de pago, sucursal…) se marca con `bg-marca-suave` y texto normal.
+  ['texto', 'marca-suave'],
 ];
 
 /**
@@ -104,9 +128,41 @@ describe('Los colores de los gráficos se ven — SPEC-KRILINXI-026', () => {
     expect(contraste(color(marca), color('superficie'))).toBeGreaterThanOrEqual(3);
   });
 
-  it('la antigüedad se oscurece de a un paso: más vieja, más oscura', () => {
-    const [nueva, media, vieja] = ['antiguedad-1', 'antiguedad-2', 'antiguedad-3'].map((n) => luminancia(color(n)));
-    expect(nueva).toBeGreaterThan(media ?? 0);
-    expect(media).toBeGreaterThan(vieja ?? 0);
+  // Desde SPEC-KRILINXI-030 se mide como contraste y no como "más oscura": en el tema oscuro, lo
+  // que resalta sobre la superficie es lo más claro. La regla de fondo es la misma en los dos.
+  it.each(TEMAS)('en el tema %s, la antigüedad resalta de a un paso: más vieja, más contraste', (tema) => {
+    const fondo = color('superficie', tema);
+    const [nueva, media, vieja] = ['antiguedad-1', 'antiguedad-2', 'antiguedad-3'].map((n) =>
+      contraste(color(n, tema), fondo),
+    );
+    expect(media).toBeGreaterThan(nueva ?? 0);
+    expect(vieja).toBeGreaterThan(media ?? 0);
+  });
+});
+
+describe('El tema oscuro se lee — SPEC-KRILINXI-030', () => {
+  it('redefine todos los colores del tema claro, ni uno menos', () => {
+    expect(nombresDeColor(bloque('oscuro')).sort()).toEqual(nombresDeColor(bloque('claro')).sort());
+  });
+
+  it.each(TEXTOS)('%s sobre %s llega a 4,5:1 también en oscuro', (texto, fondo) => {
+    expect(contraste(color(texto, 'oscuro'), color(fondo, 'oscuro'))).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it.each(CONTROLES)('%s sobre %s llega a 3:1 también en oscuro', (control, fondo) => {
+    expect(contraste(color(control, 'oscuro'), color(fondo, 'oscuro'))).toBeGreaterThanOrEqual(3);
+  });
+
+  it.each(MARCAS)('%s sobre la superficie oscura llega a 3:1', (marca) => {
+    expect(contraste(color(marca, 'oscuro'), color('superficie', 'oscuro'))).toBeGreaterThanOrEqual(3);
+  });
+
+  it('el primer instante (antes de que arranque la app) usa los mismos colores que el tema oscuro', () => {
+    const instante = /@media \(prefers-color-scheme: dark\)\s*\{\s*:root:not\(\[data-tema\]\)\s*\{([^}]*)\}/.exec(CSS)?.[1];
+    expect(instante).toBeDefined();
+    for (const nombre of nombresDeColor(instante ?? '')) {
+      expect(new RegExp(`--color-${nombre}:\\s*${color(nombre, 'oscuro')};`).test(instante ?? '')).toBe(true);
+    }
+    expect(nombresDeColor(instante ?? '')).toEqual(['fondo', 'texto']);
   });
 });

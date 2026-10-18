@@ -236,6 +236,15 @@ sesión** (lo vigila un test de arquitectura). Las rutas del mostrador llevan `m
 las lista solo con sucursal de trabajo, y `ConSucursalDeTrabajo` dice cómo empezar si no la hay. Dejar
 de atender reconecta sin el parámetro y no borra nada: la cola sigue subiendo.
 
+SPEC-KRILINXI-030 agregó el **tema oscuro**: `lib/tema.ts` marca `<html data-tema="claro|oscuro">` (lo
+elegido con el botón de la cabecera —un ícono de luna o sol, la única excepción a "un ícono nunca va solo":
+lleva `aria-label` y `title`—, guardado en la tablet, o la preferencia del sistema, seguida en vivo) e
+`index.css` redefine **todos** los tokens bajo `[data-tema='oscuro']`. Ningún componente cambió: funcionan
+porque pintan con los tokens. **Un color nuevo va en los dos bloques**, y `test/tema.test.ts` mide cada par
+en los dos temas. En oscuro, `marca` y `peligro` son claros y `sobre-marca` es oscuro. En la misma spec, quien
+atiende pasó a ser un círculo con su inicial (`components/marco/Avatar.tsx`, "Perfil" al pasar el mouse);
+todavía no abre nada: el perfil es una spec pendiente.
+
 SPEC-KRILINXI-012 corrige el reloj de la tablet: `lib/reloj` guarda el desfase con la hora
 del servidor que traen `login` y `renovar`, y `horaOficial()` es de donde salen
 `fecha_entrada`, `fecha_pago` y `fecha_entrega`, también sin internet. Ningún archivo de
@@ -420,8 +429,8 @@ frontend/src/
 ```
 
 **Los colores salen del tema** (`src/index.css`, `@theme`; SPEC-KRILINXI-022): `bg-marca`,
-`text-peligro-texto`, no `bg-sky-700`. Un color nuevo se agrega al tema con su par de contraste en
-`test/tema.test.ts`. Un aviso es un `Aviso`, no un `<p>` con colores a mano.
+`text-peligro-texto`, no `bg-sky-700`. Un color nuevo se agrega al tema, **en el bloque claro y en el
+oscuro** (SPEC-KRILINXI-030), con su par de contraste en `test/tema.test.ts`. Un aviso es un `Aviso`, no un `<p>` con colores a mano.
 
 Regla equivalente en el front: **ningún componente llama a axios ni consulta PowerSync
 directamente.** Pasa siempre por `features/<x>/api` o por un hook. Un componente que

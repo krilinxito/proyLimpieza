@@ -3,8 +3,12 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { App } from './App';
 import { SesionProvider } from './features/auth/SesionProvider';
+import { aplicarTema } from './lib/tema';
 import { registrarServiceWorker } from './pwa/registrar';
 import './index.css';
+
+// Antes de montar: la primera pantalla ya sale con el tema que corresponde (SPEC-KRILINXI-030).
+aplicarTema();
 
 const raiz = document.getElementById('root');
 if (!raiz) throw new Error('No se encontró el elemento #root en index.html');
