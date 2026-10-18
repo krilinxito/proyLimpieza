@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-030
 name: Tema oscuro
 slug: tema-oscuro
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-18
 scope:
