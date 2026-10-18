@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-libra
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { App } from '../App';
-import type { Fila } from '../lib/powersync/control';
+import type { EstadoSubida, Fila } from '../lib/powersync/control';
 import { controlFalso } from '../test/controlFalso';
 import { renderEnRuta } from '../test/render';
 import { sesionDePrueba } from '../test/sesion';
@@ -13,15 +13,15 @@ const EMPLEADO = sesionDePrueba({ rol: 'EMPLEADO', nombreCompleto: 'Rosa Quispe'
 const ADMIN = sesionDePrueba({ rol: 'ADMIN', nombreCompleto: 'Ana Mamani' });
 
 /** Una base local que ya bajó la sucursal del empleado de prueba, como pasa después del primer ingreso. */
-function conSucursal(nombre = 'Centro') {
-  const baseLocal = controlFalso();
+function conSucursal(nombre = 'Centro', estado?: EstadoSubida) {
+  const baseLocal = controlFalso({ estado });
   const fila: Fila = { id: EMPLEADO.usuario.sucursalId, nombre, direccion: null, telefono: null, activa: 1 };
   baseLocal.base.consultar.mockImplementation(async () => [fila] as never[]);
   return baseLocal;
 }
 
-function abrir(ruta = '/', sesion: ReturnType<typeof sesionDePrueba> | null = EMPLEADO) {
-  renderEnRuta(<App />, ruta, { sesion, baseLocal: conSucursal() });
+function abrir(ruta = '/', sesion: ReturnType<typeof sesionDePrueba> | null = EMPLEADO, estado?: EstadoSubida) {
+  renderEnRuta(<App />, ruta, { sesion, baseLocal: conSucursal('Centro', estado) });
 }
 
 const menu = () => screen.getByRole('navigation', { name: 'Menú principal' });
@@ -160,9 +160,9 @@ describe('Marco: el cajón del menú — SPEC-KRILINXI-023', () => {
 });
 
 describe('Marco: aviso de conexión, contenido y pie — SPEC-KRILINXI-023', () => {
-  it('el aviso de conexión está debajo de la cabecera, con su texto de siempre', async () => {
-    abrir('/clientes');
-    const aviso = await screen.findByText('Con internet — todo está guardado.');
+  it('si hay algo para corregir, el aviso grande está debajo de la cabecera, con su texto de siempre', async () => {
+    abrir('/clientes', EMPLEADO, { conectado: true, pendientes: 0, paraCorregir: 1 });
+    const aviso = await within(screen.getByRole('main')).findByText('Con internet — todo está guardado.');
     // DOCUMENT_POSITION_FOLLOWING: el aviso viene después de la cabecera en la página.
     expect(screen.getByRole('banner').compareDocumentPosition(aviso) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
@@ -276,5 +276,75 @@ describe('Marco: claro u oscuro — SPEC-KRILINXI-030', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Sí, salir' }));
     await screen.findByRole('button', { name: 'Entrar' });
     expect(cabecera().getByRole('button', { name: 'Tema claro' })).toBeInTheDocument();
+  });
+});
+
+describe('Marco: la conexión en una esquina — SPEC-KRILINXI-031', () => {
+  const SIN_INTERNET: EstadoSubida = { conectado: false, pendientes: 3, paraCorregir: 0 };
+  const cabecera = () => within(screen.getByRole('banner'));
+
+  it('con internet y todo guardado, una píldora chica dice "Con internet" y no hay franja de aviso', async () => {
+    abrir('/clientes');
+    expect(await cabecera().findByRole('button', { name: 'Con internet' })).toBeInTheDocument();
+    // Ni el aviso grande ni su frase arriba del contenido.
+    expect(within(screen.getByRole('main')).queryByText(/Con internet/)).not.toBeInTheDocument();
+  });
+
+  it('sin internet dice cuántos registros faltan guardar, y cambia de color además del texto', async () => {
+    abrir('/clientes', EMPLEADO, SIN_INTERNET);
+    const boton = await cabecera().findByRole('button', { name: 'Sin internet · 3 por guardar' });
+    expect(boton).toHaveClass('bg-advertencia-fondo', 'text-advertencia-texto');
+    expect(within(screen.getByRole('main')).queryByText(/Trabajando sin internet/)).not.toBeInTheDocument();
+  });
+
+  it('al tocarla muestra la frase completa, y se cierra con Escape devolviendo el foco', async () => {
+    abrir('/clientes', EMPLEADO, SIN_INTERNET);
+    const boton = await cabecera().findByRole('button', { name: /Sin internet/ });
+    expect(boton).toHaveAttribute('aria-expanded', 'false');
+
+    fireEvent.click(boton);
+    expect(boton).toHaveAttribute('aria-expanded', 'true');
+    const detalle = cabecera().getByText('Trabajando sin internet — 3 registros se guardarán cuando vuelva la conexión.');
+    expect(boton).toHaveAttribute('aria-controls', detalle.id);
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(cabecera().queryByText(/Trabajando sin internet/)).not.toBeInTheDocument();
+    expect(boton).toHaveFocus();
+  });
+
+  it('tocar fuera la cierra', async () => {
+    abrir('/clientes', EMPLEADO, SIN_INTERNET);
+    fireEvent.click(await cabecera().findByRole('button', { name: /Sin internet/ }));
+    fireEvent.pointerDown(screen.getByRole('main'));
+    expect(cabecera().queryByText(/Trabajando sin internet/)).not.toBeInTheDocument();
+  });
+
+  it('con registros para corregir, aparece además el aviso grande con el enlace, como antes', async () => {
+    abrir('/clientes', EMPLEADO, { ...SIN_INTERNET, paraCorregir: 2 });
+    expect(await cabecera().findByRole('button', { name: /Sin internet/ })).toBeInTheDocument();
+    const enlace = within(screen.getByRole('main')).getByRole('link', { name: /2 registros no se pudieron guardar/ });
+    expect(enlace).toHaveAttribute('href', '/para-corregir');
+  });
+
+  it('es un status, que el lector de pantalla anuncia al cambiar, y nunca un ícono sin texto', async () => {
+    abrir('/clientes', EMPLEADO, SIN_INTERNET);
+    const boton = await cabecera().findByRole('button', { name: /Sin internet/ });
+    expect(boton.closest('[role="status"]')).not.toBeNull();
+    expect(boton).toHaveTextContent('Sin internet · 3 por guardar');
+    expect(boton.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('en pantalla chica no empuja Salir afuera: el texto es corto, no se parte, y la cabecera pasa a otra línea', async () => {
+    abrir('/clientes', EMPLEADO, SIN_INTERNET);
+    const boton = await cabecera().findByRole('button', { name: /Sin internet/ });
+    expect(boton.textContent?.length).toBeLessThanOrEqual(30);
+    expect(boton).toHaveClass('whitespace-nowrap');
+    // jsdom no mide: que pase a otra línea en vez de desbordar lo garantiza el `flex-wrap`.
+    expect(screen.getByRole('banner').firstElementChild).toHaveClass('flex-wrap');
+  });
+
+  it('sin nadie adentro no hay píldora: no hay base local que mirar', () => {
+    abrir('/ingresar', null);
+    expect(cabecera().queryByRole('button', { name: /internet/ })).not.toBeInTheDocument();
   });
 });

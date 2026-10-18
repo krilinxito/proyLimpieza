@@ -10,6 +10,8 @@ type Props = {
   acciones?: ReactNode;
   /** Claro u oscuro (SPEC-KRILINXI-030). Está también sin sesión: en el ingreso se lee igual. */
   tema?: ReactNode;
+  /** La píldora de la conexión (SPEC-KRILINXI-031). Solo con sesión: sin nadie adentro no hay base. */
+  conexion?: ReactNode;
 };
 
 /**
@@ -20,7 +22,7 @@ type Props = {
  * El nombre del negocio no es un encabezado (`h1`): el `h1` es el de cada pantalla, que es lo
  * que cambia y lo que el lector de pantalla tiene que anunciar.
  */
-export function Cabecera({ lugar, menu, acciones, tema }: Props) {
+export function Cabecera({ lugar, menu, acciones, tema, conexion }: Props) {
   return (
     <header className="sticky top-0 z-30 border-b border-borde-suave bg-superficie shadow-sm">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 lg:px-6">
@@ -34,6 +36,7 @@ export function Cabecera({ lugar, menu, acciones, tema }: Props) {
           </Link>
           {lugar && <p className="text-lg text-texto-suave">{lugar}</p>}
         </div>
+        {conexion}
         {tema}
         {acciones}
       </div>

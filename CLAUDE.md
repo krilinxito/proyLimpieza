@@ -245,6 +245,11 @@ en los dos temas. En oscuro, `marca` y `peligro` son claros y `sobre-marca` es o
 atiende pasó a ser un círculo con su inicial (`components/marco/Avatar.tsx`, "Perfil" al pasar el mouse);
 todavía no abre nada: el perfil es una spec pendiente.
 
+SPEC-KRILINXI-031 pasó el estado de la conexión a una **píldora en la cabecera**
+(`components/marco/PildoraConexion.tsx`): corta, en palabras, y con el detalle al tocarla. El aviso grande
+(`AvisoConexion`) solo aparece si hay registros para corregir. Los textos de los dos salen de
+`components/textoConexion.ts`, para que nunca digan cosas distintas.
+
 SPEC-KRILINXI-012 corrige el reloj de la tablet: `lib/reloj` guarda el desfase con la hora
 del servidor que traen `login` y `renovar`, y `horaOficial()` es de donde salen
 `fecha_entrada`, `fecha_pago` y `fecha_entrega`, también sin internet. Ningún archivo de
@@ -631,9 +636,11 @@ Requisitos concretos, no buenas intenciones:
   "Cobrar", no "Insertar pago". Nada de "sincronizar", "caché" o "token" en pantalla.
 - **Confirmación explícita antes de cualquier acción irreversible**, diciendo qué va a
   pasar: "¿Anular la orden 001234? Esta acción no se puede deshacer."
-- **El estado de conexión está siempre visible y en palabras**: "Trabajando sin internet —
-  3 registros se guardarán cuando vuelva la conexión". Nunca un ícono suelto que haya que
-  interpretar.
+- **El estado de conexión está siempre visible y en palabras, pero discreto** (SPEC-KRILINXI-031):
+  una píldora en la cabecera dice "Con internet" o "Sin internet · 3 por guardar", y al tocarla
+  despliega la frase completa ("Trabajando sin internet — 3 registros se guardarán cuando vuelva la
+  conexión"). Nunca un ícono suelto que haya que interpretar. Solo cuando pide una acción —hay
+  registros para corregir— aparece además el aviso grande arriba del contenido, con el enlace.
 - **Los errores dicen qué hacer**, en español y sin códigos: "Ese número de boleta ya
   está usado en esta sucursal. Revisá el papel y volvé a escribirlo."
 - Pocos campos por pantalla y un solo camino claro para cada tarea.

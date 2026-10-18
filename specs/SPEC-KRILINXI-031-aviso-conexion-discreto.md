@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-031
 name: Conexión en una esquina
 slug: aviso-conexion-discreto
-status: draft
+status: finished
 owner: krilinxito
 created: 2026-10-18
 scope:
@@ -13,7 +13,11 @@ scope:
   - CLAUDE.md
 priority: medium
 depends_on: []
-tests: []
+tests:
+  - frontend/src/components/textoConexion.test.ts
+  - frontend/src/features/pendientes/components/PantallaParaCorregir.test.tsx
+  - frontend/src/pages/Marco.test.tsx
+  - frontend/src/test/controlFalso.ts
 ---
 
 ## Descripción

@@ -44,13 +44,14 @@ describe('Lo que no se pudo guardar llega a la pantalla — SPEC-KRILINXI-007', 
     expect(await screen.findByText('No hay nada para corregir. Todo se guardó bien.')).toBeInTheDocument();
   });
 
-  it('el aviso está en todas las pantallas con sesión, también sin internet', async () => {
+  it('el estado de la conexión está en todas las pantallas con sesión, también sin internet', async () => {
     const { control } = await baseLocalDePrueba();
     await control.base.ejecutar("INSERT INTO clientes (id, nombre, telefono) VALUES (uuid(), 'Rosa', '1')");
     renderEnRuta(<App />, '/clientes', { baseLocal: control });
-    // La base de prueba nunca se conecta: es la tablet sin internet.
+    // La base de prueba nunca se conecta: es la tablet sin internet. Desde SPEC-KRILINXI-031 lo
+    // dice la píldora de la cabecera, en corto.
     expect(
-      await screen.findByText('Trabajando sin internet — 1 registro se guardará cuando vuelva la conexión.'),
+      await within(screen.getByRole('banner')).findByRole('button', { name: /Sin internet · 1 por guardar/ }),
     ).toBeInTheDocument();
   });
 });
@@ -107,8 +108,9 @@ describe('Corregir lo que no se pudo guardar — SPEC-KRILINXI-013', () => {
     expect(await screen.findByText(/Listo: la corrección quedó guardada en esta tablet/)).toBeInTheDocument();
     expect(await screen.findByText('No hay nada para corregir. Todo se guardó bien.')).toBeInTheDocument();
     // La base de prueba nunca se conecta: es la tablet sin internet, con la corrección en la cola.
+    // Sin nada más para corregir, el aviso grande se va y lo dice la píldora (SPEC-KRILINXI-031).
     expect(
-      await screen.findByText('Trabajando sin internet — 1 registro se guardará cuando vuelva la conexión.'),
+      await within(screen.getByRole('banner')).findByRole('button', { name: 'Sin internet · 1 por guardar' }),
     ).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /no se pudo guardar/ })).not.toBeInTheDocument();
     sinJerga();

@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { AvisoConexion } from '../components/AvisoConexion';
 import { Cabecera } from '../components/marco/Cabecera';
 import { BotonTema } from '../components/marco/BotonTema';
+import { PildoraConexion } from '../components/marco/PildoraConexion';
 import { MenuCompacto } from '../components/marco/MenuCompacto';
 import { MenuPrincipal } from '../components/marco/MenuPrincipal';
 import { Pie } from '../components/marco/Pie';
@@ -20,11 +21,6 @@ import { VERSION_APP } from './version';
 
 const CONTENIDO = 'contenido';
 
-/** El aviso de conexión con los números de la base local (SPEC-KRILINXI-007). */
-function EstadoConexion() {
-  const estado = useConexion();
-  return estado && <AvisoConexion {...estado} />;
-}
 
 /**
  * Dónde está trabajando quien entró: el nombre de su sucursal de trabajo, de la base local. El
@@ -62,6 +58,9 @@ export function Marco() {
   const conSucursal = useSucursalDeTrabajo() !== null;
   const destinos = usuario ? destinosDelMenu(usuario.rol, conSucursal) : [];
   const { tema, cambiar } = useTema();
+  // Los números de la base local (SPEC-KRILINXI-007): van a la píldora de la cabecera y, solo
+  // si hay algo para corregir, al aviso grande arriba del contenido (SPEC-KRILINXI-031).
+  const conexion = useConexion();
 
   useEffect(() => {
     document.title = tituloDePestana(pathname);
@@ -74,6 +73,7 @@ export function Marco() {
         lugar={lugar}
         menu={usuario && <MenuCompacto destinos={destinos} />}
         tema={<BotonTema tema={tema} alCambiar={cambiar} />}
+        conexion={usuario && conexion && <PildoraConexion conectado={conexion.conectado} pendientes={conexion.pendientes} />}
         acciones={
           usuario && (
             <>
@@ -92,9 +92,9 @@ export function Marco() {
           </aside>
         )}
         <main id={CONTENIDO} tabIndex={-1} className="min-w-0 flex-1 focus:outline-none">
-          {usuario && (
+          {usuario && conexion && conexion.paraCorregir > 0 && (
             <div className="px-4 pt-4 lg:px-6">
-              <EstadoConexion />
+              <AvisoConexion {...conexion} />
             </div>
           )}
           <Outlet />
