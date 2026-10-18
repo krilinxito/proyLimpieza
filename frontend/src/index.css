@@ -95,6 +95,77 @@
   --color-antiguedad-3: #0d366b;
 }
 
+/*
+ * El tema oscuro — SPEC-KRILINXI-030. Los mismos tokens con otro valor: ningún componente cambia.
+ * `lib/tema.ts` pone `data-tema` en <html> (lo elegido en la cabecera, o lo que prefiere la tablet).
+ * Cada par texto/fondo de `test/tema.test.ts` se mide también acá, y este bloque tiene que
+ * redefinir TODOS los colores del tema (lo comprueba el mismo test).
+ *
+ * Dos cosas que en oscuro se dan vuelta, a propósito:
+ *  - `marca` y `peligro` son claros, para leerse como texto sobre la superficie oscura; por eso
+ *    `sobre-marca` (el texto encima de un botón) pasa a ser oscuro.
+ *  - La antigüedad se aclara al envejecer: sobre fondo oscuro, lo que más resalta es lo más claro.
+ *    Las series de los gráficos no cambian: las cuatro pasan el validador de daltonismo también
+ *    contra esta superficie (ver la bitácora).
+ */
+:root[data-tema='oscuro'] {
+  color-scheme: dark;
+
+  --color-marca: #93c5fd;
+  --color-marca-fuerte: #bfdbfe;
+  --color-marca-suave: #1e3a8a;
+  --color-sobre-marca: #0f172a;
+
+  --color-fondo: #0f172a;
+  --color-superficie: #1e293b;
+  --color-texto: #f1f5f9;
+  --color-texto-suave: #cbd5e1;
+  --color-borde: #94a3b8;
+  --color-borde-suave: #334155;
+
+  --color-foco: #fb923c;
+
+  --color-info-fondo: #172554;
+  --color-info-texto: #bfdbfe;
+  --color-info-borde: #3b82f6;
+
+  --color-exito-fondo: #052e16;
+  --color-exito-texto: #bbf7d0;
+  --color-exito-borde: #22c55e;
+
+  --color-advertencia-fondo: #451a03;
+  --color-advertencia-texto: #fde68a;
+  --color-advertencia-borde: #f59e0b;
+
+  --color-peligro-fondo: #450a0a;
+  --color-peligro-texto: #fecaca;
+  --color-peligro-borde: #ef4444;
+  --color-peligro: #f87171;
+  --color-peligro-fuerte: #fca5a5;
+
+  --color-serie-1: #3a83fc;
+  --color-serie-2: #e55108;
+  --color-serie-3: #0f9958;
+  --color-serie-4: #d14ead;
+
+  --color-antiguedad-1: #3b82f6;
+  --color-antiguedad-2: #7fb0f7;
+  --color-antiguedad-3: #c3dafe;
+}
+
+/*
+ * El primer instante, antes de que la app ponga `data-tema`: si la tablet prefiere oscuro, el
+ * fondo ya sale oscuro, sin un fogonazo blanco. No hace falta más: ni bien arranca, `main.tsx`
+ * aplica el tema completo. Los dos valores son los del bloque de arriba.
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema]) {
+    color-scheme: dark;
+    --color-fondo: #0f172a;
+    --color-texto: #f1f5f9;
+  }
+}
+
 @layer base {
   html {
     background-color: var(--color-fondo);

@@ -54,6 +54,14 @@ describe('Estilos con Tailwind — SPEC-KRILINXI-001', () => {
     expect(css).not.toMatch(new RegExp(`\\.${noUsada}\\{`));
   });
 
+  // SPEC-KRILINXI-030: el tema oscuro funciona porque las utilidades leen la variable, no el color.
+  // Si Tailwind copiara el hexadecimal dentro de `.bg-marca`, redefinir el token no cambiaría nada.
+  it('las utilidades del tema leen la variable, y el build trae el bloque del tema oscuro — SPEC-KRILINXI-030', () => {
+    expect(css).toMatch(/\.bg-marca\{[^}]*var\(--color-marca\)/);
+    expect(css).toMatch(/:root\[data-tema=["']?oscuro["']?\]\{[^}]*--color-marca:/);
+    expect(css).toMatch(/prefers-color-scheme:\s*dark/);
+  });
+
   it('las pantallas llevan puestas esas clases', () => {
     renderEnRuta(<Inicio />);
     expect(screen.getByRole('link', { name: 'Registrar ropa' })).toHaveClass('bg-superficie', 'rounded-2xl');
