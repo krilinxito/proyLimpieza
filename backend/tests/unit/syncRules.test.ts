@@ -3,8 +3,9 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 // Las reglas de PowerSync son control de acceso (CLAUDE.md §7): lo que no está ahí no
-// llega a ninguna tablet. Este test lee el archivo de verdad y vigila dos cosas del bucket
-// `global`: a quién se entrega y qué entrega.
+// llega a ninguna tablet. Este test lee el archivo de verdad y vigila, de cada bucket, a
+// quién se entrega y qué entrega: `global` (SPEC-ALE186-024) y `atencion_admin`
+// (SPEC-KRILINXI-028).
 //
 // Se lee como texto, igual que `frontend/src/lib/powersync/schema.test.ts`, en vez de
 // sumar una librería de YAML solo para esto. Que PowerSync ACEPTE el archivo no se puede
@@ -59,5 +60,42 @@ describe('Sync rules: el bucket global solo baja a cuentas activas — SPEC-ALE1
 
   it('el bucket sucursal sigue igual: también filtra por cuenta activa', () => {
     expect(parametros(bucket('sucursal'))).toMatch(/\bactivo = true\b/);
+  });
+});
+
+describe('Sync rules: el ADMIN baja la ropa de la sucursal donde atiende — SPEC-KRILINXI-028', () => {
+  it('la sucursal sale del parámetro que manda la tablet, y solo para la fila del ADMIN activo que pide', () => {
+    const consulta = parametros(bucket('atencion_admin'));
+
+    expect(consulta).toMatch(/^SELECT request\.parameters\(\) ->> 'sucursal_id' AS sucursal_id FROM usuarios\b/);
+    // Estas tres condiciones SON la autorización: el parámetro lo controla la tablet.
+    expect(consulta).toMatch(/\bid = request\.user_id\(\)/);
+    expect(consulta).toMatch(/\brol = 'ADMIN'/);
+    expect(consulta).toMatch(/\bactivo = true\b/);
+  });
+
+  it('un ADMIN que no está atendiendo no recibe el bucket: sin parámetro, la consulta no devuelve fila', () => {
+    // Sin esta condición, PowerSync le armaba un bucket `atencion_admin[null]` vacío en cada
+    // conexión (comprobado evaluando las reglas con su motor, ver la bitácora).
+    expect(parametros(bucket('atencion_admin'))).toMatch(/AND request\.parameters\(\) ->> 'sucursal_id' IS NOT NULL\b/);
+  });
+
+  it('baja lo mismo que el bucket de la sucursal de un empleado: la ropa, las entregas y los pagos', () => {
+    const datos = consultasData(bucket('atencion_admin'));
+    expect(datos).toEqual(consultasData(bucket('sucursal')));
+    expect(datos).toHaveLength(3);
+  });
+
+  it('no apaga las advertencias de PowerSync: sin accept_potentially_dangerous_queries en ningún bucket', () => {
+    // PowerSync no marca esta consulta porque está atada a request.user_id() (comprobado con su
+    // validador: sin esa condición, avisa "Potentially dangerous query"). El flag no autoriza
+    // nada; solo callaría ese aviso si alguien borrara la condición.
+    expect(SYNC_RULES.replace(/#.*$/gm, '')).not.toMatch(/accept_potentially_dangerous_queries/);
+  });
+
+  it('el bucket del empleado no escucha a la tablet: su sucursal sale de su fila en la base', () => {
+    const consulta = parametros(bucket('sucursal'));
+    expect(consulta).toMatch(/^SELECT sucursal_id FROM usuarios\b/);
+    expect(consulta).not.toMatch(/request\.parameters/);
   });
 });
