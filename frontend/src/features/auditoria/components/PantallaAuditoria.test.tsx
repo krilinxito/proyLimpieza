@@ -143,3 +143,25 @@ describe('¿Quién hizo qué? — SPEC-KRILINXI-018', () => {
     expect(await screen.findByText('No hay nada registrado en este período.')).toBeInTheDocument();
   });
 });
+
+describe('¿Quién hizo qué? con el tema — SPEC-KRILINXI-027', () => {
+  it('lo que hay que revisar lleva una insignia de advertencia, y su explicación sigue debajo', async () => {
+    await abrir(() => ({ status: 200, data: paginaDePrueba([registroDePrueba({ revision: 'cuenta_dada_de_baja' }), ROPA]) }));
+    const explicacion = await screen.findByText('Para revisar: lo hizo una cuenta que ya estaba dada de baja.');
+    const [marcado, comun] = within(screen.getByRole('region', { name: 'Lo que se hizo' })).getAllByRole('listitem');
+
+    expect(marcado).toContainElement(explicacion);
+    expect(within(marcado as HTMLElement).getByText('Hay que revisar')).toHaveClass('bg-advertencia-fondo');
+    // Cada registro es una tarjeta del tema; el que no hay que revisar, sin insignia.
+    expect((comun as HTMLElement).firstElementChild).toHaveClass('rounded-2xl', 'bg-superficie');
+    expect(within(comun as HTMLElement).queryByText('Hay que revisar')).not.toBeInTheDocument();
+    sinJerga();
+  });
+
+  it('sin conexión, el aviso es una advertencia del tema con su rol de alerta', async () => {
+    await abrir(() => 'sin-conexion');
+    const aviso = await screen.findByRole('alert');
+    expect(aviso).toHaveTextContent('Esta consulta necesita conexión.');
+    expect(aviso).toHaveClass('bg-advertencia-fondo');
+  });
+});
