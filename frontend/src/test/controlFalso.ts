@@ -1,5 +1,5 @@
 /**
- * Base local falsa para los tests de pantalla — SPEC-KRILINXI-004, ampliada en SPEC-KRILINXI-007, 013 y 029
+ * Base local falsa para los tests de pantalla — SPEC-KRILINXI-004, ampliada en SPEC-KRILINXI-007, 013, 029 y 031
  *
  * No guarda nada: cada método es un `vi.fn()` que anota qué le pidieron. Es el que usa
  * `renderEnRuta` por defecto, porque las pantallas que no leen datos no necesitan una base
@@ -9,11 +9,18 @@
  *     const baseLocal = controlFalso();
  *     renderEnRuta(<App />, '/', { baseLocal });
  *     await waitFor(() => expect(baseLocal.conectar).toHaveBeenCalled());
+ *
+ * Por defecto avisa "con internet y nada pendiente". Para otro estado de la conexión
+ * (SPEC-KRILINXI-031):
+ *
+ *     controlFalso({ estado: { conectado: false, pendientes: 3, paraCorregir: 0 } });
  */
 import { vi } from 'vitest';
 import type { ControlBaseLocal, EstadoSubida, ParametrosSincronizacion, Sentencia } from '../lib/powersync';
 
-export function controlFalso() {
+const CON_INTERNET: EstadoSubida = { conectado: true, pendientes: 0, paraCorregir: 0 };
+
+export function controlFalso({ estado = CON_INTERNET }: { estado?: EstadoSubida } = {}) {
   return {
     base: {
       consultar: vi.fn(async () => []),
@@ -21,7 +28,7 @@ export function controlFalso() {
       ejecutarJuntas: vi.fn(async (_sentencias: readonly Sentencia[]) => {}),
       // Con internet y nada pendiente, salvo que el test diga otra cosa (SPEC-KRILINXI-007).
       observarEstado: vi.fn((alCambiar: (estado: EstadoSubida) => void) => {
-        alCambiar({ conectado: true, pendientes: 0, paraCorregir: 0 });
+        alCambiar(estado);
         return () => {};
       }),
     },
