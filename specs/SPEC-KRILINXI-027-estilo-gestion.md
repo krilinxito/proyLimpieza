@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-027
 name: Personal, sucursales, auditoría y para corregir con el tema
 slug: estilo-gestion
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-17
 scope:
@@ -18,7 +18,13 @@ depends_on:
   - SPEC-KRILINXI-024
   - SPEC-KRILINXI-025
   - SPEC-KRILINXI-026
-tests: []
+tests:
+  - frontend/src/components/AvisoConexion.test.tsx
+  - frontend/src/features/auditoria/components/PantallaAuditoria.test.tsx
+  - frontend/src/features/pendientes/components/PantallaParaCorregir.test.tsx
+  - frontend/src/features/sucursales/components/PantallaSucursales.test.tsx
+  - frontend/src/features/usuarios/components/PantallaPersonal.test.tsx
+  - frontend/src/test/arquitectura.test.ts
 ---
 
 ## Descripción
