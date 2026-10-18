@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-033
 name: Una sola pantalla de mostrador
 slug: mostrador-unificado
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-18
 scope:
