@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { Icono } from './iconos';
 
 type Props = {
   conectado: boolean;
@@ -31,22 +32,30 @@ function frase({ conectado, pendientes }: Props): string {
  *
  * Recibe los números por props, como todo componente compartido: quien los saca de la base
  * local es `useConexion`.
+ *
+ * Tiene el aspecto de `Aviso` (SPEC-KRILINXI-027): el mismo ícono al costado, sin internet en
+ * advertencia y con internet en neutro. No ES un `Aviso` porque su rol es siempre `status`: está
+ * en todas las pantallas y cambia solo, y un `alert` interrumpiría al lector de pantalla cada vez
+ * que se corta o vuelve la conexión.
  */
 export function AvisoConexion(props: Props) {
   const { conectado, paraCorregir } = props;
   return (
     <div
       role="status"
-      className={`mx-auto mt-2 max-w-3xl rounded-xl border-2 px-6 py-3 text-lg ${
+      className={`mx-auto mt-2 flex max-w-3xl items-start gap-3 rounded-xl border-2 px-6 py-3 text-lg ${
         conectado ? 'border-borde-suave bg-superficie text-texto' : 'border-advertencia-borde bg-advertencia-fondo text-advertencia-texto'
       }`}
     >
-      <p>{frase(props)}</p>
-      {paraCorregir > 0 && (
-        <Link to="/para-corregir" className="mt-1 inline-block font-semibold text-peligro-texto underline">
-          {cuantos(paraCorregir)} {paraCorregir === 1 ? 'no se pudo guardar' : 'no se pudieron guardar'}. Tocá acá para revisarlos.
-        </Link>
-      )}
+      <Icono nombre={conectado ? 'informacion' : 'advertencia'} />
+      <div className="min-w-0 flex-1">
+        <p>{frase(props)}</p>
+        {paraCorregir > 0 && (
+          <Link to="/para-corregir" className="mt-1 inline-block font-semibold text-peligro-texto underline">
+            {cuantos(paraCorregir)} {paraCorregir === 1 ? 'no se pudo guardar' : 'no se pudieron guardar'}. Tocá acá para revisarlos.
+          </Link>
+        )}
+      </div>
     </div>
   );
 }
