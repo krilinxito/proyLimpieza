@@ -112,8 +112,8 @@ ante un 401; el schema local se testea contra las sync rules. Lo escrito queda e
 `/clientes`: buscar por teléfono y dar de alta, todo en la base local. Fija el patrón de las
 demás: el SQL vive en `features/<x>/api/`, un hook lo pone al alcance de la pantalla, y el
 teléfono se normaliza con la misma regla que el backend. SPEC-KRILINXI-006 añadió
-`/registrar-ropa` (orden y adelanto opcional, solo para EMPLEADO: el ADMIN no tiene
-sucursal), el saldo en `features/pagos/saldo.ts` —el único lugar donde se calcula— y
+`/registrar-ropa` (orden y adelanto opcional; desde SPEC-KRILINXI-029 también el ADMIN mientras
+atiende en una sucursal), el saldo en `features/pagos/saldo.ts` —el único lugar donde se calcula— y
 `aDecimal`/`desdeDecimal` en `lib/money`, que es como se guardan los montos en la base local
 ("25.50"). Cada ruta puede declarar su propio `sinPermiso`. Para los tests: `sembrar()` carga
 filas "ya sincronizadas" y `sinJerga()` revisa que no haya palabras del sistema en pantalla.
@@ -131,7 +131,8 @@ pantalla con "Entregar la ropa" en el detalle (`accionesExtra`), con o sin bolet
 y pago final. Se puede entregar con saldo pendiente: la confirmación dice cuánto queda
 debiendo. **El frontend nunca escribe `ordenes.estado = 'ENTREGADO'`**: lo hace el servidor, y
 en la tablet se ve por `estadoEfectivo`. Con eso, el flujo del mostrador está completo
-(registrar → avanzar → cobrar → entregar). Las pantallas del mostrador son solo para EMPLEADO.
+(registrar → avanzar → cobrar → entregar). Las pantallas del mostrador piden una sucursal de
+trabajo: la del EMPLEADO, o la que eligió el ADMIN (SPEC-KRILINXI-029).
 SPEC-KRILINXI-010 renueva la sesión sin pedir la contraseña: cada vez que PowerSync pide
 credenciales, `features/auth/renovacion.ts` mira el `exp` del `tokenPowerSync` y, si le quedan
 menos de 2 minutos (o no se lee), cambia el par en `/renovar` con el token de la API —una sola
@@ -225,6 +226,15 @@ estado, una `Insignia` (qué tono lleva cada estado lo decide la feature, como `
 motivo de cada rechazo, un `Aviso` de error. El aviso de conexión tomó el aspecto de `Aviso` pero sigue
 siendo `role="status"`. **Ninguna parte de la app usa la paleta cruda**: la regla cubre `components/`,
 `pages/` y `features/`, así que una pantalla nueva nace vigilada.
+
+SPEC-KRILINXI-029 hizo la parte de la tablet de la 028: el ADMIN elige en el Inicio "Atender en una
+sucursal" y la tablet reconecta PowerSync con `params: { sucursal_id }` (`conectar` de `lib/powersync`).
+La elección se guarda en el dispositivo hasta "Dejar de atender" (en la cabecera) o Salir. La
+**sucursal de trabajo** sale de un solo lugar, `useSucursalDeTrabajo()` (`features/atencion/hooks/`): la
+asignada para un EMPLEADO, la elegida para un ADMIN. **Ninguna pantalla lee `usuario.sucursalId` de la
+sesión** (lo vigila un test de arquitectura). Las rutas del mostrador llevan `mostrador: true`: el menú
+las lista solo con sucursal de trabajo, y `ConSucursalDeTrabajo` dice cómo empezar si no la hay. Dejar
+de atender reconecta sin el parámetro y no borra nada: la cola sigue subiendo.
 
 SPEC-KRILINXI-012 corrige el reloj de la tablet: `lib/reloj` guarda el desfase con la hora
 del servidor que traen `login` y `renovar`, y `horaOficial()` es de donde salen
@@ -396,7 +406,7 @@ Nunca concatenes valores dentro de una consulta. Siempre `$1, $2`.
 ```
 frontend/src/
   features/     ordenes/ clientes/ entregas/ pagos/ auth/ pendientes/ estadisticas/
-                usuarios/ sucursales/
+                usuarios/ sucursales/ atencion/
                 cada una con components/ hooks/ api/ types.ts
   components/   UI compartida: botones, inputs, modales de confirmación, avisos, tarjetas,
                 insignias e íconos. Pinta solo con los colores del tema (SPEC-KRILINXI-022).
@@ -814,8 +824,8 @@ implemente una spec de las de abajo actualiza su línea cuando la mergee.
 - **Sync rules del bucket `global`** (SPEC-ALE186-024, hecho): ya no baja clientes, sucursales
   ni usuarios a una cuenta dada de baja. Para las activas no cambia nada. **Después del pull,
   `docker compose restart powersync`**, para que lea las reglas nuevas.
-- **El ADMIN que atiende baja la ropa de una sucursal** (SPEC-KRILINXI-028, hecho en las sync
-  rules; la tablet es SPEC-KRILINXI-029). Para recibirla, la tablet del ADMIN conecta PowerSync con
+- **El ADMIN que atiende baja la ropa de una sucursal** (SPEC-KRILINXI-028 en las sync rules,
+  SPEC-KRILINXI-029 en la tablet, hecho). Para recibirla, la tablet del ADMIN conecta PowerSync con
   `params: { sucursal_id }`; sin ese parámetro no baja nada, como antes. **Después del pull,
   `docker compose restart powersync`**, para que lea las reglas nuevas.
 - **Renovar el token de PowerSync** (SPEC-ALE186-025 en el backend, SPEC-KRILINXI-010 en el

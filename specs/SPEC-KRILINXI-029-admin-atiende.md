@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-029
 name: El admin atiende en una sucursal
 slug: admin-atiende
-status: draft
+status: finished
 owner: krilinxito
 created: 2026-10-18
 scope:
@@ -18,7 +18,16 @@ scope:
 priority: high
 depends_on:
   - SPEC-KRILINXI-028
-tests: []
+tests:
+  - frontend/src/features/atencion/api/almacen.test.ts
+  - frontend/src/features/atencion/components/AtenderEnUnaSucursal.test.tsx
+  - frontend/src/features/entregas/components/PantallaEntregar.test.tsx
+  - frontend/src/features/ordenes/components/PantallaRegistrarRopa.test.tsx
+  - frontend/src/features/ordenes/components/PantallaRopa.test.tsx
+  - frontend/src/lib/powersync/control.test.ts
+  - frontend/src/pages/rutas.test.ts
+  - frontend/src/test/arquitectura.test.ts
+  - frontend/src/test/controlFalso.ts
 ---
 
 ## Descripción

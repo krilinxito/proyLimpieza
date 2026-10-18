@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react';
 import { PantallaAuditoria } from '../features/auditoria/components/PantallaAuditoria';
 import { PantallaIngreso } from '../features/auth/components/PantallaIngreso';
-import { AvisoSoloEmpleado } from '../features/auth/components/AvisoSoloEmpleado';
+import { ConSucursalDeTrabajo } from '../features/atencion/components/ConSucursalDeTrabajo';
 import { PantallaClientes } from '../features/clientes/components/PantallaClientes';
 import { PantallaEntregar } from '../features/entregas/components/PantallaEntregar';
 import { PantallaEstadisticas } from '../features/estadisticas/components/PantallaEstadisticas';
@@ -40,18 +40,25 @@ export type Ruta = {
   elemento: ReactElement;
   /** Lo que ve quien entró pero no tiene el rol. Si no se dice, el aviso de "solo administrador". */
   sinPermiso?: ReactElement;
+  /**
+   * Una pantalla del mostrador: trabaja sobre una sucursal (SPEC-KRILINXI-029). La pueden abrir
+   * todos, pero el menú y el Inicio solo la listan si quien está adentro tiene sucursal de
+   * trabajo (un EMPLEADO siempre; un ADMIN, mientras atiende).
+   */
+  mostrador?: true;
 };
 
 const TODOS = ROLES;
 const SOLO_ADMIN: readonly Rol[] = ['ADMIN'];
-// El mostrador registra en una sucursal, y el ADMIN no tiene ninguna (CLAUDE.md §3).
-const SOLO_EMPLEADO: readonly Rol[] = ['EMPLEADO'];
 
-/** Lo que ve el ADMIN en una pantalla del mostrador. */
-function soloEmpleado(titulo: string): ReactElement {
+/**
+ * Una pantalla del mostrador — SPEC-KRILINXI-029. Lo que se registra ahí va a una sucursal
+ * (CLAUDE.md §3): sin sucursal de trabajo (un ADMIN que no está atendiendo) dice cómo empezar.
+ */
+function delMostrador(titulo: string, contenido: ReactElement): ReactElement {
   return (
     <Pantalla titulo={titulo}>
-      <AvisoSoloEmpleado />
+      <ConSucursalDeTrabajo>{contenido}</ConSucursalDeTrabajo>
     </Pantalla>
   );
 }
@@ -87,13 +94,9 @@ export const RUTAS: readonly Ruta[] = [
     enMenu: true,
     icono: 'registrar-ropa',
     descripcion: 'Cuando el cliente deja ropa: se anota y se le da la boleta.',
-    acceso: SOLO_EMPLEADO,
-    elemento: (
-      <Pantalla titulo="Registrar ropa">
-        <PantallaRegistrarRopa />
-      </Pantalla>
-    ),
-    sinPermiso: soloEmpleado('Registrar ropa'),
+    acceso: TODOS,
+    mostrador: true,
+    elemento: delMostrador('Registrar ropa', <PantallaRegistrarRopa />),
   },
   {
     camino: '/ropa',
@@ -101,13 +104,9 @@ export const RUTAS: readonly Ruta[] = [
     enMenu: true,
     icono: 'ropa',
     descripcion: 'La ropa que está en el local, y en qué paso va cada boleta.',
-    acceso: SOLO_EMPLEADO,
-    elemento: (
-      <Pantalla titulo="Ropa en el local">
-        <PantallaRopa />
-      </Pantalla>
-    ),
-    sinPermiso: soloEmpleado('Ropa en el local'),
+    acceso: TODOS,
+    mostrador: true,
+    elemento: delMostrador('Ropa en el local', <PantallaRopa />),
   },
   {
     camino: '/entregar',
@@ -115,13 +114,9 @@ export const RUTAS: readonly Ruta[] = [
     enMenu: true,
     icono: 'entregar',
     descripcion: 'Cuando el cliente vuelve a buscar su ropa.',
-    acceso: SOLO_EMPLEADO,
-    elemento: (
-      <Pantalla titulo="Entregar ropa">
-        <PantallaEntregar />
-      </Pantalla>
-    ),
-    sinPermiso: soloEmpleado('Entregar ropa'),
+    acceso: TODOS,
+    mostrador: true,
+    elemento: delMostrador('Entregar ropa', <PantallaEntregar />),
   },
   {
     camino: '/cobrar',
@@ -129,14 +124,10 @@ export const RUTAS: readonly Ruta[] = [
     enMenu: true,
     icono: 'cobrar',
     descripcion: 'Cobrar un adelanto o lo que falta de una boleta.',
-    acceso: SOLO_EMPLEADO,
+    acceso: TODOS,
+    mostrador: true,
     // La misma pantalla que /ropa: para cobrar, primero se busca la boleta (SPEC-KRILINXI-008).
-    elemento: (
-      <Pantalla titulo="Cobrar">
-        <PantallaRopa />
-      </Pantalla>
-    ),
-    sinPermiso: soloEmpleado('Cobrar'),
+    elemento: delMostrador('Cobrar', <PantallaRopa />),
   },
   {
     camino: '/clientes',
@@ -235,10 +226,13 @@ function aDestino(ruta: Ruta): Destino[] {
 /**
  * Lo que lista el menú para un rol — SPEC-KRILINXI-023: el Inicio primero, y después lo que
  * está en el menú y ese rol puede abrir, en el orden del registro.
+ *
+ * Las del mostrador, solo con sucursal de trabajo (SPEC-KRILINXI-029): un ADMIN que no está
+ * atendiendo no ve tareas que no puede hacer.
  */
-export function destinosDelMenu(rol: Rol): Destino[] {
+export function destinosDelMenu(rol: Rol, conSucursal: boolean): Destino[] {
   const inicio = RUTAS.filter((r) => r.camino === '/');
-  const delMenu = RUTAS.filter((r) => r.enMenu && puedeVer(r, rol));
+  const delMenu = RUTAS.filter((r) => r.enMenu && puedeVer(r, rol) && (conSucursal || !r.mostrador));
   return [...inicio, ...delMenu].flatMap(aDestino);
 }
 

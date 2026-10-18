@@ -169,9 +169,9 @@ describe('Registrar ropa: lo que se corrige en pantalla — SPEC-KRILINXI-006', 
 });
 
 describe('Registrar ropa: solo en el mostrador — SPEC-KRILINXI-006', () => {
-  it('un ADMIN que la abre ve un aviso, no el formulario', async () => {
+  it('un ADMIN que no está atendiendo ve cómo empezar, no el formulario (SPEC-KRILINXI-029)', async () => {
     renderEnRuta(<App />, '/registrar-ropa', { sesion: sesionDePrueba({ rol: 'ADMIN' }) });
-    expect(screen.getByText(/para quien atiende en una sucursal/)).toBeInTheDocument();
+    expect(screen.getByText(/elegí en qué sucursal vas a atender/)).toBeInTheDocument();
     expect(screen.queryByLabelText('Teléfono del cliente')).not.toBeInTheDocument();
   });
 });

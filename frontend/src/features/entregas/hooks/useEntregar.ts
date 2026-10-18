@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useSession } from '../../../hooks/useSession';
+import { useSucursalDeTrabajo } from '../../atencion/hooks/useSucursalDeTrabajo';
 import { useBaseLocal } from '../../../lib/powersync';
 import { prepararEntrega, registrarEntrega } from '../api/entregasLocal';
 import type { DatosEntrega, ResultadoEntrega } from '../types';
@@ -13,12 +14,15 @@ export type Entregar =
       registrar: (ordenId: string, datos: DatosEntrega) => Promise<ResultadoEntrega>;
     };
 
-/** La puerta de la pantalla a la entrega — SPEC-KRILINXI-009. Pone la base y, de la sesión, quién entrega. */
+/**
+ * La puerta de la pantalla a la entrega — SPEC-KRILINXI-009. Pone la base, la sucursal de trabajo
+ * (SPEC-KRILINXI-029) y, de la sesión, quién entrega.
+ */
 export function useEntregar(): Entregar {
   const base = useBaseLocal();
   const { sesion } = useSession();
   const usuarioId = sesion?.usuario.id;
-  const sucursalId = sesion?.usuario.sucursalId;
+  const sucursalId = useSucursalDeTrabajo();
 
   return useMemo<Entregar>(() => {
     if (!base || !usuarioId || !sucursalId) return { lista: false };

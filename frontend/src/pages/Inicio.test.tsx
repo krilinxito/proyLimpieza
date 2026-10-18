@@ -11,7 +11,7 @@ const tareas = () => within(screen.getByRole('navigation', { name: 'Tareas' }));
 describe('Inicio como tarjetas de tareas — SPEC-KRILINXI-024', () => {
   it.each(['EMPLEADO', 'ADMIN'] as const)('a un %s le muestra una tarjeta por cada tarea del menú, en el mismo orden', (rol) => {
     renderEnRuta(<App />, '/', { sesion: sesionDePrueba({ rol }) });
-    const esperadas = destinosDelMenu(rol).filter((d) => d.camino !== '/');
+    const esperadas = destinosDelMenu(rol, rol === 'EMPLEADO').filter((d) => d.camino !== '/');
     const enlaces = tareas().getAllByRole('link');
     expect(enlaces).toHaveLength(esperadas.length);
     esperadas.forEach((destino, i) => {
@@ -72,7 +72,6 @@ describe('Ingreso, página no encontrada y avisos de rol — SPEC-KRILINXI-024',
 
   it.each([
     ['un EMPLEADO en una pantalla del administrador', '/personal', 'EMPLEADO', /solo para el administrador/],
-    ['el ADMIN en una pantalla del mostrador', '/registrar-ropa', 'ADMIN', /para quien atiende en una sucursal/],
   ] as const)('%s ve el aviso con el tema y el camino de vuelta', (_caso, ruta, rol, texto) => {
     renderEnRuta(<App />, ruta, { sesion: sesionDePrueba({ rol }) });
     const aviso = within(screen.getByRole('main')).getByText(texto).closest('[role="status"]');

@@ -15,7 +15,7 @@ describe('Rutas: lo que necesita el menú — SPEC-KRILINXI-023', () => {
   );
 
   it('un EMPLEADO ve el Inicio y el mostrador, no lo del administrador', () => {
-    expect(destinosDelMenu('EMPLEADO').map((d) => d.titulo)).toEqual([
+    expect(destinosDelMenu('EMPLEADO', true).map((d) => d.titulo)).toEqual([
       'Inicio',
       'Registrar ropa',
       'Ropa en el local',
@@ -25,9 +25,24 @@ describe('Rutas: lo que necesita el menú — SPEC-KRILINXI-023', () => {
     ]);
   });
 
-  it('un ADMIN ve el Inicio y lo suyo, no Registrar ropa', () => {
-    expect(destinosDelMenu('ADMIN').map((d) => d.titulo)).toEqual([
+  it('un ADMIN que no está atendiendo ve el Inicio y lo suyo, no Registrar ropa', () => {
+    expect(destinosDelMenu('ADMIN', false).map((d) => d.titulo)).toEqual([
       'Inicio',
+      'Clientes',
+      'Personal',
+      'Sucursales',
+      '¿Quién hizo qué?',
+      'Estadísticas',
+    ]);
+  });
+
+  it('un ADMIN que atiende en una sucursal ve el mostrador, y sigue viendo lo suyo — SPEC-KRILINXI-029', () => {
+    expect(destinosDelMenu('ADMIN', true).map((d) => d.titulo)).toEqual([
+      'Inicio',
+      'Registrar ropa',
+      'Ropa en el local',
+      'Entregar ropa',
+      'Cobrar',
       'Clientes',
       'Personal',
       'Sucursales',

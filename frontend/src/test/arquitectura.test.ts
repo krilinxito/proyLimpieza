@@ -258,3 +258,42 @@ describe('Los gráficos no traen librerías — SPEC-KRILINXI-026', () => {
     expect(deAfuera).toEqual([]);
   });
 });
+
+/**
+ * La sucursal de trabajo sale de un solo lugar — SPEC-KRILINXI-029: `useSucursalDeTrabajo`. Un
+ * EMPLEADO trabaja en la suya, pero un ADMIN que atiende trabaja en la que eligió, y su
+ * `usuario.sucursalId` es null: una pantalla que la leyera de la sesión lo dejaría sin sucursal,
+ * y sin avisar. Cubre todo `src/` salvo el propio hook, así una pantalla nueva nace vigilada.
+ */
+const UNICO_LECTOR = 'features/atencion/hooks/useSucursalDeTrabajo.ts';
+
+const SUCURSAL_DE_LA_SESION = [
+  { que: 'usuario.sucursalId', patron: /usuario\??\.sucursalId/ },
+  { que: 'sucursalId desarmado del usuario', patron: /\{[^}]*\bsucursalId\b[^}]*\}\s*=\s*[^;]*\busuario\b/ },
+];
+
+describe('La sucursal de trabajo, de un solo lugar — SPEC-KRILINXI-029', () => {
+  const resto = archivosFuente().filter(({ ruta }) => ruta !== UNICO_LECTOR && !ruta.startsWith('test/'));
+
+  it('el hook existe y es el que la lee', () => {
+    const hook = archivosFuente('features/atencion').find(({ ruta }) => ruta === UNICO_LECTOR);
+    expect(hook?.fuente).toMatch(/usuario\??\.sucursalId/);
+  });
+
+  it('revisa el mostrador, el marco y el inicio', () => {
+    expect(resto.map(({ ruta }) => ruta)).toEqual(
+      expect.arrayContaining([
+        'features/ordenes/hooks/useRegistrarRopa.ts',
+        'features/ordenes/hooks/useRopa.ts',
+        'features/entregas/hooks/useEntregar.ts',
+        'pages/Marco.tsx',
+        'pages/Inicio.tsx',
+      ]),
+    );
+  });
+
+  it.each(resto.map((a) => [a.ruta, a.fuente]))('%s no lee la sucursal de la sesión', (_ruta, fuente) => {
+    const encontrados = SUCURSAL_DE_LA_SESION.filter(({ patron }) => patron.test(fuente)).map(({ que }) => que);
+    expect(encontrados).toEqual([]);
+  });
+});

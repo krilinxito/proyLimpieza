@@ -6,6 +6,8 @@ import { MenuCompacto } from '../components/marco/MenuCompacto';
 import { MenuPrincipal } from '../components/marco/MenuPrincipal';
 import { Pie } from '../components/marco/Pie';
 import { SaltarAlContenido } from '../components/marco/SaltarAlContenido';
+import { DejarDeAtender } from '../features/atencion/components/DejarDeAtender';
+import { useSucursalDeTrabajo } from '../features/atencion/hooks/useSucursalDeTrabajo';
 import { BarraSesion } from '../features/auth/components/BarraSesion';
 import { useSucursales } from '../features/sucursales/hooks/useSucursales';
 import { useConexion } from '../hooks/useConexion';
@@ -23,16 +25,19 @@ function EstadoConexion() {
 }
 
 /**
- * Dónde está trabajando quien entró: el nombre de su sucursal, de la base local. El ADMIN no
- * tiene sucursal (CLAUDE.md §3). Mientras la base local no la tiene (la primera vez, antes de
- * que baje), no dice nada: mejor nada que un nombre inventado.
+ * Dónde está trabajando quien entró: el nombre de su sucursal de trabajo, de la base local. El
+ * ADMIN no tiene sucursal (CLAUDE.md §3), salvo mientras atiende en una (SPEC-KRILINXI-029).
+ * Mientras la base local no la tiene (la primera vez, antes de que baje), no dice nada: mejor
+ * nada que un nombre inventado.
  */
 function useLugar(usuario: Usuario | undefined): string | null {
   const sucursales = useSucursales();
+  const sucursalId = useSucursalDeTrabajo();
   if (!usuario) return null;
-  if (usuario.rol === 'ADMIN') return 'Administración';
-  const nombre = sucursales?.find((s) => s.id === usuario.sucursalId)?.nombre;
-  return nombre ? `Sucursal ${nombre}` : null;
+  if (usuario.rol === 'ADMIN' && !sucursalId) return 'Administración';
+  const nombre = sucursales?.find((s) => s.id === sucursalId)?.nombre;
+  if (!nombre) return null;
+  return usuario.rol === 'ADMIN' ? `Atendiendo en ${nombre}` : `Sucursal ${nombre}`;
 }
 
 /**
@@ -52,7 +57,8 @@ export function Marco() {
   const { pathname } = useLocation();
   const usuario = sesion?.usuario;
   const lugar = useLugar(usuario);
-  const destinos = usuario ? destinosDelMenu(usuario.rol) : [];
+  const conSucursal = useSucursalDeTrabajo() !== null;
+  const destinos = usuario ? destinosDelMenu(usuario.rol, conSucursal) : [];
 
   useEffect(() => {
     document.title = tituloDePestana(pathname);
@@ -64,7 +70,14 @@ export function Marco() {
       <Cabecera
         lugar={lugar}
         menu={usuario && <MenuCompacto destinos={destinos} />}
-        acciones={usuario && <BarraSesion />}
+        acciones={
+          usuario && (
+            <>
+              <DejarDeAtender />
+              <BarraSesion />
+            </>
+          )
+        }
       />
       <div className="flex flex-1">
         {usuario && (

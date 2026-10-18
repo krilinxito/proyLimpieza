@@ -46,14 +46,25 @@ export type BaseLocal = {
   observarEstado: (alCambiar: (estado: EstadoSubida) => void) => () => void;
 };
 
+/**
+ * Lo que la tablet le cuenta a las reglas de sincronización al conectarse — SPEC-KRILINXI-029.
+ * Hoy, solo la sucursal donde atiende el ADMIN (`atencion_admin`, CLAUDE.md §7). No autoriza
+ * nada: el servidor decide qué baja según quién es el dueño del token.
+ */
+export type ParametrosSincronizacion = { sucursal_id: string };
+
 export type ControlBaseLocal = {
   base: BaseLocal;
   /**
    * Arranca la sincronización. `obtenerToken` se consulta cada vez que PowerSync se
    * conecta, así usa siempre el token vigente de la sesión. Es async porque puede tener que
    * renovarlo antes (SPEC-KRILINXI-010).
+   *
+   * Llamarla otra vez con otros `parametros` reconecta con esos (SPEC-KRILINXI-029): PowerSync
+   * corta la conexión anterior y se queda con lo último que se le pidió. No borra nada: la cola
+   * de subida sigue donde estaba.
    */
-  conectar: (obtenerToken: () => Promise<string | null>) => Promise<void>;
+  conectar: (obtenerToken: () => Promise<string | null>, parametros?: ParametrosSincronizacion) => Promise<void>;
   /** Corta la sincronización y borra todos los datos del dispositivo (CLAUDE.md §6). */
   desconectarYBorrar: () => Promise<void>;
   /** Corta la sincronización y deja los datos: la cola sigue ahí para la próxima sesión. */
@@ -75,7 +86,8 @@ export function envolver(db: CommonPowerSyncDatabase, url: string): ControlBaseL
         }),
       observarEstado: (alCambiar) => observarEstado(db, alCambiar),
     },
-    conectar: (obtenerToken) => db.connect(crearConector(url, obtenerToken)),
+    conectar: (obtenerToken, parametros) =>
+      db.connect(crearConector(url, obtenerToken), parametros ? { params: parametros } : undefined),
     desconectarYBorrar: () => db.disconnectAndClear(),
     desconectar: () => db.disconnect(),
     hayCambiosSinSubir: async () => (await db.getUploadQueueStats()).count > 0,
