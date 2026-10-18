@@ -189,7 +189,7 @@ SPEC-KRILINXI-022 abrió la ola estética con el **tema**: los colores, la letra
 fuente (Atkinson Hyperlegible, propia, sin pedir nada afuera) viven en `src/index.css` (`@theme`), y un
 test calcula el contraste de cada texto sobre su fondo. `components/` pinta solo con el tema (lo vigila
 un test de arquitectura) y suma `Aviso`, `Tarjeta`, `Insignia` e `Icono` (ver `components/README.md`).
-Las pantallas todavía usan la paleta cruda: pasan al tema en las specs siguientes de la ola.
+Las pantallas pasaron al tema en las specs siguientes de la ola (024 a 027).
 SPEC-KRILINXI-023 armó el **marco** de todas las pantallas (`pages/Marco.tsx`, una ruta de diseño
 que `App.tsx` pone por encima de las demás): cabecera con el negocio, la sucursal, quién atiende y
 Salir; el menú, que en pantalla ancha (desde 1024px) es una barra lateral y en chica un botón
@@ -201,8 +201,8 @@ busca un enlace o un texto de una pantalla lo busca dentro de `getByRole('main')
 SPEC-KRILINXI-024 pasó al tema la entrada a la app: el Inicio son tarjetas de tareas (las de
 `destinosDelMenu`, con su ícono y su `descripcion`; el nombre accesible de cada una es solo el
 título), el ingreso es una tarjeta centrada (`PantallaIngreso`) y "Volver al inicio" es un
-`EnlaceBoton`. La regla de la paleta cruda cubre la lista `CON_EL_TEMA` de
-`test/arquitectura.test.ts`: cada spec de la ola que pasa pantallas al tema agrega ahí sus carpetas.
+`EnlaceBoton`. La regla de la paleta cruda (`CON_EL_TEMA` en `test/arquitectura.test.ts`) creció
+carpeta por carpeta con la ola; desde SPEC-KRILINXI-027 cubre toda la app.
 SPEC-KRILINXI-025 pasó al tema el mostrador (registrar, ropa, cobrar, entregar, clientes): el estado
 de cada orden es una `Insignia` con el tono de `TONO_ESTADO` (`features/ordenes/estado.ts`, junto a
 `estadoEfectivo`), el detalle agrupa en `Tarjeta` (con `nivel={3}` dentro de una sección que ya tiene
@@ -216,6 +216,12 @@ dato depende del mouse: cada barra es un botón que, al tocarlo o enfocarlo, esc
 gráfico (`Grafico`) tiene nombre y una tabla `sr-only` con los mismos números, que es donde los tests
 leen los valores. Los colores son `serie-1`…`serie-4` (uno por forma de pago, validados con todas sus
 parejas para daltonismo, ver la bitácora) y `antiguedad-1`…`3` en el tema.
+SPEC-KRILINXI-027 cerró la ola con las pantallas de gestión: Personal, Sucursales, ¿Quién hizo qué? y
+Registros para corregir. Cada cuenta, sucursal, registro de la auditoría y rechazo es una `Tarjeta`; su
+estado, una `Insignia` (qué tono lleva cada estado lo decide la feature, como `TONO_ESTADO`), y el
+motivo de cada rechazo, un `Aviso` de error. El aviso de conexión tomó el aspecto de `Aviso` pero sigue
+siendo `role="status"`. **Ninguna parte de la app usa la paleta cruda**: la regla cubre `components/`,
+`pages/` y `features/`, así que una pantalla nueva nace vigilada.
 
 SPEC-KRILINXI-012 corrige el reloj de la tablet: `lib/reloj` guarda el desfase con la hora
 del servidor que traen `login` y `renovar`, y `horaOficial()` es de donde salen
