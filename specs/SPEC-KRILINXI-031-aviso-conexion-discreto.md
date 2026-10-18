@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-031
 name: Conexión en una esquina
 slug: aviso-conexion-discreto
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-18
 scope:
