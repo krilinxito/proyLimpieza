@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-033
 name: Una sola pantalla de mostrador
 slug: mostrador-unificado
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-18
 scope:
@@ -16,7 +16,15 @@ scope:
 priority: high
 depends_on:
   - SPEC-KRILINXI-032
-tests: []
+tests:
+  - frontend/src/App.test.tsx
+  - frontend/src/features/auth/components/FormularioIngreso.test.tsx
+  - frontend/src/features/mostrador/api/mostradorLocal.test.ts
+  - frontend/src/features/mostrador/components/EntregarEnMostrador.test.tsx
+  - frontend/src/features/mostrador/components/PantallaMostrador.test.tsx
+  - frontend/src/features/pendientes/components/PantallaParaCorregir.test.tsx
+  - frontend/src/pages/Marco.test.tsx
+  - frontend/src/pages/rutas.test.ts
 ---
 
 ## Descripción
