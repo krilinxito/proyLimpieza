@@ -13,6 +13,8 @@ import type { BaseLocal, Fila } from '../../../lib/powersync';
 import { esEstadoOrden, esMetodoPago, esTipoPago, type EstadoOrden, type MetodoPago } from '../../../lib/dominio';
 import { desdeDecimal, parsearMonto, sumar, type Centavos } from '../../../lib/money';
 import { horaOficial } from '../../../lib/reloj';
+import { alcanzaParaBuscar, escaparLike, type ResultadosDeBusqueda } from '../../../lib/texto';
+import { condicionCliente } from '../../clientes/api/busqueda';
 import { normalizarTelefono } from '../../clientes/telefono';
 import { insertarPago } from '../../pagos/api/pagosLocal';
 import { calcularSaldo } from '../../pagos/saldo';
@@ -134,6 +136,53 @@ export async function buscarOrdenes(base: BaseLocal, sucursalId: string, buscado
     [sucursalId, boleta, telefono, telefono],
   );
   return armar(base, filas);
+}
+
+/** Cuántas boletas muestra el buscador (SPEC-KRILINXI-032), igual que con los clientes. */
+const MAXIMO_RESULTADOS = 6;
+
+/**
+ * La ropa de la sucursal que coincide con lo escrito, mientras se escribe — SPEC-KRILINXI-032.
+ *
+ * Coincide si el número de boleta contiene lo escrito (las boletas tienen ceros adelante:
+ * "1234" encuentra "001234"), o si su cliente coincide con la misma regla que la búsqueda de
+ * clientes (`clientes/api/busqueda.ts`: nombre sin tildes, parte del teléfono, carnet).
+ *
+ * Primero la boleta exacta, después las que empiezan así, después el resto, cada grupo de la más
+ * nueva a la más vieja. Dentro de lo que se muestra, la ropa que sigue en el local va antes que la
+ * entregada o anulada: eso se ordena después de armar, con `estaCerrada`, para que la regla de qué
+ * está cerrado siga en un solo lugar (`estado.ts`).
+ */
+export async function buscarRopaVivo(
+  base: BaseLocal,
+  sucursalId: string,
+  texto: string,
+): Promise<ResultadosDeBusqueda<OrdenVista>> {
+  const escrito = texto.trim();
+  const cliente = alcanzaParaBuscar(texto)
+    ? condicionCliente(texto, { nombre: 'c.nombre', telefono: 'c.telefono', carnet: 'c.carnet' })
+    : null;
+  if (!cliente) return { resultados: [], hayMas: false };
+
+  const boleta = escaparLike(escrito);
+  const filas = await base.consultar(
+    `${SELECT_ORDENES}
+       AND (o.numero_boleta LIKE ? ESCAPE '\\' OR (${cliente.donde}))
+     ORDER BY CASE
+                WHEN o.numero_boleta = ? THEN 0
+                WHEN o.numero_boleta LIKE ? ESCAPE '\\' THEN 1
+                ELSE 2 END,
+              o.fecha_entrada DESC
+     LIMIT ?`,
+    [sucursalId, `%${boleta}%`, ...cliente.parametros, escrito, `${boleta}%`, MAXIMO_RESULTADOS + 1],
+  );
+  const ordenes = await armar(base, filas);
+  const visibles = ordenes.slice(0, MAXIMO_RESULTADOS);
+  // La boleta exacta, arriba siempre (quien escribe el número entero busca ESA); después, la ropa
+  // en el local antes que la cerrada. `sort` es estable: dentro de cada grupo queda el orden del SQL.
+  const grupo = (o: OrdenVista) => (o.numeroBoleta === escrito ? 0 : estaCerrada(o.estado) ? 2 : 1);
+  visibles.sort((a, b) => grupo(a) - grupo(b));
+  return { resultados: visibles, hayMas: ordenes.length > MAXIMO_RESULTADOS };
 }
 
 export async function obtenerOrden(base: BaseLocal, sucursalId: string, ordenId: string): Promise<OrdenVista | null> {

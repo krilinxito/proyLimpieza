@@ -4,6 +4,7 @@ import { fireEvent, screen, within } from '@testing-library/react';
 import { App } from '../../../App';
 import { simularApi } from '../../../test/apiFalsa';
 import { baseLocalDePrueba } from '../../../test/baseLocalDePrueba';
+import { elegirEnBuscador, escribirEnBuscador } from '../../../test/buscador';
 import { sinJerga } from '../../../test/jerga';
 import { renderEnRuta } from '../../../test/render';
 import { sesionDePrueba } from '../../../test/sesion';
@@ -23,7 +24,7 @@ async function abrir() {
     { id: randomUUID(), sucursal_id: EMPLEADA.usuario.sucursalId, numero_boleta: '000999', cliente_id: ROSA.id },
   ]);
   renderEnRuta(<App />, '/registrar-ropa', { sesion: EMPLEADA, baseLocal: prueba.control });
-  await screen.findByRole('button', { name: 'Buscar cliente' });
+  await escribirEnBuscador('');
   return { ...prueba, servidor };
 }
 
@@ -33,8 +34,7 @@ function escribir(etiqueta: string, valor: string) {
 
 /** Busca a Rosa y la elige: el paso 1, que casi todos los tests necesitan hecho. */
 async function elegirARosa() {
-  escribir('Teléfono del cliente', '70123456');
-  fireEvent.click(screen.getByRole('button', { name: 'Buscar cliente' }));
+  await elegirEnBuscador('70123456', /Rosa Quispe/);
   fireEvent.click(await screen.findByRole('button', { name: 'Es este cliente' }));
   return screen.findByRole('form', { name: 'Datos de la ropa' });
 }
@@ -105,9 +105,7 @@ describe('Registrar ropa: el recorrido — SPEC-KRILINXI-006', () => {
 
   it('registra un cliente nuevo sin salir de la pantalla, y queda elegido', async () => {
     await abrir();
-    escribir('Teléfono del cliente', '71111111');
-    fireEvent.click(screen.getByRole('button', { name: 'Buscar cliente' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Registrar cliente nuevo' }));
+    await elegirEnBuscador('71111111', 'Cliente nuevo');
     escribir('Nombre completo', 'Juan Mamani');
     fireEvent.click(screen.getByRole('button', { name: 'Guardar cliente' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Es este cliente' }));
@@ -124,7 +122,7 @@ describe('Registrar ropa: el recorrido — SPEC-KRILINXI-006', () => {
     escribir('Precio (Bs)', '10');
     await guardar();
     fireEvent.click(await screen.findByRole('button', { name: 'Registrar otra ropa' }));
-    expect(await screen.findByLabelText('Teléfono del cliente')).toHaveValue('');
+    expect(await screen.findByRole('combobox', { name: /Buscar cliente/ })).toHaveValue('');
   });
 });
 
@@ -172,7 +170,7 @@ describe('Registrar ropa: solo en el mostrador — SPEC-KRILINXI-006', () => {
   it('un ADMIN que no está atendiendo ve cómo empezar, no el formulario (SPEC-KRILINXI-029)', async () => {
     renderEnRuta(<App />, '/registrar-ropa', { sesion: sesionDePrueba({ rol: 'ADMIN' }) });
     expect(screen.getByText(/elegí en qué sucursal vas a atender/)).toBeInTheDocument();
-    expect(screen.queryByLabelText('Teléfono del cliente')).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: /Buscar cliente/ })).not.toBeInTheDocument();
   });
 });
 

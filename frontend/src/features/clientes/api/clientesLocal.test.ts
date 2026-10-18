@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { simularApi } from '../../../test/apiFalsa';
 import { baseLocalDePrueba } from '../../../test/baseLocalDePrueba';
 import { subirAceptando } from '../../../test/rechazos';
-import { buscarPorTelefono, editarCliente, registrarCliente, telefonoDeOtro, validarCliente } from './clientesLocal';
+import { buscarClientes, buscarPorTelefono, editarCliente, registrarCliente, telefonoDeOtro, validarCliente } from './clientesLocal';
 
 // Una persona que ya estaba en el sistema: bajó por la sincronización, no está en la cola.
 const ROSA = { id: randomUUID(), nombre: 'Rosa Quispe', telefono: '70123456', carnet: '4455667' };
@@ -190,5 +190,63 @@ describe('Un teléfono repetido en la tablet — SPEC-KRILINXI-021', () => {
     const { ocupadoPor } = await validarCliente(control.base, { nombre: 'Rosa Q.', telefono: '70123456' }, propio.id);
 
     expect(ocupadoPor?.id).toBe(otro.id);
+  });
+});
+
+describe('Buscar clientes mientras se escribe — SPEC-KRILINXI-032', () => {
+  const JOSE = { id: randomUUID(), nombre: 'José Quispe', telefono: '71234567', carnet: '9988776 LP' };
+  const NUNEZ = { id: randomUUID(), nombre: 'Ana Núñez', telefono: '60001111', carnet: null };
+  const PEDRO = { id: randomUUID(), nombre: 'Pedro Rosales', telefono: '60002222', carnet: null };
+
+  async function baseConVarios(extra: Record<string, unknown>[] = []) {
+    const prueba = await baseLocalDePrueba();
+    await prueba.sembrar('clientes', [ROSA, JOSE, NUNEZ, PEDRO, ...extra]);
+    return prueba.control.base;
+  }
+
+  const nombres = async (texto: string, extra?: Record<string, unknown>[]) =>
+    (await buscarClientes(await baseConVarios(extra), texto)).resultados.map((c) => c.nombre);
+
+  it('por cualquier parte del nombre, sin importar tildes ni mayúsculas', async () => {
+    expect(await nombres('jose qui')).toEqual(['José Quispe']);
+    expect(await nombres('NUÑEZ')).toEqual(['Ana Núñez']);
+    expect(await nombres('nunez')).toEqual(['Ana Núñez']);
+  });
+
+  it('cada palabra tiene que coincidir: "rosa 7012" no trae a todas las Rosas', async () => {
+    expect(await nombres('rosa 7012')).toEqual(['Rosa Quispe']);
+  });
+
+  it('por parte del teléfono, con la misma normalización que el backend', async () => {
+    expect(await nombres('0123-4')).toEqual(['Rosa Quispe']);
+    expect(await nombres('6000')).toEqual(['Ana Núñez', 'Pedro Rosales']);
+  });
+
+  it('por el carnet', async () => {
+    expect(await nombres('998877')).toEqual(['José Quispe']);
+    expect(await nombres('776 lp')).toEqual(['José Quispe']);
+  });
+
+  it('primero los que empiezan con lo escrito, después los que lo tienen en el medio', async () => {
+    // "ros": Rosa empieza así; Pedro Rosales lo tiene al principio de su segunda palabra.
+    expect(await nombres('ros')).toEqual(['Rosa Quispe', 'Pedro Rosales']);
+  });
+
+  it('con menos de 2 letras o 3 dígitos no busca', async () => {
+    expect(await nombres('r')).toEqual([]);
+    expect(await nombres('70')).toEqual([]);
+  });
+
+  it('muestra como mucho 6, y avisa si hay más', async () => {
+    const muchos = Array.from({ length: 8 }, (_, i) => ({ id: randomUUID(), nombre: `Marta ${i}`, telefono: `6100000${i}` }));
+    const base = await baseConVarios(muchos);
+    const { resultados, hayMas } = await buscarClientes(base, 'marta');
+    expect(resultados).toHaveLength(6);
+    expect(hayMas).toBe(true);
+    expect(await buscarClientes(base, 'jose')).toMatchObject({ hayMas: false });
+  });
+
+  it('un % escrito se busca tal cual, no trae a todos', async () => {
+    expect(await nombres('%%')).toEqual([]);
   });
 });

@@ -11,8 +11,20 @@
  * hook (`hooks/useClientes.ts`).
  */
 import type { BaseLocal, Fila } from '../../../lib/powersync';
+import { alcanzaParaBuscar, type ResultadosDeBusqueda } from '../../../lib/texto';
 import { normalizarTelefono } from '../telefono';
-import type { Cliente, DatosAlta, DatosEdicion, ErroresAlta, ResultadoAlta, ResultadoEdicion } from '../types';
+import type {
+  Cliente,
+  DatosAlta,
+  DatosEdicion,
+  ErroresAlta,
+  ResultadoAlta,
+  ResultadoEdicion,
+} from '../types';
+import { condicionCliente } from './busqueda';
+
+/** Cuántos resultados muestra el buscador: más no se leen de pie en un mostrador (SPEC-KRILINXI-032). */
+export const MAXIMO_RESULTADOS = 6;
 
 // Los mismos textos que responde el backend (SPEC-ALE186-003): el empleado lee lo mismo
 // lo detecte el dispositivo o el servidor. Exportados para la corrección de lo rechazado
@@ -48,6 +60,30 @@ export async function buscarPorTelefono(base: BaseLocal, telefono: string, exclu
   ]);
   const [fila] = filas;
   return fila ? aCliente(fila) : null;
+}
+
+/**
+ * Los clientes que coinciden con lo escrito, mientras se escribe — SPEC-KRILINXI-032. Por
+ * nombre (sin tildes ni mayúsculas), parte del teléfono o carnet: ver `api/busqueda.ts`.
+ *
+ * Pide uno más de los que muestra: si llega, hay más resultados y la pantalla lo dice ("escribí
+ * un poco más"), sin contar todos. Con menos de 2 letras o 3 dígitos no busca.
+ */
+export async function buscarClientes(base: BaseLocal, texto: string): Promise<ResultadosDeBusqueda<Cliente>> {
+  const condicion = alcanzaParaBuscar(texto)
+    ? condicionCliente(texto, { nombre: 'nombre', telefono: 'telefono', carnet: 'carnet' })
+    : null;
+  if (!condicion) return { resultados: [], hayMas: false };
+
+  const filas = await base.consultar(
+    `SELECT id, nombre, telefono, carnet FROM clientes
+      WHERE ${condicion.donde}
+      ORDER BY ${condicion.orden}, nombre
+      LIMIT ?`,
+    [...condicion.parametros, ...condicion.parametrosOrden, MAXIMO_RESULTADOS + 1],
+  );
+  const clientes = filas.map(aCliente).filter((c): c is Cliente => c !== null);
+  return { resultados: clientes.slice(0, MAXIMO_RESULTADOS), hayMas: clientes.length > MAXIMO_RESULTADOS };
 }
 
 /** El mensaje cuando el teléfono ya es de otro cliente: dice de quién es y qué hacer. */

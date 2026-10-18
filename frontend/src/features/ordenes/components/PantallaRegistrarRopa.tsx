@@ -20,7 +20,7 @@ export function PantallaRegistrarRopa() {
   if (paso.tipo === 'cliente') {
     return (
       <>
-        <p className="mt-4 text-xl text-texto-suave">Buscá al cliente por su teléfono.</p>
+        <p className="mt-4 text-xl text-texto-suave">Buscá al cliente por su nombre, teléfono o carnet.</p>
         <PantallaClientes alElegir={(cliente) => setPaso({ tipo: 'ropa', cliente })} />
       </>
     );
