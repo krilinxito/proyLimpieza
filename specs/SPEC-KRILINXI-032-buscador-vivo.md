@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-032
 name: Buscar mientras se escribe
 slug: buscador-vivo
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-18
 scope:
@@ -12,7 +12,13 @@ scope:
   - frontend/src/lib/texto*
 priority: high
 depends_on: []
-tests: []
+tests:
+  - frontend/src/components/BuscadorVivo.test.tsx
+  - frontend/src/features/clientes/api/clientesLocal.test.ts
+  - frontend/src/features/clientes/components/PantallaClientes.test.tsx
+  - frontend/src/features/ordenes/api/ropaLocal.test.ts
+  - frontend/src/lib/texto.test.ts
+  - frontend/src/test/buscador.ts
 ---
 
 ## Descripción
