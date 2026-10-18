@@ -62,12 +62,21 @@ function conLentitud(control: ReturnType<typeof envolver>): ReturnType<typeof en
         return base.consultar(sql, parametros);
       },
       // Los avisos se demoran, pero en fila: llegan tarde y en el mismo orden, como en la base
-      // de verdad. Desordenarlos daría fallos que en la tablet no pueden pasar.
+      // de verdad. Desordenarlos daría fallos que en la tablet no pueden pasar. Y como en la base
+      // de verdad, quien dejó de escuchar no recibe los que quedaban en fila: si no, alguno llega
+      // con el entorno del test ya desmontado ("window is not defined").
       observarEstado: (alCambiar) => {
         let fila: Promise<unknown> = Promise.resolve();
-        return base.observarEstado((estado) => {
-          fila = fila.then(demora).then(() => alCambiar(estado));
+        let escuchando = true;
+        const dejar = base.observarEstado((estado) => {
+          fila = fila.then(demora).then(() => {
+            if (escuchando) alCambiar(estado);
+          });
         });
+        return () => {
+          escuchando = false;
+          dejar();
+        };
       },
     },
   };
