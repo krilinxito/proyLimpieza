@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-034
 name: Registrar ropa desde el mostrador
 slug: mostrador-registrar
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-18
 scope:
@@ -16,7 +16,14 @@ scope:
 priority: high
 depends_on:
   - SPEC-KRILINXI-033
-tests: []
+tests:
+  - frontend/src/App.test.tsx
+  - frontend/src/components/BuscadorVivo.test.tsx
+  - frontend/src/features/atencion/components/AtenderEnUnaSucursal.test.tsx
+  - frontend/src/features/mostrador/components/RegistrarEnMostrador.test.tsx
+  - frontend/src/features/ordenes/api/ordenesLocal.test.ts
+  - frontend/src/pages/Marco.test.tsx
+  - frontend/src/pages/rutas.test.ts
 ---
 
 ## Descripción
