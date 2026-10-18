@@ -27,7 +27,7 @@ export type ResultadoCorreccion =
 
 export const MENSAJES_CORRECCION = {
   estado:
-    'Un cambio de estado no se corrige aquí: puede que la ropa ya esté en otro paso. Buscá la boleta en "Ropa en el local", fijate cómo está y, si hace falta, hacé el cambio de nuevo desde ahí.',
+    'Un cambio de estado no se corrige aquí: puede que la ropa ya esté en otro paso. Buscá la boleta en el Mostrador, fijate cómo está y, si hace falta, hacé el cambio de nuevo desde ahí.',
   desconocido: 'Este registro no se puede corregir desde aquí. Avisale al encargado o descartalo.',
   sinCambios: 'No cambiaste ningún dato. Corregí lo que está mal o descartá el registro.',
   yaNoEsta: 'Ese registro ya no está en esta tablet. Descartalo y, si hace falta, volvé a hacerlo.',

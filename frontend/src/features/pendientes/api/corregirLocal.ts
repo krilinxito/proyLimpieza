@@ -18,7 +18,7 @@
  *  - **Una edición (PATCH)**. El registro sí existe en el servidor. Se vuelve a escribir con
  *    `UPDATE`, solo con lo que difiere de lo que hay en la tablet. Un cambio de estado no se
  *    corrige aquí: si el servidor lo rechazó es que la ropa ya está en otro estado, y eso se
- *    mira y se rehace desde "Ropa en el local".
+ *    mira y se rehace desde el Mostrador.
  *
  * Qué campos se corrigen de cada tabla está en `../correccion.ts`. Las validaciones son las mismas que en la pantalla de origen, con sus mismos textos
  * (`validarRopa`, los mensajes de clientes, cobros y entregas).

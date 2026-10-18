@@ -74,7 +74,7 @@ export function FormularioCorreccion({ registro, guardar, alGuardar, alVolver, a
         {encabezado}
         <p className="mt-4 text-xl text-texto">{correccion.mensaje}</p>
         <div className="mt-6 grid gap-3">
-          <EnlaceBoton a="/ropa">Ir a Ropa en el local</EnlaceBoton>
+          <EnlaceBoton a="/mostrador">Ir al Mostrador</EnlaceBoton>
           <Boton variante="secundario" onClick={alVolver}>
             Volver a la lista
           </Boton>

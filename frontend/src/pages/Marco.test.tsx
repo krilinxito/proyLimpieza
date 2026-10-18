@@ -63,7 +63,8 @@ describe('Marco: la cabecera — SPEC-KRILINXI-023', () => {
 describe('Marco: el menú — SPEC-KRILINXI-023', () => {
   it('un EMPLEADO ve el Inicio y el mostrador, cada uno con su ícono', () => {
     abrir();
-    expect(nombres(menu())).toEqual(['Inicio', 'Registrar ropa', 'Ropa en el local', 'Entregar ropa', 'Cobrar', 'Clientes']);
+    // El Mostrador junta Ropa en el local, Entregar ropa y Cobrar desde SPEC-KRILINXI-033.
+    expect(nombres(menu())).toEqual(['Inicio', 'Mostrador', 'Registrar ropa', 'Clientes']);
     for (const enlace of within(menu()).getAllByRole('link')) {
       expect(enlace.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
     }
@@ -75,13 +76,14 @@ describe('Marco: el menú — SPEC-KRILINXI-023', () => {
   });
 
   it('marca la pantalla actual, y solo esa, como página actual', () => {
+    // /cobrar lleva al Mostrador desde SPEC-KRILINXI-033: lo que queda marcado es el Mostrador.
     abrir('/cobrar');
-    const actual = within(menu()).getByRole('link', { name: 'Cobrar' });
+    const actual = within(menu()).getByRole('link', { name: 'Mostrador' });
     expect(actual).toHaveAttribute('aria-current', 'page');
     // No solo color: negrita y la barra de la izquierda cuelgan del mismo atributo.
     expect(actual).toHaveClass('aria-[current=page]:font-bold', 'aria-[current=page]:border-marca');
     expect(within(menu()).getByRole('link', { name: 'Inicio' })).not.toHaveAttribute('aria-current');
-    expect(within(menu()).getByRole('link', { name: 'Ropa en el local' })).not.toHaveAttribute('aria-current');
+    expect(within(menu()).getByRole('link', { name: 'Registrar ropa' })).not.toHaveAttribute('aria-current');
   });
 
   it('elegir un destino lleva a esa pantalla', async () => {
@@ -153,8 +155,8 @@ describe('Marco: el cajón del menú — SPEC-KRILINXI-023', () => {
 
   it('elegir un destino navega y lo cierra', async () => {
     const { cajon } = abrirCajon();
-    fireEvent.click(within(cajon).getByRole('link', { name: 'Entregar ropa' }));
-    expect(await screen.findByRole('heading', { name: 'Entregar ropa', level: 1 })).toBeInTheDocument();
+    fireEvent.click(within(cajon).getByRole('link', { name: 'Mostrador' }));
+    expect(await screen.findByRole('heading', { name: 'Mostrador', level: 1 })).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: 'Menú' })).not.toBeInTheDocument();
   });
 });

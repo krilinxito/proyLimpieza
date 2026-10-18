@@ -46,8 +46,8 @@ describe('App: rutas protegidas — SPEC-KRILINXI-003', () => {
   it('con sesión guardada abre directo, sin pedir la contraseña ni llamar a la API', () => {
     // Es lo que pasa al recargar la página: la sesión ya está en el dispositivo.
     const servidor = simularApi(() => 'sin-conexion');
-    renderEnRuta(<App />, '/cobrar');
-    expect(screen.getByRole('heading', { name: 'Cobrar' })).toBeInTheDocument();
+    renderEnRuta(<App />, '/mostrador');
+    expect(screen.getByRole('heading', { name: 'Mostrador' })).toBeInTheDocument();
     expect(servidor.pedidos).toEqual([]);
   });
 
@@ -74,9 +74,10 @@ describe('App: menú por rol — SPEC-KRILINXI-003', () => {
       .getAllByRole('link')
       .map((enlace) => document.getElementById(enlace.getAttribute('aria-labelledby') ?? '')?.textContent);
 
-  it('un EMPLEADO ve Registrar ropa, Ropa en el local, Entregar ropa, Cobrar y Clientes (SPEC-KRILINXI-008)', () => {
+  it('un EMPLEADO ve el Mostrador, Registrar ropa y Clientes (SPEC-KRILINXI-008, SPEC-KRILINXI-033)', () => {
     renderEnRuta(<App />, '/', { sesion: sesionDePrueba({ rol: 'EMPLEADO' }) });
-    expect(nombresDelMenu()).toEqual(['Registrar ropa', 'Ropa en el local', 'Entregar ropa', 'Cobrar', 'Clientes']);
+    // Ropa en el local, Entregar ropa y Cobrar son una sola tarea desde SPEC-KRILINXI-033: el Mostrador.
+    expect(nombresDelMenu()).toEqual(['Mostrador', 'Registrar ropa', 'Clientes']);
   });
 
   it('un ADMIN además ve Estadísticas, y no ve Registrar ropa (SPEC-KRILINXI-006)', () => {

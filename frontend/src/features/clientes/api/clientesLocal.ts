@@ -86,6 +86,12 @@ export async function buscarClientes(base: BaseLocal, texto: string): Promise<Re
   return { resultados: clientes.slice(0, MAXIMO_RESULTADOS), hayMas: clientes.length > MAXIMO_RESULTADOS };
 }
 
+/** Un cliente por su id, o null — SPEC-KRILINXI-033: la ficha del Mostrador se abre también desde una boleta. */
+export async function obtenerCliente(base: BaseLocal, id: string): Promise<Cliente | null> {
+  const [fila] = await base.consultar('SELECT id, nombre, telefono, carnet FROM clientes WHERE id = ?', [id]);
+  return fila ? aCliente(fila) : null;
+}
+
 /** El mensaje cuando el teléfono ya es de otro cliente: dice de quién es y qué hacer. */
 export const telefonoDeOtro = (nombre: string) => `Ese teléfono ya es de ${nombre}. Revisalo y volvé a escribirlo.`;
 

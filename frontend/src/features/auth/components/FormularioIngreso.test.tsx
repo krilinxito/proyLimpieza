@@ -55,9 +55,10 @@ describe('Ingresar al sistema — SPEC-KRILINXI-003', () => {
 
   it('después de entrar lleva a la pantalla que se había pedido', async () => {
     servidorQueResponde(RESPUESTA_OK);
+    // /cobrar es parte del Mostrador desde SPEC-KRILINXI-033: entra y sigue hasta ahí.
     abrirSinSesion('/cobrar');
     entrarComo('rosa', 'secreta');
-    expect(await screen.findByRole('heading', { name: 'Cobrar' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Mostrador' })).toBeInTheDocument();
   });
 
   it.each([

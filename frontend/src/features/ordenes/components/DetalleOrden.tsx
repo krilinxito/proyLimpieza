@@ -20,6 +20,8 @@ type Props = {
    * Recibe la orden y una función para volver a leerla después de cambiarla.
    */
   accionesExtra?: (orden: OrdenVista, recargar: () => Promise<void>) => ReactNode;
+  /** Lo que dice el botón de volver: "Volver a la lista", o adónde vuelve (SPEC-KRILINXI-033). */
+  textoVolver?: string;
 };
 
 /** Pares dato/valor, uno debajo del otro. */
@@ -40,12 +42,15 @@ function Datos({ pares }: { pares: [string, ReactNode][] }) {
  * Todo sobre una ropa: sus datos, lo que pagó y lo que se puede hacer con ella —
  * SPEC-KRILINXI-008. Solo ofrece lo que el estado permite: una cerrada no se toca.
  */
-export function DetalleOrden({ ordenId, alVolver, accionesExtra }: Props) {
+export function DetalleOrden({ ordenId, alVolver, accionesExtra, textoVolver = 'Volver a la lista' }: Props) {
   const ropa = useRopa();
   const [orden, setOrden] = useState<OrdenVista | null | undefined>(undefined);
   const [cobrando, setCobrando] = useState(false);
   const [anulando, setAnulando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
+  // Lo que se acaba de hacer, para decirlo (SPEC-KRILINXI-033): después de cobrar, la persona
+  // tiene que ver que quedó guardado sin tener que fijarse si el saldo bajó.
+  const [hecho, setHecho] = useState<string | null>(null);
 
   const recargar = useCallback(async () => {
     if (!ropa.lista) return;
@@ -63,7 +68,7 @@ export function DetalleOrden({ ordenId, alVolver, accionesExtra }: Props) {
         <p className="mt-6 text-xl text-texto-suave">No se encontró esa boleta en esta sucursal.</p>
         <div className="mt-4">
           <Boton variante="secundario" onClick={alVolver}>
-            Volver a la lista
+            {textoVolver}
           </Boton>
         </div>
       </>
@@ -74,6 +79,7 @@ export function DetalleOrden({ ordenId, alVolver, accionesExtra }: Props) {
 
   async function pasarA(destino: EstadoOrden) {
     if (!ropa.lista || !orden) return;
+    setHecho(null);
     const resultado = await ropa.cambiarEstado(orden.id, destino);
     setAviso(resultado.tipo === 'hecho' ? null : resultado.mensaje);
     await recargar();
@@ -130,6 +136,7 @@ export function DetalleOrden({ ordenId, alVolver, accionesExtra }: Props) {
       </Tarjeta>
 
       {aviso && <Aviso tipo="error">{aviso}</Aviso>}
+      {hecho && <Aviso tipo="exito">{hecho}</Aviso>}
 
       {cerrada && (
         <Aviso tipo="informacion">
@@ -147,7 +154,13 @@ export function DetalleOrden({ ordenId, alVolver, accionesExtra }: Props) {
             </Boton>
           ))}
           {orden.saldo > 0 && (
-            <Boton variante="secundario" onClick={() => setCobrando(true)}>
+            <Boton
+              variante="secundario"
+              onClick={() => {
+                setHecho(null);
+                setCobrando(true);
+              }}
+            >
               Cobrar
             </Boton>
           )}
@@ -164,6 +177,7 @@ export function DetalleOrden({ ordenId, alVolver, accionesExtra }: Props) {
           cobrar={(datosCobro) => ropa.cobrar(orden.id, datosCobro)}
           alCobrar={() => {
             setCobrando(false);
+            setHecho('Cobro guardado.');
             void recargar();
           }}
           alCancelar={() => setCobrando(false)}
@@ -172,7 +186,7 @@ export function DetalleOrden({ ordenId, alVolver, accionesExtra }: Props) {
 
       <div className="mt-2">
         <Boton variante="secundario" onClick={alVolver}>
-          Volver a la lista
+          {textoVolver}
         </Boton>
       </div>
 
