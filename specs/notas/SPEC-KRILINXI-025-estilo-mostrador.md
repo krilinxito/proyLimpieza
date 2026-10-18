@@ -77,7 +77,12 @@ lee el `<dd>` que le sigue. Por eso, al destacar "Falta pagar", se lo sacó de l
   final de cada archivo, con la etiqueta de esta spec.
 - **Las pruebas de la paleta** miran clases (`bg-fondo`, `text-peligro-texto`), porque jsdom no pinta;
   las de accesibilidad miran roles y nombres (`region` "Cuentas", `heading` de nivel 3, `alert`).
-- La suite pasó también en modo lento (`LENTO_MS=200`).
+- La suite pasó también en modo lento (`LENTO_MS=200`). Al cerrar la spec, una corrida lenta salió
+  con código 1 aunque los 863 tests pasaban: un aviso de `observarEstado` que quedaba en la fila
+  demorada llegó con el jsdom de `PantallaClientes.test.tsx` ya desmontado ("window is not defined").
+  El defecto era del helper (`test/baseLocalDePrueba.ts`, SPEC-KRILINXI-019), fuera del alcance de
+  esta spec: dejar de escuchar no vaciaba la fila. Ahora la vacía, como la base de verdad, y se
+  arregló acá para no cerrar con el modo lento en rojo (después pasaron tres corridas limpias).
 
 ## Si mañana tenés que tocar esto
 
