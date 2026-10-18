@@ -33,13 +33,13 @@ function Opciones<T extends string>({
   const grupo = useId();
   return (
     <fieldset className="mt-4" aria-describedby={error ? `${grupo}-error` : undefined}>
-      <legend className="text-xl font-semibold text-slate-900">{pregunta}</legend>
+      <legend className="text-xl font-semibold text-texto">{pregunta}</legend>
       <div className="mt-2 grid grid-cols-2 gap-3">
         {opciones.map((o) => (
           <label
             key={o.valor}
             className={`flex min-h-14 items-center gap-3 rounded-lg border-2 px-4 text-xl ${
-              valor === o.valor ? 'border-sky-700 bg-sky-50' : 'border-slate-400 bg-white'
+              valor === o.valor ? 'border-marca bg-marca-suave font-semibold' : 'border-borde bg-superficie'
             }`}
           >
             <input type="radio" name={grupo} className="size-6" checked={valor === o.valor} onChange={() => alElegir(o.valor)} />
@@ -48,7 +48,7 @@ function Opciones<T extends string>({
         ))}
       </div>
       {error && (
-        <p id={`${grupo}-error`} className="mt-2 text-lg text-red-700">
+        <p id={`${grupo}-error`} className="mt-2 text-lg font-semibold text-peligro-texto">
           {error}
         </p>
       )}
@@ -88,8 +88,8 @@ export function FormularioCuenta({ cuenta, sucursales, guardar, alTerminar, alCa
   }
 
   return (
-    <form onSubmit={enviarFormulario} noValidate aria-label={titulo} className="mt-6 grid gap-2 rounded-lg border-2 border-sky-700 p-4">
-      <h2 className="text-2xl font-bold text-slate-900">{titulo}</h2>
+    <form onSubmit={enviarFormulario} noValidate aria-label={titulo} className="mt-6 grid gap-2 rounded-2xl border-2 border-marca bg-superficie p-5 shadow-sm">
+      <h2 className="text-2xl font-bold text-texto">{titulo}</h2>
       <CampoTexto
         etiqueta="Nombre y apellido"
         value={datos.nombreCompleto}
@@ -99,7 +99,7 @@ export function FormularioCuenta({ cuenta, sucursales, guardar, alTerminar, alCa
         autoFocus
       />
       {cuenta ? (
-        <p className="mt-4 text-xl text-slate-800">
+        <p className="mt-4 text-xl text-texto">
           Entra como «{cuenta.username}» · {TEXTO_ROL[cuenta.rol]}
         </p>
       ) : (

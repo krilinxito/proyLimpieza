@@ -21,21 +21,18 @@ async function abrir(responder: Parameters<typeof simularApi>[0] = () => ({ stat
     { id: SUR, nombre: 'Sur', direccion: null, telefono: null, activa: 0 },
   ]);
   renderEnRuta(<App />, '/sucursales', { sesion: sesionDePrueba({ rol: 'ADMIN' }), baseLocal: control });
-  await screen.findByText('Centro — Abierta');
+  await screen.findByRole('region', { name: 'Centro' });
   return { servidor, db };
 }
 
-const tarjeta = (titulo: string) => {
-  const li = screen.getByText(titulo).closest('li');
-  if (!li) throw new Error(`No está la tarjeta "${titulo}".`);
-  return within(li);
-};
+/** La tarjeta de una sucursal: desde SPEC-KRILINXI-027 es una región con su nombre de título. */
+const tarjeta = (nombre: string) => within(screen.getByRole('region', { name: nombre }));
 
 describe('Pantalla de sucursales — SPEC-KRILINXI-017', () => {
   it('lista las sucursales de la base local, sin pedir nada a la API', async () => {
     const { servidor } = await abrir();
-    expect(screen.getByText('Sur — Cerrada')).toBeInTheDocument();
-    expect(tarjeta('Centro — Abierta').getByText('Av. Busch 123')).toBeInTheDocument();
+    expect(tarjeta('Sur').getByText('Cerrada')).toBeInTheDocument();
+    expect(tarjeta('Centro').getByText('Av. Busch 123')).toBeInTheDocument();
     expect(servidor.pedidos).toEqual([]);
     sinJerga();
   });
@@ -55,7 +52,7 @@ describe('Pantalla de sucursales — SPEC-KRILINXI-017', () => {
 
   it('cambiar datos arranca con los actuales y manda solo lo que cambió', async () => {
     const { servidor } = await abrir();
-    fireEvent.click(tarjeta('Centro — Abierta').getByRole('button', { name: 'Cambiar datos' }));
+    fireEvent.click(tarjeta('Centro').getByRole('button', { name: 'Cambiar datos' }));
     expect(screen.getByLabelText('Dirección (si la tiene)')).toHaveValue('Av. Busch 123');
     fireEvent.change(screen.getByLabelText('Teléfono (si lo tiene)'), { target: { value: '2209' } });
     fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
@@ -80,7 +77,7 @@ describe('Pantalla de sucursales — SPEC-KRILINXI-017', () => {
       status: 409,
       data: cuerpoError('SUCURSAL_CON_ROPA', 'Quedan 2 órdenes con ropa en esta sucursal.'),
     }));
-    fireEvent.click(tarjeta('Centro — Abierta').getByRole('button', { name: 'Cerrar sucursal' }));
+    fireEvent.click(tarjeta('Centro').getByRole('button', { name: 'Cerrar sucursal' }));
     const dialogo = screen.getByRole('dialog', { name: '¿Cerrar la sucursal Centro?' });
     expect(dialogo).toHaveTextContent('No va a poder recibir ropa nueva ni personal nuevo.');
     sinJerga();
@@ -93,7 +90,7 @@ describe('Pantalla de sucursales — SPEC-KRILINXI-017', () => {
 
   it('una cerrada se puede volver a abrir, con confirmación', async () => {
     const { servidor } = await abrir();
-    fireEvent.click(tarjeta('Sur — Cerrada').getByRole('button', { name: 'Volver a abrir' }));
+    fireEvent.click(tarjeta('Sur').getByRole('button', { name: 'Volver a abrir' }));
     fireEvent.click(screen.getByRole('button', { name: 'Sí, volver a abrir' }));
 
     await screen.findByText('Guardado. Puede tardar unos segundos en verse en la lista.');
@@ -106,7 +103,23 @@ describe('Pantalla de sucursales — SPEC-KRILINXI-017', () => {
 
     expect(screen.getByText(/Para hacer cambios hace falta internet/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Agregar sucursal' })).toBeDisabled();
-    expect(tarjeta('Centro — Abierta').getByRole('button', { name: 'Cerrar sucursal' })).toBeDisabled();
+    expect(tarjeta('Centro').getByRole('button', { name: 'Cerrar sucursal' })).toBeDisabled();
     sinJerga();
+  });
+});
+
+describe('Sucursales con el tema — SPEC-KRILINXI-027', () => {
+  it('cada sucursal es una tarjeta con su estado en una insignia: abierta en verde, cerrada en advertencia', async () => {
+    await abrir();
+    expect(tarjeta('Centro').getByText('Abierta')).toHaveClass('rounded-full', 'bg-exito-fondo');
+    expect(tarjeta('Sur').getByText('Cerrada')).toHaveClass('rounded-full', 'bg-advertencia-fondo');
+    sinJerga();
+  });
+
+  it('sin internet, cerrar y volver a abrir siguen deshabilitados', async () => {
+    sinRed();
+    await abrir();
+    expect(tarjeta('Centro').getByRole('button', { name: 'Cerrar sucursal' })).toBeDisabled();
+    expect(tarjeta('Sur').getByRole('button', { name: 'Volver a abrir' })).toBeDisabled();
   });
 });

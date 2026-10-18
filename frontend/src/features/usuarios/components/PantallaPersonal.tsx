@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { AvisoResultado, AvisoSinRed, avisoDe } from '../../../components/AvisosAdmin';
 import { Boton } from '../../../components/Boton';
+import { Insignia, type TonoInsignia } from '../../../components/Insignia';
 import { ModalConfirmacion } from '../../../components/ModalConfirmacion';
+import { Tarjeta } from '../../../components/Tarjeta';
 import { useEnLinea } from '../../../hooks/useEnLinea';
 import { useSession } from '../../../hooks/useSession';
 import { TEXTO_ROL } from '../../../lib/dominio';
@@ -11,6 +13,17 @@ import type { Cuenta } from '../types';
 import { FormularioCuenta } from './FormularioCuenta';
 
 type Edicion = { tipo: 'nueva' } | { tipo: 'editar'; cuenta: Cuenta } | null;
+
+/**
+ * Cómo se ve si la cuenta puede entrar — SPEC-KRILINXI-027. Activa en verde: es lo normal y lo que
+ * se busca. Dada de baja en neutro: no es un error, es una cuenta que ya no se usa.
+ */
+const ESTADO_CUENTA: Record<'activa' | 'baja', { texto: string; tono: TonoInsignia }> = {
+  activa: { texto: 'Activa', tono: 'exito' },
+  baja: { texto: 'Dada de baja', tono: 'neutro' },
+};
+
+const estadoDe = (cuenta: Cuenta) => ESTADO_CUENTA[cuenta.activo ? 'activa' : 'baja'];
 
 /**
  * El personal para el admin — SPEC-KRILINXI-017: las cuentas (de la base local), y darlas de
@@ -26,7 +39,7 @@ export function PantallaPersonal() {
   const [baja, setBaja] = useState<Cuenta | null>(null);
   const [aviso, setAviso] = useState<ReturnType<typeof avisoDe> | null>(null);
 
-  if (cuentas === null) return <p className="mt-6 text-xl text-slate-700">Buscando…</p>;
+  if (cuentas === null) return <p className="mt-6 text-xl text-texto-suave">Buscando…</p>;
 
   async function darDeBaja(cuenta: Cuenta) {
     const resultado = await cambiosDeCuenta.darDeBaja(cuenta);
@@ -72,35 +85,34 @@ export function PantallaPersonal() {
       </div>
       <ul className="mt-6 grid gap-4">
         {cuentas.map((c) => (
-          <li key={c.id} className="rounded-lg border-2 border-slate-300 bg-white p-4 text-xl">
-            <p className="font-semibold text-slate-900">
-              {c.nombreCompleto}
-              {!c.activo && ' — dada de baja'}
-            </p>
-            <p className="mt-1 text-slate-800">
-              Entra como «{c.username}» · {TEXTO_ROL[c.rol]}
-              {c.sucursal && ` · ${c.sucursal}`}
-            </p>
-            {c.activo && (
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                <Boton
-                  variante="secundario"
-                  disabled={!enLinea}
-                  onClick={() => {
-                    setAviso(null);
-                    setEdicion({ tipo: 'editar', cuenta: c });
-                  }}
-                >
-                  Cambiar datos
-                </Boton>
-                {/* Un admin no puede darse de baja a sí mismo (SPEC-ALE186-009). */}
-                {c.id !== sesion?.usuario.id && (
-                  <Boton variante="peligro" disabled={!enLinea} onClick={() => setBaja(c)}>
-                    Dar de baja
+          <li key={c.id}>
+            <Tarjeta titulo={c.nombreCompleto}>
+              <Insignia tono={estadoDe(c).tono}>{estadoDe(c).texto}</Insignia>
+              <p className="mt-2 text-xl text-texto">
+                Entra como «{c.username}» · {TEXTO_ROL[c.rol]}
+                {c.sucursal && ` · ${c.sucursal}`}
+              </p>
+              {c.activo && (
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <Boton
+                    variante="secundario"
+                    disabled={!enLinea}
+                    onClick={() => {
+                      setAviso(null);
+                      setEdicion({ tipo: 'editar', cuenta: c });
+                    }}
+                  >
+                    Cambiar datos
                   </Boton>
-                )}
-              </div>
-            )}
+                  {/* Un admin no puede darse de baja a sí mismo (SPEC-ALE186-009). */}
+                  {c.id !== sesion?.usuario.id && (
+                    <Boton variante="peligro" disabled={!enLinea} onClick={() => setBaja(c)}>
+                      Dar de baja
+                    </Boton>
+                  )}
+                </div>
+              )}
+            </Tarjeta>
           </li>
         ))}
       </ul>
