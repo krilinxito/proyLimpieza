@@ -33,6 +33,17 @@ async function abrirPanel() {
 
 const seccion = (nombre: string) => screen.getByRole('region', { name: nombre });
 
+/**
+ * Las celdas de una fila de la tabla de un gráfico, por el encabezado de la fila. Desde
+ * SPEC-KRILINXI-026 cada número del panel está en el dibujo y en su tabla: los tests leen la tabla,
+ * que es lo que lee el lector de pantalla.
+ */
+function fila(contenedor: HTMLElement, tabla: string, encabezado: string): string[] {
+  const deLaTabla = within(within(contenedor).getByRole('table', { name: tabla }));
+  const celdas = deLaTabla.getByRole('rowheader', { name: encabezado }).closest('tr')?.children ?? [];
+  return [...celdas].map((celda) => celda.textContent ?? '');
+}
+
 describe('Panel de estadísticas — SPEC-KRILINXI-015', () => {
   it('el ADMIN ve el panel en vez del aviso de en construcción', async () => {
     simularEstadisticas();
@@ -66,8 +77,15 @@ describe('Panel de estadísticas — SPEC-KRILINXI-015', () => {
     const cobrado = seccion('Cobrado');
     expect(within(cobrado).getAllByText('Bs 125,50')).not.toHaveLength(0);
     expect(within(cobrado).getByText('Centro: Bs 125,50')).toBeInTheDocument();
-    expect(within(cobrado).getByText('Pago con QR').nextElementSibling).toHaveTextContent('Bs 25,50');
-    expect(within(cobrado).getByText('Tarjeta').nextElementSibling).toHaveTextContent('Bs 0,00');
+    // Sucursal, Efectivo, Pago con QR, Tarjeta, Transferencia y Total (SPEC-KRILINXI-026: la tabla del gráfico).
+    expect(fila(cobrado, 'Cobrado por sucursal y forma de pago', 'Centro')).toEqual([
+      'Centro',
+      'Bs 100,00',
+      'Bs 25,50',
+      'Bs 0,00',
+      'Bs 0,00',
+      'Bs 125,50',
+    ]);
   });
 
   it('muestra los saldos y la ropa sin recoger con su antigüedad en días', async () => {
@@ -76,11 +94,11 @@ describe('Panel de estadísticas — SPEC-KRILINXI-015', () => {
     await screen.findByRole('heading', { name: 'Falta cobrar hasta hoy' });
 
     const saldos = seccion('Falta cobrar');
-    expect(within(saldos).getByText('Más de 30 días').nextElementSibling).toHaveTextContent('1 boleta — Bs 30,00');
+    expect(fila(saldos, 'Falta cobrar según los días', 'Más de 30 días')).toEqual(['Más de 30 días', '1 boleta', 'Bs 30,00']);
     expect(within(saldos).getByText(/Debe Bs 30,00 de Bs 50,00 · Listo para retirar · hace 45 días/)).toBeInTheDocument();
 
     const ropa = seccion('Ropa sin recoger');
-    expect(within(ropa).getByText('Hasta 7 días').nextElementSibling).toHaveTextContent('1 boleta');
+    expect(fila(ropa, 'Ropa sin recoger según los días', 'Hasta 7 días')).toEqual(['Hasta 7 días', '1 boleta']);
     expect(within(ropa).getByText(/3 camisas · Centro · Bs 45,00 · hace 2 días/)).toBeInTheDocument();
     sinJerga();
   });
@@ -93,7 +111,9 @@ describe('Panel de estadísticas — SPEC-KRILINXI-015', () => {
     });
     await abrirPanel();
 
-    expect(await screen.findByText('No hubo cobros en este período.')).toBeInTheDocument();
+    // Sin cobros no hay gráfico que dibujar, y lo dice (SPEC-KRILINXI-026).
+    await screen.findByRole('heading', { name: 'Cobrado de hoy' });
+    expect(within(seccion('Cobrado')).getByText('No hay datos en este período.')).toBeInTheDocument();
     expect(screen.getByText('Nadie debe nada en este período.')).toBeInTheDocument();
     expect(screen.getByText('No hay ropa sin recoger en este período.')).toBeInTheDocument();
   });
@@ -284,15 +304,17 @@ describe('Panel de estadísticas: volumen, productividad y clientes — SPEC-KRI
 });
 
 describe('Las barras del volumen sin estilos en línea — SPEC-KRILINXI-020', () => {
-  it('el ancho va en una clase: la del día con más ropa es la más ancha, y un día sin ropa no tiene barra', async () => {
+  // Desde SPEC-KRILINXI-026 las barras son columnas de un SVG: el alto va en un atributo, no en un
+  // `style` ni en una clase.
+  it('el alto va en un atributo del SVG: la del día con más ropa es la más alta, y un día sin ropa no tiene columna', async () => {
     simularEstadisticas();
     await abrirPanel();
     const volumen = await screen.findByRole('region', { name: 'Ropa recibida' });
-    const barra = (fecha: string) => within(volumen).getByText(fecha).nextElementSibling?.querySelector('[aria-hidden="true"]');
+    const columna = (nombre: string) => within(volumen).getByRole('button', { name: nombre }).querySelector('rect');
 
-    expect(barra('15/10/2026')).toHaveClass('w-[60%]');
-    expect(barra('14/10/2026')).toHaveClass('w-[30%]');
-    expect(barra('16/10/2026')).toHaveClass('w-0');
+    expect(columna('15/10/2026: 4 boletas (1 anulada)')).toHaveAttribute('height', '82%');
+    expect(columna('14/10/2026: 2 boletas')).toHaveAttribute('height', '41%');
+    expect(columna('16/10/2026: 0 boletas')).toBeNull();
     expect(volumen.querySelector('[style]')).toBeNull();
   });
 });
