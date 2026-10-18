@@ -10,7 +10,7 @@ import {
   pagoDePrueba,
   SUCURSAL_DE_PRUEBA,
 } from '../../../test/filasDePrueba';
-import { buscarOrdenes, cambiarEstado, cobrar, listarAbiertas, MENSAJES_ACCION, obtenerOrden } from './ropaLocal';
+import { buscarOrdenes, buscarRopaVivo, cambiarEstado, cobrar, listarAbiertas, MENSAJES_ACCION, obtenerOrden } from './ropaLocal';
 
 const ROSA = clienteDePrueba({ nombre: 'Rosa Quispe', telefono: '70123456' });
 const JUAN = clienteDePrueba({ nombre: 'Juan Mamani', telefono: '71111111' });
@@ -200,5 +200,44 @@ describe('Cobrar con la hora del servidor — SPEC-KRILINXI-012', () => {
 
     const filas = await control.base.consultar('SELECT fecha_pago FROM pagos WHERE orden_id = ? AND monto = ?', [recibida.id, '10.00']);
     expect(filas).toEqual([{ fecha_pago: HORA_DEL_SERVIDOR_ISO }]);
+  });
+});
+
+describe('Buscar ropa mientras se escribe — SPEC-KRILINXI-032', () => {
+  const boletas = async (texto: string) => {
+    const { control } = await sucursalConRopa();
+    return (await buscarRopaVivo(control.base, SUCURSAL_DE_PRUEBA, texto)).resultados.map((o) => o.numeroBoleta);
+  };
+
+  it('por número de boleta, también sin los ceros de adelante, solo de esta sucursal', async () => {
+    expect(await boletas('000002')).toEqual(['000002']);
+    // "002" está en 000002 y nada más; la 000001 de otra sucursal nunca aparece.
+    expect(await boletas('002')).toEqual(['000002']);
+  });
+
+  it('por el nombre del cliente sin tildes, con la ropa en el local antes que la cerrada', async () => {
+    const encontradas = await boletas('rosa qui');
+    expect([...encontradas].sort()).toEqual(['000001', '000003', '000004']);
+    // La 000001 sigue en el local; la anulada y la entregada (aunque no haya subido) van después.
+    expect(encontradas[0]).toBe('000001');
+  });
+
+  it('por parte del teléfono del cliente', async () => {
+    expect(await boletas('7111')).toEqual(['000002']);
+  });
+
+  it('la boleta exacta va primero, aunque esté entregada y haya otra abierta que coincide', async () => {
+    const { control, sembrar } = await sucursalConRopa();
+    // Un cliente cuyo teléfono contiene "000004", con ropa en el local: también coincide.
+    const marta = clienteDePrueba({ nombre: 'Marta', telefono: '70000004' });
+    await sembrar('clientes', [marta]);
+    await sembrar('ordenes', [ordenDePrueba({ cliente_id: marta.id, numero_boleta: '000777' })]);
+
+    const { resultados } = await buscarRopaVivo(control.base, SUCURSAL_DE_PRUEBA, '000004');
+    expect(resultados.map((o) => o.numeroBoleta)).toEqual(['000004', '000777']);
+  });
+
+  it('con menos de 2 letras o 3 dígitos no busca', async () => {
+    expect(await boletas('00')).toEqual([]);
   });
 });
