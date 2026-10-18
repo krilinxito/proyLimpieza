@@ -92,6 +92,9 @@ la marca de revisión es la columna `auditoria.revision`, el momento del cierre 
 `sucursales.cerrada_en` (la pone la misma sentencia que cierra, y la borra la que reabre; una
 cerrada sin fecha no acepta ropa), el nombre único de sucursal es el índice
 `uq_sucursales_nombre` (el model traduce su 23505 a 409) y `auditoria.registro_id` tiene índice.
+SPEC-KRILINXI-028 agregó a las sync rules el bucket `atencion_admin`: el ADMIN que atiende el
+mostrador baja la ropa de la sucursal que manda la tablet en el parámetro de cliente `sucursal_id`
+(§7). La autorización es la fila del ADMIN activo que pide, nunca el parámetro.
 
 `frontend/` tiene el scaffolding de SPEC-KRILINXI-001: Vite, Tailwind, rutas y su suite de
 tests. SPEC-KRILINXI-002 añadió las piezas que reutilizan todas las pantallas: `Boton`,
@@ -528,6 +531,14 @@ Definidas en `docker/powersync/sync-rules.yaml`. No son una optimización: son *
 de acceso**. Lo que no está ahí no llega nunca al dispositivo.
 
 - **Bucket `sucursal`** — las `ordenes`, `entregas` y `pagos` de la sucursal del usuario.
+- **Bucket `atencion_admin`** (SPEC-KRILINXI-028) — lo mismo, para el ADMIN que atiende el
+  mostrador: la sucursal sale del parámetro de cliente `sucursal_id` (`request.parameters()`), que
+  la tablet manda al conectarse. Ese parámetro lo controla la tablet, así que **no autoriza nada**:
+  la consulta exige `id = request.user_id() AND rol = 'ADMIN' AND activo = true`, y sin parámetro
+  el bucket no existe. Un empleado no lo recibe nunca, mande lo que mande. Por estar atada a
+  `request.user_id()`, PowerSync no la marca como peligrosa: **no lleva
+  `accept_potentially_dangerous_queries`**, que solo callaría el aviso si alguien rompiera esa
+  condición (lo vigila `backend/tests/unit/syncRules.test.ts`).
 - **Bucket `global`** — `clientes` (el mismo cliente puede dejar ropa en sucursales
   distintas en visitas distintas, y el alta por teléfono tiene que encontrarlo desde
   cualquiera; la ropa de cada orden, eso sí, se retira donde se dejó), más `sucursales` y
@@ -539,9 +550,11 @@ de acceso**. Lo que no está ahí no llega nunca al dispositivo.
 - **Después de cambiar `sync-rules.yaml`, reiniciar PowerSync** (`docker compose restart
   powersync`): lee las reglas solo al arrancar. No se pierde nada: arma la versión nueva en una
   ranura de replicación aparte y cambia cuando termina. Antes de reiniciar, el archivo se puede
-  validar con el validador que trae el propio contenedor (ver la bitácora de SPEC-ALE186-024).
+  validar con el validador que trae el propio contenedor (ver la bitácora de SPEC-ALE186-024), y
+  ver qué buckets recibe cada cuenta con el motor de reglas (ver la bitácora de SPEC-KRILINXI-028).
 - **`auditoria` no se sincroniza a ningún dispositivo.** Se consulta por API, solo admin.
-- **El admin no descarga el histórico**, porque su dashboard es online (sección 8).
+- **El admin no descarga el histórico**, porque su dashboard es online (sección 8). La
+  excepción es cuando atiende el mostrador: baja la ropa de esa sucursal (`atencion_admin`).
 
 Una limitación de PowerSync que explica una rareza del schema: las consultas de datos
 **no admiten JOINs ni subconsultas**. Por eso `entregas` y `pagos` llevan su propio
@@ -800,6 +813,10 @@ implemente una spec de las de abajo actualiza su línea cuando la mergee.
   un error de CORS en la consola. En producción la variable es obligatoria.
 - **Sync rules del bucket `global`** (SPEC-ALE186-024, hecho): ya no baja clientes, sucursales
   ni usuarios a una cuenta dada de baja. Para las activas no cambia nada. **Después del pull,
+  `docker compose restart powersync`**, para que lea las reglas nuevas.
+- **El ADMIN que atiende baja la ropa de una sucursal** (SPEC-KRILINXI-028, hecho en las sync
+  rules; la tablet es SPEC-KRILINXI-029). Para recibirla, la tablet del ADMIN conecta PowerSync con
+  `params: { sucursal_id }`; sin ese parámetro no baja nada, como antes. **Después del pull,
   `docker compose restart powersync`**, para que lea las reglas nuevas.
 - **Renovar el token de PowerSync** (SPEC-ALE186-025 en el backend, SPEC-KRILINXI-010 en el
   frontend, hecho). `login` y `renovar` devuelven el `tokenPowerSync` con 12 h de vida y el
