@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-034
 name: Registrar ropa desde el mostrador
 slug: mostrador-registrar
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-18
 scope:
