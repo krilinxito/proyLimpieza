@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-030
 name: Tema oscuro
 slug: tema-oscuro
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-18
 scope:
@@ -14,7 +14,15 @@ scope:
   - CLAUDE.md
 priority: medium
 depends_on: []
-tests: []
+tests:
+  - frontend/src/App.test.tsx
+  - frontend/src/estilos.test.tsx
+  - frontend/src/features/auth/SesionProvider.test.tsx
+  - frontend/src/lib/tema.test.ts
+  - frontend/src/pages/Marco.test.tsx
+  - frontend/src/test/setup.ts
+  - frontend/src/test/sistemaDePrueba.ts
+  - frontend/src/test/tema.test.ts
 ---
 
 ## Descripción
