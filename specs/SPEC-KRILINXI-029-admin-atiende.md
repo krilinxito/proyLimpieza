@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-029
 name: El admin atiende en una sucursal
 slug: admin-atiende
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-18
 scope:
