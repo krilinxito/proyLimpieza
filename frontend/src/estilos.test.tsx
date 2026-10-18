@@ -64,6 +64,6 @@ describe('Estilos con Tailwind — SPEC-KRILINXI-001', () => {
 
   it('las pantallas llevan puestas esas clases', () => {
     renderEnRuta(<Inicio />);
-    expect(screen.getByRole('link', { name: 'Registrar ropa' })).toHaveClass('bg-superficie', 'rounded-2xl');
+    expect(screen.getByRole('link', { name: 'Mostrador' })).toHaveClass('bg-superficie', 'rounded-2xl');
   });
 });

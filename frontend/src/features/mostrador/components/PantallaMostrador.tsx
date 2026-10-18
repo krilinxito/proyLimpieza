@@ -1,17 +1,30 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Boton } from '../../../components/Boton';
 import { BuscadorVivo } from '../../../components/BuscadorVivo';
 import { Insignia } from '../../../components/Insignia';
 import { TEXTO_ESTADO_ORDEN } from '../../../lib/dominio';
 import { TONO_ESTADO } from '../../ordenes/estado';
+import { ResumenRopa } from '../../ordenes/components/ResumenRopa';
 import { TarjetaOrden } from '../../ordenes/components/TarjetaOrden';
-import type { OrdenVista } from '../../ordenes/types';
+import type { OrdenVista, RopaRegistrada } from '../../ordenes/types';
 import { useMostrador } from '../hooks/useMostrador';
 import type { Encontrado } from '../types';
 import { FichaCliente } from './FichaCliente';
+import { RegistrarEnMostrador } from './RegistrarEnMostrador';
 
-/** Dónde está quien atiende: mirando la ropa en el local, o en la ficha de un cliente. */
-type Vista = { tipo: 'inicio' } | { tipo: 'ficha'; clienteId: string; abierta: string | null };
+/**
+ * Dónde está quien atiende: mirando la ropa en el local, en la ficha de un cliente, o registrando
+ * ropa (SPEC-KRILINXI-034), con el cliente de la ficha o eligiéndolo en el formulario.
+ */
+type Vista =
+  | { tipo: 'inicio' }
+  | { tipo: 'ficha'; clienteId: string; abierta: string | null }
+  | { tipo: 'registrando'; clienteId: string | null }
+  | { tipo: 'registrada'; ropa: RopaRegistrada };
+
+/** El parámetro de la dirección que abre el Mostrador con el formulario: `/mostrador?registrar`. */
+export const PARAMETRO_REGISTRAR = 'registrar';
 
 /** Cómo se ve cada resultado del buscador: un cliente, o una boleta con su estado. */
 function ResultadoEncontrado({ encontrado }: { encontrado: Encontrado }) {
@@ -84,14 +97,21 @@ function RopaEnElLocal({ alElegir }: { alElegir: (orden: OrdenVista) => void }) 
  */
 export function PantallaMostrador() {
   const mostrador = useMostrador();
-  const [vista, setVista] = useState<Vista>({ tipo: 'inicio' });
+  const [parametros, setParametros] = useSearchParams();
+  // `/mostrador?registrar` (adonde lleva /registrar-ropa) abre directo el formulario.
+  const [vista, setVista] = useState<Vista>(() =>
+    parametros.has(PARAMETRO_REGISTRAR) ? { tipo: 'registrando', clienteId: null } : { tipo: 'inicio' },
+  );
   // Cambia cada vez que se elige algo: vuelve a montar el buscador, que queda vacío.
   const [vuelta, setVuelta] = useState(0);
 
   function ir(nueva: Vista) {
     setVista(nueva);
     setVuelta((v) => v + 1);
+    // Fuera del formulario, la dirección vuelve a ser /mostrador: recargar no lo reabre.
+    if (nueva.tipo !== 'registrando' && parametros.has(PARAMETRO_REGISTRAR)) setParametros({}, { replace: true });
   }
+
 
   function abrirBoleta(orden: OrdenVista) {
     if (orden.clienteId) ir({ tipo: 'ficha', clienteId: orden.clienteId, abierta: orden.id });
@@ -102,8 +122,47 @@ export function PantallaMostrador() {
     else abrirBoleta(encontrado.orden);
   }
 
+  if (vista.tipo === 'registrando') {
+    return (
+      <div className="mt-6">
+        <RegistrarEnMostrador clienteId={vista.clienteId} alRegistrar={(ropa) => ir({ tipo: 'registrada', ropa })} />
+        <div className="mt-6">
+          <Boton
+            variante="secundario"
+            onClick={() =>
+              ir(vista.clienteId ? { tipo: 'ficha', clienteId: vista.clienteId, abierta: null } : { tipo: 'inicio' })
+            }
+          >
+            Volver al mostrador sin guardar
+          </Boton>
+        </div>
+      </div>
+    );
+  }
+
+  if (vista.tipo === 'registrada') {
+    const { ropa } = vista;
+    // Después del resumen, a la ficha del cliente con la boleta nueva abierta.
+    return (
+      <ResumenRopa
+        ropa={ropa}
+        textoSeguir={`Ver la boleta en la ficha de ${ropa.cliente.nombre}`}
+        alSeguir={() => ir({ tipo: 'ficha', clienteId: ropa.cliente.id, abierta: ropa.ordenId })}
+      />
+    );
+  }
+
   return (
     <div className="mt-6">
+      {/* Siempre a mano, también con la ficha de un cliente abierta: ahí lo trae elegido. */}
+      <div className="mb-6">
+        <Boton
+          icono="registrar-ropa"
+          onClick={() => ir({ tipo: 'registrando', clienteId: vista.tipo === 'ficha' ? vista.clienteId : null })}
+        >
+          Registrar ropa
+        </Boton>
+      </div>
       <BuscadorVivo<Encontrado>
         key={vuelta}
         etiqueta="Buscar cliente o boleta: nombre, teléfono, carnet o número de boleta"

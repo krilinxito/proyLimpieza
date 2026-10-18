@@ -90,11 +90,11 @@ describe('Atender en una sucursal: elegir y empezar — SPEC-KRILINXI-029', () =
 
   it('mientras atiende ve las tareas del mostrador, y siguen las suyas de administrador', async () => {
     await abrir();
-    expect(tareas().queryByRole('link', { name: 'Registrar ropa' })).not.toBeInTheDocument();
+    expect(tareas().queryByRole('link', { name: 'Mostrador' })).not.toBeInTheDocument();
 
     await empezarEn('Centro');
 
-    for (const nombre of ['Mostrador', 'Registrar ropa']) {
+    for (const nombre of ['Mostrador']) {
       expect(tareas().getByRole('link', { name: nombre })).toBeInTheDocument();
     }
     for (const nombre of ['Estadísticas', 'Personal', 'Sucursales', '¿Quién hizo qué?']) {
@@ -126,9 +126,10 @@ describe('Atender en una sucursal: el mostrador con la sucursal elegida — SPEC
   }
 
   async function registrarConBoleta(boleta: string) {
-    fireEvent.click(within(screen.getByRole('main')).getByRole('link', { name: 'Registrar ropa' }));
+    // Desde SPEC-KRILINXI-034, Registrar ropa es un botón del Mostrador, con el cliente en el formulario.
+    fireEvent.click(within(screen.getByRole('main')).getByRole('link', { name: 'Mostrador' }));
+    fireEvent.click(await within(screen.getByRole('main')).findByRole('button', { name: 'Registrar ropa' }));
     await elegirEnBuscador('70123456', /Rosa Quispe/);
-    fireEvent.click(await screen.findByRole('button', { name: 'Es este cliente' }));
     await screen.findByRole('form', { name: 'Datos de la ropa' });
     escribir('Número de la boleta', boleta);
     escribir('Qué ropa deja', '1 saco');
@@ -218,7 +219,7 @@ describe('Atender en una sucursal: dejar de atender y salir — SPEC-KRILINXI-02
 describe('Atender en una sucursal: el EMPLEADO — SPEC-KRILINXI-029', () => {
   it('no ve la opción y se conecta sin parámetros: trabaja siempre en la suya', async () => {
     const { conectar } = await abrir({ sesion: sesionDePrueba() });
-    await tareas().findByRole('link', { name: 'Registrar ropa' });
+    await tareas().findByRole('link', { name: 'Mostrador' });
     await waitFor(() => expect(conectar).toHaveBeenCalled());
     expect(screen.queryByRole('button', { name: 'Atender en una sucursal' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Dejar de atender' })).not.toBeInTheDocument();

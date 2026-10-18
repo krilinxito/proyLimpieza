@@ -30,7 +30,7 @@ describe('Inicio como tarjetas de tareas — SPEC-KRILINXI-024', () => {
 
   it('las tarjetas se tocan con comodidad, y en pantalla ancha van en dos columnas', () => {
     renderEnRuta(<App />, '/');
-    const tarjeta = tareas().getByRole('link', { name: 'Registrar ropa' });
+    const tarjeta = tareas().getByRole('link', { name: 'Mostrador' });
     expect(tarjeta).toHaveClass('min-h-24');
     expect(document.getElementById(tarjeta.getAttribute('aria-labelledby') ?? '')).toHaveClass('text-2xl');
     expect(tarjeta.closest('ul')).toHaveClass('lg:grid-cols-2');

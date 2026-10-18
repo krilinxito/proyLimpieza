@@ -3,25 +3,31 @@ import { Aviso } from '../../../components/Aviso';
 import { Boton } from '../../../components/Boton';
 import { Tarjeta } from '../../../components/Tarjeta';
 import { CampoTexto } from '../../../components/CampoTexto';
-import { TarjetaCliente } from '../../clientes/components/TarjetaCliente';
-import type { Cliente } from '../../clientes/types';
+import { ElegirClienteDeLaRopa } from '../../clientes/components/ElegirClienteDeLaRopa';
+import type { Cliente, ClienteElegido } from '../../clientes/types';
 import type { DatosRopa, ErroresRopa, ResultadoRegistro, RopaRegistrada } from '../types';
 import { ElegirMetodo } from './ElegirMetodo';
 
 const NO_SE_GUARDO = 'No se pudo guardar la ropa. Probá de nuevo y, si sigue pasando, avisale al encargado.';
 
 type Props = {
-  cliente: Cliente;
+  /** El cliente ya elegido (desde su ficha, en el Mostrador), o null para elegirlo acá. */
+  clienteInicial: Cliente | null;
   registrar: (datos: DatosRopa) => Promise<ResultadoRegistro>;
   alRegistrar: (ropa: RopaRegistrada) => void;
-  alCambiarCliente: () => void;
 };
 
 /**
- * Los datos de la ropa que deja el cliente ya elegido. Valida quien guarda
+ * La ropa que deja un cliente, con el cliente arriba en el mismo formulario — SPEC-KRILINXI-034:
+ * se elige con el buscador o se da de alta ahí mismo, y se guarda todo junto. Valida quien guarda
  * (`api/ordenesLocal`); este formulario muestra lo que le contesta, campo por campo.
  */
-export function FormularioRopa({ cliente, registrar, alRegistrar, alCambiarCliente }: Props) {
+export function FormularioRopa({ clienteInicial, registrar, alRegistrar }: Props) {
+  const [cliente, setCliente] = useState<ClienteElegido | null>(
+    clienteInicial ? { tipo: 'existente', cliente: clienteInicial } : null,
+  );
+  // El cliente nuevo tenía el teléfono de uno que ya existe: se ofrece elegir a ese.
+  const [ocupadoPor, setOcupadoPor] = useState<Cliente | null>(null);
   const [datos, setDatos] = useState<Omit<DatosRopa, 'cliente'>>({
     numeroBoleta: '',
     descripcion: '',
@@ -50,6 +56,12 @@ export function FormularioRopa({ cliente, registrar, alRegistrar, alCambiarClien
         setGuardando(false);
         return;
       }
+      if (resultado.tipo === 'telefono-ocupado') {
+        setOcupadoPor(resultado.cliente);
+        setErrores({});
+        setGuardando(false);
+        return;
+      }
       alRegistrar(resultado.ropa);
     } catch (error) {
       console.error('No se pudo guardar la ropa en la base local.', error);
@@ -60,11 +72,31 @@ export function FormularioRopa({ cliente, registrar, alRegistrar, alCambiarClien
 
   return (
     <form onSubmit={guardar} noValidate aria-label="Datos de la ropa" className="mt-6 grid gap-2">
-      <TarjetaCliente cliente={cliente} titulo="Cliente">
-        <Boton variante="secundario" onClick={alCambiarCliente} disabled={guardando}>
-          Cambiar de cliente
-        </Boton>
-      </TarjetaCliente>
+      <ElegirClienteDeLaRopa
+        valor={cliente}
+        alCambiar={(valor) => {
+          setCliente(valor);
+          setOcupadoPor(null);
+        }}
+        errores={errores}
+        deshabilitado={guardando}
+      />
+      {ocupadoPor && (
+        <div className="mt-4 grid gap-3">
+          <Aviso tipo="advertencia">
+            Ese teléfono ya es de {ocupadoPor.nombre}. Si es la misma persona, elegila y guardá la ropa a su nombre.
+          </Aviso>
+          <Boton
+            variante="secundario"
+            onClick={() => {
+              setCliente({ tipo: 'existente', cliente: ocupadoPor });
+              setOcupadoPor(null);
+            }}
+          >
+            Es {ocupadoPor.nombre}
+          </Boton>
+        </div>
+      )}
 
       <div className="mt-4">
         <Tarjeta titulo="La ropa">
@@ -74,7 +106,8 @@ export function FormularioRopa({ cliente, registrar, alRegistrar, alCambiarClien
             onChange={cambiar('numeroBoleta')}
             error={errores.numeroBoleta}
             autoComplete="off"
-            autoFocus
+            // Con el cliente ya elegido se empieza por la boleta; si no, por el buscador del cliente.
+            autoFocus={clienteInicial !== null}
           />
           <CampoTexto
             etiqueta="Qué ropa deja"

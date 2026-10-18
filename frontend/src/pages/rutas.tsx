@@ -4,9 +4,8 @@ import { PantallaAuditoria } from '../features/auditoria/components/PantallaAudi
 import { PantallaIngreso } from '../features/auth/components/PantallaIngreso';
 import { ConSucursalDeTrabajo } from '../features/atencion/components/ConSucursalDeTrabajo';
 import { PantallaClientes } from '../features/clientes/components/PantallaClientes';
-import { PantallaMostrador } from '../features/mostrador/components/PantallaMostrador';
+import { PantallaMostrador, PARAMETRO_REGISTRAR } from '../features/mostrador/components/PantallaMostrador';
 import { PantallaEstadisticas } from '../features/estadisticas/components/PantallaEstadisticas';
-import { PantallaRegistrarRopa } from '../features/ordenes/components/PantallaRegistrarRopa';
 import { PantallaParaCorregir } from '../features/pendientes/components/PantallaParaCorregir';
 import { PantallaSucursales } from '../features/sucursales/components/PantallaSucursales';
 import { PantallaPersonal } from '../features/usuarios/components/PantallaPersonal';
@@ -65,11 +64,11 @@ function delMostrador(titulo: string, contenido: ReactElement): ReactElement {
 
 /**
  * Una dirección que ya no es una pantalla propia: Ropa en el local, Cobrar y Entregar ropa son
- * parte del Mostrador desde SPEC-KRILINXI-033. Lleva ahí, así no se rompe un enlace guardado ni el
- * "volver a donde iba" del ingreso.
+ * parte del Mostrador desde SPEC-KRILINXI-033, y Registrar ropa desde SPEC-KRILINXI-034. Lleva ahí,
+ * así no se rompe un enlace guardado ni el "volver a donde iba" del ingreso.
  */
-function haciaElMostrador(camino: string): Ruta {
-  return { camino, titulo: 'Mostrador', enMenu: false, acceso: TODOS, elemento: <Navigate to="/mostrador" replace /> };
+function haciaElMostrador(camino: string, destino = '/mostrador'): Ruta {
+  return { camino, titulo: 'Mostrador', enMenu: false, acceso: TODOS, elemento: <Navigate to={destino} replace /> };
 }
 
 /**
@@ -108,18 +107,10 @@ export const RUTAS: readonly Ruta[] = [
     // Ropa en el local, Cobrar y Entregar ropa en una sola pantalla (SPEC-KRILINXI-033).
     elemento: delMostrador('Mostrador', <PantallaMostrador />),
   },
-  {
-    camino: '/registrar-ropa',
-    titulo: 'Registrar ropa',
-    enMenu: true,
-    icono: 'registrar-ropa',
-    descripcion: 'Cuando el cliente deja ropa: se anota y se le da la boleta.',
-    acceso: TODOS,
-    mostrador: true,
-    elemento: delMostrador('Registrar ropa', <PantallaRegistrarRopa />),
-  },
-  // Las direcciones viejas del mostrador llevan al Mostrador (SPEC-KRILINXI-033).
-  ...['/ropa', '/cobrar', '/entregar'].map(haciaElMostrador),
+  // Las direcciones viejas del mostrador llevan al Mostrador (SPEC-KRILINXI-033); /registrar-ropa,
+  // con el formulario abierto (SPEC-KRILINXI-034).
+  ...['/ropa', '/cobrar', '/entregar'].map((camino) => haciaElMostrador(camino)),
+  haciaElMostrador('/registrar-ropa', `/mostrador?${PARAMETRO_REGISTRAR}`),
   {
     camino: '/clientes',
     titulo: 'Clientes',

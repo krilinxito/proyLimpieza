@@ -4,8 +4,16 @@ import { formatearBs } from '../../../lib/money';
 import type { RopaRegistrada } from '../types';
 import { fechaCorta } from './fechas';
 
+type Props = {
+  ropa: RopaRegistrada;
+  /** Qué sigue después de repasarlo. */
+  alSeguir: () => void;
+  /** Lo que dice ese botón: "Registrar otra ropa", o adónde lleva (SPEC-KRILINXI-034). */
+  textoSeguir?: string;
+};
+
 /** Lo que quedó registrado, para repasarlo con el cliente antes de que se vaya. */
-export function ResumenRopa({ ropa, alRegistrarOtra }: { ropa: RopaRegistrada; alRegistrarOtra: () => void }) {
+export function ResumenRopa({ ropa, alSeguir, textoSeguir = 'Registrar otra ropa' }: Props) {
   const filas: [string, string][] = [
     ['Boleta', ropa.numeroBoleta],
     ['Cliente', ropa.cliente.nombre],
@@ -28,7 +36,7 @@ export function ResumenRopa({ ropa, alRegistrarOtra }: { ropa: RopaRegistrada; a
         ))}
       </dl>
       <div className="mt-6">
-        <Boton onClick={alRegistrarOtra}>Registrar otra ropa</Boton>
+        <Boton onClick={alSeguir}>{textoSeguir}</Boton>
       </div>
     </section>
   );

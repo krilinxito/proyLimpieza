@@ -64,7 +64,8 @@ describe('Marco: el menú — SPEC-KRILINXI-023', () => {
   it('un EMPLEADO ve el Inicio y el mostrador, cada uno con su ícono', () => {
     abrir();
     // El Mostrador junta Ropa en el local, Entregar ropa y Cobrar desde SPEC-KRILINXI-033.
-    expect(nombres(menu())).toEqual(['Inicio', 'Mostrador', 'Registrar ropa', 'Clientes']);
+    // Registrar ropa es un botón del Mostrador desde SPEC-KRILINXI-034.
+    expect(nombres(menu())).toEqual(['Inicio', 'Mostrador', 'Clientes']);
     for (const enlace of within(menu()).getAllByRole('link')) {
       expect(enlace.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
     }
@@ -83,7 +84,7 @@ describe('Marco: el menú — SPEC-KRILINXI-023', () => {
     // No solo color: negrita y la barra de la izquierda cuelgan del mismo atributo.
     expect(actual).toHaveClass('aria-[current=page]:font-bold', 'aria-[current=page]:border-marca');
     expect(within(menu()).getByRole('link', { name: 'Inicio' })).not.toHaveAttribute('aria-current');
-    expect(within(menu()).getByRole('link', { name: 'Registrar ropa' })).not.toHaveAttribute('aria-current');
+    expect(within(menu()).getByRole('link', { name: 'Clientes' })).not.toHaveAttribute('aria-current');
   });
 
   it('elegir un destino lleva a esa pantalla', async () => {
@@ -194,7 +195,7 @@ describe('Marco: aviso de conexión, contenido y pie — SPEC-KRILINXI-023', () 
 
   it.each([
     ['/', 'Lavandería'],
-    ['/registrar-ropa', 'Registrar ropa · Lavandería'],
+    ['/mostrador', 'Mostrador · Lavandería'],
     ['/clientes', 'Clientes · Lavandería'],
   ])('en %s la pestaña se llama "%s"', async (ruta, titulo) => {
     abrir(ruta);
