@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { baseLocalDePrueba } from '../../test/baseLocalDePrueba';
 import { simularApi } from '../../test/apiFalsa';
 import { subirCola } from './conector';
-import type { EstadoSubida } from './control';
+import type { CommonPowerSyncDatabase } from '@powersync/common';
+import { envolver, type EstadoSubida } from './control';
 
 describe('Base local: consultas sin internet — SPEC-KRILINXI-004', () => {
   it('responde consultas con lo que ya hay guardado, sin haberse conectado nunca', async () => {
@@ -112,5 +113,27 @@ describe('Base local: desconectar sin borrar — SPEC-KRILINXI-007', () => {
     await control.desconectar();
     expect(await control.base.consultar('SELECT nombre FROM clientes')).toEqual([{ nombre: 'Rosa' }]);
     expect(await control.hayCambiosSinSubir()).toBe(true);
+  });
+});
+
+describe('Base local: conectar con los parámetros de la tablet — SPEC-KRILINXI-029', () => {
+  // Lo que se prueba es la traducción a la opción del SDK, no la sincronización: alcanza con un
+  // doble que anote cómo lo llamaron.
+  function conDobleDeConexion() {
+    const connect = vi.fn(async () => {});
+    const db = { connect } as unknown as CommonPowerSyncDatabase;
+    return { connect, control: envolver(db, 'http://powersync.invalid') };
+  }
+
+  it('pasa la sucursal elegida como `params`, que las reglas leen con request.parameters()', async () => {
+    const { connect, control } = conDobleDeConexion();
+    await control.conectar(async () => 'token', { sucursal_id: 'sucursal-centro' });
+    expect(connect).toHaveBeenCalledWith(expect.anything(), { params: { sucursal_id: 'sucursal-centro' } });
+  });
+
+  it('sin parámetros se conecta como siempre, sin pedir nada de más', async () => {
+    const { connect, control } = conDobleDeConexion();
+    await control.conectar(async () => 'token');
+    expect(connect).toHaveBeenCalledWith(expect.anything(), undefined);
   });
 });

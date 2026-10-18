@@ -1,5 +1,5 @@
 /**
- * Base local falsa para los tests de pantalla — SPEC-KRILINXI-004, ampliada en SPEC-KRILINXI-007 y SPEC-KRILINXI-013
+ * Base local falsa para los tests de pantalla — SPEC-KRILINXI-004, ampliada en SPEC-KRILINXI-007, 013 y 029
  *
  * No guarda nada: cada método es un `vi.fn()` que anota qué le pidieron. Es el que usa
  * `renderEnRuta` por defecto, porque las pantallas que no leen datos no necesitan una base
@@ -11,7 +11,7 @@
  *     await waitFor(() => expect(baseLocal.conectar).toHaveBeenCalled());
  */
 import { vi } from 'vitest';
-import type { ControlBaseLocal, EstadoSubida, Sentencia } from '../lib/powersync';
+import type { ControlBaseLocal, EstadoSubida, ParametrosSincronizacion, Sentencia } from '../lib/powersync';
 
 export function controlFalso() {
   return {
@@ -25,7 +25,8 @@ export function controlFalso() {
         return () => {};
       }),
     },
-    conectar: vi.fn(async (_obtenerToken: () => Promise<string | null>) => {}),
+    // Con qué parámetros se conectó, en `conectar.mock.calls[i][1]` (SPEC-KRILINXI-029).
+    conectar: vi.fn(async (_obtenerToken: () => Promise<string | null>, _parametros?: ParametrosSincronizacion) => {}),
     desconectarYBorrar: vi.fn(async () => {}),
     desconectar: vi.fn(async () => {}),
     hayCambiosSinSubir: vi.fn(async () => false),
