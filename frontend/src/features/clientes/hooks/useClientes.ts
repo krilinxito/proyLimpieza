@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useBaseLocal } from '../../../lib/powersync';
-import { buscarPorTelefono, editarCliente, registrarCliente } from '../api/clientesLocal';
+import type { ResultadosDeBusqueda } from '../../../lib/texto';
+import { buscarClientes, editarCliente, registrarCliente } from '../api/clientesLocal';
 import type { Cliente, DatosAlta, DatosEdicion, ResultadoAlta, ResultadoEdicion } from '../types';
 
 export type Clientes =
@@ -8,7 +9,8 @@ export type Clientes =
   | { lista: false }
   | {
       lista: true;
-      buscar: (telefono: string) => Promise<Cliente | null>;
+      /** Mientras se escribe: por nombre, parte del teléfono o carnet (SPEC-KRILINXI-032). */
+      buscarVivo: (texto: string) => Promise<ResultadosDeBusqueda<Cliente>>;
       registrar: (datos: DatosAlta) => Promise<ResultadoAlta>;
       /** Cambiar nombre o teléfono (SPEC-KRILINXI-014). */
       editar: (cliente: Cliente, datos: DatosEdicion) => Promise<ResultadoEdicion>;
@@ -16,7 +18,7 @@ export type Clientes =
 
 /**
  * La puerta de las pantallas a los clientes. Saca la base local del contexto y se la pasa
- * a `api/clientesLocal`, que es quien sabe SQL; la pantalla solo ve `buscar`, `registrar` y `editar`
+ * a `api/clientesLocal`, que es quien sabe SQL; la pantalla solo ve `buscarVivo`, `registrar` y `editar`
  * (CLAUDE.md §5).
  */
 export function useClientes(): Clientes {
@@ -26,7 +28,7 @@ export function useClientes(): Clientes {
       base
         ? {
             lista: true,
-            buscar: (telefono) => buscarPorTelefono(base, telefono),
+            buscarVivo: (texto) => buscarClientes(base, texto),
             registrar: (datos) => registrarCliente(base, datos),
             editar: (cliente, datos) => editarCliente(base, cliente, datos),
           }

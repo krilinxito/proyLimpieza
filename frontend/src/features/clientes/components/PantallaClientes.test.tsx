@@ -4,6 +4,7 @@ import { fireEvent, screen, within } from '@testing-library/react';
 import { App } from '../../../App';
 import { simularApi } from '../../../test/apiFalsa';
 import { baseLocalDePrueba } from '../../../test/baseLocalDePrueba';
+import { elegirEnBuscador, escribirEnBuscador } from '../../../test/buscador';
 import { sinJerga } from '../../../test/jerga';
 import { renderEnRuta } from '../../../test/render';
 
@@ -19,8 +20,8 @@ async function abrirClientes() {
   const prueba = await baseLocalDePrueba();
   await prueba.sembrar('clientes', [ROSA]);
   renderEnRuta(<App />, '/clientes', { baseLocal: prueba.control });
-  // El botón dice "Preparando…" hasta que la base local termina de abrirse.
-  await screen.findByRole('button', { name: 'Buscar cliente' });
+  // El buscador está deshabilitado hasta que la base local termina de abrirse.
+  await escribirEnBuscador('');
   return { ...prueba, servidor };
 }
 
@@ -28,9 +29,14 @@ function escribir(etiqueta: string, valor: string) {
   fireEvent.change(screen.getByLabelText(etiqueta), { target: { value: valor } });
 }
 
-async function buscar(telefono: string) {
-  escribir('Teléfono del cliente', telefono);
-  fireEvent.click(screen.getByRole('button', { name: 'Buscar cliente' }));
+/** Escribe en el buscador, sin elegir nada (SPEC-KRILINXI-032). */
+async function buscar(texto: string) {
+  await escribirEnBuscador(texto);
+}
+
+/** Escribe y elige al cliente que aparece: Rosa, salvo que se diga otro. */
+async function encontrar(texto: string, nombre: RegExp = /Rosa Quispe/) {
+  await elegirEnBuscador(texto, nombre);
 }
 
 /** La tarjeta de datos del cliente, como pares [dato, valor]. */
@@ -43,7 +49,7 @@ async function datosMostrados() {
 describe('Pantalla de clientes: buscar — SPEC-KRILINXI-005', () => {
   it('muestra nombre, teléfono y carnet del cliente encontrado, sin pedir nada al servidor', async () => {
     const { servidor } = await abrirClientes();
-    await buscar('7012-3456');
+    await encontrar('7012-3456');
 
     expect(await screen.findByText('Rosa Quispe')).toBeInTheDocument();
     expect(await datosMostrados()).toEqual([
@@ -54,18 +60,14 @@ describe('Pantalla de clientes: buscar — SPEC-KRILINXI-005', () => {
     expect(servidor.pedidos).toEqual([]);
   });
 
-  it('pide el teléfono si se busca sin escribirlo', async () => {
-    await abrirClientes();
-    await buscar('   ');
-    expect(await screen.findByText('Escribí el número de teléfono del cliente.')).toBeInTheDocument();
-  });
-
   it('si no lo encuentra, lo dice y ofrece registrarlo con el teléfono ya cargado', async () => {
     await abrirClientes();
     await buscar('7999 9999');
 
-    expect(await screen.findByText('No hay ningún cliente con el teléfono 7999 9999.')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Registrar cliente nuevo' }));
+    expect(
+      await screen.findByText(/Ningún cliente coincide con eso/, { selector: 'p:not([role])' }, { timeout: 3000 }),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('option', { name: 'Cliente nuevo' }));
 
     const formulario = await screen.findByRole('form', { name: 'Registrar cliente nuevo' });
     expect(within(formulario).getByLabelText('Teléfono')).toHaveValue('7999 9999');
@@ -76,7 +78,7 @@ describe('Pantalla de clientes: registrar — SPEC-KRILINXI-005', () => {
   async function abrirAlta(telefono = '71111111') {
     const prueba = await abrirClientes();
     await buscar(telefono);
-    fireEvent.click(await screen.findByRole('button', { name: 'Registrar cliente nuevo' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'Cliente nuevo' }));
     await screen.findByRole('form', { name: 'Registrar cliente nuevo' });
     return prueba;
   }
@@ -136,12 +138,12 @@ describe('Pantalla de clientes: el idioma del mostrador — SPEC-KRILINXI-005', 
     expect(screen.queryByText(/en construcción/i)).not.toBeInTheDocument();
     sinJerga();
 
-    await buscar('70123456');
-    await screen.findByText('Rosa Quispe');
+    await encontrar('70123456');
+    await screen.findByText('Rosa Quispe', { selector: 'dd' });
     sinJerga();
 
     await buscar('71111111');
-    fireEvent.click(await screen.findByRole('button', { name: 'Registrar cliente nuevo' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'Cliente nuevo' }));
     await screen.findByRole('form', { name: 'Registrar cliente nuevo' });
     fireEvent.click(screen.getByRole('button', { name: 'Guardar cliente' }));
     await screen.findByText('Escribí el nombre del cliente.');
@@ -158,7 +160,7 @@ describe('Pantalla de clientes: cambiar datos — SPEC-KRILINXI-014', () => {
   /** Rosa encontrada y el formulario de cambiar datos abierto. */
   async function abrirEdicion() {
     const prueba = await abrirClientes();
-    await buscar('70123456');
+    await encontrar('70123456');
     fireEvent.click(await screen.findByRole('button', { name: 'Cambiar datos' }));
     await screen.findByRole('form', { name: 'Cambiar datos del cliente' });
     return prueba;
@@ -205,7 +207,7 @@ describe('Pantalla de clientes: cambiar datos — SPEC-KRILINXI-014', () => {
   it('un teléfono de otro cliente se avisa en el campo, diciendo de quién es', async () => {
     const { db, sembrar } = await abrirClientes();
     await sembrar('clientes', [{ id: randomUUID(), nombre: 'Juan Mamani', telefono: '70555555', carnet: null }]);
-    await buscar('70123456');
+    await encontrar('70123456');
     fireEvent.click(await screen.findByRole('button', { name: 'Cambiar datos' }));
     escribir('Teléfono', '70555555');
     fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
@@ -229,7 +231,7 @@ describe('Pantalla de clientes: cambiar datos — SPEC-KRILINXI-014', () => {
 describe('Pantalla de clientes con el tema — SPEC-KRILINXI-025', () => {
   it('el cliente encontrado se muestra en una tarjeta del tema', async () => {
     await abrirClientes();
-    await buscar('70123456');
+    await encontrar('70123456');
     const nombre = await screen.findByText('Rosa Quispe', { selector: 'dd' });
     expect(nombre.closest('.rounded-2xl')).toHaveClass('bg-superficie');
   });
@@ -237,8 +239,53 @@ describe('Pantalla de clientes con el tema — SPEC-KRILINXI-025', () => {
   it('el alta es una tarjeta con su título, y el formulario conserva su nombre', async () => {
     await abrirClientes();
     await buscar('70999999');
-    fireEvent.click(await screen.findByRole('button', { name: 'Registrar cliente nuevo' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'Cliente nuevo' }));
     const tarjeta = await screen.findByRole('region', { name: 'Registrar cliente nuevo' });
     expect(within(tarjeta).getByRole('form', { name: 'Registrar cliente nuevo' })).toBeInTheDocument();
+  });
+});
+
+describe('Pantalla de clientes: buscar mientras se escribe — SPEC-KRILINXI-032', () => {
+  it('encuentra por parte del nombre, sin tildes ni mayúsculas, sin tocar ningún botón', async () => {
+    const { servidor } = await abrirClientes();
+    await encontrar('rosa qui');
+    expect(await datosMostrados()).toContainEqual(['Nombre', 'Rosa Quispe']);
+    expect(servidor.pedidos).toEqual([]);
+  });
+
+  it('cada resultado muestra con qué distinguirlo: teléfono y carnet', async () => {
+    await abrirClientes();
+    await buscar('quispe');
+    expect(await screen.findByRole('option', { name: /Rosa Quispe/ }, { timeout: 3000 })).toHaveTextContent(
+      'Tel. 70123456 · Carnet 4455667',
+    );
+  });
+
+  it('por el carnet', async () => {
+    await abrirClientes();
+    await encontrar('445566');
+    expect(await datosMostrados()).toContainEqual(['Carnet', '4455667']);
+  });
+
+  it('"Cliente nuevo" está a mano antes de escribir nada', async () => {
+    await abrirClientes();
+    expect(screen.getByRole('option', { name: 'Cliente nuevo' })).toBeInTheDocument();
+  });
+
+  it('si lo escrito es un nombre, el alta lo trae en el nombre', async () => {
+    await abrirClientes();
+    await elegirEnBuscador('Juan Nuevo', 'Cliente nuevo');
+    const formulario = await screen.findByRole('form', { name: 'Registrar cliente nuevo' });
+    expect(within(formulario).getByLabelText('Nombre completo')).toHaveValue('Juan Nuevo');
+    expect(within(formulario).getByLabelText('Teléfono')).toHaveValue('');
+  });
+
+  it('elegir otro cliente después reemplaza al anterior, y el buscador queda vacío', async () => {
+    const { sembrar } = await abrirClientes();
+    await sembrar('clientes', [{ id: randomUUID(), nombre: 'Juan Mamani', telefono: '70555555', carnet: null }]);
+    await encontrar('rosa');
+    await encontrar('juan', /Juan Mamani/);
+    expect(await datosMostrados()).toContainEqual(['Nombre', 'Juan Mamani']);
+    expect(screen.getByRole('combobox', { name: /Buscar cliente/ })).toHaveValue('');
   });
 });

@@ -5,6 +5,7 @@ import { App } from '../../../App';
 import { simularApi } from '../../../test/apiFalsa';
 import { baseLocalDePrueba } from '../../../test/baseLocalDePrueba';
 import { clienteDePrueba, ordenDePrueba } from '../../../test/filasDePrueba';
+import { elegirEnBuscador } from '../../../test/buscador';
 import { sinJerga } from '../../../test/jerga';
 import { renderEnRuta } from '../../../test/render';
 import { sesionDePrueba } from '../../../test/sesion';
@@ -126,8 +127,7 @@ describe('Atender en una sucursal: el mostrador con la sucursal elegida — SPEC
 
   async function registrarConBoleta(boleta: string) {
     fireEvent.click(within(screen.getByRole('main')).getByRole('link', { name: 'Registrar ropa' }));
-    escribir('Teléfono del cliente', '70123456');
-    fireEvent.click(await screen.findByRole('button', { name: 'Buscar cliente' }));
+    await elegirEnBuscador('70123456', /Rosa Quispe/);
     fireEvent.click(await screen.findByRole('button', { name: 'Es este cliente' }));
     await screen.findByRole('form', { name: 'Datos de la ropa' });
     escribir('Número de la boleta', boleta);
