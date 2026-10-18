@@ -12,7 +12,9 @@
 #      consulta por API y solo el rol ADMIN puede verla.
 #   3. El ADMIN no descarga el histórico. Su dashboard es online y
 #      agrega en Postgres; bajarle años de órdenes al navegador
-#      sería trabajo puro sin beneficio.
+#      sería trabajo puro sin beneficio. La única excepción es
+#      cuando atiende el mostrador: entonces baja la ropa de esa
+#      sucursal, igual que un empleado (`atencion_admin`).
 #
 #  Limitación a tener presente: las consultas de `data` no admiten
 #  JOINs ni subconsultas. Por eso `entregas` y `pagos` cargan su
@@ -36,6 +38,44 @@ bucket_definitions:
       WHERE id = request.user_id()
         AND sucursal_id IS NOT NULL
         AND activo = true
+    data:
+      - SELECT * FROM ordenes  WHERE sucursal_id = bucket.sucursal_id
+      - SELECT * FROM entregas WHERE sucursal_id = bucket.sucursal_id
+      - SELECT * FROM pagos    WHERE sucursal_id = bucket.sucursal_id
+
+  # ----------------------------------------------------------
+  #  El ADMIN que atiende el mostrador — SPEC-KRILINXI-028.
+  #  A veces el dueño atiende. Elige en la tablet en qué sucursal,
+  #  y la tablet lo manda como parámetro al conectarse
+  #  (`connect({ params: { sucursal_id } })`). Este bucket le baja
+  #  la ropa de esa sucursal, lo mismo que `sucursal` a un empleado.
+  #
+  #  El parámetro lo controla la tablet: puede mandar cualquier
+  #  cosa. Por eso NO autoriza nada. Lo que autoriza es la fila del
+  #  que pide: `id = request.user_id()` (la cuenta del token), y que
+  #  esa cuenta sea ADMIN y esté activa. Un empleado que mande el
+  #  parámetro no tiene fila que cumpla `rol = 'ADMIN'`: este bucket
+  #  no existe para él. Un ADMIN que no está atendiendo no manda
+  #  el parámetro, y la última condición hace que el bucket no
+  #  exista: no baja nada, como siempre (regla 3).
+  #
+  #  Que el ADMIN elija cualquier sucursal es correcto: ya las ve
+  #  todas por la API y el panel. El parámetro solo dice cuál baja.
+  #
+  #  Sin `accept_potentially_dangerous_queries`, a propósito.
+  #  PowerSync no marca esta consulta porque está atada a
+  #  `request.user_id()` (comprobado con su validador: sin esa
+  #  condición avisa "Potentially dangerous query"). El flag no
+  #  autoriza nada: solo callaría ese aviso si alguien la borrara.
+  # ----------------------------------------------------------
+  atencion_admin:
+    parameters: |
+      SELECT request.parameters() ->> 'sucursal_id' AS sucursal_id
+      FROM usuarios
+      WHERE id = request.user_id()
+        AND rol = 'ADMIN'
+        AND activo = true
+        AND request.parameters() ->> 'sucursal_id' IS NOT NULL
     data:
       - SELECT * FROM ordenes  WHERE sucursal_id = bucket.sucursal_id
       - SELECT * FROM entregas WHERE sucursal_id = bucket.sucursal_id
