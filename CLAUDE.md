@@ -237,10 +237,13 @@ las lista solo con sucursal de trabajo, y `ConSucursalDeTrabajo` dice cómo empe
 de atender reconecta sin el parámetro y no borra nada: la cola sigue subiendo.
 
 SPEC-KRILINXI-030 agregó el **tema oscuro**: `lib/tema.ts` marca `<html data-tema="claro|oscuro">` (lo
-elegido con el botón de la cabecera, guardado en la tablet, o la preferencia del sistema, seguida en vivo) e
+elegido con el botón de la cabecera —un ícono de luna o sol, la única excepción a "un ícono nunca va solo":
+lleva `aria-label` y `title`—, guardado en la tablet, o la preferencia del sistema, seguida en vivo) e
 `index.css` redefine **todos** los tokens bajo `[data-tema='oscuro']`. Ningún componente cambió: funcionan
 porque pintan con los tokens. **Un color nuevo va en los dos bloques**, y `test/tema.test.ts` mide cada par
-en los dos temas. En oscuro, `marca` y `peligro` son claros y `sobre-marca` es oscuro.
+en los dos temas. En oscuro, `marca` y `peligro` son claros y `sobre-marca` es oscuro. En la misma spec, quien
+atiende pasó a ser un círculo con su inicial (`components/marco/Avatar.tsx`, "Perfil" al pasar el mouse);
+todavía no abre nada: el perfil es una spec pendiente.
 
 SPEC-KRILINXI-012 corrige el reloj de la tablet: `lib/reloj` guarda el desfase con la hora
 del servidor que traen `login` y `renovar`, y `horaOficial()` es de donde salen

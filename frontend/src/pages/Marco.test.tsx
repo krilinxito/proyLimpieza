@@ -33,7 +33,8 @@ describe('Marco: la cabecera — SPEC-KRILINXI-023', () => {
     const cabecera = screen.getByRole('banner');
     expect(within(cabecera).getByRole('link', { name: 'Lavandería' })).toHaveAttribute('href', '/');
     expect(await within(cabecera).findByText('Sucursal Centro')).toBeInTheDocument();
-    expect(cabecera).toHaveTextContent('Atiende: Rosa Quispe');
+    // Desde SPEC-KRILINXI-030, un círculo con la inicial: el nombre completo va en su nombre accesible.
+    expect(within(cabecera).getByRole('img', { name: 'Perfil de Rosa Quispe' })).toHaveTextContent('R');
     expect(within(cabecera).getByRole('button', { name: 'Salir' })).toBeInTheDocument();
   });
 
@@ -241,6 +242,26 @@ describe('Marco: claro u oscuro — SPEC-KRILINXI-030', () => {
     act(() => sistema.cambiar({ oscuro: true }));
     expect(html().dataset.tema).toBe('oscuro');
     expect(cabecera().getByRole('button', { name: 'Tema claro' })).toBeInTheDocument();
+  });
+
+  it('es discreto: un ícono redondo, con su nombre al pasar el mouse y para el lector de pantalla', () => {
+    abrir();
+    const boton = cabecera().getByRole('button', { name: 'Tema oscuro' });
+    expect(boton).toHaveAttribute('title', 'Tema oscuro');
+    expect(boton).toHaveClass('rounded-full', 'size-12');
+    expect(boton).toHaveTextContent('');
+    expect(boton.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('quien atiende es un círculo con su inicial que dice "Perfil" al pasar el mouse, y todavía no hace nada', () => {
+    abrir();
+    const perfil = cabecera().getByRole('img', { name: 'Perfil de Rosa Quispe' });
+    expect(perfil).toHaveTextContent('R');
+    expect(perfil).toHaveAttribute('title', 'Perfil');
+    expect(perfil).toHaveClass('rounded-full');
+    // Un `span`, no un botón: hasta que exista el perfil, no se ofrece algo que no hace nada.
+    expect(cabecera().queryByRole('button', { name: /Perfil/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('banner')).not.toHaveTextContent('Atiende');
   });
 
   it('está también en el ingreso, sin nadie adentro', () => {

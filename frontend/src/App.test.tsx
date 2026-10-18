@@ -104,9 +104,10 @@ describe('App: menú por rol — SPEC-KRILINXI-003', () => {
 });
 
 describe('App: quién atiende y salir — SPEC-KRILINXI-003', () => {
-  it('muestra el nombre de quien está usando la tablet', () => {
+  it('muestra quién está usando la tablet', () => {
     renderEnRuta(<App />, '/', { sesion: sesionDePrueba({ nombreCompleto: 'Rosa Quispe' }) });
-    expect(screen.getByText('Rosa Quispe')).toBeInTheDocument();
+    // Desde SPEC-KRILINXI-030, un círculo con la inicial; el nombre completo es su nombre accesible.
+    expect(screen.getByRole('img', { name: 'Perfil de Rosa Quispe' })).toHaveTextContent('R');
   });
 
   it('Salir pide confirmación avisando que para volver hace falta internet', () => {

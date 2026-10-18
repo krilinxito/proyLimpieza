@@ -10,6 +10,10 @@ import type { ReactElement } from 'react';
  * **Un ícono nunca va solo** (CLAUDE.md §9: nada de íconos sueltos que haya que interpretar).
  * Por eso son siempre decorativos (`aria-hidden`): el que dice qué es cada cosa es el texto de
  * al lado, y para un lector de pantalla el ícono no existe.
+ *
+ * La única excepción es el tema (`sol`, `luna`, SPEC-KRILINXI-030): un botón discreto en la
+ * cabecera, sin texto visible. Su nombre va en `aria-label` y en `title` (lo dice al pasar el
+ * mouse); el ícono sigue siendo decorativo.
  */
 const TRAZOS = {
   inicio: (
@@ -111,6 +115,13 @@ const TRAZOS = {
       <path d="m8 12 3 3 5-6" />
     </>
   ),
+  sol: (
+    <>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+    </>
+  ),
+  luna: <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />,
 } satisfies Record<string, ReactElement>;
 
 export type NombreIcono = keyof typeof TRAZOS;

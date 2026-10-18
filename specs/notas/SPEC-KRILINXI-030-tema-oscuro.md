@@ -13,8 +13,10 @@ explica:
 ## Qué se construyó
 
 La app tiene un tema oscuro. Si la tablet está en modo oscuro, la app también, y cambia sola
-cuando la tablet cambia. En la cabecera hay un botón con texto ("Tema oscuro" / "Tema claro") para
-elegir a mano; la elección queda guardada en la tablet, también al salir de la cuenta.
+cuando la tablet cambia. En la cabecera hay un botón redondo y discreto (una luna en claro, un sol
+en oscuro) para elegir a mano; la elección queda guardada en la tablet, también al salir de la
+cuenta. De paso, quien atiende se muestra como un círculo con su inicial ("Perfil"), en lugar de
+"Atiende: <nombre>".
 
 ## Cómo funciona, paso a paso
 
@@ -133,8 +135,17 @@ navegador.
   media query con todos los colores oscuros más un bloque para la elección manual: dos copias de
   cada color, que tarde o temprano se desincronizan. Así hay una copia, y la media query solo cubre
   el primer instante con dos valores.
-- **El botón dice a qué tema pasa, en palabras.** Un sol o una luna sueltos son un ícono que hay
-  que interpretar (§9).
+- **El botón es un ícono discreto (luna en claro, sol en oscuro), por pedido explícito.** La
+  primera versión decía "Tema oscuro" en palabras, para respetar "un ícono nunca va solo"
+  (`iconos.tsx`, §9); se pidió algo más sutil. Queda como **la única excepción** a esa regla, y
+  documentada en `iconos.tsx`: su nombre va en `aria-label` (lector de pantalla) y en `title` (al
+  pasar el mouse). Es aceptable porque cambiar el tema es opcional y no es parte del trabajo del
+  mostrador; no sirve de precedente para una acción del negocio.
+- **Quien atiende pasó de "Atiende: Rosa Quispe" a un círculo con su inicial** (`Avatar`, en
+  `components/marco/`), que dice "Perfil" al pasar el mouse. Es un `<span role="img">` con el
+  nombre completo como nombre accesible, **no un botón**: el perfil todavía no existe, y un botón
+  que no hace nada confunde. Cuando haya una spec de perfil, ese círculo pasa a ser el botón que lo
+  abre. Lo que se pierde: el nombre ya no se lee a simple vista en la cabecera.
 - **La elección es de la tablet, no de la cuenta.** Salir borra la sesión y la atención, pero no
   el tema: lo eligió quien mira esa pantalla, no quien entra.
 - **Se agregó el par `texto` sobre `marca-suave`** al test: es la opción elegida (método de pago,
