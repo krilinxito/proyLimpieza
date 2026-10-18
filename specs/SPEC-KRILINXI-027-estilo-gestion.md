@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-027
 name: Personal, sucursales, auditoría y para corregir con el tema
 slug: estilo-gestion
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-17
 scope:
