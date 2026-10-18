@@ -124,11 +124,12 @@ SPEC-KRILINXI-007 cerró la subida: `uploadData` manda cada cambio de la cola a 
 (`components/AvisoConexion`, con `hooks/useConexion`) está en todas las pantallas con sesión
 y lleva a `/para-corregir`. Un 401 con cambios sin subir ya no borra la base local.
 SPEC-KRILINXI-008 añadió `/ropa` ("Ropa en el local") y `/cobrar`, la misma pantalla: lista,
-búsqueda por boleta o teléfono, detalle, avances, anular y cobrar. El **estado que se muestra**
+búsqueda por boleta o teléfono, detalle, avances, anular y cobrar (desde SPEC-KRILINXI-033, todo eso
+vive en el Mostrador). El **estado que se muestra**
 sale de `features/ordenes/estado.ts` (`estadoEfectivo`: si la orden tiene entrega en la base
 local, figura ENTREGADO aunque no haya sincronizado), y los avances permitidos repiten la tabla
 del backend con un test que la compara. SPEC-KRILINXI-009 añadió `/entregar`: la misma
-pantalla con "Entregar la ropa" en el detalle (`accionesExtra`), con o sin boleta, precio final
+pantalla con "Entregar la ropa" en el detalle (`accionesExtra`; hoy `entregas/components/AccionEntregar`), con o sin boleta, precio final
 y pago final. Se puede entregar con saldo pendiente: la confirmación dice cuánto queda
 debiendo. **El frontend nunca escribe `ordenes.estado = 'ENTREGADO'`**: lo hace el servidor, y
 en la tablet se ve por `estadoEfectivo`. Con eso, el flujo del mostrador está completo
@@ -258,6 +259,13 @@ combobox de ARIA, hasta 6 resultados y una acción fija como "Cliente nuevo") y,
 también la ropa. Sin tildes ni mayúsculas con `lib/texto.ts`: `plegar` (JS) y `plegarSql` (SQL) tienen que
 dar lo mismo, y su test lo comprueba contra SQLite. /clientes ya lo usa. Para los tests, `test/buscador.ts`
 (`elegirEnBuscador('rosa', /Rosa Quispe/)`).
+
+SPEC-KRILINXI-033 juntó Ropa en el local, Cobrar y Entregar ropa en el **Mostrador** (`/mostrador`,
+`features/mostrador/`): un solo buscador (clientes y boletas, `buscarEnMostrador`) y, al elegir, la **ficha del
+cliente** con su ropa de esta sucursal; cada boleta se abre ahí con lo que su estado permite (es el mismo
+`DetalleOrden`, con `AccionEntregar`). Sin buscar nada, muestra la ropa en el local. `/ropa`, `/cobrar` y
+`/entregar` ya no son pantallas: llevan al Mostrador (`haciaElMostrador` en `pages/rutas.tsx`), así no se rompe
+un enlace guardado. Registrar ropa sigue aparte hasta la spec siguiente.
 
 SPEC-KRILINXI-012 corrige el reloj de la tablet: `lib/reloj` guarda el desfase con la hora
 del servidor que traen `login` y `renovar`, y `horaOficial()` es de donde salen
@@ -429,7 +437,7 @@ Nunca concatenes valores dentro de una consulta. Siempre `$1, $2`.
 ```
 frontend/src/
   features/     ordenes/ clientes/ entregas/ pagos/ auth/ pendientes/ estadisticas/
-                usuarios/ sucursales/ atencion/
+                usuarios/ sucursales/ atencion/ mostrador/
                 cada una con components/ hooks/ api/ types.ts
   components/   UI compartida: botones, inputs, modales de confirmación, avisos, tarjetas,
                 insignias e íconos. Pinta solo con los colores del tema (SPEC-KRILINXI-022).
@@ -776,7 +784,7 @@ Nada se implementa sin una spec aprobada.
 - **Corregir lo que el servidor rechazó: lo que queda.** Desde SPEC-KRILINXI-013 se corrige y
   se vuelve a guardar desde `/para-corregir`, y desde SPEC-KRILINXI-021 también el cliente dado de
   alta en dos tablets ("Es el mismo cliente": su ropa pasa al que ya existe). Queda un caso: un
-  cambio de estado rechazado no se corrige ahí, se rehace desde "Ropa en el local".
+  cambio de estado rechazado no se corrige ahí, se rehace desde el Mostrador.
 - **El reloj de la tablet.** `fecha_entrada`, `fecha_pago` y `fecha_entrega` las pone la
   tablet y son las oficiales. Desde SPEC-KRILINXI-012 salen de `horaOficial()`
   (`frontend/src/lib/reloj.ts`): el reloj de la tablet más el desfase medido con el `ahora` de
