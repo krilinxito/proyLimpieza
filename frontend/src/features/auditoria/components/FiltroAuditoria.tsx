@@ -23,13 +23,13 @@ function Elegir({
 }) {
   return (
     <fieldset className="mt-4">
-      <legend className="text-xl font-semibold text-slate-900">{pregunta}</legend>
+      <legend className="text-xl font-semibold text-texto">{pregunta}</legend>
       <div className="mt-2 grid grid-cols-2 gap-3">
         {[{ id: null, nombre: todas }, ...opciones].map(({ id, nombre }) => (
           <label
             key={id ?? 'todas'}
             className={`flex min-h-14 items-center gap-3 rounded-lg border-2 px-4 text-xl ${
-              valor === id ? 'border-sky-700 bg-sky-50' : 'border-slate-400 bg-white'
+              valor === id ? 'border-marca bg-marca-suave font-semibold' : 'border-borde bg-superficie'
             }`}
           >
             <input type="radio" name={pregunta} className="size-6" checked={valor === id} onChange={() => alElegir(id)} />
@@ -65,8 +65,8 @@ export function FiltroAuditoria({ filtro, personas, sucursales, alCambiar }: Pro
   }
 
   return (
-    <form onSubmit={verFechas} noValidate aria-label="Qué mirar" className="mt-6 grid gap-2 rounded-lg border-2 border-slate-300 p-4">
-      <label className="flex min-h-14 items-center gap-3 text-xl font-semibold text-slate-900">
+    <form onSubmit={verFechas} noValidate aria-label="Qué mirar" className="mt-6 grid gap-2 rounded-2xl border border-borde-suave bg-superficie p-5 shadow-sm">
+      <label className="flex min-h-14 items-center gap-3 text-xl font-semibold text-texto">
         <input
           type="checkbox"
           className="size-6"
@@ -76,7 +76,7 @@ export function FiltroAuditoria({ filtro, personas, sucursales, alCambiar }: Pro
         Solo lo que hay que revisar
       </label>
       <details>
-        <summary className="min-h-14 cursor-pointer py-3 text-xl font-semibold text-sky-700">Buscar con más detalle</summary>
+        <summary className="min-h-14 cursor-pointer py-3 text-xl font-semibold text-marca">Buscar con más detalle</summary>
         <Elegir
           pregunta="¿Qué buscar?"
           opciones={QUE_BUSCAR.map((q) => ({ id: q.clave, nombre: q.texto }))}

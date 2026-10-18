@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Aviso } from '../../../components/Aviso';
 import { Boton } from '../../../components/Boton';
+import { EnlaceBoton } from '../../../components/EnlaceBoton';
 import { ModalConfirmacion } from '../../../components/ModalConfirmacion';
+import { Tarjeta } from '../../../components/Tarjeta';
 import type { RegistroParaCorregir } from '../types';
 import { useCorreccion } from '../hooks/useCorreccion';
 import { useParaCorregir } from '../hooks/useParaCorregir';
@@ -28,7 +30,7 @@ export function PantallaParaCorregir() {
   const [aviso, setAviso] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  if (registros === null || !correccion.lista) return <p className="mt-6 text-xl text-slate-700">Buscando…</p>;
+  if (registros === null || !correccion.lista) return <p className="mt-6 text-xl text-texto-suave">Buscando…</p>;
 
   if (corrigiendo) {
     return (
@@ -37,7 +39,9 @@ export function PantallaParaCorregir() {
         guardar={(valores) => correccion.guardar(corrigiendo, valores)}
         alGuardar={() => {
           setCorrigiendo(null);
-          setAviso('Listo: la corrección quedó guardada en esta tablet. Si no hay internet, se manda cuando vuelva la conexión.');
+          setAviso(
+            'Listo: la corrección quedó guardada en esta tablet. Si no hay internet, se manda cuando vuelva la conexión.',
+          );
         }}
         alVolver={() => setCorrigiendo(null)}
         antesDelFormulario={
@@ -76,14 +80,14 @@ export function PantallaParaCorregir() {
   const avisos = (
     <>
       {aviso && (
-        <p role="status" className="mt-6 rounded-lg border-2 border-green-700 bg-green-50 p-4 text-xl text-green-900">
-          {aviso}
-        </p>
+        <div className="mt-6">
+          <Aviso tipo="exito">{aviso}</Aviso>
+        </div>
       )}
       {error && (
-        <p role="alert" className="mt-6 text-xl text-red-700">
-          {error}
-        </p>
+        <div className="mt-6">
+          <Aviso tipo="error">{error}</Aviso>
+        </div>
       )}
     </>
   );
@@ -92,10 +96,10 @@ export function PantallaParaCorregir() {
     return (
       <>
         {avisos}
-        <p className="mt-6 text-xl text-slate-700">No hay nada para corregir. Todo se guardó bien.</p>
-        <Link to="/" className="mt-6 inline-block text-xl font-semibold text-sky-700 underline">
-          Volver al inicio
-        </Link>
+        <p className="mt-6 text-xl text-texto-suave">No hay nada para corregir. Todo se guardó bien.</p>
+        <div className="mt-6">
+          <EnlaceBoton a="/">Volver al inicio</EnlaceBoton>
+        </div>
       </>
     );
   }
@@ -103,30 +107,36 @@ export function PantallaParaCorregir() {
   return (
     <>
       {avisos}
-      <p className="mt-4 text-xl text-slate-700">
-        Estos registros no se pudieron guardar. Leé el motivo de cada uno: corregí lo que está mal y volvé a
-        guardarlo, o descartalo si no va.
+      <p className="mt-4 text-xl text-texto-suave">
+        Estos registros no se pudieron guardar. Leé el motivo de cada uno: corregí lo que está mal y volvé a guardarlo,
+        o descartalo si no va.
       </p>
       <ul className="mt-6 grid gap-4">
         {registros.map((registro) => (
-          <li key={registro.id} className="rounded-lg border-2 border-red-300 bg-red-50 p-4">
-            <p className="text-xl font-semibold text-slate-900">{registro.que}</p>
-            <p className="mt-2 text-xl text-red-800">{registro.mensaje}</p>
-            {registro.fecha && <p className="mt-2 text-lg text-slate-600">{cuando(registro.fecha)}</p>}
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <Boton
-                onClick={() => {
-                  setAviso(null);
-                  setError(null);
-                  setCorrigiendo(registro);
-                }}
-              >
-                Corregir
-              </Boton>
-              <Boton variante="secundario" onClick={() => setDescartando(registro)}>
-                Descartar
-              </Boton>
-            </div>
+          <li key={registro.id}>
+            <Tarjeta>
+              <p className="text-xl font-semibold text-texto">{registro.que}</p>
+              {/* Por qué no se guardó: es un error que el empleado tiene que resolver, y ninguno puede
+                quedar en silencio (CLAUDE.md §6). */}
+              <div className="mt-2">
+                <Aviso tipo="error">{registro.mensaje}</Aviso>
+              </div>
+              {registro.fecha && <p className="mt-2 text-lg text-texto-suave">{cuando(registro.fecha)}</p>}
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <Boton
+                  onClick={() => {
+                    setAviso(null);
+                    setError(null);
+                    setCorrigiendo(registro);
+                  }}
+                >
+                  Corregir
+                </Boton>
+                <Boton variante="secundario" onClick={() => setDescartando(registro)}>
+                  Descartar
+                </Boton>
+              </div>
+            </Tarjeta>
           </li>
         ))}
       </ul>

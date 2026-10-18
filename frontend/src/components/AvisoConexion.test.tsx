@@ -42,3 +42,17 @@ describe('Aviso de conexión — SPEC-KRILINXI-007', () => {
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
 });
+
+describe('Aviso de conexión con el tema — SPEC-KRILINXI-027', () => {
+  it('sin internet va en advertencia, con su ícono, y sigue siendo un status', () => {
+    const aviso = mostrar(false, 2);
+    expect(aviso).toHaveClass('bg-advertencia-fondo', 'text-advertencia-texto');
+    expect(aviso.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('con internet va en neutro, sobre la superficie', () => {
+    const aviso = mostrar(true, 0);
+    expect(aviso).toHaveClass('bg-superficie', 'text-texto');
+    expect(aviso).not.toHaveClass('bg-advertencia-fondo');
+  });
+});

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Aviso } from '../../../components/Aviso';
 import { Boton } from '../../../components/Boton';
 import { Paginas } from '../../../components/Paginas';
 import { useSucursales } from '../../sucursales/hooks/useSucursales';
@@ -24,32 +25,36 @@ export function PantallaAuditoria() {
     <>
       <FiltroAuditoria filtro={filtro} personas={personas} sucursales={sucursales} alCambiar={setFiltro} />
 
-      {estado.tipo === 'cargando' && <p className="mt-8 text-xl text-slate-700">Buscando…</p>}
+      {estado.tipo === 'cargando' && <p className="mt-8 text-xl text-texto-suave">Buscando…</p>}
 
       {(estado.tipo === 'sin-conexion' || estado.tipo === 'error') && (
-        <div role="alert" className="mt-8 rounded-lg border-2 border-amber-600 bg-amber-50 p-4 text-xl text-amber-900">
-          {estado.tipo === 'sin-conexion' ? (
-            <>
-              <p className="font-semibold">Esta consulta necesita conexión.</p>
-              <p className="mt-2">Cuando vuelva internet se carga sola. También podés probar de nuevo.</p>
-            </>
-          ) : (
-            <p>{estado.mensaje}</p>
-          )}
-          <div className="mt-4">
-            <Boton onClick={recargar}>Probar de nuevo</Boton>
-          </div>
+        <div className="mt-8">
+          <Aviso tipo={estado.tipo === 'sin-conexion' ? 'advertencia' : 'error'}>
+            {estado.tipo === 'sin-conexion' ? (
+              <>
+                <p className="font-semibold">Esta consulta necesita conexión.</p>
+                <p className="mt-2">Cuando vuelva internet se carga sola. También podés probar de nuevo.</p>
+              </>
+            ) : (
+              <p>{estado.mensaje}</p>
+            )}
+            <div className="mt-4">
+              <Boton onClick={recargar}>Probar de nuevo</Boton>
+            </div>
+          </Aviso>
         </div>
       )}
 
       {estado.tipo === 'listo' && (
         <section aria-label="Lo que se hizo" className="mt-8">
-          <h2 className="text-2xl font-bold text-slate-900">
+          <h2 className="text-2xl font-bold text-texto">
             Del {fechaParaLeer(estado.datos.desde)} al {fechaParaLeer(estado.datos.hasta)}
           </h2>
           {estado.datos.registros.length === 0 ? (
-            <p className="mt-4 text-xl text-slate-700">
-              {filtro.soloParaRevisar ? 'No hay nada para revisar en este período.' : 'No hay nada registrado en este período.'}
+            <p className="mt-4 text-xl text-texto-suave">
+              {filtro.soloParaRevisar
+                ? 'No hay nada para revisar en este período.'
+                : 'No hay nada registrado en este período.'}
             </p>
           ) : (
             <>

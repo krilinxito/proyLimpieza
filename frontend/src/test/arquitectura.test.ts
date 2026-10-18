@@ -183,33 +183,24 @@ describe('Los componentes no usan estilos en línea — SPEC-KRILINXI-020', () =
 });
 
 /**
- * La app pinta con el tema — SPEC-KRILINXI-022, extendida en SPEC-KRILINXI-024. Los colores salen
- * de `index.css` (`bg-marca`, `text-peligro-texto`…), no de la paleta de Tailwind (`bg-sky-700`):
- * así cambiar un color es una línea, y el test del tema (`tema.test.ts`) garantiza que se lea.
+ * La app pinta con el tema — SPEC-KRILINXI-022, extendida en SPEC-KRILINXI-024, -025 y -026. Los
+ * colores salen de `index.css` (`bg-marca`, `text-peligro-texto`…), no de la paleta de Tailwind
+ * (`bg-sky-700`): así cambiar un color es una línea, y el test del tema (`tema.test.ts`) garantiza
+ * que se lea.
  *
- * Crece con la ola estética: cada spec que pasa pantallas al tema agrega acá sus carpetas. Cuando
- * estén todas, la lista será `components`, `pages` y `features`.
+ * Creció con la ola estética, carpeta por carpeta. Desde SPEC-KRILINXI-027, que pasó al tema las
+ * últimas pantallas, cubre **toda** la app: una pantalla o una feature nueva queda vigilada desde
+ * su primer archivo, sin tocar esta lista.
  */
-const CON_EL_TEMA = [
-  'components',
-  'pages',
-  'features/auth',
-  // El mostrador — SPEC-KRILINXI-025.
-  'features/ordenes',
-  'features/entregas',
-  'features/clientes',
-  'features/pagos',
-  // El panel del admin — SPEC-KRILINXI-026.
-  'features/estadisticas',
-];
+const CON_EL_TEMA = ['components', 'pages', 'features'];
 
 const PALETA_CRUDA =
   /\b(?:bg|text|border|ring|outline|fill|stroke|divide|decoration|placeholder|accent|caret|shadow|from|via|to)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3}\b|\b(?:bg|text|border)-(?:white|black)\b/;
 
-describe('Lo que ya pasó al tema no usa la paleta cruda — SPEC-KRILINXI-022, SPEC-KRILINXI-024, SPEC-KRILINXI-025 y SPEC-KRILINXI-026', () => {
+describe('Ninguna parte de la app usa la paleta cruda — SPEC-KRILINXI-022, SPEC-KRILINXI-024, SPEC-KRILINXI-025, SPEC-KRILINXI-026 y SPEC-KRILINXI-027', () => {
   const ARCHIVOS = archivosFuente(...CON_EL_TEMA);
 
-  it('revisa los componentes, las páginas y el ingreso, no una lista vacía', () => {
+  it('revisa toda la app, no una lista vacía', () => {
     expect(ARCHIVOS.map(({ ruta }) => ruta)).toEqual(
       expect.arrayContaining([
         'components/Boton.tsx',
@@ -221,6 +212,11 @@ describe('Lo que ya pasó al tema no usa la paleta cruda — SPEC-KRILINXI-022, 
         'features/entregas/components/FormularioEntrega.tsx',
         'features/clientes/components/TarjetaCliente.tsx',
         'features/estadisticas/components/graficos/BarrasHorizontales.tsx',
+        // Las últimas que pasaron al tema, SPEC-KRILINXI-027.
+        'features/usuarios/components/PantallaPersonal.tsx',
+        'features/sucursales/components/PantallaSucursales.tsx',
+        'features/auditoria/components/TarjetaRegistro.tsx',
+        'features/pendientes/components/PantallaParaCorregir.tsx',
       ]),
     );
   });
@@ -232,7 +228,7 @@ describe('Lo que ya pasó al tema no usa la paleta cruda — SPEC-KRILINXI-022, 
     expect(PALETA_CRUDA.test('bg-marca text-peligro-texto border-borde-suave')).toBe(false);
   });
 
-  it('ningún archivo de esas carpetas usa la paleta cruda de Tailwind', () => {
+  it('ningún archivo de la app usa la paleta cruda de Tailwind', () => {
     const culpables = ARCHIVOS.filter(({ fuente }) => PALETA_CRUDA.test(sinComentarios(fuente))).map(({ ruta }) => ruta);
     expect(culpables).toEqual([]);
   });

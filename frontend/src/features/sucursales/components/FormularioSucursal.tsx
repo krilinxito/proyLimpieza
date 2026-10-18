@@ -36,8 +36,8 @@ export function FormularioSucursal({ sucursal, guardar, alTerminar, alCancelar, 
   }
 
   return (
-    <form onSubmit={enviarFormulario} noValidate aria-label={titulo} className="mt-6 grid gap-2 rounded-lg border-2 border-sky-700 p-4">
-      <h2 className="text-2xl font-bold text-slate-900">{titulo}</h2>
+    <form onSubmit={enviarFormulario} noValidate aria-label={titulo} className="mt-6 grid gap-2 rounded-2xl border-2 border-marca bg-superficie p-5 shadow-sm">
+      <h2 className="text-2xl font-bold text-texto">{titulo}</h2>
       <CampoTexto etiqueta="Nombre" value={datos.nombre} onChange={cambiar('nombre')} error={errores.nombre} autoComplete="off" autoFocus />
       <CampoTexto etiqueta="Dirección (si la tiene)" value={datos.direccion} onChange={cambiar('direccion')} autoComplete="off" />
       <CampoTexto etiqueta="Teléfono (si lo tiene)" value={datos.telefono} onChange={cambiar('telefono')} inputMode="tel" autoComplete="off" />
