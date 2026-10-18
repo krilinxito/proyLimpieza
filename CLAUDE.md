@@ -109,7 +109,8 @@ SPEC-KRILINXI-004 añadió la base local: PowerSync abre un SQLite en el navegad
 ante un 401; el schema local se testea contra las sync rules. Lo escrito queda en la cola:
 `uploadData` todavía no sube. Los tests usan la base real sobre SQLite de Node
 (`test/baseLocalDePrueba.ts`). SPEC-KRILINXI-005 añadió la primera pantalla del negocio,
-`/clientes`: buscar por teléfono y dar de alta, todo en la base local. Fija el patrón de las
+`/clientes`: buscar (por teléfono; desde SPEC-KRILINXI-032, mientras se escribe, por nombre, teléfono o
+carnet) y dar de alta, todo en la base local. Fija el patrón de las
 demás: el SQL vive en `features/<x>/api/`, un hook lo pone al alcance de la pantalla, y el
 teléfono se normaliza con la misma regla que el backend. SPEC-KRILINXI-006 añadió
 `/registrar-ropa` (orden y adelanto opcional; desde SPEC-KRILINXI-029 también el ADMIN mientras
@@ -249,6 +250,14 @@ SPEC-KRILINXI-031 pasó el estado de la conexión a una **píldora en la cabecer
 (`components/marco/PildoraConexion.tsx`): corta, en palabras, y con el detalle al tocarla. El aviso grande
 (`AvisoConexion`) solo aparece si hay registros para corregir. Los textos de los dos salen de
 `components/textoConexion.ts`, para que nunca digan cosas distintas.
+
+SPEC-KRILINXI-032 agregó la **búsqueda mientras se escribe**: `components/BuscadorVivo.tsx` (genérico, patrón
+combobox de ARIA, hasta 6 resultados y una acción fija como "Cliente nuevo") y, en la base local,
+`buscarClientes` y `buscarRopaVivo`. **Qué es coincidir con un cliente** se decide en un solo lugar,
+`features/clientes/api/busqueda.ts` (cada palabra en el nombre, parte del teléfono o el carnet), y lo usa
+también la ropa. Sin tildes ni mayúsculas con `lib/texto.ts`: `plegar` (JS) y `plegarSql` (SQL) tienen que
+dar lo mismo, y su test lo comprueba contra SQLite. /clientes ya lo usa. Para los tests, `test/buscador.ts`
+(`elegirEnBuscador('rosa', /Rosa Quispe/)`).
 
 SPEC-KRILINXI-012 corrige el reloj de la tablet: `lib/reloj` guarda el desfase con la hora
 del servidor que traen `login` y `renovar`, y `horaOficial()` es de donde salen
