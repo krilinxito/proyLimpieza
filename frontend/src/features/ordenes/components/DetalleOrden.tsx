@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Aviso } from '../../../components/Aviso';
 import { Boton } from '../../../components/Boton';
+import { Insignia } from '../../../components/Insignia';
+import { Tarjeta } from '../../../components/Tarjeta';
 import { ModalConfirmacion } from '../../../components/ModalConfirmacion';
 import { TEXTO_ESTADO_ORDEN, TEXTO_METODO_PAGO, TEXTO_TIPO_PAGO, type EstadoOrden } from '../../../lib/dominio';
 import { formatearBs } from '../../../lib/money';
-import { avancesDesde, estaCerrada } from '../estado';
+import { avancesDesde, estaCerrada, TONO_ESTADO } from '../estado';
 import { useRopa } from '../hooks/useRopa';
 import type { OrdenVista } from '../types';
 import { diaDe, fechaCorta } from './fechas';
@@ -18,6 +21,20 @@ type Props = {
    */
   accionesExtra?: (orden: OrdenVista, recargar: () => Promise<void>) => ReactNode;
 };
+
+/** Pares dato/valor, uno debajo del otro. */
+function Datos({ pares }: { pares: [string, ReactNode][] }) {
+  return (
+    <dl className="grid grid-cols-[auto_1fr] items-center gap-x-6 gap-y-2 text-xl">
+      {pares.map(([dato, valor]) => (
+        <div key={dato} className="contents">
+          <dt className="font-semibold text-texto-suave">{dato}</dt>
+          <dd className="text-texto">{valor}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
 
 /**
  * Todo sobre una ropa: sus datos, lo que pagó y lo que se puede hacer con ella —
@@ -39,11 +56,11 @@ export function DetalleOrden({ ordenId, alVolver, accionesExtra }: Props) {
     recargar().catch((error: unknown) => console.error('No se pudo leer la ropa.', error));
   }, [recargar]);
 
-  if (orden === undefined) return <p className="mt-6 text-xl text-slate-700">Buscando…</p>;
+  if (orden === undefined) return <p className="mt-6 text-xl text-texto-suave">Buscando…</p>;
   if (orden === null || !ropa.lista) {
     return (
       <>
-        <p className="mt-6 text-xl text-slate-700">No se encontró esa boleta en esta sucursal.</p>
+        <p className="mt-6 text-xl text-texto-suave">No se encontró esa boleta en esta sucursal.</p>
         <div className="mt-4">
           <Boton variante="secundario" onClick={alVolver}>
             Volver a la lista
@@ -62,59 +79,68 @@ export function DetalleOrden({ ordenId, alVolver, accionesExtra }: Props) {
     await recargar();
   }
 
-  const datos: [string, string][] = [
+  // Dos grupos: qué ropa es y cómo va, y las cuentas. Cada dato es un par <dt>/<dd>: así se lee
+  // de a pares con un lector de pantalla, y así lo buscan los tests.
+  const laRopa: [string, ReactNode][] = [
     ['Cliente', `${orden.clienteNombre}${orden.clienteTelefono ? ` (${orden.clienteTelefono})` : ''}`],
     ['Ropa', orden.descripcion],
-    ['Cómo va', TEXTO_ESTADO_ORDEN[orden.estado]],
+    ['Cómo va', <Insignia tono={TONO_ESTADO[orden.estado]}>{TEXTO_ESTADO_ORDEN[orden.estado]}</Insignia>],
     ['Entró', orden.fechaEntrada ? diaDe(orden.fechaEntrada) : '—'],
     ['Estará lista', orden.fechaEstimada ? fechaCorta(orden.fechaEstimada) : 'Sin fecha'],
+  ];
+  const cuentas: [string, ReactNode][] = [
     ['Precio', formatearBs(orden.precioTotal)],
-    ...(orden.precioFinal !== null ? [['Precio al entregar', formatearBs(orden.precioFinal)] as [string, string]] : []),
+    ...(orden.precioFinal !== null
+      ? [['Precio al entregar', formatearBs(orden.precioFinal)] as [string, ReactNode]]
+      : []),
     ['Pagó', formatearBs(orden.pagado)],
-    ['Falta pagar', formatearBs(orden.saldo)],
   ];
 
   return (
-    <section className="mt-6" aria-label={`Boleta ${orden.numeroBoleta}`}>
-      <h2 className="text-2xl font-bold text-slate-900">Boleta {orden.numeroBoleta}</h2>
-      <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 rounded-lg border-2 border-slate-300 bg-white p-4 text-xl">
-        {datos.map(([dato, valor]) => (
-          <div key={dato} className="contents">
-            <dt className="font-semibold text-slate-700">{dato}</dt>
-            <dd className="text-slate-900">{valor}</dd>
-          </div>
-        ))}
-      </dl>
+    <section className="mt-6 grid gap-4" aria-label={`Boleta ${orden.numeroBoleta}`}>
+      <h2 className="text-2xl font-bold text-texto">Boleta {orden.numeroBoleta}</h2>
 
-      <h3 className="mt-6 text-xl font-bold text-slate-900">Pagos</h3>
-      {orden.pagos.length === 0 ? (
-        <p className="mt-2 text-xl text-slate-700">Todavía no pagó nada.</p>
-      ) : (
-        <ul className="mt-2 grid gap-2 text-xl" aria-label="Pagos">
-          {orden.pagos.map((pago) => (
-            <li key={pago.id} className="rounded-lg bg-slate-100 px-4 py-2">
-              {TEXTO_TIPO_PAGO[pago.tipo]} — {TEXTO_METODO_PAGO[pago.metodo]} — {formatearBs(pago.monto)}
-            </li>
-          ))}
-        </ul>
-      )}
+      <Tarjeta titulo="La ropa" nivel={3}>
+        <Datos pares={laRopa} />
+      </Tarjeta>
 
-      {aviso && (
-        <p role="alert" className="mt-4 rounded-lg bg-red-50 p-4 text-xl text-red-800">
-          {aviso}
-        </p>
-      )}
+      <Tarjeta titulo="Cuentas" nivel={3}>
+        <Datos pares={cuentas} />
+        {/* Lo que más se pregunta en el mostrador: grande, y en rojo solo si hay algo que cobrar. */}
+        <dl className="mt-3 flex flex-wrap items-baseline justify-between gap-x-6 border-t border-borde-suave pt-3">
+          <dt className="text-xl font-semibold text-texto-suave">Falta pagar</dt>
+          <dd className={`text-3xl font-bold ${orden.saldo > 0 ? 'text-peligro-texto' : 'text-exito-texto'}`}>
+            {formatearBs(orden.saldo)}
+          </dd>
+        </dl>
+      </Tarjeta>
+
+      <Tarjeta titulo="Pagos" nivel={3}>
+        {orden.pagos.length === 0 ? (
+          <p className="text-xl text-texto-suave">Todavía no pagó nada.</p>
+        ) : (
+          <ul className="grid gap-2 text-xl" aria-label="Pagos">
+            {orden.pagos.map((pago) => (
+              <li key={pago.id} className="rounded-xl bg-fondo px-4 py-2">
+                {TEXTO_TIPO_PAGO[pago.tipo]} — {TEXTO_METODO_PAGO[pago.metodo]} — {formatearBs(pago.monto)}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Tarjeta>
+
+      {aviso && <Aviso tipo="error">{aviso}</Aviso>}
 
       {cerrada && (
-        <p className="mt-6 rounded-lg bg-slate-100 p-4 text-xl text-slate-800">
+        <Aviso tipo="informacion">
           {orden.estado === 'ANULADO'
             ? 'Esta ropa fue anulada: no se puede entregar ni cobrar.'
             : 'Esta ropa ya fue entregada.'}
-        </p>
+        </Aviso>
       )}
 
       {!cerrada && !cobrando && (
-        <div className="mt-6 grid gap-3">
+        <div className="mt-2 grid gap-3">
           {avancesDesde(orden.estado).map(({ destino, texto }) => (
             <Boton key={destino} onClick={() => pasarA(destino)}>
               {texto}
@@ -144,7 +170,7 @@ export function DetalleOrden({ ordenId, alVolver, accionesExtra }: Props) {
         />
       )}
 
-      <div className="mt-6">
+      <div className="mt-2">
         <Boton variante="secundario" onClick={alVolver}>
           Volver a la lista
         </Boton>

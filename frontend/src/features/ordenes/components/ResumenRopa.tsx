@@ -1,3 +1,4 @@
+import { Aviso } from '../../../components/Aviso';
 import { Boton } from '../../../components/Boton';
 import { formatearBs } from '../../../lib/money';
 import type { RopaRegistrada } from '../types';
@@ -17,14 +18,12 @@ export function ResumenRopa({ ropa, alRegistrarOtra }: { ropa: RopaRegistrada; a
 
   return (
     <section className="mt-6">
-      <p role="status" className="rounded-lg bg-green-50 p-4 text-xl text-green-900">
-        Ropa registrada con la boleta {ropa.numeroBoleta}.
-      </p>
-      <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 rounded-lg border-2 border-slate-300 bg-white p-4 text-xl">
+      <Aviso tipo="exito">Ropa registrada con la boleta {ropa.numeroBoleta}.</Aviso>
+      <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 rounded-2xl border border-borde-suave bg-superficie p-4 text-xl">
         {filas.map(([dato, valor]) => (
           <div key={dato} className="contents">
-            <dt className="font-semibold text-slate-700">{dato}</dt>
-            <dd className="text-slate-900">{valor}</dd>
+            <dt className="font-semibold text-texto-suave">{dato}</dt>
+            <dd className="text-texto">{valor}</dd>
           </div>
         ))}
       </dl>

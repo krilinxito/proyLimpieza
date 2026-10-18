@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Aviso } from '../../../components/Aviso';
 import { Boton } from '../../../components/Boton';
 import { CampoTexto } from '../../../components/CampoTexto';
 import { ModalConfirmacion } from '../../../components/ModalConfirmacion';
@@ -21,7 +22,11 @@ type Props = {
 function saldoConPrecio(orden: OrdenVista, precioFinal: string): number | null {
   try {
     const precio = parsearMonto(precioFinal);
-    return calcularSaldo({ precioTotal: orden.precioTotal, precioFinal: precio, pagos: orden.pagos.map((p) => p.monto) });
+    return calcularSaldo({
+      precioTotal: orden.precioTotal,
+      precioFinal: precio,
+      pagos: orden.pagos.map((p) => p.monto),
+    });
   } catch {
     return null;
   }
@@ -85,12 +90,18 @@ export function FormularioEntrega({ orden, alEntregar, alCancelar }: Props) {
     }
   }
 
-  const debe = confirmar && confirmar.saldoDespues > 0 ? ` El cliente queda debiendo ${formatearBs(confirmar.saldoDespues)}.` : '';
+  const debe =
+    confirmar && confirmar.saldoDespues > 0 ? ` El cliente queda debiendo ${formatearBs(confirmar.saldoDespues)}.` : '';
 
   return (
-    <form onSubmit={revisar} noValidate aria-label="Entregar la ropa" className="mt-2 grid gap-2 rounded-lg border-2 border-sky-700 p-4">
+    <form
+      onSubmit={revisar}
+      noValidate
+      aria-label="Entregar la ropa"
+      className="mt-2 grid gap-2 rounded-2xl border-2 border-marca bg-superficie p-5 shadow-sm"
+    >
       <fieldset aria-describedby={errores.traeBoleta ? 'trae-boleta-error' : undefined}>
-        <legend className="text-xl font-semibold text-slate-900">¿El cliente trae la boleta?</legend>
+        <legend className="text-xl font-semibold text-texto">¿El cliente trae la boleta?</legend>
         <div className="mt-2 grid grid-cols-2 gap-3">
           {[
             { valor: true, texto: 'Trae la boleta' },
@@ -99,7 +110,7 @@ export function FormularioEntrega({ orden, alEntregar, alCancelar }: Props) {
             <label
               key={texto}
               className={`flex min-h-14 items-center gap-3 rounded-lg border-2 px-4 text-xl ${
-                datos.traeBoleta === valor ? 'border-sky-700 bg-sky-50' : 'border-slate-400 bg-white'
+                datos.traeBoleta === valor ? 'border-marca bg-marca-suave font-semibold' : 'border-borde bg-superficie'
               }`}
             >
               <input
@@ -114,7 +125,7 @@ export function FormularioEntrega({ orden, alEntregar, alCancelar }: Props) {
           ))}
         </div>
         {errores.traeBoleta && (
-          <p id="trae-boleta-error" className="mt-2 text-lg text-red-700">
+          <p id="trae-boleta-error" className="mt-2 text-lg font-semibold text-peligro-texto">
             {errores.traeBoleta}
           </p>
         )}
@@ -147,7 +158,7 @@ export function FormularioEntrega({ orden, alEntregar, alCancelar }: Props) {
         inputMode="decimal"
         autoComplete="off"
       />
-      <p className="text-xl text-slate-800" aria-live="polite">
+      <p className="text-xl text-texto" aria-live="polite">
         {saldo === null ? ' ' : saldo > 0 ? `Falta pagar ${formatearBs(saldo)}.` : 'No falta pagar nada.'}
       </p>
 
@@ -169,9 +180,9 @@ export function FormularioEntrega({ orden, alEntregar, alCancelar }: Props) {
       )}
 
       {aviso && (
-        <p role="alert" className="mt-4 rounded-lg bg-red-50 p-4 text-xl text-red-800">
-          {aviso}
-        </p>
+        <div className="mt-4">
+          <Aviso tipo="error">{aviso}</Aviso>
+        </div>
       )}
       <div className="mt-4 grid gap-3">
         <Boton type="submit" ocupado={!entregar.lista} textoOcupado="Preparando…">

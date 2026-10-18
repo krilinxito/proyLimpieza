@@ -190,3 +190,58 @@ describe('Ropa en el local: una lectura vieja no pisa la búsqueda — SPEC-KRIL
     expect(screen.getByRole('button', { name: 'Boleta 001234, Rosa Quispe' })).toBeInTheDocument();
   });
 });
+
+describe('Ropa en el local con el tema — SPEC-KRILINXI-025', () => {
+  it('cada ropa de la lista es una tarjeta con su estado en una insignia del tono que le toca', async () => {
+    await abrir();
+    const tarjeta = screen.getByRole('button', { name: 'Boleta 000001, Rosa Quispe' });
+    expect(tarjeta).toHaveClass('rounded-2xl', 'bg-superficie');
+    // La palabra está siempre; el tono solo ayuda a encontrarla (TONO_ESTADO: RECIBIDO, neutro).
+    expect(within(tarjeta).getByText('Recibido')).toHaveClass('rounded-full', 'bg-fondo');
+    expect(within(tarjeta).getByText('Falta pagar Bs 30,00')).toHaveClass('text-peligro-texto');
+  });
+
+  it('la entregada sin sincronizar figura con la insignia de Entregado (estadoEfectivo)', async () => {
+    await abrir();
+    fireEvent.change(screen.getByLabelText('Número de boleta o teléfono del cliente'), { target: { value: '70123456' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar' }));
+    const tarjeta = await screen.findByRole('button', { name: 'Boleta 000004, Rosa Quispe' });
+    expect(within(tarjeta).getByText('Entregado')).toHaveClass('rounded-full');
+  });
+
+  it('el detalle agrupa la ropa, las cuentas y los pagos en tarjetas, y destaca lo que falta pagar', async () => {
+    await abrir();
+    const detalle = await abrirDetalle();
+    expect(within(detalle).getByRole('region', { name: 'La ropa' })).toBeInTheDocument();
+    expect(within(detalle).getByRole('heading', { level: 3, name: 'Cuentas' })).toBeInTheDocument();
+    expect(within(within(detalle).getByRole('region', { name: 'Pagos' })).getByRole('list', { name: 'Pagos' })).toBeInTheDocument();
+
+    const saldo = within(detalle).getByText('Falta pagar', { selector: 'dt' }).nextElementSibling;
+    expect(saldo).toHaveClass('text-3xl', 'text-peligro-texto');
+    expect(within(detalle).getByText('Recibido', { selector: 'dd span' })).toHaveClass('rounded-full');
+  });
+
+  it('el error de un cobro es un aviso de error del tema, con su rol de alerta', async () => {
+    await abrir();
+    const detalle = await abrirDetalle();
+    fireEvent.click(within(detalle).getByRole('button', { name: 'Cobrar' }));
+    fireEvent.change(within(detalle).getByLabelText('Cuánto paga (Bs)'), { target: { value: '31' } });
+    fireEvent.click(within(detalle).getByLabelText('Efectivo'));
+    // El método elegido se distingue por algo más que el color: negrita.
+    expect(within(detalle).getByLabelText('Efectivo').closest('label')).toHaveClass('font-semibold', 'border-marca');
+    fireEvent.click(within(detalle).getByRole('button', { name: 'Guardar cobro' }));
+
+    const aviso = await within(detalle).findByRole('alert');
+    expect(aviso).toHaveTextContent('El cobro no puede ser mayor que lo que falta pagar.');
+    expect(aviso).toHaveClass('bg-peligro-fondo');
+  });
+
+  it('la ropa entregada lo dice en un aviso de información', async () => {
+    await abrir();
+    fireEvent.change(screen.getByLabelText('Número de boleta o teléfono del cliente'), { target: { value: '000004' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar' }));
+    await screen.findByRole('button', { name: 'Boleta 000004, Rosa Quispe' });
+    const detalle = await abrirDetalle('000004');
+    expect(within(detalle).getByText('Esta ropa ya fue entregada.').closest('[role="status"]')).toHaveClass('bg-info-fondo');
+  });
+});

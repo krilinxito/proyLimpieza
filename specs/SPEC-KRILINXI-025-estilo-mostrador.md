@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-025
 name: Pantallas del mostrador con el tema
 slug: estilo-mostrador
-status: draft
+status: finished
 owner: krilinxito
 created: 2026-10-17
 scope:
@@ -16,7 +16,13 @@ scope:
 priority: high
 depends_on:
   - SPEC-KRILINXI-024
-tests: []
+tests:
+  - frontend/src/components/piezas.test.tsx
+  - frontend/src/features/clientes/components/PantallaClientes.test.tsx
+  - frontend/src/features/entregas/components/PantallaEntregar.test.tsx
+  - frontend/src/features/ordenes/components/PantallaRopa.test.tsx
+  - frontend/src/features/ordenes/estado.test.ts
+  - frontend/src/test/arquitectura.test.ts
 ---
 
 ## Descripción

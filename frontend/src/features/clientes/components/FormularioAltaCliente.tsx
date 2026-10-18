@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react';
+import { Aviso } from '../../../components/Aviso';
 import { Boton } from '../../../components/Boton';
+import { Tarjeta } from '../../../components/Tarjeta';
 import { CampoTexto } from '../../../components/CampoTexto';
 import type { DatosAlta, ErroresAlta, ResultadoAlta } from '../types';
 
@@ -19,7 +21,11 @@ type Props = {
  * (`api/clientesLocal`); este formulario solo muestra lo que le contesta.
  */
 export function FormularioAltaCliente({ telefonoInicial, registrar, alTerminar, alCancelar }: Props) {
-  const [datos, setDatos] = useState<DatosAlta>({ nombre: '', telefono: telefonoInicial, carnet: '' });
+  const [datos, setDatos] = useState<DatosAlta>({
+    nombre: '',
+    telefono: telefonoInicial,
+    carnet: '',
+  });
   const [errores, setErrores] = useState<ErroresAlta>({});
   const [errorGeneral, setErrorGeneral] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
@@ -48,43 +54,46 @@ export function FormularioAltaCliente({ telefonoInicial, registrar, alTerminar, 
   }
 
   return (
-    <form onSubmit={guardar} noValidate aria-label="Registrar cliente nuevo" className="mt-6 grid gap-2">
-      <h2 className="text-2xl font-bold text-slate-900">Registrar cliente nuevo</h2>
-      <CampoTexto
-        etiqueta="Nombre completo"
-        value={datos.nombre}
-        onChange={cambiar('nombre')}
-        error={errores.nombre}
-        autoComplete="off"
-        autoFocus
-      />
-      <CampoTexto
-        etiqueta="Teléfono"
-        value={datos.telefono}
-        onChange={cambiar('telefono')}
-        error={errores.telefono}
-        inputMode="tel"
-        autoComplete="off"
-      />
-      <CampoTexto
-        etiqueta="Carnet (si lo da)"
-        value={datos.carnet}
-        onChange={cambiar('carnet')}
-        autoComplete="off"
-      />
-      {errorGeneral && (
-        <p role="alert" className="mt-4 rounded-lg bg-red-50 p-4 text-xl text-red-800">
-          {errorGeneral}
-        </p>
-      )}
-      <div className="mt-6 grid gap-3">
-        <Boton type="submit" ocupado={guardando} textoOcupado="Guardando…">
-          Guardar cliente
-        </Boton>
-        <Boton variante="secundario" onClick={alCancelar} disabled={guardando}>
-          Cancelar
-        </Boton>
-      </div>
-    </form>
+    <div className="mt-6">
+      <Tarjeta titulo="Registrar cliente nuevo">
+        <form onSubmit={guardar} noValidate aria-label="Registrar cliente nuevo" className="grid gap-2">
+          <CampoTexto
+            etiqueta="Nombre completo"
+            value={datos.nombre}
+            onChange={cambiar('nombre')}
+            error={errores.nombre}
+            autoComplete="off"
+            autoFocus
+          />
+          <CampoTexto
+            etiqueta="Teléfono"
+            value={datos.telefono}
+            onChange={cambiar('telefono')}
+            error={errores.telefono}
+            inputMode="tel"
+            autoComplete="off"
+          />
+          <CampoTexto
+            etiqueta="Carnet (si lo da)"
+            value={datos.carnet}
+            onChange={cambiar('carnet')}
+            autoComplete="off"
+          />
+          {errorGeneral && (
+            <div className="mt-4">
+              <Aviso tipo="error">{errorGeneral}</Aviso>
+            </div>
+          )}
+          <div className="mt-6 grid gap-3">
+            <Boton type="submit" ocupado={guardando} textoOcupado="Guardando…">
+              Guardar cliente
+            </Boton>
+            <Boton variante="secundario" onClick={alCancelar} disabled={guardando}>
+              Cancelar
+            </Boton>
+          </div>
+        </form>
+      </Tarjeta>
+    </div>
   );
 }

@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react';
+import { Aviso } from '../../../components/Aviso';
 import { Boton } from '../../../components/Boton';
+import { Tarjeta } from '../../../components/Tarjeta';
 import { CampoTexto } from '../../../components/CampoTexto';
 import type { Cliente, DatosEdicion, ErroresAlta, ResultadoEdicion } from '../types';
 
@@ -19,7 +21,10 @@ type Props = {
  * contesta, igual que el del alta.
  */
 export function FormularioEditarCliente({ cliente, editar, alTerminar, alCancelar }: Props) {
-  const [datos, setDatos] = useState<DatosEdicion>({ nombre: cliente.nombre, telefono: cliente.telefono });
+  const [datos, setDatos] = useState<DatosEdicion>({
+    nombre: cliente.nombre,
+    telefono: cliente.telefono,
+  });
   const [errores, setErrores] = useState<ErroresAlta>({});
   const [errorGeneral, setErrorGeneral] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
@@ -47,37 +52,40 @@ export function FormularioEditarCliente({ cliente, editar, alTerminar, alCancela
   }
 
   return (
-    <form onSubmit={guardar} noValidate aria-label="Cambiar datos del cliente" className="mt-6 grid gap-2">
-      <h2 className="text-2xl font-bold text-slate-900">Cambiar datos del cliente</h2>
-      <CampoTexto
-        etiqueta="Nombre completo"
-        value={datos.nombre}
-        onChange={cambiar('nombre')}
-        error={errores.nombre}
-        autoComplete="off"
-        autoFocus
-      />
-      <CampoTexto
-        etiqueta="Teléfono"
-        value={datos.telefono}
-        onChange={cambiar('telefono')}
-        error={errores.telefono}
-        inputMode="tel"
-        autoComplete="off"
-      />
-      {errorGeneral && (
-        <p role="alert" className="mt-4 rounded-lg bg-red-50 p-4 text-xl text-red-800">
-          {errorGeneral}
-        </p>
-      )}
-      <div className="mt-6 grid gap-3">
-        <Boton type="submit" ocupado={guardando} textoOcupado="Guardando…">
-          Guardar cambios
-        </Boton>
-        <Boton variante="secundario" onClick={alCancelar} disabled={guardando}>
-          Cancelar
-        </Boton>
-      </div>
-    </form>
+    <div className="mt-6">
+      <Tarjeta titulo="Cambiar datos del cliente">
+        <form onSubmit={guardar} noValidate aria-label="Cambiar datos del cliente" className="grid gap-2">
+          <CampoTexto
+            etiqueta="Nombre completo"
+            value={datos.nombre}
+            onChange={cambiar('nombre')}
+            error={errores.nombre}
+            autoComplete="off"
+            autoFocus
+          />
+          <CampoTexto
+            etiqueta="Teléfono"
+            value={datos.telefono}
+            onChange={cambiar('telefono')}
+            error={errores.telefono}
+            inputMode="tel"
+            autoComplete="off"
+          />
+          {errorGeneral && (
+            <div className="mt-4">
+              <Aviso tipo="error">{errorGeneral}</Aviso>
+            </div>
+          )}
+          <div className="mt-6 grid gap-3">
+            <Boton type="submit" ocupado={guardando} textoOcupado="Guardando…">
+              Guardar cambios
+            </Boton>
+            <Boton variante="secundario" onClick={alCancelar} disabled={guardando}>
+              Cancelar
+            </Boton>
+          </div>
+        </form>
+      </Tarjeta>
+    </div>
   );
 }

@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Aviso } from '../../../components/Aviso';
 import { Boton } from '../../../components/Boton';
 import { CampoTexto } from '../../../components/CampoTexto';
 import type { MetodoPago } from '../../../lib/dominio';
@@ -40,14 +41,26 @@ export function FormularioCobro({ saldo, cobrar, alCobrar, alCancelar }: Props) 
   }
 
   return (
-    <form onSubmit={guardar} noValidate aria-label="Cobrar" className="mt-6 grid gap-2 rounded-lg border-2 border-sky-700 p-4">
-      <p className="text-xl text-slate-800">Falta pagar {formatearBs(saldo)}.</p>
-      <CampoTexto etiqueta="Cuánto paga (Bs)" value={monto} onChange={setMonto} inputMode="decimal" autoComplete="off" autoFocus />
+    <form
+      onSubmit={guardar}
+      noValidate
+      aria-label="Cobrar"
+      className="mt-6 grid gap-2 rounded-2xl border-2 border-marca bg-superficie p-5 shadow-sm"
+    >
+      <p className="text-xl text-texto">Falta pagar {formatearBs(saldo)}.</p>
+      <CampoTexto
+        etiqueta="Cuánto paga (Bs)"
+        value={monto}
+        onChange={setMonto}
+        inputMode="decimal"
+        autoComplete="off"
+        autoFocus
+      />
       <ElegirMetodo value={metodo} onChange={setMetodo} pregunta="¿Cómo paga?" />
       {error && (
-        <p role="alert" className="mt-4 rounded-lg bg-red-50 p-4 text-xl text-red-800">
-          {error}
-        </p>
+        <div className="mt-4">
+          <Aviso tipo="error">{error}</Aviso>
+        </div>
       )}
       <div className="mt-4 grid gap-3">
         <Boton type="submit" ocupado={guardando} textoOcupado="Guardando…">

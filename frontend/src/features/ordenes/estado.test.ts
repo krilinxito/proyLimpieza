@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ESTADOS_ORDEN } from '../../lib/dominio';
-import { avancesDesde, estadoEfectivo, estaCerrada, ORIGENES, puedePasarA } from './estado';
+import { avancesDesde, estadoEfectivo, estaCerrada, ORIGENES, puedePasarA, TONO_ESTADO } from './estado';
 
 /**
  * La tabla del backend, leída de su archivo de verdad: si alguien cambia las transiciones del
@@ -68,5 +68,18 @@ describe('El estado que se muestra — SPEC-KRILINXI-008', () => {
 
   it('cerradas son ENTREGADO y ANULADO', () => {
     expect(ESTADOS_ORDEN.filter(estaCerrada)).toEqual(['ENTREGADO', 'ANULADO']);
+  });
+});
+
+describe('El tono de cada estado — SPEC-KRILINXI-025', () => {
+  // El tipo `Record<EstadoOrden, …>` ya obliga a TypeScript; esto lo dice también en la suite,
+  // por si alguien agrega un estado al dominio y lo castea para salir del paso.
+  it.each(ESTADOS_ORDEN)('%s tiene un tono', (estado) => {
+    expect(['neutro', 'informacion', 'exito', 'advertencia', 'peligro']).toContain(TONO_ESTADO[estado]);
+  });
+
+  it('lo que ya se puede entregar se distingue de lo que no se toca más', () => {
+    expect(TONO_ESTADO.LISTO).toBe('exito');
+    expect(TONO_ESTADO.ANULADO).toBe('peligro');
   });
 });
