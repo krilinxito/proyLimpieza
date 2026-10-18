@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Aviso } from '../../../components/Aviso';
 import { Boton } from '../../../components/Boton';
 import { ModalConfirmacion } from '../../../components/ModalConfirmacion';
 import type { Cliente } from '../../clientes/types';
@@ -47,16 +48,16 @@ export function MismoCliente({ registro, buscar, usar, alUsar }: Props) {
   }
 
   return (
-    <section aria-label="Es el mismo cliente" className="mt-4 rounded-lg border-2 border-sky-700 bg-sky-50 p-4 text-xl">
-      <p className="font-semibold text-slate-900">Ya hay un cliente con ese teléfono:</p>
-      <p className="mt-1 text-slate-900">
+    <section aria-label="Es el mismo cliente" className="mt-4 rounded-2xl border-2 border-info-borde bg-info-fondo p-5 text-xl">
+      <p className="font-semibold text-texto">Ya hay un cliente con ese teléfono:</p>
+      <p className="mt-1 text-texto">
         {existente.nombre} ({existente.telefono})
       </p>
-      <p className="mt-2 text-slate-800">Si es la misma persona, su ropa pasa a ese cliente y este se descarta.</p>
+      <p className="mt-2 text-texto">Si es la misma persona, su ropa pasa a ese cliente y este se descarta.</p>
       {error && (
-        <p role="alert" className="mt-2 text-red-700">
-          {error}
-        </p>
+        <div className="mt-2">
+          <Aviso tipo="error">{error}</Aviso>
+        </div>
       )}
       <div className="mt-4">
         <Boton onClick={() => setConfirmando(true)}>Es el mismo cliente</Boton>

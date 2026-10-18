@@ -1,7 +1,8 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Aviso } from '../../../components/Aviso';
 import { Boton } from '../../../components/Boton';
 import { CampoTexto } from '../../../components/CampoTexto';
+import { EnlaceBoton } from '../../../components/EnlaceBoton';
 import { esMetodoPago } from '../../../lib/dominio';
 import { ElegirMetodo } from '../../ordenes/components/ElegirMetodo';
 import { prepararCorreccion, type Campo, type ResultadoCorreccion } from '../correccion';
@@ -22,7 +23,7 @@ type Props = {
 function ElegirRetiro({ value, onChange, error }: { value: string; onChange: (valor: string) => void; error?: string }) {
   return (
     <fieldset className="mt-4" aria-describedby={error ? 'retiro-error' : undefined}>
-      <legend className="text-xl font-semibold text-slate-900">¿El cliente trae la boleta?</legend>
+      <legend className="text-xl font-semibold text-texto">¿El cliente trae la boleta?</legend>
       <div className="mt-2 grid grid-cols-2 gap-3">
         {[
           { valor: 'CON_BOLETA', texto: 'Trae la boleta' },
@@ -31,7 +32,7 @@ function ElegirRetiro({ value, onChange, error }: { value: string; onChange: (va
           <label
             key={valor}
             className={`flex min-h-14 items-center gap-3 rounded-lg border-2 px-4 text-xl ${
-              value === valor ? 'border-sky-700 bg-sky-50' : 'border-slate-400 bg-white'
+              value === valor ? 'border-marca bg-marca-suave font-semibold' : 'border-borde bg-superficie'
             }`}
           >
             <input type="radio" name="retiro" className="size-6" checked={value === valor} onChange={() => onChange(valor)} />
@@ -40,7 +41,7 @@ function ElegirRetiro({ value, onChange, error }: { value: string; onChange: (va
         ))}
       </div>
       {error && (
-        <p id="retiro-error" className="mt-2 text-lg text-red-700">
+        <p id="retiro-error" className="mt-2 text-lg font-semibold text-peligro-texto">
           {error}
         </p>
       )}
@@ -62,8 +63,8 @@ export function FormularioCorreccion({ registro, guardar, alGuardar, alVolver, a
 
   const encabezado = (
     <>
-      <h2 className="mt-6 text-2xl font-bold text-slate-900">Corregir: {registro.que}</h2>
-      <p className="mt-2 text-xl text-red-800">Por qué no se guardó: {registro.mensaje}</p>
+      <h2 className="mt-6 text-2xl font-bold text-texto">Corregir: {registro.que}</h2>
+      <p className="mt-2 text-xl text-peligro-texto">Por qué no se guardó: {registro.mensaje}</p>
     </>
   );
 
@@ -71,11 +72,9 @@ export function FormularioCorreccion({ registro, guardar, alGuardar, alVolver, a
     return (
       <div>
         {encabezado}
-        <p className="mt-4 text-xl text-slate-800">{correccion.mensaje}</p>
+        <p className="mt-4 text-xl text-texto">{correccion.mensaje}</p>
         <div className="mt-6 grid gap-3">
-          <Link to="/ropa" className="text-xl font-semibold text-sky-700 underline">
-            Ir a Ropa en el local
-          </Link>
+          <EnlaceBoton a="/ropa">Ir a Ropa en el local</EnlaceBoton>
           <Boton variante="secundario" onClick={alVolver}>
             Volver a la lista
           </Boton>
@@ -146,12 +145,12 @@ export function FormularioCorreccion({ registro, guardar, alGuardar, alVolver, a
     <form onSubmit={enviar} noValidate aria-label="Corregir el registro" className="grid gap-2">
       {encabezado}
       {antesDelFormulario}
-      <p className="mt-2 text-xl text-slate-700">Corregí lo que está mal y volvé a guardarlo.</p>
+      <p className="mt-2 text-xl text-texto-suave">Corregí lo que está mal y volvé a guardarlo.</p>
       {correccion.campos.map(campo)}
       {errorGeneral && (
-        <p role="alert" className="mt-4 text-xl text-red-700">
-          {errorGeneral}
-        </p>
+        <div className="mt-4">
+          <Aviso tipo="error">{errorGeneral}</Aviso>
+        </div>
       )}
       <div className="mt-6 grid gap-3">
         <Boton type="submit" ocupado={guardando} textoOcupado="Guardando…">

@@ -225,3 +225,20 @@ describe('Es el mismo cliente — SPEC-KRILINXI-021', () => {
     expect(screen.queryByRole('region', { name: 'Es el mismo cliente' })).not.toBeInTheDocument();
   });
 });
+
+describe('Para corregir con el tema — SPEC-KRILINXI-027', () => {
+  it('cada registro es una tarjeta, con por qué no se guardó en un aviso de error', async () => {
+    const { abrir } = await abrirConUnaBoletaRechazada();
+    await abrir();
+
+    const tarjeta = screen.getByText('Ropa con la boleta 001234').closest('li');
+    if (!tarjeta) throw new Error('No está la tarjeta del registro.');
+    expect(tarjeta.firstElementChild).toHaveClass('rounded-2xl', 'bg-superficie');
+    const motivo = within(tarjeta).getByRole('alert');
+    expect(motivo).toHaveTextContent(BOLETA_REPETIDA);
+    expect(motivo).toHaveClass('bg-peligro-fondo');
+    // Corregir es la acción principal; descartar, la secundaria. Los dos, botones del tema.
+    expect(within(tarjeta).getByRole('button', { name: 'Corregir' })).toHaveClass('bg-marca');
+    expect(within(tarjeta).getByRole('button', { name: 'Descartar' })).toHaveClass('bg-superficie');
+  });
+});
