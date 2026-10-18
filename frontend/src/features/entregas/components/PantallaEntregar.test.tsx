@@ -171,9 +171,9 @@ describe('Entregar: después de entregar — SPEC-KRILINXI-009', () => {
 });
 
 describe('Entregar: solo en el mostrador — SPEC-KRILINXI-009', () => {
-  it('un ADMIN que abre /entregar ve el aviso de solo empleados', () => {
+  it('un ADMIN que no está atendiendo ve cómo empezar (SPEC-KRILINXI-029)', () => {
     renderEnRuta(<App />, '/entregar', { sesion: sesionDePrueba({ rol: 'ADMIN' }) });
-    expect(screen.getByText(/para quien atiende en una sucursal/)).toBeInTheDocument();
+    expect(screen.getByText(/elegí en qué sucursal vas a atender/)).toBeInTheDocument();
   });
 });
 

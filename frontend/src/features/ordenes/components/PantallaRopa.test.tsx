@@ -153,9 +153,9 @@ describe('Ropa en el local: rutas — SPEC-KRILINXI-008', () => {
     expect(screen.getByRole('heading', { name: 'Cobrar', level: 1 })).toBeInTheDocument();
   });
 
-  it.each(['/ropa', '/cobrar'])('un ADMIN que abre %s ve el aviso de solo empleados', (ruta) => {
+  it.each(['/ropa', '/cobrar'])('un ADMIN que no está atendiendo y abre %s ve cómo empezar (SPEC-KRILINXI-029)', (ruta) => {
     renderEnRuta(<App />, ruta, { sesion: sesionDePrueba({ rol: 'ADMIN' }) });
-    expect(screen.getByText(/para quien atiende en una sucursal/)).toBeInTheDocument();
+    expect(screen.getByText(/elegí en qué sucursal vas a atender/)).toBeInTheDocument();
   });
 });
 

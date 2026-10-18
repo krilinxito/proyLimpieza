@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useSession } from '../../../hooks/useSession';
+import { useSucursalDeTrabajo } from '../../atencion/hooks/useSucursalDeTrabajo';
 import type { EstadoOrden, MetodoPago } from '../../../lib/dominio';
 import { useBaseLocal } from '../../../lib/powersync';
 import { buscarOrdenes, cambiarEstado, cobrar, listarAbiertas, obtenerOrden } from '../api/ropaLocal';
@@ -18,13 +19,14 @@ export type Ropa =
 
 /**
  * La puerta de las pantallas a la ropa de la sucursal — SPEC-KRILINXI-008. Pone la base
- * local y, de la sesión, la sucursal y quién cobra: la pantalla no los ve ni los elige.
+ * local, la sucursal de trabajo (SPEC-KRILINXI-029) y, de la sesión, quién cobra: la pantalla
+ * no los ve ni los elige.
  */
 export function useRopa(): Ropa {
   const base = useBaseLocal();
   const { sesion } = useSession();
   const usuarioId = sesion?.usuario.id;
-  const sucursalId = sesion?.usuario.sucursalId;
+  const sucursalId = useSucursalDeTrabajo();
 
   return useMemo<Ropa>(() => {
     if (!base || !usuarioId || !sucursalId) return { lista: false };

@@ -7,6 +7,7 @@ import {
   type BaseLocal,
   type ControlBaseLocal,
 } from '../../lib/powersync';
+import { borrarAtencion, guardarAtencion, leerAtencion } from '../atencion/api/almacen';
 import { borrarSesion, guardarSesion, leerSesion } from './api/almacen';
 import { login } from './api/login';
 import { ContextoSesion, type ValorSesion } from './contexto';
@@ -22,6 +23,11 @@ type Props = {
   abrirBaseLocal?: () => Promise<ControlBaseLocal>;
 };
 
+/** La sucursal guardada en la tablet, si quien está adentro es un ADMIN que eligió una. */
+function atencionGuardada(sesion: Sesion | null): string | null {
+  return sesion?.usuario.rol === 'ADMIN' ? leerAtencion(sesion.usuario.id) : null;
+}
+
 /**
  * Dueño de la sesión mientras la app está abierta, y de la base local que va con ella.
  *
@@ -30,10 +36,17 @@ type Props = {
  * alguien adentro, mantiene abierta la base local y la sincronización (SPEC-KRILINXI-004):
  * se abre al entrar y se borra al salir o cuando el servidor rechaza la sesión. Cuando el
  * token de PowerSync está por vencer, lo renueva sin pedir la contraseña (SPEC-KRILINXI-010).
+ *
+ * También sabe dónde atiende el ADMIN (SPEC-KRILINXI-029), porque es quien conecta PowerSync y
+ * esa sucursal viaja en la conexión: cambiarla reconecta con el parámetro nuevo, sin cerrar ni
+ * borrar la base.
  */
 export function SesionProvider({ children, abrirBaseLocal = abrirBaseLocalDelNavegador }: Props) {
   const [sesion, setSesion] = useState<Sesion | null>(leerSesion);
   const [base, setBase] = useState<BaseLocal | null>(null);
+  // La base ya abierta, para conectarla (y reconectarla cuando cambia dónde atiende el ADMIN).
+  const [abierta, setAbierta] = useState<ControlBaseLocal | null>(null);
+  const [atencion, setAtencion] = useState<string | null>(() => atencionGuardada(sesion));
 
   // El cliente de la API y el conector de PowerSync piden el token fuera de React, cada vez
   // que lo necesitan. Una ref les da siempre el valor actual sin tener que reconectarlos.
@@ -47,10 +60,14 @@ export function SesionProvider({ children, abrirBaseLocal = abrirBaseLocalDelNav
       guardarSesion(nueva);
     } else {
       borrarSesion();
-      const abierta = control.current;
+      // Salir también deja de atender: quien entre después elige por su cuenta (SPEC-KRILINXI-029).
+      borrarAtencion();
+      setAtencion(null);
+      const anterior = control.current;
       control.current = null;
       setBase(null);
-      abierta
+      setAbierta(null);
+      anterior
         ?.then(async (c) => {
           // Si el servidor rechazó la sesión con trabajo sin subir (un token que venció
           // mientras no había internet), borrar sería perder ropa que entró de verdad
@@ -108,26 +125,50 @@ export function SesionProvider({ children, abrirBaseLocal = abrirBaseLocalDelNav
       .then((c) => {
         if (!vigente) return;
         setBase(c.base);
-        // Sin `await`, a propósito: la base ya responde con lo guardado. La sincronización
-        // va por detrás y sin internet simplemente espera (CLAUDE.md §6).
-        c.conectar(tokenPowerSyncVigente).catch((error: unknown) =>
-          console.error('No se pudo conectar la sincronización.', error),
-        );
+        setAbierta(c);
       })
       .catch((error: unknown) => console.error('No se pudo abrir la base local.', error));
 
     return () => {
       vigente = false;
     };
-  }, [hayAlguien, abrirBaseLocal, tokenPowerSyncVigente]);
+  }, [hayAlguien, abrirBaseLocal]);
+
+  // Conecta la base apenas está abierta, y vuelve a conectar cuando el ADMIN empieza o deja de
+  // atender: con la sucursal, PowerSync le baja la ropa de ahí (`atencion_admin`, CLAUDE.md §7);
+  // sin ella, deja de bajarla. Reconectar no toca la cola: lo que no subió sigue subiendo.
+  useEffect(() => {
+    if (!abierta) return;
+    // Sin `await`, a propósito: la base ya responde con lo guardado. La sincronización
+    // va por detrás y sin internet simplemente espera (CLAUDE.md §6).
+    abierta
+      .conectar(tokenPowerSyncVigente, atencion ? { sucursal_id: atencion } : undefined)
+      .catch((error: unknown) => console.error('No se pudo conectar la sincronización.', error));
+  }, [abierta, atencion, tokenPowerSyncVigente]);
+
+  const esAdmin = sesion?.usuario.rol === 'ADMIN';
+  const usuarioId = sesion?.usuario.id;
+
+  const atender = useCallback(
+    (sucursalId: string | null) => {
+      // Un EMPLEADO trabaja siempre en la suya (CLAUDE.md §3): no hay nada que elegir.
+      if (!esAdmin || !usuarioId) return;
+      if (sucursalId) guardarAtencion(usuarioId, sucursalId);
+      else borrarAtencion();
+      setAtencion(sucursalId);
+    },
+    [esAdmin, usuarioId],
+  );
 
   const valor = useMemo<ValorSesion>(
     () => ({
       sesion,
       ingresar: async (username, password) => cambiarSesion(await login(username, password)),
       salir: () => cambiarSesion(null),
+      atencion,
+      atender,
     }),
-    [sesion, cambiarSesion],
+    [sesion, cambiarSesion, atencion, atender],
   );
 
   return (

@@ -1,6 +1,8 @@
 import { useId } from 'react';
 import { Link } from 'react-router-dom';
 import { Icono } from '../components/iconos';
+import { AtenderEnUnaSucursal } from '../features/atencion/components/AtenderEnUnaSucursal';
+import { useSucursalDeTrabajo } from '../features/atencion/hooks/useSucursalDeTrabajo';
 import { useSession } from '../hooks/useSession';
 import { Pantalla } from './Pantalla';
 import { destinosDelMenu, type Destino } from './rutas';
@@ -41,15 +43,20 @@ function TarjetaTarea({ destino }: { destino: Destino }) {
  * El Inicio: las tareas de quien entró, en palabras del negocio (CLAUDE.md §9). Cada uno ve
  * solo lo que puede abrir, en el mismo orden que el menú, porque salen de la misma lista
  * (`destinosDelMenu`, sin el propio Inicio).
+ *
+ * El ADMIN, además, puede elegir una sucursal para atender el mostrador (SPEC-KRILINXI-029):
+ * mientras atiende, las tareas del mostrador aparecen con las suyas.
  */
 export function Inicio() {
   const { sesion } = useSession();
   const usuario = sesion?.usuario;
-  const tareas = usuario ? destinosDelMenu(usuario.rol).filter((d) => d.camino !== '/') : [];
+  const conSucursal = useSucursalDeTrabajo() !== null;
+  const tareas = usuario ? destinosDelMenu(usuario.rol, conSucursal).filter((d) => d.camino !== '/') : [];
 
   return (
     <Pantalla titulo="Lavandería">
       {usuario && <p className="mt-2 text-2xl text-texto-suave">Hola, {usuario.nombreCompleto}</p>}
+      <AtenderEnUnaSucursal />
       <nav aria-label="Tareas" className="mt-8">
         <ul className="grid gap-4 lg:grid-cols-2">
           {tareas.map((destino) => (

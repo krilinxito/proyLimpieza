@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useSession } from '../../../hooks/useSession';
+import { useSucursalDeTrabajo } from '../../atencion/hooks/useSucursalDeTrabajo';
 import { useBaseLocal } from '../../../lib/powersync';
 import { buscarMismoCliente, descartarRegistro, guardarCorreccion, usarMismoCliente } from '../api/corregirLocal';
 import type { Cliente } from '../../clientes/types';
@@ -21,13 +21,12 @@ export type Correcciones =
 
 /**
  * La puerta de la pantalla a corregir y descartar — SPEC-KRILINXI-013 (mismo patrón que
- * `useRegistrarRopa`). La sucursal sale de la sesión: la boleta corregida se valida contra
- * la ropa de esa sucursal, que es la única que la tablet conoce (CLAUDE.md §6).
+ * `useRegistrarRopa`). La sucursal es la de trabajo (SPEC-KRILINXI-029): la boleta corregida se
+ * valida contra la ropa de esa sucursal, que es la única que la tablet conoce (CLAUDE.md §6).
  */
 export function useCorreccion(): Correcciones {
   const base = useBaseLocal();
-  const { sesion } = useSession();
-  const sucursalId = sesion?.usuario.sucursalId ?? '';
+  const sucursalId = useSucursalDeTrabajo() ?? '';
 
   return useMemo<Correcciones>(() => {
     if (!base) return { lista: false };
