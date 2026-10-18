@@ -12,11 +12,8 @@
  * leen vienen sumados del servidor (CLAUDE.md §8).
  */
 
-/**
- * Hasta dónde llega la barra más larga, en % del ancho. El resto queda para el rótulo con el
- * valor, que va pegado a la punta de la barra.
- */
-export const TOPE_BARRA = 72;
+/** Hasta dónde llega la barra más larga, en % del ancho: el valor va arriba, no en la punta. */
+export const TOPE_BARRA = 100;
 
 /** Hasta dónde llega la columna más alta, en % del alto: arriba va su rótulo. */
 export const TOPE_COLUMNA = 82;

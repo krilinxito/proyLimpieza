@@ -379,9 +379,9 @@ describe('El panel como tablero — SPEC-KRILINXI-026', () => {
     // El color sigue al método, no a su lugar: la transferencia del Norte es la serie 4 aunque vaya sola.
     const norte = within(cobrado).getByRole('button', { name: /^Norte:/ });
     expect(norte.querySelector('rect')).toHaveClass('fill-serie-4');
-    // La barra más larga llega al tope (72 %), y las demás se miden con la misma escala.
-    expect(centro.querySelector('rect')).toHaveAttribute('width', '57.37%');
-    expect(norte.querySelector('rect')).toHaveAttribute('width', '14.06%');
+    // La barra más larga llega a todo el ancho, y las demás se miden con la misma escala.
+    expect(centro.querySelector('rect')).toHaveAttribute('width', '79.68%');
+    expect(norte.querySelector('rect')).toHaveAttribute('width', '19.52%');
   });
 
   it('el volumen es una columna por día, con el total arriba y el eje de fechas sin amontonar', async () => {
@@ -423,9 +423,9 @@ describe('El panel como tablero — SPEC-KRILINXI-026', () => {
     expect(tramo(/^Hasta 7 días/).querySelector('rect')).toHaveClass('fill-antiguedad-1');
     expect(tramo(/^De 8 a 30 días/).querySelector('rect')).toHaveClass('fill-antiguedad-2');
     expect(tramo(/^Más de 30 días/).querySelector('rect')).toHaveClass('fill-antiguedad-3');
-    // La cantidad y el monto, en la punta de cada barra; y la barra mide la plata, no las boletas.
+    // La cantidad y el monto, rotulados en cada barra; y la barra mide la plata, no las boletas.
     expect(within(tramo(/^De 8 a 30 días/)).getByText('1 boleta — Bs 40,00')).toBeInTheDocument();
-    expect(tramo(/^De 8 a 30 días/).querySelector('rect')).toHaveAttribute('width', '72%');
+    expect(tramo(/^De 8 a 30 días/).querySelector('rect')).toHaveAttribute('width', '100%');
 
     // La ropa, sin monto: un tramo en cero no tiene barra, pero sí su rótulo.
     const ropa = grafico('Ropa sin recoger según los días');
@@ -442,7 +442,7 @@ describe('El panel como tablero — SPEC-KRILINXI-026', () => {
     await screen.findByRole('heading', { name: 'Lo que hizo cada persona de los últimos 30 días' });
 
     const barras = within(grafico('Ropa recibida por cada persona')).getAllByRole('button');
-    expect(barras.map((b) => b.querySelector('span')?.textContent)).toEqual(['Ana Flores (Centro)', 'Ana Flores (Norte)']);
+    expect(barras.map((b) => b.querySelector('span > span')?.textContent)).toEqual(['Ana Flores (Centro)', 'Ana Flores (Norte)']);
     expect(within(barras[0] as HTMLElement).getByText('Recibió 12')).toBeInTheDocument();
     // La lista de abajo sigue en el orden en que llegó.
     const personas = within(seccion('Lo que hizo cada persona')).getByRole('list', { name: 'Personas' });

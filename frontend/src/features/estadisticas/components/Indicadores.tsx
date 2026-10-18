@@ -9,6 +9,7 @@ type Periodos = { ingresos: string; pendientes: string; historia: string };
  * cada uno en su tarjeta. Un número solo no pide un gráfico: escrito grande se lee antes que
  * cualquier barra.
  *
+ * De a dos por fila: con el menú al costado, cuatro no entran sin partir los montos en dos renglones.
  * Son los mismos que trae cada sección, tal como los manda el servidor: acá no se suma nada.
  * Cada uno con su período, porque no todos miran los mismos días (ver `periodo.ts`).
  */
@@ -21,7 +22,7 @@ export function Indicadores({ panel, periodos }: { panel: Panel; periodos: Perio
   ];
   return (
     <section aria-label="Resumen" className="mt-8">
-      <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <dl className="grid gap-4 sm:grid-cols-2">
         {indicadores.map(({ nombre, valor, extra }) => (
           <Tarjeta key={nombre}>
             <dt className="text-lg font-semibold text-texto-suave">{nombre}</dt>
