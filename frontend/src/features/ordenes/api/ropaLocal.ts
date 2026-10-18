@@ -32,7 +32,7 @@ export const MENSAJES_ACCION = {
 
 // La orden con su cliente y su entrega. Los pagos se leen aparte: son varios por orden.
 const SELECT_ORDENES = `
-  SELECT o.id, o.numero_boleta, o.descripcion, o.estado, o.fecha_entrada, o.fecha_estimada_salida,
+  SELECT o.id, o.numero_boleta, o.cliente_id, o.descripcion, o.estado, o.fecha_entrada, o.fecha_estimada_salida,
          o.precio_total, c.nombre AS cliente_nombre, c.telefono AS cliente_telefono,
          e.id AS entrega_id, e.precio_final
     FROM ordenes o
@@ -94,6 +94,7 @@ function aOrden(fila: Fila, pagos: PagoVisto[]): OrdenVista | null {
     numeroBoleta: numero_boleta,
     descripcion: texto(fila.descripcion) ?? '',
     estado: estadoEfectivo(estado, tieneEntrega),
+    clienteId: texto(fila.cliente_id),
     clienteNombre: texto(fila.cliente_nombre) ?? 'Cliente sin nombre',
     clienteTelefono: texto(fila.cliente_telefono) ?? '',
     fechaEntrada: texto(fila.fecha_entrada),
@@ -136,6 +137,20 @@ export async function buscarOrdenes(base: BaseLocal, sucursalId: string, buscado
     [sucursalId, boleta, telefono, telefono],
   );
   return armar(base, filas);
+}
+
+/**
+ * La ropa de un cliente en la sucursal — SPEC-KRILINXI-033, para su ficha en el Mostrador. Toda,
+ * también la entregada y la anulada: es su historia en este local. Primero la que sigue en el
+ * local y, dentro de cada grupo, la más nueva arriba (la regla de qué está cerrado, de `estado.ts`).
+ */
+export async function ropaDelCliente(base: BaseLocal, sucursalId: string, clienteId: string): Promise<OrdenVista[]> {
+  const filas = await base.consultar(`${SELECT_ORDENES} AND o.cliente_id = ? ORDER BY o.fecha_entrada DESC`, [
+    sucursalId,
+    clienteId,
+  ]);
+  const ordenes = await armar(base, filas);
+  return ordenes.sort((a, b) => Number(estaCerrada(a.estado)) - Number(estaCerrada(b.estado)));
 }
 
 /** Cuántas boletas muestra el buscador (SPEC-KRILINXI-032), igual que con los clientes. */

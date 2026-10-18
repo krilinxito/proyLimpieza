@@ -17,10 +17,8 @@ describe('Rutas: lo que necesita el menú — SPEC-KRILINXI-023', () => {
   it('un EMPLEADO ve el Inicio y el mostrador, no lo del administrador', () => {
     expect(destinosDelMenu('EMPLEADO', true).map((d) => d.titulo)).toEqual([
       'Inicio',
+      'Mostrador',
       'Registrar ropa',
-      'Ropa en el local',
-      'Entregar ropa',
-      'Cobrar',
       'Clientes',
     ]);
   });
@@ -39,10 +37,8 @@ describe('Rutas: lo que necesita el menú — SPEC-KRILINXI-023', () => {
   it('un ADMIN que atiende en una sucursal ve el mostrador, y sigue viendo lo suyo — SPEC-KRILINXI-029', () => {
     expect(destinosDelMenu('ADMIN', true).map((d) => d.titulo)).toEqual([
       'Inicio',
+      'Mostrador',
       'Registrar ropa',
-      'Ropa en el local',
-      'Entregar ropa',
-      'Cobrar',
       'Clientes',
       'Personal',
       'Sucursales',
@@ -54,9 +50,25 @@ describe('Rutas: lo que necesita el menú — SPEC-KRILINXI-023', () => {
   it.each([
     ['/', 'Lavandería'],
     ['/registrar-ropa', 'Registrar ropa · Lavandería'],
+    // Las direcciones viejas del mostrador llevan ahí (SPEC-KRILINXI-033).
+    ['/cobrar', 'Mostrador · Lavandería'],
     ['/quien-hizo-que', '¿Quién hizo qué? · Lavandería'],
     ['/no-existe', 'Esa página no existe · Lavandería'],
   ])('la pestaña de %s se llama "%s"', (camino, titulo) => {
     expect(tituloDePestana(camino)).toBe(titulo);
+  });
+});
+
+describe('Rutas: un solo Mostrador — SPEC-KRILINXI-033', () => {
+  it('/ropa, /cobrar y /entregar no son pantallas propias: llevan al Mostrador y no están en el menú', () => {
+    for (const camino of ['/ropa', '/cobrar', '/entregar']) {
+      const ruta = RUTAS.find((r) => r.camino === camino);
+      expect(ruta?.enMenu).toBe(false);
+      expect(ruta?.titulo).toBe('Mostrador');
+    }
+  });
+
+  it('el Mostrador es una pantalla del mostrador: pide sucursal de trabajo', () => {
+    expect(RUTAS.find((r) => r.camino === '/mostrador')?.mostrador).toBe(true);
   });
 });

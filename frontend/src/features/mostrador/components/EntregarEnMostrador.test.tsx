@@ -3,13 +3,15 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { App } from '../../../App';
 import { simularApi } from '../../../test/apiFalsa';
 import { baseLocalDePrueba } from '../../../test/baseLocalDePrueba';
+import { elegirEnBuscador } from '../../../test/buscador';
 import { clienteDePrueba, ordenDePrueba, pagoDePrueba } from '../../../test/filasDePrueba';
 import { sinJerga } from '../../../test/jerga';
 import { renderEnRuta } from '../../../test/render';
 import { sesionDePrueba } from '../../../test/sesion';
 
 /**
- * La entrega de punta a punta, en /entregar, con la base local de verdad y sin internet.
+ * La entrega de punta a punta en el Mostrador, con la base local de verdad y sin internet —
+ * SPEC-KRILINXI-009, reescrita contra /mostrador en SPEC-KRILINXI-033 (antes vivía en /entregar).
  * Rosa dejó ropa por Bs 50 y adelantó Bs 20: falta pagar Bs 30.
  */
 const ROSA = clienteDePrueba({ nombre: 'Rosa Quispe', telefono: '70123456' });
@@ -22,17 +24,20 @@ async function abrir() {
   await prueba.sembrar('clientes', [ROSA]);
   await prueba.sembrar('ordenes', [LISTA, ANULADA]);
   await prueba.sembrar('pagos', [pagoDePrueba({ orden_id: LISTA.id, monto: '20.00' })]);
-  renderEnRuta(<App />, '/entregar', { baseLocal: prueba.control });
+  renderEnRuta(<App />, '/mostrador', { baseLocal: prueba.control });
   await screen.findByRole('button', { name: 'Boleta 001234, Rosa Quispe' });
   return { ...prueba, servidor };
 }
 
+/** Busca la boleta en el Mostrador y la abre en la ficha de su cliente. */
+async function buscarBoleta(boleta: string) {
+  await elegirEnBuscador(boleta, new RegExp(`Boleta ${boleta}`));
+  return screen.findByRole('region', { name: `Boleta ${boleta}` });
+}
+
 /** Busca la boleta, abre su detalle y el formulario de entrega. */
 async function abrirEntrega(boleta = '001234') {
-  fireEvent.change(screen.getByLabelText('Número de boleta o teléfono del cliente'), { target: { value: boleta } });
-  fireEvent.click(screen.getByRole('button', { name: 'Buscar' }));
-  fireEvent.click(await screen.findByRole('button', { name: `Boleta ${boleta}, Rosa Quispe` }));
-  const detalle = await screen.findByRole('region', { name: `Boleta ${boleta}` });
+  const detalle = await buscarBoleta(boleta);
   fireEvent.click(within(detalle).getByRole('button', { name: 'Entregar la ropa' }));
   return within(detalle).getByRole('form', { name: 'Entregar la ropa' });
 }
@@ -54,7 +59,7 @@ async function resumen() {
   return Object.fromEntries(terminos.map((t, i) => [t, valores[i]]));
 }
 
-describe('Entregar: el recorrido — SPEC-KRILINXI-009', () => {
+describe('Entregar en el Mostrador: el recorrido — SPEC-KRILINXI-009 y SPEC-KRILINXI-033', () => {
   it('con boleta y pagando lo que falta: confirma, guarda entrega y pago, y muestra el resumen', async () => {
     const { db, servidor } = await abrir();
     const formulario = await abrirEntrega();
@@ -136,8 +141,8 @@ describe('Entregar: el recorrido — SPEC-KRILINXI-009', () => {
   });
 });
 
-describe('Entregar: después de entregar — SPEC-KRILINXI-009', () => {
-  it('la ropa figura Entregado en la lista y el detalle, y no ofrece entregarla otra vez', async () => {
+describe('Entregar en el Mostrador: después de entregar — SPEC-KRILINXI-009 y SPEC-KRILINXI-033', () => {
+  it('vuelve a la ficha del cliente, donde figura Entregado; ya no está en el local ni ofrece entregarla otra vez', async () => {
     await abrir();
     const formulario = await abrirEntrega();
     fireEvent.click(within(formulario).getByLabelText('Trae la boleta'));
@@ -145,39 +150,41 @@ describe('Entregar: después de entregar — SPEC-KRILINXI-009', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sí, entregar' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Entregar otra ropa' }));
 
+    // La ficha de Rosa, actualizada sola: la boleta figura entregada, sin buscarla de nuevo.
+    const ficha = await screen.findByRole('region', { name: 'Ficha de Rosa Quispe' });
+    // Se espera lo que se afirma (SPEC-KRILINXI-018): la ficha se relee de la base, que es asíncrona.
+    await waitFor(() =>
+      expect(within(ficha).getByRole('button', { name: 'Boleta 001234, Rosa Quispe' })).toHaveTextContent('Entregado'),
+    );
+
     // Ya no está en la ropa del local…
-    // El título de la lista; el texto suelto también es el del menú desde SPEC-KRILINXI-023.
+    fireEvent.click(screen.getByRole('button', { name: 'Ver toda la ropa en el local' }));
     await screen.findByRole('heading', { name: 'Ropa en el local' });
     expect(screen.queryByRole('button', { name: 'Boleta 001234, Rosa Quispe' })).not.toBeInTheDocument();
 
     // …y buscándola, figura Entregado y sin acciones.
-    fireEvent.change(screen.getByLabelText('Número de boleta o teléfono del cliente'), { target: { value: '001234' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Buscar' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Boleta 001234, Rosa Quispe' }));
-    const detalle = await screen.findByRole('region', { name: 'Boleta 001234' });
+    const detalle = await buscarBoleta('001234');
     expect(within(detalle).getByText('Esta ropa ya fue entregada.')).toBeInTheDocument();
     expect(within(detalle).queryByRole('button', { name: 'Entregar la ropa' })).not.toBeInTheDocument();
   });
 
   it('una ropa anulada dice por qué no se puede entregar', async () => {
     await abrir();
-    fireEvent.change(screen.getByLabelText('Número de boleta o teléfono del cliente'), { target: { value: '001235' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Buscar' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Boleta 001235, Rosa Quispe' }));
-    const detalle = await screen.findByRole('region', { name: 'Boleta 001235' });
+    const detalle = await buscarBoleta('001235');
     expect(within(detalle).getByText('Esta ropa fue anulada: no se puede entregar ni cobrar.')).toBeInTheDocument();
     expect(within(detalle).queryByRole('button', { name: 'Entregar la ropa' })).not.toBeInTheDocument();
   });
 });
 
-describe('Entregar: solo en el mostrador — SPEC-KRILINXI-009', () => {
-  it('un ADMIN que no está atendiendo ve cómo empezar (SPEC-KRILINXI-029)', () => {
+describe('Entregar en el Mostrador: la dirección vieja — SPEC-KRILINXI-009 y SPEC-KRILINXI-033', () => {
+  it('/entregar lleva al Mostrador; un ADMIN que no está atendiendo ve cómo empezar (SPEC-KRILINXI-029)', async () => {
     renderEnRuta(<App />, '/entregar', { sesion: sesionDePrueba({ rol: 'ADMIN' }) });
+    expect(await screen.findByRole('heading', { name: 'Mostrador', level: 1 })).toBeInTheDocument();
     expect(screen.getByText(/elegí en qué sucursal vas a atender/)).toBeInTheDocument();
   });
 });
 
-describe('Entregar con el tema — SPEC-KRILINXI-025', () => {
+describe('Entregar en el Mostrador con el tema — SPEC-KRILINXI-025 y SPEC-KRILINXI-033', () => {
   it('el formulario elegido se distingue por algo más que el color, y el resumen es un aviso de éxito', async () => {
     await abrir();
     const formulario = await abrirEntrega();

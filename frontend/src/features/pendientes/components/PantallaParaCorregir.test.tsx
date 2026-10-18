@@ -166,7 +166,8 @@ describe('Corregir lo que no se pudo guardar — SPEC-KRILINXI-013', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Corregir' }));
 
     expect(screen.getByText(/Un cambio de estado no se corrige aquí/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Ir a Ropa en el local' })).toHaveAttribute('href', '/ropa');
+    // Desde SPEC-KRILINXI-033, la ropa se mira en el Mostrador.
+    expect(screen.getByRole('link', { name: 'Ir al Mostrador' })).toHaveAttribute('href', '/mostrador');
     expect(screen.queryByRole('button', { name: 'Volver a guardar' })).not.toBeInTheDocument();
     sinJerga();
   });
@@ -207,7 +208,7 @@ describe('Es el mismo cliente — SPEC-KRILINXI-021', () => {
     sinJerga();
   });
 
-  it('en Ropa en el local, la boleta figura con el cliente que existe', async () => {
+  it('en el Mostrador, la boleta figura con el cliente que existe (SPEC-KRILINXI-033)', async () => {
     await abrirElClienteRechazado();
     fireEvent.click(await screen.findByRole('button', { name: 'Es el mismo cliente' }));
     fireEvent.click(screen.getByRole('button', { name: 'Sí, es la misma persona' }));
@@ -216,7 +217,7 @@ describe('Es el mismo cliente — SPEC-KRILINXI-021', () => {
     fireEvent.click(await screen.findByRole('link', { name: 'Volver al inicio' }));
     // El botón del Inicio, no el del menú (que también se llama así desde SPEC-KRILINXI-023).
     await screen.findByRole('heading', { name: 'Lavandería' });
-    fireEvent.click(within(screen.getByRole('main')).getByRole('link', { name: 'Ropa en el local' }));
+    fireEvent.click(within(screen.getByRole('main')).getByRole('link', { name: 'Mostrador' }));
 
     expect(await screen.findByRole('button', { name: 'Boleta 001234, Rosa Quispe' })).toBeInTheDocument();
   });

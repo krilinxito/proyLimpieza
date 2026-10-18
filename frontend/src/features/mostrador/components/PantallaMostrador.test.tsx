@@ -3,20 +3,25 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { App } from '../../../App';
 import { simularApi } from '../../../test/apiFalsa';
 import { baseLocalDePrueba } from '../../../test/baseLocalDePrueba';
+import { elegirEnBuscador } from '../../../test/buscador';
 import { clienteDePrueba, entregaDePrueba, ordenDePrueba, pagoDePrueba } from '../../../test/filasDePrueba';
 import { sinJerga } from '../../../test/jerga';
 import { renderEnRuta } from '../../../test/render';
 import { sesionDePrueba } from '../../../test/sesion';
 
 /**
- * El recorrido del mostrador sobre la App entera, en /ropa, con la base local de verdad y
- * el servidor "sin internet": lo que se prueba va de la pantalla al SQL.
+ * El Mostrador sobre la App entera, con la base local de verdad y el servidor "sin internet": lo
+ * que se prueba va de la pantalla al SQL — SPEC-KRILINXI-033.
+ *
+ * Los recorridos de Ropa en el local y Cobrar (SPEC-KRILINXI-008) vivían en /ropa; se reescribieron
+ * acá contra /mostrador y conservan su etiqueta, para que `grep SPEC-KRILINXI-008` los siga
+ * encontrando.
  */
 const ROSA = clienteDePrueba({ nombre: 'Rosa Quispe', telefono: '70123456' });
 const RECIBIDA = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000001', descripcion: '2 pantalones' });
 const ENTREGADA = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000004', estado: 'LISTO' });
 
-async function abrir(ruta = '/ropa') {
+async function abrir(ruta = '/mostrador') {
   const servidor = simularApi(() => 'sin-conexion');
   const prueba = await baseLocalDePrueba();
   await prueba.sembrar('clientes', [ROSA]);
@@ -28,8 +33,15 @@ async function abrir(ruta = '/ropa') {
   return { ...prueba, servidor };
 }
 
+/** Desde la ropa en el local, abre una boleta: la ficha de su cliente, con esa boleta abierta. */
 async function abrirDetalle(boleta = '000001') {
   fireEvent.click(screen.getByRole('button', { name: `Boleta ${boleta}, Rosa Quispe` }));
+  return screen.findByRole('region', { name: `Boleta ${boleta}` });
+}
+
+/** Busca una boleta por su número y la elige: abre la ficha con esa boleta. */
+async function buscarBoleta(boleta: string) {
+  await elegirEnBuscador(boleta, new RegExp(`Boleta ${boleta}`));
   return screen.findByRole('region', { name: `Boleta ${boleta}` });
 }
 
@@ -38,7 +50,72 @@ function datoDelDetalle(detalle: HTMLElement, dato: string) {
   return termino.nextElementSibling?.textContent;
 }
 
-describe('Ropa en el local: la lista — SPEC-KRILINXI-008', () => {
+describe('Mostrador: una sola pantalla — SPEC-KRILINXI-033', () => {
+  it('el menú muestra Mostrador en lugar de Ropa en el local, Cobrar y Entregar ropa', async () => {
+    await abrir();
+    const menu = screen.getByRole('navigation', { name: 'Menú principal' });
+    const nombres = within(menu).getAllByRole('link').map((enlace) => enlace.textContent);
+    expect(nombres).toContain('Mostrador');
+    for (const viejo of ['Ropa en el local', 'Cobrar', 'Entregar ropa']) expect(nombres).not.toContain(viejo);
+  });
+
+  it.each(['/ropa', '/cobrar', '/entregar'])('%s lleva al Mostrador', async (ruta) => {
+    await abrir(ruta);
+    expect(screen.getByRole('heading', { name: 'Mostrador', level: 1 })).toBeInTheDocument();
+  });
+
+  it('al elegir un cliente se ve su ficha con su ropa de esta sucursal, la que sigue en el local primero', async () => {
+    await abrir();
+    await elegirEnBuscador('rosa', /Rosa Quispe/);
+
+    const ficha = await screen.findByRole('region', { name: 'Ficha de Rosa Quispe' });
+    expect(within(ficha).getByText('Rosa Quispe', { selector: 'dd' })).toBeInTheDocument();
+    const boletas = within(ficha)
+      .getAllByRole('button', { name: /^Boleta/ })
+      .map((b) => b.getAttribute('aria-label'));
+    expect(boletas).toEqual(['Boleta 000001, Rosa Quispe', 'Boleta 000004, Rosa Quispe']);
+    sinJerga();
+  });
+
+  it('al elegir una boleta se abre dentro de la ficha de su cliente', async () => {
+    await abrir();
+    const detalle = await buscarBoleta('000004');
+    const ficha = screen.getByRole('region', { name: 'Ficha de Rosa Quispe' });
+    expect(ficha).toContainElement(detalle);
+    // Y se vuelve a toda la ropa del cliente, sin buscar de nuevo.
+    fireEvent.click(within(detalle).getByRole('button', { name: 'Ver toda la ropa de Rosa Quispe' }));
+    expect(await within(ficha).findByRole('heading', { name: 'Su ropa en esta sucursal' })).toBeInTheDocument();
+  });
+
+  it('después de cobrar, la ficha dice qué se hizo y muestra el saldo nuevo, sin volver al buscador', async () => {
+    await abrir();
+    const detalle = await abrirDetalle();
+    fireEvent.click(within(detalle).getByRole('button', { name: 'Cobrar' }));
+    const formulario = within(detalle).getByRole('form', { name: 'Cobrar' });
+    fireEvent.change(within(formulario).getByLabelText('Cuánto paga (Bs)'), { target: { value: '10' } });
+    fireEvent.click(within(formulario).getByLabelText('Efectivo'));
+    fireEvent.click(within(formulario).getByRole('button', { name: 'Guardar cobro' }));
+
+    expect(await within(detalle).findByText('Cobro guardado.')).toBeInTheDocument();
+    await waitFor(() => expect(datoDelDetalle(detalle, 'Falta pagar')).toBe('Bs 20,00'));
+    expect(screen.getByRole('region', { name: 'Ficha de Rosa Quispe' })).toContainElement(detalle);
+  });
+
+  it('"Ver toda la ropa en el local" vuelve a la lista', async () => {
+    await abrir();
+    await abrirDetalle();
+    fireEvent.click(screen.getByRole('button', { name: 'Ver toda la ropa en el local' }));
+    expect(await screen.findByRole('heading', { name: 'Ropa en el local' })).toBeInTheDocument();
+  });
+
+  it('sin internet, ninguna lectura va al servidor', async () => {
+    const { servidor } = await abrir();
+    await buscarBoleta('000001');
+    expect(servidor.pedidos).toEqual([]);
+  });
+});
+
+describe('Mostrador: la ropa en el local — SPEC-KRILINXI-008 y SPEC-KRILINXI-033', () => {
   it('muestra la abierta con su estado y lo que falta pagar, y no la entregada sin sincronizar', async () => {
     const { servidor } = await abrir();
     const tarjeta = screen.getByRole('button', { name: 'Boleta 000001, Rosa Quispe' });
@@ -49,18 +126,16 @@ describe('Ropa en el local: la lista — SPEC-KRILINXI-008', () => {
     sinJerga();
   });
 
-  it('busca por teléfono y encuentra también la entregada, que figura Entregado', async () => {
+  it('busca por teléfono y, en la ficha, encuentra también la entregada, que figura Entregado', async () => {
     await abrir();
-    fireEvent.change(screen.getByLabelText('Número de boleta o teléfono del cliente'), { target: { value: '7012 3456' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Buscar' }));
-
+    await elegirEnBuscador('7012 3456', /Rosa Quispe/);
     const entregada = await screen.findByRole('button', { name: 'Boleta 000004, Rosa Quispe' });
     expect(entregada).toHaveTextContent('Entregado');
     sinJerga();
   });
 });
 
-describe('Ropa en el local: el detalle — SPEC-KRILINXI-008', () => {
+describe('Mostrador: la boleta — SPEC-KRILINXI-008 y SPEC-KRILINXI-033', () => {
   it('muestra los datos, los pagos y el saldo', async () => {
     await abrir();
     const detalle = await abrirDetalle();
@@ -102,7 +177,7 @@ describe('Ropa en el local: el detalle — SPEC-KRILINXI-008', () => {
 
     await waitFor(() => expect(datoDelDetalle(detalle, 'Cómo va')).toBe('Anulado'));
     // Cerrada: ya no ofrece nada.
-    for (const nombre of ['Anular', 'Cobrar', 'Marcar como lista', 'Empezar a lavar']) {
+    for (const nombre of ['Anular', 'Cobrar', 'Marcar como lista', 'Empezar a lavar', 'Entregar la ropa']) {
       expect(within(detalle).queryByRole('button', { name: nombre })).not.toBeInTheDocument();
     }
   });
@@ -133,34 +208,24 @@ describe('Ropa en el local: el detalle — SPEC-KRILINXI-008', () => {
     expect(await db.getCrudBatch()).toBeNull();
   });
 
-  it('una ropa entregada no ofrece avanzar, anular ni cobrar', async () => {
+  it('una ropa entregada no ofrece avanzar, anular, cobrar ni entregar', async () => {
     await abrir();
-    fireEvent.change(screen.getByLabelText('Número de boleta o teléfono del cliente'), { target: { value: '000004' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Buscar' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Boleta 000004, Rosa Quispe' }));
-    const detalle = await screen.findByRole('region', { name: 'Boleta 000004' });
+    const detalle = await buscarBoleta('000004');
 
     expect(datoDelDetalle(detalle, 'Cómo va')).toBe('Entregado');
-    for (const nombre of ['Anular', 'Cobrar', 'Marcar como lista']) {
+    for (const nombre of ['Anular', 'Cobrar', 'Marcar como lista', 'Entregar la ropa']) {
       expect(within(detalle).queryByRole('button', { name: nombre })).not.toBeInTheDocument();
     }
   });
-});
 
-describe('Ropa en el local: rutas — SPEC-KRILINXI-008', () => {
-  it('/cobrar muestra la misma pantalla con su título', async () => {
-    await abrir('/cobrar');
-    expect(screen.getByRole('heading', { name: 'Cobrar', level: 1 })).toBeInTheDocument();
-  });
-
-  it.each(['/ropa', '/cobrar'])('un ADMIN que no está atendiendo y abre %s ve cómo empezar (SPEC-KRILINXI-029)', (ruta) => {
-    renderEnRuta(<App />, ruta, { sesion: sesionDePrueba({ rol: 'ADMIN' }) });
+  it('un ADMIN que no está atendiendo ve cómo empezar (SPEC-KRILINXI-029)', () => {
+    renderEnRuta(<App />, '/mostrador', { sesion: sesionDePrueba({ rol: 'ADMIN' }) });
     expect(screen.getByText(/elegí en qué sucursal vas a atender/)).toBeInTheDocument();
   });
 });
 
-describe('Ropa en el local: una lectura vieja no pisa la búsqueda — SPEC-KRILINXI-019', () => {
-  it('si la lista del local llega después que la búsqueda, se muestra la búsqueda', async () => {
+describe('Mostrador: una lectura vieja no pisa la búsqueda — SPEC-KRILINXI-019 y SPEC-KRILINXI-033', () => {
+  it('si la lista del local llega después de elegir una boleta, se sigue viendo la boleta', async () => {
     simularApi(() => 'sin-conexion');
     const prueba = await baseLocalDePrueba();
     const rosa = clienteDePrueba({ nombre: 'Rosa Quispe', telefono: '70123456' });
@@ -169,29 +234,29 @@ describe('Ropa en el local: una lectura vieja no pisa la búsqueda — SPEC-KRIL
     await prueba.sembrar('ordenes', [entregada]);
     await prueba.sembrar('entregas', [entregaDePrueba({ orden_id: entregada.id })]);
 
-    // La lista del local (la consulta sin filtro de boleta) tarda; la búsqueda, no. Así la
-    // respuesta vieja llega siempre última, que es lo que en la suite pasaba de vez en cuando.
+    // La lista del local (la consulta de órdenes sin filtro) tarda; la búsqueda y la ficha, no. Así
+    // la respuesta vieja llega siempre última.
     const { base } = prueba.control;
     const lenta = {
       ...base,
       consultar: async (sql: string, parametros?: unknown[]) => {
-        if (/FROM ordenes/.test(sql) && !/numero_boleta = \?/.test(sql)) await new Promise((r) => setTimeout(r, 300));
+        if (/FROM ordenes/.test(sql) && !/numero_boleta LIKE|cliente_id = \?|o\.id = \?/.test(sql)) {
+          await new Promise((r) => setTimeout(r, 300));
+        }
         return base.consultar(sql, parametros);
       },
     };
-    renderEnRuta(<App />, '/ropa', { baseLocal: { ...prueba.control, base: lenta } });
+    renderEnRuta(<App />, '/mostrador', { baseLocal: { ...prueba.control, base: lenta } });
 
-    fireEvent.change(await screen.findByLabelText('Número de boleta o teléfono del cliente'), { target: { value: '001234' } });
-    fireEvent.click(await screen.findByRole('button', { name: 'Buscar' }));
-
-    expect(await screen.findByRole('button', { name: 'Boleta 001234, Rosa Quispe' })).toBeInTheDocument();
+    await elegirEnBuscador('001234', /Boleta 001234/);
+    expect(await screen.findByRole('region', { name: 'Boleta 001234' })).toBeInTheDocument();
     // Y sigue ahí cuando llega la lista vieja.
     await new Promise((r) => setTimeout(r, 400));
-    expect(screen.getByRole('button', { name: 'Boleta 001234, Rosa Quispe' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Boleta 001234' })).toBeInTheDocument();
   });
 });
 
-describe('Ropa en el local con el tema — SPEC-KRILINXI-025', () => {
+describe('Mostrador con el tema — SPEC-KRILINXI-025 y SPEC-KRILINXI-033', () => {
   it('cada ropa de la lista es una tarjeta con su estado en una insignia del tono que le toca', async () => {
     await abrir();
     const tarjeta = screen.getByRole('button', { name: 'Boleta 000001, Rosa Quispe' });
@@ -203,8 +268,7 @@ describe('Ropa en el local con el tema — SPEC-KRILINXI-025', () => {
 
   it('la entregada sin sincronizar figura con la insignia de Entregado (estadoEfectivo)', async () => {
     await abrir();
-    fireEvent.change(screen.getByLabelText('Número de boleta o teléfono del cliente'), { target: { value: '70123456' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Buscar' }));
+    await elegirEnBuscador('70123456', /Rosa Quispe/);
     const tarjeta = await screen.findByRole('button', { name: 'Boleta 000004, Rosa Quispe' });
     expect(within(tarjeta).getByText('Entregado')).toHaveClass('rounded-full');
   });
@@ -238,10 +302,7 @@ describe('Ropa en el local con el tema — SPEC-KRILINXI-025', () => {
 
   it('la ropa entregada lo dice en un aviso de información', async () => {
     await abrir();
-    fireEvent.change(screen.getByLabelText('Número de boleta o teléfono del cliente'), { target: { value: '000004' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Buscar' }));
-    await screen.findByRole('button', { name: 'Boleta 000004, Rosa Quispe' });
-    const detalle = await abrirDetalle('000004');
+    const detalle = await buscarBoleta('000004');
     expect(within(detalle).getByText('Esta ropa ya fue entregada.').closest('[role="status"]')).toHaveClass('bg-info-fondo');
   });
 });

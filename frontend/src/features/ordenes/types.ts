@@ -55,6 +55,8 @@ export type OrdenVista = {
   descripcion: string;
   /** El estado efectivo: ENTREGADO si ya tiene entrega aunque no haya sincronizado. */
   estado: EstadoOrden;
+  /** Para abrir la ficha de su cliente desde la boleta (SPEC-KRILINXI-033); null en una fila rota. */
+  clienteId: string | null;
   clienteNombre: string;
   clienteTelefono: string;
   fechaEntrada: string | null;

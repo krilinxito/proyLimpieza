@@ -94,7 +94,7 @@ describe('Atender en una sucursal: elegir y empezar — SPEC-KRILINXI-029', () =
 
     await empezarEn('Centro');
 
-    for (const nombre of ['Registrar ropa', 'Ropa en el local', 'Entregar ropa', 'Cobrar']) {
+    for (const nombre of ['Mostrador', 'Registrar ropa']) {
       expect(tareas().getByRole('link', { name: nombre })).toBeInTheDocument();
     }
     for (const nombre of ['Estadísticas', 'Personal', 'Sucursales', '¿Quién hizo qué?']) {
@@ -162,10 +162,10 @@ describe('Atender en una sucursal: el mostrador con la sucursal elegida — SPEC
     ).toBeInTheDocument();
   });
 
-  it('"Ropa en el local" muestra la ropa de la sucursal elegida, no la de otra', async () => {
+  it('el Mostrador muestra la ropa de la sucursal elegida, no la de otra', async () => {
     await abrir();
     await empezarEn('Norte');
-    fireEvent.click(within(screen.getByRole('main')).getByRole('link', { name: 'Ropa en el local' }));
+    fireEvent.click(within(screen.getByRole('main')).getByRole('link', { name: 'Mostrador' }));
 
     expect(await within(screen.getByRole('main')).findByText(/000777/)).toBeInTheDocument();
     expect(within(screen.getByRole('main')).queryByText(/000999/)).not.toBeInTheDocument();
@@ -190,7 +190,7 @@ describe('Atender en una sucursal: dejar de atender y salir — SPEC-KRILINXI-02
       "INSERT INTO ordenes (id, numero_boleta, cliente_id, sucursal_id, descripcion, fecha_entrada, precio_total, estado) VALUES (uuid(), '000555', ?, ?, '1 saco', '2026-10-18T10:00:00.000Z', '30.00', 'RECIBIDO')",
       [ROSA.id, CENTRO.id],
     );
-    fireEvent.click(tareas().getByRole('link', { name: 'Cobrar' }));
+    fireEvent.click(tareas().getByRole('link', { name: 'Mostrador' }));
 
     fireEvent.click(cabecera().getByRole('button', { name: 'Dejar de atender' }));
 
