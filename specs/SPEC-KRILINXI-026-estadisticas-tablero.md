@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-026
 name: Estadísticas como tablero con gráficos
 slug: estadisticas-tablero
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-17
 scope:
