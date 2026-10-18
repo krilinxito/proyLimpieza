@@ -107,6 +107,28 @@ export function volumenDePrueba(cambios: Record<string, unknown> = {}) {
   };
 }
 
+/**
+ * Un período largo, para lo que cambia con muchos días (el eje del gráfico, SPEC-KRILINXI-026):
+ * `dias` días que terminan el 16/10/2026, con `ordenes(i)` boletas el día i (de 0, el primero).
+ *
+ *     simularEstadisticas({ volumen: { status: 200, data: volumenDeDias(30) } });
+ */
+export function volumenDeDias(dias: number, ordenes: (i: number) => number = (i) => i % 4) {
+  const fin = Date.UTC(2026, 9, 16);
+  const porDia = Array.from({ length: dias }, (_, i) => ({
+    fecha: new Date(fin - (dias - 1 - i) * 86_400_000).toISOString().slice(0, 10),
+    ordenes: ordenes(i),
+    anuladas: 0,
+  }));
+  return volumenDePrueba({
+    desde: porDia[0]?.fecha,
+    hasta: porDia.at(-1)?.fecha,
+    total: porDia.reduce((total, dia) => total + dia.ordenes, 0),
+    anuladas: 0,
+    porDia,
+  });
+}
+
 export const SUCURSAL_NORTE = '00000000-0000-4000-8000-0000000000c2';
 const ANA = { id: '00000000-0000-4000-8000-0000000000e1', nombreCompleto: 'Ana Flores' };
 
