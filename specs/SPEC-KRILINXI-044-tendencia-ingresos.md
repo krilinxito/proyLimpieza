@@ -28,7 +28,7 @@ Con lo cobrado por día (SPEC-KRILINXI-043), el dashboard de Estadísticas (SPEC
 - [ ] Cada punto del gráfico se puede tocar o enfocar con el teclado y escribe su detalle (día, total y desglose), como las barras de SPEC-KRILINXI-026.
 - [ ] El gráfico tiene nombre accesible y su tabla para el lector de pantalla con los mismos números, que es donde los tests leen los valores.
 - [ ] Los días sin cobros se dibujan en cero, sin cortar la línea.
-- [ ] La respuesta de la API se comprueba contra su contrato como las demás (), y  arma respuestas válidas del endpoint nuevo.
+- [ ] La respuesta de la API se comprueba contra su contrato como las demás (`estadisticasApi.ts`), y `test/estadisticasDePrueba.ts` arma respuestas válidas del endpoint nuevo.
 - [ ] Sin internet, como el resto del panel, dice que las estadísticas necesitan conexión; revisado a mano en Chrome en claro y en oscuro, a 360px y a 1280px.
 
 ## Notas
