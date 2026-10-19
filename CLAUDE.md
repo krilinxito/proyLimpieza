@@ -114,7 +114,7 @@ carnet) y dar de alta, todo en la base local. Fija el patrón de las
 demás: el SQL vive en `features/<x>/api/`, un hook lo pone al alcance de la pantalla, y el
 teléfono se normaliza con la misma regla que el backend. SPEC-KRILINXI-006 añadió
 `/registrar-ropa` (orden y adelanto opcional; desde SPEC-KRILINXI-029 también el ADMIN mientras
-atiende en una sucursal), el saldo en `features/pagos/saldo.ts` —el único lugar donde se calcula— y
+atiende en una sucursal; desde SPEC-KRILINXI-034, dentro del Mostrador), el saldo en `features/pagos/saldo.ts` —el único lugar donde se calcula— y
 `aDecimal`/`desdeDecimal` en `lib/money`, que es como se guardan los montos en la base local
 ("25.50"). Cada ruta puede declarar su propio `sinPermiso`. Para los tests: `sembrar()` carga
 filas "ya sincronizadas" y `sinJerga()` revisa que no haya palabras del sistema en pantalla.
@@ -265,7 +265,11 @@ SPEC-KRILINXI-033 juntó Ropa en el local, Cobrar y Entregar ropa en el **Mostra
 cliente** con su ropa de esta sucursal; cada boleta se abre ahí con lo que su estado permite (es el mismo
 `DetalleOrden`, con `AccionEntregar`). Sin buscar nada, muestra la ropa en el local. `/ropa`, `/cobrar` y
 `/entregar` ya no son pantallas: llevan al Mostrador (`haciaElMostrador` en `pages/rutas.tsx`), así no se rompe
-un enlace guardado. Registrar ropa sigue aparte hasta la spec siguiente.
+un enlace guardado. SPEC-KRILINXI-034 sumó al Mostrador el botón **Registrar ropa** (`/registrar-ropa` lleva a
+`/mostrador?registrar`): el cliente se elige dentro del formulario de la ropa (`ElegirClienteDeLaRopa`), o se da
+de alta ahí mismo, y **el alta, la orden y el adelanto se guardan en una sola transacción** (`ejecutarJuntas`,
+con `sentenciaAltaCliente` y `sentenciaPago`): todo o nada, y la cola sube el cliente antes que su orden. Desde
+la ficha de un cliente, viene elegido; al guardar, del resumen se va a su ficha con la boleta nueva.
 
 SPEC-KRILINXI-012 corrige el reloj de la tablet: `lib/reloj` guarda el desfase con la hora
 del servidor que traen `login` y `renovar`, y `horaOficial()` es de donde salen

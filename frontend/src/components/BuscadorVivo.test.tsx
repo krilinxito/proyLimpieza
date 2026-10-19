@@ -90,7 +90,10 @@ describe('Buscador mientras se escribe — SPEC-KRILINXI-032', () => {
   it('cuenta los resultados para el lector de pantalla, y avisa si hay más', async () => {
     const { escribir } = montar({ buscar: async () => ({ resultados: [ROSA, ROSARIO], hayMas: true }) });
     escribir('ro');
-    expect(await screen.findByRole('status')).toHaveTextContent('2 resultados. Hay más resultados: escribí un poco más.');
+    // La región viva existe desde el principio, vacía: se espera el texto, no solo que aparezca.
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent('2 resultados. Hay más resultados: escribí un poco más.'),
+    );
     expect(screen.getByText('Hay más resultados: escribí un poco más.', { selector: 'p:not([role])' })).toBeInTheDocument();
   });
 
@@ -160,5 +163,12 @@ describe('Buscador mientras se escribe — SPEC-KRILINXI-032', () => {
     const { campo } = montar();
     expect(campo).toHaveAttribute('aria-controls', screen.getByRole('listbox').id);
     expect(campo).toHaveAttribute('aria-autocomplete', 'list');
+  });
+
+  it('Enter sin una opción elegida queda cancelado: no envía el formulario donde está (SPEC-KRILINXI-034)', () => {
+    const { campo } = montar();
+    // jsdom no envía formularios con Enter, así que no sirve mirar si se envió. Se mira lo que en
+    // un navegador lo impide: que el Enter quede cancelado. `fireEvent` devuelve false en ese caso.
+    expect(fireEvent.keyDown(campo, { key: 'Enter' })).toBe(false);
   });
 });

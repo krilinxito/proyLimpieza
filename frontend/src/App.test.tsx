@@ -13,7 +13,7 @@ describe('App — SPEC-KRILINXI-001', () => {
     renderEnRuta(<App />, '/');
     expect(screen.getByRole('heading', { name: 'Lavandería' })).toBeInTheDocument();
     // En el contenido: el menú del marco también lo nombra (SPEC-KRILINXI-023).
-    expect(within(screen.getByRole('main')).getByRole('link', { name: 'Registrar ropa' })).toBeInTheDocument();
+    expect(within(screen.getByRole('main')).getByRole('link', { name: 'Mostrador' })).toBeInTheDocument();
   });
 
   it('muestra una pantalla en español cuando la dirección no existe', () => {
@@ -74,10 +74,11 @@ describe('App: menú por rol — SPEC-KRILINXI-003', () => {
       .getAllByRole('link')
       .map((enlace) => document.getElementById(enlace.getAttribute('aria-labelledby') ?? '')?.textContent);
 
-  it('un EMPLEADO ve el Mostrador, Registrar ropa y Clientes (SPEC-KRILINXI-008, SPEC-KRILINXI-033)', () => {
+  it('un EMPLEADO ve el Mostrador y Clientes (SPEC-KRILINXI-008, SPEC-KRILINXI-033, SPEC-KRILINXI-034)', () => {
     renderEnRuta(<App />, '/', { sesion: sesionDePrueba({ rol: 'EMPLEADO' }) });
     // Ropa en el local, Entregar ropa y Cobrar son una sola tarea desde SPEC-KRILINXI-033: el Mostrador.
-    expect(nombresDelMenu()).toEqual(['Mostrador', 'Registrar ropa', 'Clientes']);
+    // Y Registrar ropa también, desde SPEC-KRILINXI-034: es un botón del Mostrador.
+    expect(nombresDelMenu()).toEqual(['Mostrador', 'Clientes']);
   });
 
   it('un ADMIN además ve Estadísticas, y no ve Registrar ropa (SPEC-KRILINXI-006)', () => {

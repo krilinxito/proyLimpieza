@@ -10,7 +10,7 @@
  * con `baseLocalDePrueba()` sin montar ninguna pantalla. Quien la saca del contexto es el
  * hook (`hooks/useClientes.ts`).
  */
-import type { BaseLocal, Fila } from '../../../lib/powersync';
+import type { BaseLocal, Fila, Sentencia } from '../../../lib/powersync';
 import { alcanzaParaBuscar, type ResultadosDeBusqueda } from '../../../lib/texto';
 import { normalizarTelefono } from '../telefono';
 import type {
@@ -141,19 +141,32 @@ export async function validarCliente(
  * sesión, nunca del dispositivo— y bajan con la siguiente sincronización.
  */
 export async function registrarCliente(base: BaseLocal, datos: DatosAlta): Promise<ResultadoAlta> {
-  const carnet = datos.carnet.trim();
   const { errores, nombre, telefono, ocupadoPor } = await validarCliente(base, datos);
   if (errores.nombre || errores.telefono) return { tipo: 'invalido', errores };
   if (ocupadoPor) return { tipo: 'telefono-ocupado', cliente: ocupadoPor };
 
-  const cliente: Cliente = { id: crypto.randomUUID(), nombre, telefono, carnet: carnet === '' ? null : carnet };
-  await base.ejecutar('INSERT INTO clientes (id, nombre, telefono, carnet) VALUES (?, ?, ?, ?)', [
-    cliente.id,
-    cliente.nombre,
-    cliente.telefono,
-    cliente.carnet,
-  ]);
+  const cliente = clienteNuevo({ nombre, telefono, carnet: datos.carnet });
+  const { sql, parametros } = sentenciaAltaCliente(cliente);
+  await base.ejecutar(sql, parametros);
   return { tipo: 'registrado', cliente };
+}
+
+/** Un cliente nuevo, con su id del dispositivo (CLAUDE.md §6) y los datos ya validados. */
+export function clienteNuevo({ nombre, telefono, carnet }: { nombre: string; telefono: string; carnet: string }): Cliente {
+  const limpio = carnet.trim();
+  return { id: crypto.randomUUID(), nombre, telefono, carnet: limpio === '' ? null : limpio };
+}
+
+/**
+ * La escritura del alta, sin hacerla — SPEC-KRILINXI-034: para guardar al cliente en la misma
+ * transacción que su primera ropa (`ejecutarJuntas`). Primero va el alta: así la cola la sube antes
+ * que la orden que le apunta.
+ */
+export function sentenciaAltaCliente(cliente: Cliente): Sentencia {
+  return {
+    sql: 'INSERT INTO clientes (id, nombre, telefono, carnet) VALUES (?, ?, ?, ?)',
+    parametros: [cliente.id, cliente.nombre, cliente.telefono, cliente.carnet],
+  };
 }
 
 /**

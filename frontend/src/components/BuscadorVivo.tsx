@@ -113,9 +113,11 @@ export function BuscadorVivo<T>({
     } else if (evento.key === 'ArrowUp' && total > 0) {
       evento.preventDefault();
       setActivo((a) => Math.max(a - 1, 0));
-    } else if (evento.key === 'Enter' && activo >= 0) {
+    } else if (evento.key === 'Enter') {
+      // Un buscador no envía nada: puede estar dentro de un formulario (el de la ropa,
+      // SPEC-KRILINXI-034), y Enter sin una opción elegida lo mandaría a medio llenar.
       evento.preventDefault();
-      elegir(activo);
+      if (activo >= 0) elegir(activo);
     } else if (evento.key === 'Escape') {
       setTexto('');
     }

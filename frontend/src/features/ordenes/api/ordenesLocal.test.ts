@@ -4,6 +4,7 @@ import { simularApi } from '../../../test/apiFalsa';
 import { baseLocalDePrueba } from '../../../test/baseLocalDePrueba';
 import { HORA_DEL_SERVIDOR_ISO, tabletConRelojCorrido } from '../../../test/reloj';
 import type { DatosRopa, QuienRegistra } from '../types';
+import { FALTA_NOMBRE, FALTA_TELEFONO } from '../../clientes/api/clientesLocal';
 import { MENSAJES, registrarRopa } from './ordenesLocal';
 
 const ROSA = { id: randomUUID(), nombre: 'Rosa Quispe', telefono: '70123456', carnet: null };
@@ -13,7 +14,7 @@ const OTRA_SUCURSAL = randomUUID();
 /** Una ropa válida; cada test cambia solo lo que le importa. */
 function datosRopa(cambios: Partial<DatosRopa> = {}): DatosRopa {
   return {
-    cliente: ROSA,
+    cliente: { tipo: 'existente', cliente: ROSA },
     numeroBoleta: '001234',
     descripcion: '2 pantalones, 1 saco',
     precio: '50',
@@ -205,5 +206,68 @@ describe('Registrar ropa con la hora del servidor — SPEC-KRILINXI-012', () => 
     const [pago] = await control.base.consultar('SELECT fecha_pago FROM pagos');
     expect(orden?.fecha_entrada).toBe(HORA_DEL_SERVIDOR_ISO);
     expect(pago?.fecha_pago).toBe(HORA_DEL_SERVIDOR_ISO);
+  });
+});
+
+describe('Registrar ropa con un cliente nuevo, todo junto — SPEC-KRILINXI-034', () => {
+  const JUAN = { tipo: 'nuevo', datos: { nombre: ' Juan Mamani ', telefono: '71-111-111', carnet: '' } } as const;
+
+  it('da de alta al cliente y registra la ropa y el adelanto, y la cola los sube en ese orden', async () => {
+    const { control, db } = await baseLocalDePrueba();
+    const resultado = await registrarRopa(
+      control.base,
+      QUIEN,
+      datosRopa({ cliente: JUAN, adelanto: '10', metodoAdelanto: 'EFECTIVO' }),
+    );
+
+    expect(resultado.tipo).toBe('registrada');
+    if (resultado.tipo !== 'registrada') return;
+    // El cliente nuevo, con los datos ya limpios y el id que generó la tablet.
+    expect(resultado.ropa.cliente).toMatchObject({ nombre: 'Juan Mamani', telefono: '71111111', carnet: null });
+    const [orden] = await control.base.consultar('SELECT cliente_id FROM ordenes');
+    expect(orden?.cliente_id).toBe(resultado.ropa.cliente.id);
+    // El orden de la cola es el contrato con el servidor: la orden no puede llegar antes que su cliente.
+    expect((await cola(db)).map(([op, tabla]) => [op, tabla])).toEqual([
+      ['PUT', 'clientes'],
+      ['PUT', 'ordenes'],
+      ['PUT', 'pagos'],
+    ]);
+  });
+
+  it('con la ropa mal, no guarda nada: ni la orden ni el cliente nuevo', async () => {
+    const { control, db } = await baseLocalDePrueba();
+    const resultado = await registrarRopa(control.base, QUIEN, datosRopa({ cliente: JUAN, precio: '' }));
+    expect(resultado).toEqual({ tipo: 'invalida', errores: { precio: MENSAJES.precio } });
+    expect(await control.base.consultar('SELECT id FROM clientes')).toEqual([]);
+    expect(await cola(db)).toEqual([]);
+  });
+
+  it('los datos del cliente nuevo se validan como en el alta, junto con los de la ropa', async () => {
+    const { control } = await baseLocalDePrueba();
+    const resultado = await registrarRopa(
+      control.base,
+      QUIEN,
+      datosRopa({ cliente: { tipo: 'nuevo', datos: { nombre: ' ', telefono: '', carnet: '' } }, numeroBoleta: '' }),
+    );
+    expect(resultado).toEqual({
+      tipo: 'invalida',
+      errores: {
+        clienteNombre: FALTA_NOMBRE,
+        clienteTelefono: FALTA_TELEFONO,
+        numeroBoleta: MENSAJES.sinBoleta,
+      },
+    });
+  });
+
+  it('si el teléfono ya es de otro cliente, lo dice con ese cliente y no guarda nada', async () => {
+    const { control, db, sembrar } = await baseLocalDePrueba();
+    await sembrar('clientes', [ROSA]);
+    const resultado = await registrarRopa(
+      control.base,
+      QUIEN,
+      datosRopa({ cliente: { tipo: 'nuevo', datos: { nombre: 'Otra', telefono: '7012 3456', carnet: '' } } }),
+    );
+    expect(resultado).toEqual({ tipo: 'telefono-ocupado', cliente: ROSA });
+    expect(await cola(db)).toEqual([]);
   });
 });

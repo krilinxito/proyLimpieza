@@ -18,7 +18,6 @@ describe('Rutas: lo que necesita el menú — SPEC-KRILINXI-023', () => {
     expect(destinosDelMenu('EMPLEADO', true).map((d) => d.titulo)).toEqual([
       'Inicio',
       'Mostrador',
-      'Registrar ropa',
       'Clientes',
     ]);
   });
@@ -38,7 +37,6 @@ describe('Rutas: lo que necesita el menú — SPEC-KRILINXI-023', () => {
     expect(destinosDelMenu('ADMIN', true).map((d) => d.titulo)).toEqual([
       'Inicio',
       'Mostrador',
-      'Registrar ropa',
       'Clientes',
       'Personal',
       'Sucursales',
@@ -49,7 +47,8 @@ describe('Rutas: lo que necesita el menú — SPEC-KRILINXI-023', () => {
 
   it.each([
     ['/', 'Lavandería'],
-    ['/registrar-ropa', 'Registrar ropa · Lavandería'],
+    // Registrar ropa es parte del Mostrador desde SPEC-KRILINXI-034.
+    ['/registrar-ropa', 'Mostrador · Lavandería'],
     // Las direcciones viejas del mostrador llevan ahí (SPEC-KRILINXI-033).
     ['/cobrar', 'Mostrador · Lavandería'],
     ['/quien-hizo-que', '¿Quién hizo qué? · Lavandería'],

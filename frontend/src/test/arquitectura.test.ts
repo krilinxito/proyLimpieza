@@ -65,7 +65,7 @@ describe('Componentes de features sin acceso a la base local — SPEC-KRILINXI-0
   it('revisa los componentes de más de una feature', () => {
     const rutas = COMPONENTES_DE_FEATURES.map(({ ruta }) => ruta);
     expect(rutas).toContain('features/clientes/components/PantallaClientes.tsx');
-    expect(rutas).toContain('features/ordenes/components/PantallaRegistrarRopa.tsx');
+    expect(rutas).toContain('features/ordenes/components/FormularioRopa.tsx');
   });
 
   it.each(COMPONENTES_DE_FEATURES.map((a) => [a.ruta, a.fuente]))('%s pasa por un hook', (_ruta, fuente) => {

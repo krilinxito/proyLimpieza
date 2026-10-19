@@ -20,13 +20,6 @@ type Paso =
   | { tipo: 'editando'; cliente: Cliente }
   | { tipo: 'editado'; cliente: Cliente; aviso: string };
 
-type Props = {
-  /**
-   * Para usar la búsqueda dentro de otra tarea, como registrar ropa (SPEC-KRILINXI-006):
-   * si viene, junto a cada cliente encontrado o registrado aparece "Es este cliente".
-   */
-  alElegir?: (cliente: Cliente) => void;
-};
 
 /** Lo que muestra cada resultado del buscador: el nombre grande y, debajo, cómo distinguirlo. */
 function ResultadoCliente({ cliente }: { cliente: Cliente }) {
@@ -46,7 +39,7 @@ function ResultadoCliente({ cliente }: { cliente: Cliente }) {
  * SPEC-KRILINXI-032) y, si no está, darlo de alta. Todo sobre la base local: funciona igual con
  * o sin internet (CLAUDE.md §6).
  */
-export function PantallaClientes({ alElegir }: Props = {}) {
+export function PantallaClientes() {
   const clientes = useClientes();
   const [paso, setPaso] = useState<Paso>({ tipo: 'inicio' });
   // Cambia cada vez que se elige un cliente: vuelve a montar el buscador, que queda vacío.
@@ -76,8 +69,6 @@ export function PantallaClientes({ alElegir }: Props = {}) {
           <>
             <TarjetaCliente cliente={paso.cliente} />
             <Acciones
-              cliente={paso.cliente}
-              alElegir={alElegir}
               alEditar={() => setPaso({ tipo: 'editando', cliente: paso.cliente })}
             />
           </>
@@ -104,8 +95,6 @@ export function PantallaClientes({ alElegir }: Props = {}) {
             <Aviso tipo="exito">Cliente registrado.</Aviso>
             <TarjetaCliente cliente={paso.cliente} />
             <Acciones
-              cliente={paso.cliente}
-              alElegir={alElegir}
               alEditar={() => setPaso({ tipo: 'editando', cliente: paso.cliente })}
             />
           </>
@@ -139,8 +128,6 @@ export function PantallaClientes({ alElegir }: Props = {}) {
             <Aviso tipo="exito">{paso.aviso}</Aviso>
             <TarjetaCliente cliente={paso.cliente} />
             <Acciones
-              cliente={paso.cliente}
-              alElegir={alElegir}
               alEditar={() => setPaso({ tipo: 'editando', cliente: paso.cliente })}
             />
           </>
@@ -153,8 +140,6 @@ export function PantallaClientes({ alElegir }: Props = {}) {
             </Aviso>
             <TarjetaCliente cliente={paso.cliente} />
             <Acciones
-              cliente={paso.cliente}
-              alElegir={alElegir}
               alEditar={() => setPaso({ tipo: 'editando', cliente: paso.cliente })}
             />
           </>
@@ -165,21 +150,13 @@ export function PantallaClientes({ alElegir }: Props = {}) {
 }
 
 /**
- * Lo que se puede hacer con un cliente en pantalla: "Cambiar datos" siempre
- * (SPEC-KRILINXI-014) y "Es este cliente" solo cuando la búsqueda se usa para elegir.
+ * Lo que se puede hacer con un cliente en pantalla: "Cambiar datos" (SPEC-KRILINXI-014). Hasta
+ * SPEC-KRILINXI-034 había también "Es este cliente", para elegirlo al registrar ropa; ahora el
+ * cliente se elige dentro del formulario de la ropa (`ElegirClienteDeLaRopa`).
  */
-function Acciones({
-  cliente,
-  alElegir,
-  alEditar,
-}: {
-  cliente: Cliente;
-  alElegir: Props['alElegir'];
-  alEditar: () => void;
-}) {
+function Acciones({ alEditar }: { alEditar: () => void }) {
   return (
     <div className="mt-4 grid gap-3">
-      {alElegir && <Boton onClick={() => alElegir(cliente)}>Es este cliente</Boton>}
       <Boton variante="secundario" onClick={alEditar}>
         Cambiar datos
       </Boton>
