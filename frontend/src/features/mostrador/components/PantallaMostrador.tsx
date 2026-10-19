@@ -26,6 +26,24 @@ type Vista =
 /** El parámetro de la dirección que abre el Mostrador con el formulario: `/mostrador?registrar`. */
 export const PARAMETRO_REGISTRAR = 'registrar';
 
+/**
+ * La dirección que abre una boleta en la ficha de su cliente — SPEC-KRILINXI-035: el Inicio lleva
+ * así a cada boleta de sus listas. `/mostrador?cliente=…&boleta=…`.
+ */
+export function enlaceABoleta(orden: { id: string; clienteId: string | null }): string {
+  const parametros = new URLSearchParams({ boleta: orden.id });
+  if (orden.clienteId) parametros.set('cliente', orden.clienteId);
+  return `/mostrador?${parametros.toString()}`;
+}
+
+/** Qué muestra el Mostrador al abrirse, según la dirección. */
+function vistaInicial(parametros: URLSearchParams): Vista {
+  if (parametros.has(PARAMETRO_REGISTRAR)) return { tipo: 'registrando', clienteId: null };
+  const clienteId = parametros.get('cliente');
+  if (clienteId) return { tipo: 'ficha', clienteId, abierta: parametros.get('boleta') };
+  return { tipo: 'inicio' };
+}
+
 /** Cómo se ve cada resultado del buscador: un cliente, o una boleta con su estado. */
 function ResultadoEncontrado({ encontrado }: { encontrado: Encontrado }) {
   if (encontrado.tipo === 'cliente') {
@@ -98,18 +116,17 @@ function RopaEnElLocal({ alElegir }: { alElegir: (orden: OrdenVista) => void }) 
 export function PantallaMostrador() {
   const mostrador = useMostrador();
   const [parametros, setParametros] = useSearchParams();
-  // `/mostrador?registrar` (adonde lleva /registrar-ropa) abre directo el formulario.
-  const [vista, setVista] = useState<Vista>(() =>
-    parametros.has(PARAMETRO_REGISTRAR) ? { tipo: 'registrando', clienteId: null } : { tipo: 'inicio' },
-  );
+  // `/mostrador?registrar` (adonde lleva /registrar-ropa) abre directo el formulario, y
+  // `?cliente=…&boleta=…` (desde el Inicio) abre esa boleta en la ficha de su cliente.
+  const [vista, setVista] = useState<Vista>(() => vistaInicial(parametros));
   // Cambia cada vez que se elige algo: vuelve a montar el buscador, que queda vacío.
   const [vuelta, setVuelta] = useState(0);
 
   function ir(nueva: Vista) {
     setVista(nueva);
     setVuelta((v) => v + 1);
-    // Fuera del formulario, la dirección vuelve a ser /mostrador: recargar no lo reabre.
-    if (nueva.tipo !== 'registrando' && parametros.has(PARAMETRO_REGISTRAR)) setParametros({}, { replace: true });
+    // Lo que pedía la dirección ya se mostró: vuelve a ser /mostrador, y recargar no lo reabre.
+    if (nueva.tipo !== 'registrando' && parametros.toString() !== '') setParametros({}, { replace: true });
   }
 
 

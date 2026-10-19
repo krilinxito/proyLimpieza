@@ -12,8 +12,8 @@ describe('App — SPEC-KRILINXI-001', () => {
   it('muestra el menú del mostrador en la ruta raíz', () => {
     renderEnRuta(<App />, '/');
     expect(screen.getByRole('heading', { name: 'Lavandería' })).toBeInTheDocument();
-    // En el contenido: el menú del marco también lo nombra (SPEC-KRILINXI-023).
-    expect(within(screen.getByRole('main')).getByRole('link', { name: 'Mostrador' })).toBeInTheDocument();
+    // En el menú: desde SPEC-KRILINXI-035 el Inicio ya no repite las tareas.
+    expect(within(screen.getByRole('navigation', { name: 'Menú principal' })).getByRole('link', { name: 'Mostrador' })).toBeInTheDocument();
   });
 
   it('muestra una pantalla en español cuando la dirección no existe', () => {
@@ -65,14 +65,13 @@ describe('App: rutas protegidas — SPEC-KRILINXI-003', () => {
 });
 
 describe('App: menú por rol — SPEC-KRILINXI-003', () => {
-  // Las tarjetas del Inicio, en el contenido. El menú del marco, que suma "Inicio" primero, se
-  // prueba en `pages/Marco.test.tsx` (SPEC-KRILINXI-023). Desde SPEC-KRILINXI-024 cada tarjeta
-  // trae también su descripción, así que su texto ya no es solo el nombre: el nombre accesible
-  // sale del elemento al que apunta `aria-labelledby`, y es ese el que se lee.
+  // El menú del marco, sin su primer destino (el Inicio). Hasta SPEC-KRILINXI-035 se miraban las
+  // tarjetas del Inicio, que repetían el menú; ahora el Inicio dice qué hay que hacer hoy.
   const nombresDelMenu = () =>
-    within(screen.getByRole('navigation', { name: 'Tareas' }))
+    within(screen.getByRole('navigation', { name: 'Menú principal' }))
       .getAllByRole('link')
-      .map((enlace) => document.getElementById(enlace.getAttribute('aria-labelledby') ?? '')?.textContent);
+      .map((enlace) => enlace.textContent)
+      .filter((nombre) => nombre !== 'Inicio');
 
   it('un EMPLEADO ve el Mostrador y Clientes (SPEC-KRILINXI-008, SPEC-KRILINXI-033, SPEC-KRILINXI-034)', () => {
     renderEnRuta(<App />, '/', { sesion: sesionDePrueba({ rol: 'EMPLEADO' }) });

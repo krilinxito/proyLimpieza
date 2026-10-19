@@ -62,8 +62,9 @@ describe('Estilos con Tailwind — SPEC-KRILINXI-001', () => {
     expect(css).toMatch(/prefers-color-scheme:\s*dark/);
   });
 
-  it('las pantallas llevan puestas esas clases', () => {
+  it('las pantallas llevan puestas esas clases', async () => {
     renderEnRuta(<Inicio />);
-    expect(screen.getByRole('link', { name: 'Mostrador' })).toHaveClass('bg-superficie', 'rounded-2xl');
+    // Desde SPEC-KRILINXI-035 el Inicio dice lo de hoy, en tarjetas del tema.
+    expect(await screen.findByRole('region', { name: 'Cobrado hoy' })).toHaveClass('bg-superficie', 'rounded-2xl');
   });
 });

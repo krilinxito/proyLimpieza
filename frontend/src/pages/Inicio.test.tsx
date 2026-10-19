@@ -1,50 +1,135 @@
 import { describe, expect, it } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { App } from '../App';
+import { simularApi } from '../test/apiFalsa';
+import { baseLocalDePrueba } from '../test/baseLocalDePrueba';
+import { controlFalso } from '../test/controlFalso';
+import { simularEstadisticas } from '../test/estadisticasDePrueba';
+import { clienteDePrueba, ordenDePrueba, pagoDePrueba } from '../test/filasDePrueba';
+import { tabletConRelojCorrido } from '../test/reloj';
 import { renderEnRuta } from '../test/render';
 import { sesionDePrueba } from '../test/sesion';
 import { sinJerga } from '../test/jerga';
-import { destinosDelMenu } from './rutas';
 
-const tareas = () => within(screen.getByRole('navigation', { name: 'Tareas' }));
+/** La base local con la ropa del día de una sucursal: lo que el Inicio tiene que mostrar. */
+async function sucursalConRopaDelDia() {
+  simularApi(() => 'sin-conexion');
+  // El 16/10/2026, 10:05 en La Paz: "hoy" no depende de cuándo corre el test.
+  tabletConRelojCorrido(0);
+  const prueba = await baseLocalDePrueba();
+  const rosa = clienteDePrueba({ nombre: 'Rosa Quispe' });
+  const lista = ordenDePrueba({ cliente_id: rosa.id, numero_boleta: '000001', estado: 'LISTO', precio_total: '50.00' });
+  const atrasada = ordenDePrueba({ cliente_id: rosa.id, numero_boleta: '000002', estado: 'EN_PROCESO', fecha_estimada_salida: '2026-10-14' });
+  await prueba.sembrar('clientes', [rosa]);
+  await prueba.sembrar('ordenes', [lista, atrasada]);
+  await prueba.sembrar('pagos', [
+    pagoDePrueba({ orden_id: lista.id, monto: '20.00', metodo: 'EFECTIVO', fecha_pago: '2026-10-16 13:00:00' }),
+    pagoDePrueba({ orden_id: atrasada.id, monto: '5.50', metodo: 'QR', fecha_pago: '2026-10-16T14:00:00.000Z' }),
+    // De ayer: no cuenta.
+    pagoDePrueba({ orden_id: atrasada.id, monto: '99.00', metodo: 'QR', fecha_pago: '2026-10-15 15:00:00' }),
+  ]);
+  return prueba;
+}
 
-describe('Inicio como tarjetas de tareas — SPEC-KRILINXI-024', () => {
-  it.each(['EMPLEADO', 'ADMIN'] as const)('a un %s le muestra una tarjeta por cada tarea del menú, en el mismo orden', (rol) => {
-    renderEnRuta(<App />, '/', { sesion: sesionDePrueba({ rol }) });
-    const esperadas = destinosDelMenu(rol, rol === 'EMPLEADO').filter((d) => d.camino !== '/');
-    const enlaces = tareas().getAllByRole('link');
-    expect(enlaces).toHaveLength(esperadas.length);
-    esperadas.forEach((destino, i) => {
-      // El nombre es solo el título; la descripción va como descripción del enlace.
-      expect(enlaces[i]).toHaveAccessibleName(destino.titulo);
-      expect(enlaces[i]).toHaveAccessibleDescription(destino.descripcion);
-      expect(enlaces[i]).toHaveAttribute('href', destino.camino);
-      expect(enlaces[i]?.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
-    });
-  });
+const principal = () => within(screen.getByRole('main'));
+const seccion = (nombre: RegExp) => principal().getByRole('region', { name: nombre });
 
-  it('no se lista a sí mismo', () => {
-    renderEnRuta(<App />, '/');
-    expect(tareas().queryByRole('link', { name: 'Inicio' })).not.toBeInTheDocument();
-  });
-
-  it('las tarjetas se tocan con comodidad, y en pantalla ancha van en dos columnas', () => {
-    renderEnRuta(<App />, '/');
-    const tarjeta = tareas().getByRole('link', { name: 'Mostrador' });
-    expect(tarjeta).toHaveClass('min-h-24');
-    expect(document.getElementById(tarjeta.getAttribute('aria-labelledby') ?? '')).toHaveClass('text-2xl');
-    expect(tarjeta.closest('ul')).toHaveClass('lg:grid-cols-2');
-  });
-
+describe('Inicio: el saludo — SPEC-KRILINXI-024', () => {
   it('saluda por su nombre a quien atiende, debajo del título', () => {
     renderEnRuta(<App />, '/', { sesion: sesionDePrueba({ nombreCompleto: 'Rosa Quispe' }) });
     expect(screen.getByRole('heading', { level: 1, name: 'Lavandería' })).toBeInTheDocument();
-    expect(within(screen.getByRole('main')).getByText('Hola, Rosa Quispe')).toBeInTheDocument();
+    expect(principal().getByText('Hola, Rosa Quispe')).toBeInTheDocument();
   });
 
   it('no usa palabras del sistema', () => {
     renderEnRuta(<App />, '/', { sesion: sesionDePrueba({ rol: 'ADMIN' }) });
     sinJerga();
+  });
+});
+
+describe('Inicio: hoy en la sucursal — SPEC-KRILINXI-035', () => {
+  it('muestra la ropa lista para recoger y la atrasada, cada una con su número', async () => {
+    const { control } = await sucursalConRopaDelDia();
+    renderEnRuta(<App />, '/', { baseLocal: control });
+
+    expect(await principal().findByRole('heading', { name: 'Hoy en la sucursal' })).toBeInTheDocument();
+    const lista = seccion(/^Lista para recoger \(1 boleta\)/);
+    expect(within(lista).getByRole('link', { name: 'Boleta 000001, Rosa Quispe' })).toHaveTextContent('Falta pagar Bs 30,00');
+    const atrasada = seccion(/^Atrasada \(1 boleta\)/);
+    expect(within(atrasada).getByRole('link', { name: 'Boleta 000002, Rosa Quispe' })).toHaveTextContent('Era para el 14/10/2026');
+    sinJerga();
+  });
+
+  it('muestra lo cobrado hoy, el total y por forma de pago, sin lo de ayer', async () => {
+    const { control } = await sucursalConRopaDelDia();
+    renderEnRuta(<App />, '/', { baseLocal: control });
+
+    const cobrado = await principal().findByRole('region', { name: 'Cobrado hoy' });
+    expect(within(cobrado).getByText('Bs 25,50')).toBeInTheDocument();
+    expect(within(cobrado).getByText('Efectivo', { selector: 'dt' }).nextElementSibling).toHaveTextContent('Bs 20,00');
+    expect(within(cobrado).getByText('Pago con QR', { selector: 'dt' }).nextElementSibling).toHaveTextContent('Bs 5,50');
+  });
+
+  it('tocar una boleta la abre en el Mostrador, en la ficha de su cliente', async () => {
+    const { control } = await sucursalConRopaDelDia();
+    renderEnRuta(<App />, '/', { baseLocal: control });
+
+    fireEvent.click(await principal().findByRole('link', { name: 'Boleta 000002, Rosa Quispe' }));
+    expect(await screen.findByRole('heading', { name: 'Mostrador', level: 1 })).toBeInTheDocument();
+    const ficha = await screen.findByRole('region', { name: 'Ficha de Rosa Quispe' });
+    expect(await within(ficha).findByRole('region', { name: 'Boleta 000002' })).toBeInTheDocument();
+  });
+
+  it('una lista vacía lo dice en palabras, y sin cobros lo dice también', async () => {
+    simularApi(() => 'sin-conexion');
+    const { control } = await baseLocalDePrueba();
+    renderEnRuta(<App />, '/', { baseLocal: control });
+
+    expect(await principal().findByText('No hay ropa lista esperando que la recojan.')).toBeInTheDocument();
+    expect(principal().getByText('No hay ropa atrasada.')).toBeInTheDocument();
+    expect(principal().getByText('Todavía no se cobró nada hoy.')).toBeInTheDocument();
+  });
+
+  it('si hay registros para corregir, lo dice y lleva a revisarlos', async () => {
+    const baseLocal = controlFalso({ estado: { conectado: false, pendientes: 0, paraCorregir: 2 } });
+    renderEnRuta(<App />, '/', { baseLocal });
+    expect(await principal().findByText('Hay 2 registros que no se pudieron guardar y hay que revisar.')).toBeInTheDocument();
+    expect(principal().getByRole('link', { name: 'Revisar los registros' })).toHaveAttribute('href', '/para-corregir');
+  });
+
+  it('sin internet, ninguna lectura va al servidor', async () => {
+    const { control } = await sucursalConRopaDelDia();
+    const servidor = simularApi(() => 'sin-conexion');
+    renderEnRuta(<App />, '/', { baseLocal: control });
+    await principal().findByRole('region', { name: 'Cobrado hoy' });
+    expect(servidor.pedidos).toEqual([]);
+  });
+
+  it('ya no repite las tareas del menú', async () => {
+    const { control } = await sucursalConRopaDelDia();
+    renderEnRuta(<App />, '/', { baseLocal: control });
+    await principal().findByRole('heading', { name: 'Hoy en la sucursal' });
+    expect(screen.queryByRole('navigation', { name: 'Tareas' })).not.toBeInTheDocument();
+    expect(principal().queryByRole('link', { name: 'Mostrador' })).not.toBeInTheDocument();
+    expect(principal().queryByRole('link', { name: 'Clientes' })).not.toBeInTheDocument();
+  });
+});
+
+describe('Inicio del ADMIN que no atiende — SPEC-KRILINXI-035', () => {
+  it('ofrece "Atender en una sucursal" y, sin internet, dice que los números necesitan conexión', async () => {
+    simularApi(() => 'sin-conexion');
+    renderEnRuta(<App />, '/', { sesion: sesionDePrueba({ rol: 'ADMIN' }) });
+    expect(await principal().findByText(/Las estadísticas necesitan conexión/)).toBeInTheDocument();
+    expect(principal().getByRole('button', { name: 'Atender en una sucursal' })).toBeInTheDocument();
+    expect(principal().queryByRole('heading', { name: 'Hoy en la sucursal' })).not.toBeInTheDocument();
+  });
+
+  it('con internet muestra los cuatro indicadores del tablero', async () => {
+    simularEstadisticas();
+    renderEnRuta(<App />, '/', { sesion: sesionDePrueba({ rol: 'ADMIN' }) });
+    const resumen = await principal().findByRole('region', { name: 'Resumen' });
+    expect(within(resumen).getAllByRole('term')).toHaveLength(4);
+    expect(principal().getByRole('link', { name: 'Ver las estadísticas' })).toHaveAttribute('href', '/estadisticas');
   });
 });
 
