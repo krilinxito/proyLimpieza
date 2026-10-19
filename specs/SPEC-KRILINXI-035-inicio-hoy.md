@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-035
 name: Un Inicio que dice qué hay que hacer hoy
 slug: inicio-hoy
-status: draft
+status: finished
 owner: krilinxito
 created: 2026-10-18
 scope:
@@ -14,7 +14,14 @@ scope:
 priority: medium
 depends_on:
   - SPEC-KRILINXI-033
-tests: []
+tests:
+  - frontend/src/App.test.tsx
+  - frontend/src/estilos.test.tsx
+  - frontend/src/features/atencion/components/AtenderEnUnaSucursal.test.tsx
+  - frontend/src/features/mostrador/api/hoyLocal.test.ts
+  - frontend/src/features/pendientes/components/PantallaParaCorregir.test.tsx
+  - frontend/src/lib/diaDelNegocio.test.ts
+  - frontend/src/pages/Inicio.test.tsx
 ---
 
 ## Descripción

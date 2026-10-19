@@ -217,7 +217,8 @@ describe('Es el mismo cliente — SPEC-KRILINXI-021', () => {
     fireEvent.click(await screen.findByRole('link', { name: 'Volver al inicio' }));
     // El botón del Inicio, no el del menú (que también se llama así desde SPEC-KRILINXI-023).
     await screen.findByRole('heading', { name: 'Lavandería' });
-    fireEvent.click(within(screen.getByRole('main')).getByRole('link', { name: 'Mostrador' }));
+    // Al Mostrador por el menú: desde SPEC-KRILINXI-035 el Inicio ya no repite las tareas.
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Menú principal' })).getByRole('link', { name: 'Mostrador' }));
 
     expect(await screen.findByRole('button', { name: 'Boleta 001234, Rosa Quispe' })).toBeInTheDocument();
   });

@@ -15,9 +15,8 @@
  *
  * Cuando el admin elige fechas, todas las secciones usan esas.
  */
-import { ahoraOficialMs } from '../../lib/reloj';
-
-export const ZONA_NEGOCIO = 'America/La_Paz';
+// Desde SPEC-KRILINXI-035 viven en `lib/`: el Inicio también necesita saber qué día es.
+export { hoyEnBolivia, ZONA_NEGOCIO } from '../../lib/diaDelNegocio';
 
 /**
  * El primer día que pide "todo lo pendiente". El backend, sin `desde`, usa los últimos 30
@@ -36,14 +35,6 @@ export const FILTRO_INICIAL: Filtro = { fechas: null, sucursalId: null };
 
 /** Los parámetros de una petición a `/api/estadisticas/*`. */
 export type Parametros = { desde: string; hasta: string; sucursal_id?: string };
-
-/** Hoy en Bolivia, como `YYYY-MM-DD`, con la hora corregida de la tablet (SPEC-KRILINXI-012). */
-export function hoyEnBolivia(ahoraMs: number = ahoraOficialMs()): string {
-  // `en-CA` escribe las fechas como año-mes-día, que es el formato que pide el backend.
-  return new Intl.DateTimeFormat('en-CA', { timeZone: ZONA_NEGOCIO, year: 'numeric', month: '2-digit', day: '2-digit' }).format(
-    new Date(ahoraMs),
-  );
-}
 
 function conSucursal(base: { desde: string; hasta: string }, sucursalId: string | null): Parametros {
   return sucursalId ? { ...base, sucursal_id: sucursalId } : base;

@@ -44,7 +44,8 @@ function ultimaConexion(conectar: ReturnType<typeof vi.fn>) {
 }
 
 const cabecera = () => within(screen.getByRole('banner'));
-const tareas = () => within(screen.getByRole('navigation', { name: 'Tareas' }));
+// Las tareas, en el menú: desde SPEC-KRILINXI-035 el Inicio ya no las repite.
+const tareas = () => within(screen.getByRole('navigation', { name: 'Menú principal' }));
 
 async function empezarEn(nombre: string) {
   fireEvent.click(await screen.findByRole('button', { name: 'Atender en una sucursal' }));
@@ -127,7 +128,7 @@ describe('Atender en una sucursal: el mostrador con la sucursal elegida — SPEC
 
   async function registrarConBoleta(boleta: string) {
     // Desde SPEC-KRILINXI-034, Registrar ropa es un botón del Mostrador, con el cliente en el formulario.
-    fireEvent.click(within(screen.getByRole('main')).getByRole('link', { name: 'Mostrador' }));
+    fireEvent.click(tareas().getByRole('link', { name: 'Mostrador' }));
     fireEvent.click(await within(screen.getByRole('main')).findByRole('button', { name: 'Registrar ropa' }));
     await elegirEnBuscador('70123456', /Rosa Quispe/);
     await screen.findByRole('form', { name: 'Datos de la ropa' });
@@ -166,7 +167,7 @@ describe('Atender en una sucursal: el mostrador con la sucursal elegida — SPEC
   it('el Mostrador muestra la ropa de la sucursal elegida, no la de otra', async () => {
     await abrir();
     await empezarEn('Norte');
-    fireEvent.click(within(screen.getByRole('main')).getByRole('link', { name: 'Mostrador' }));
+    fireEvent.click(tareas().getByRole('link', { name: 'Mostrador' }));
 
     expect(await within(screen.getByRole('main')).findByText(/000777/)).toBeInTheDocument();
     expect(within(screen.getByRole('main')).queryByText(/000999/)).not.toBeInTheDocument();
