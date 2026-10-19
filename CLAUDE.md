@@ -204,9 +204,8 @@ Salir; el menú, que en pantalla ancha (desde 1024px) es una barra lateral y en 
 contenido. Los destinos salen de `RUTAS` (`destinosDelMenu`), y cada ruta del menú declara su
 `icono` y su `descripcion`. Como el menú nombra las mismas pantallas que el Inicio, **un test que
 busca un enlace o un texto de una pantalla lo busca dentro de `getByRole('main')`** o por su rol.
-SPEC-KRILINXI-024 pasó al tema la entrada a la app: el Inicio son tarjetas de tareas (las de
-`destinosDelMenu`, con su ícono y su `descripcion`; el nombre accesible de cada una es solo el
-título), el ingreso es una tarjeta centrada (`PantallaIngreso`) y "Volver al inicio" es un
+SPEC-KRILINXI-024 pasó al tema la entrada a la app: el Inicio eran tarjetas de tareas (las de
+`destinosDelMenu`; desde SPEC-KRILINXI-035 ya no repite el menú), el ingreso es una tarjeta centrada (`PantallaIngreso`) y "Volver al inicio" es un
 `EnlaceBoton`. La regla de la paleta cruda (`CON_EL_TEMA` en `test/arquitectura.test.ts`) creció
 carpeta por carpeta con la ola; desde SPEC-KRILINXI-027 cubre toda la app.
 SPEC-KRILINXI-025 pasó al tema el mostrador (registrar, ropa, cobrar, entregar, clientes): el estado
@@ -270,6 +269,15 @@ un enlace guardado. SPEC-KRILINXI-034 sumó al Mostrador el botón **Registrar r
 de alta ahí mismo, y **el alta, la orden y el adelanto se guardan en una sola transacción** (`ejecutarJuntas`,
 con `sentenciaAltaCliente` y `sentenciaPago`): todo o nada, y la cola sube el cliente antes que su orden. Desde
 la ficha de un cliente, viene elegido; al guardar, del resumen se va a su ficha con la boleta nueva.
+
+SPEC-KRILINXI-035 cambió el **Inicio**: ya no repite el menú, dice qué hay que hacer hoy. Quien atiende ve "Hoy en
+la sucursal" (`features/mostrador/components/HoyEnLaSucursal`, de la base local con `hoyEnLaSucursal`): la ropa
+lista para recoger, la atrasada (fecha estimada vencida), lo cobrado hoy por forma de pago y lo que hay para
+corregir; cada boleta lleva al Mostrador (`enlaceABoleta`: `/mostrador?cliente=…&boleta=…`). El ADMIN que no
+atiende ve "Atender en una sucursal" y los cuatro indicadores del tablero (`ResumenDelInicio`, online). **El día
+del negocio vive en `lib/diaDelNegocio.ts`** (`hoyEnBolivia`, `diaEnBolivia`), e `instanteGuardado` lee las fechas
+guardadas: las que bajan del servidor vienen **sin zona** (`2026-10-18 22:00:00`, en UTC) y `new Date()` las
+leería como hora local. Los tests corren con `TZ=America/La_Paz` (`vite.config.ts`), la zona de las tablets.
 
 SPEC-KRILINXI-012 corrige el reloj de la tablet: `lib/reloj` guarda el desfase con la hora
 del servidor que traen `login` y `renovar`, y `horaOficial()` es de donde salen
