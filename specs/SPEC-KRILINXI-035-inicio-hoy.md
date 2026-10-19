@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-035
 name: Un Inicio que dice qué hay que hacer hoy
 slug: inicio-hoy
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-18
 scope:
