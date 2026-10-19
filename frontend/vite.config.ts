@@ -76,7 +76,10 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     // Los tests no leen el .env del desarrollador: si dependieran de él, pasarían o
     // fallarían según la máquina. El módulo de entorno se prueba con valores explícitos.
-    env: { VITE_API_URL: 'http://localhost:4000', VITE_POWERSYNC_URL: 'http://localhost:8080' },
+    // La zona horaria es la de las tablets (SPEC-KRILINXI-035): una fecha guardada sin zona leída como
+    // hora local estaría corrida cuatro horas, y ese error solo se ve si la máquina NO está en UTC. Así
+    // los tests lo atrapan igual en cualquier máquina, también en un servidor de CI en UTC.
+    env: { VITE_API_URL: 'http://localhost:4000', VITE_POWERSYNC_URL: 'http://localhost:8080', TZ: 'America/La_Paz' },
     // La mitad de los núcleos, no todos (SPEC-KRILINXI-019). Cada archivo de pantalla abre su
     // propio SQLite y monta la App entera; con un proceso por núcleo, la primera lectura de la
     // base local a veces pasaba el tope de 1 s de `findBy…` y el test fallaba sin estar mal (la
