@@ -308,12 +308,12 @@ describe('Panel de estadísticas: volumen, productividad y clientes — SPEC-KRI
 
 describe('Las barras del volumen sin estilos en línea — SPEC-KRILINXI-020', () => {
   // Desde SPEC-KRILINXI-026 las barras son columnas de un SVG: el alto va en un atributo, no en un
-  // `style` ni en una clase.
+  // `style` ni en una clase. Desde SPEC-KRILINXI-036, en el `<svg data-barra>` que recorta la columna.
   it('el alto va en un atributo del SVG: la del día con más ropa es la más alta, y un día sin ropa no tiene columna', async () => {
     simularEstadisticas();
     await abrirPanel();
     const volumen = await screen.findByRole('region', { name: 'Ropa recibida' });
-    const columna = (nombre: string) => within(volumen).getByRole('button', { name: nombre }).querySelector('rect');
+    const columna = (nombre: string) => within(volumen).getByRole('button', { name: nombre }).querySelector('[data-barra]');
 
     expect(columna('15/10/2026: 4 boletas (1 anulada)')).toHaveAttribute('height', '82%');
     expect(columna('14/10/2026: 2 boletas')).toHaveAttribute('height', '41%');
@@ -369,8 +369,8 @@ describe('El panel como tablero — SPEC-KRILINXI-026', () => {
     // Centro: efectivo y QR. La tarjeta, en cero, no ocupa lugar ni se rotula.
     const centro = within(cobrado).getByRole('button', { name: /^Centro:/ });
     expect([...centro.querySelectorAll('rect')].map((r) => r.getAttribute('class'))).toEqual([
-      'fill-serie-1 stroke-superficie',
-      'fill-serie-2 stroke-superficie',
+      'fill-serie-1',
+      'fill-serie-2',
     ]);
     expect(within(centro).getByText('Efectivo Bs 100,00')).toBeInTheDocument();
     expect(within(centro).getByText('Pago con QR Bs 25,50')).toBeInTheDocument();
@@ -381,7 +381,7 @@ describe('El panel como tablero — SPEC-KRILINXI-026', () => {
     expect(norte.querySelector('rect')).toHaveClass('fill-serie-4');
     // La barra más larga llega a todo el ancho, y las demás se miden con la misma escala.
     expect(centro.querySelector('rect')).toHaveAttribute('width', '79.68%');
-    expect(norte.querySelector('rect')).toHaveAttribute('width', '19.52%');
+    expect(norte.querySelector('[data-barra]')).toHaveAttribute('width', '19.52%');
   });
 
   it('el volumen es una columna por día, con el total arriba y el eje de fechas sin amontonar', async () => {
@@ -425,7 +425,7 @@ describe('El panel como tablero — SPEC-KRILINXI-026', () => {
     expect(tramo(/^Más de 30 días/).querySelector('rect')).toHaveClass('fill-antiguedad-3');
     // La cantidad y el monto, rotulados en cada barra; y la barra mide la plata, no las boletas.
     expect(within(tramo(/^De 8 a 30 días/)).getByText('1 boleta — Bs 40,00')).toBeInTheDocument();
-    expect(tramo(/^De 8 a 30 días/).querySelector('rect')).toHaveAttribute('width', '100%');
+    expect(tramo(/^De 8 a 30 días/).querySelector('[data-barra]')).toHaveAttribute('width', '100%');
 
     // La ropa, sin monto: un tramo en cero no tiene barra, pero sí su rótulo.
     const ropa = grafico('Ropa sin recoger según los días');
@@ -487,7 +487,8 @@ describe('El panel como tablero — SPEC-KRILINXI-026', () => {
       'Ropa recibida por cada persona',
     ]) {
       const tabla = within(grafico(nombre)).getByRole('table', { name: nombre });
-      expect(tabla).toHaveClass('sr-only');
+      // Oculta con un contenedor, no con la tabla misma: Chrome dibujaba el caption (SPEC-KRILINXI-036).
+      expect(tabla.parentElement).toHaveClass('sr-only');
     }
     expect(fila(seccion('Ropa recibida'), 'Ropa recibida por día', '15/10/2026')).toEqual(['15/10/2026', '4 boletas (1 anulada)']);
     // Ana sale dos veces (una por sucursal): la fila se busca por su lugar, no por su nombre.

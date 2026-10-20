@@ -1,6 +1,7 @@
 import { indiceDelMayor, largo, porciento, rotulosDelEje, TOPE_COLUMNA } from './escalas';
 import { alUsar, CLASES_MARCA_TOCABLE } from './Grafico';
 import { COLOR_UNICO } from './colores';
+import { PuntaRedondeada } from './PuntaRedondeada';
 
 export type Columna = {
   clave: string;
@@ -41,11 +42,14 @@ export function Columnas({ columnas, elegir }: Props) {
             >
               <svg aria-hidden="true" width="100%" height="100%" className="block max-w-6 overflow-visible">
                 {alto > 0 && (
-                  <>
-                    <rect x="0" y={porciento(100 - alto)} width="100%" height={porciento(alto)} rx="4" className={COLOR_UNICO.marca} />
-                    {/* La base recta sobre el eje: se tapan las dos esquinas de abajo. */}
-                    <rect x="0" y={porciento(100 - alto / 2)} width="100%" height={porciento(alto / 2)} className={COLOR_UNICO.marca} />
-                  </>
+                  <PuntaRedondeada
+                    x="0"
+                    y={porciento(100 - alto)}
+                    width="100%"
+                    height={porciento(alto)}
+                    hacia="arriba"
+                    clase={COLOR_UNICO.marca}
+                  />
                 )}
                 {i === mayor && (
                   <text x="50%" y={porciento(100 - alto)} dy="-8" textAnchor="middle" className="fill-texto text-lg font-semibold">

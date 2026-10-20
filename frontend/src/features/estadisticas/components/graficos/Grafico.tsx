@@ -27,8 +27,8 @@ type Props = {
  *  - **El detalle de la barra elegida, en palabras.** Ningún dato depende de pasar el mouse: el
  *    admin puede estar en una tablet. Tocar una barra, o llegar a ella con Tab, escribe su detalle
  *    debajo, y `aria-live` hace que el lector de pantalla lo lea sin mover el foco.
- *  - **La tabla con los mismos números**, solo para el lector de pantalla (`sr-only`): un dibujo no
- *    se puede leer en voz alta, una tabla sí.
+ *  - **La tabla con los mismos números**, solo para el lector de pantalla (`sr-only`, en un contenedor
+ *    alrededor): un dibujo no se puede leer en voz alta, una tabla sí.
  */
 export function Grafico({ nombre, vacio, pista, tabla, children }: Props) {
   const [detalle, setDetalle] = useState<string | null>(null);
@@ -42,29 +42,33 @@ export function Grafico({ nombre, vacio, pista, tabla, children }: Props) {
       <p aria-live="polite" className="min-h-8 text-lg text-texto">
         {detalle ?? pista}
       </p>
-      <table className="sr-only">
-        <caption>{nombre}</caption>
-        <thead>
-          <tr>
-            <th scope="col">{primero}</th>
-            {resto.map((encabezado) => (
-              <th key={encabezado} scope="col">
-                {encabezado}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {tabla.filas.map(({ clave, celdas: [cabeza, ...celdas] }) => (
-            <tr key={clave}>
-              <th scope="row">{cabeza}</th>
-              {celdas.map((celda, i) => (
-                <td key={i}>{celda}</td>
+      {/* El `sr-only` va en un contenedor, nunca en la `<table>`: Chrome dibuja el `<caption>` afuera de
+          la caja recortada de la tabla, y el nombre se veía encima del gráfico (SPEC-KRILINXI-036). */}
+      <div className="sr-only">
+        <table>
+          <caption>{nombre}</caption>
+          <thead>
+            <tr>
+              <th scope="col">{primero}</th>
+              {resto.map((encabezado) => (
+                <th key={encabezado} scope="col">
+                  {encabezado}
+                </th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {tabla.filas.map(({ clave, celdas: [cabeza, ...celdas] }) => (
+              <tr key={clave}>
+                <th scope="row">{cabeza}</th>
+                {celdas.map((celda, i) => (
+                  <td key={i}>{celda}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </figure>
   );
 }

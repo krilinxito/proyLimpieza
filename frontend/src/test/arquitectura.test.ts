@@ -260,6 +260,29 @@ describe('Los gráficos no traen librerías — SPEC-KRILINXI-026', () => {
 });
 
 /**
+ * El `sr-only` nunca va en una `<table>` — SPEC-KRILINXI-036. Chrome dibuja el `<caption>` fuera de
+ * la caja recortada de la tabla, así que su texto se ve, encima de lo que haya ahí. Pasó con el
+ * nombre de cada gráfico del panel, y jsdom no pinta, así que ningún test lo vio. Lo que se oculta
+ * a la vista va dentro de un contenedor con `sr-only` (`Grafico.tsx`).
+ */
+const SR_ONLY_EN_TABLA = /<table\b[^>]*\bclassName=[^>]*\bsr-only\b/;
+
+describe('La tabla oculta a la vista va dentro de un contenedor — SPEC-KRILINXI-036', () => {
+  it('el patrón reconoce el sr-only en la tabla y deja pasar el contenedor', () => {
+    expect(SR_ONLY_EN_TABLA.test('<table className="sr-only">')).toBe(true);
+    expect(SR_ONLY_EN_TABLA.test('<table id="t" className={`mt-2 sr-only`}>')).toBe(true);
+    expect(SR_ONLY_EN_TABLA.test('<div className="sr-only">\n  <table>')).toBe(false);
+  });
+
+  it('ningún componente pone sr-only directamente en una <table>', () => {
+    const culpables = archivosFuente('features', 'components', 'pages')
+      .filter(({ ruta, fuente }) => ruta.endsWith('.tsx') && SR_ONLY_EN_TABLA.test(sinComentarios(fuente)))
+      .map(({ ruta }) => ruta);
+    expect(culpables).toEqual([]);
+  });
+});
+
+/**
  * La sucursal de trabajo sale de un solo lugar — SPEC-KRILINXI-029: `useSucursalDeTrabajo`. Un
  * EMPLEADO trabaja en la suya, pero un ADMIN que atiende trabaja en la que eligió, y su
  * `usuario.sucursalId` es null: una pantalla que la leyera de la sesión lo dejaría sin sucursal,
