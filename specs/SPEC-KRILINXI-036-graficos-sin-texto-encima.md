@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-036
 name: El texto de los gráficos no se pisa
 slug: graficos-sin-texto-encima
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-19
 scope:
