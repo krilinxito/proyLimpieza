@@ -5,6 +5,7 @@ import { simularApi } from '../../../test/apiFalsa';
 import { baseLocalDePrueba } from '../../../test/baseLocalDePrueba';
 import { elegirEnBuscador } from '../../../test/buscador';
 import { clienteDePrueba, entregaDePrueba, ordenDePrueba, pagoDePrueba } from '../../../test/filasDePrueba';
+import { accionesPrincipales, usoDe } from '../../../test/jerarquia';
 import { sinJerga } from '../../../test/jerga';
 import { renderEnRuta } from '../../../test/render';
 import { sesionDePrueba } from '../../../test/sesion';
@@ -304,5 +305,66 @@ describe('Mostrador con el tema — SPEC-KRILINXI-025 y SPEC-KRILINXI-033', () =
     await abrir();
     const detalle = await buscarBoleta('000004');
     expect(within(detalle).getByText('Esta ropa ya fue entregada.').closest('[role="status"]')).toHaveClass('bg-info-fondo');
+  });
+});
+
+/**
+ * La jerarquía en el Mostrador — SPEC-KRILINXI-037: en cada vista hay una sola acción principal, y
+ * volver o cambiar de vista tienen el estilo de navegación. `accionesPrincipales` y `usoDe` leen con
+ * qué estilo se armó cada botón (ver `test/jerarquia.ts`).
+ */
+describe('Mostrador: una sola acción principal a la vista — SPEC-KRILINXI-037', () => {
+  const LISTA = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000007', estado: 'LISTO' });
+
+  async function abrirConRopaLista() {
+    simularApi(() => 'sin-conexion');
+    const prueba = await baseLocalDePrueba();
+    await prueba.sembrar('clientes', [ROSA]);
+    await prueba.sembrar('ordenes', [RECIBIDA, LISTA]);
+    renderEnRuta(<App />, '/mostrador', { baseLocal: prueba.control });
+    await screen.findByRole('button', { name: 'Boleta 000001, Rosa Quispe' });
+  }
+
+  const boton = (nombre: string) => within(screen.getByRole('main')).getByRole('button', { name: nombre });
+
+  it('sin buscar nada, la única principal es Registrar ropa, y cada boleta es una tarjeta que se toca', async () => {
+    await abrirConRopaLista();
+    expect(accionesPrincipales()).toEqual(['Registrar ropa']);
+    // La señal de que lleva a algo: la flecha, además del texto que la nombra.
+    expect(boton('Boleta 000001, Rosa Quispe')).toHaveClass('shadow-md');
+    expect(boton('Boleta 000001, Rosa Quispe').querySelectorAll('svg')).toHaveLength(1);
+  });
+
+  it('con una boleta recibida abierta, la principal es su avance; cobrar y anular van chicos, en una fila', async () => {
+    await abrirConRopaLista();
+    await abrirDetalle('000001');
+    expect(accionesPrincipales()).toEqual(['Empezar a lavar']);
+    expect(usoDe(boton('Registrar ropa'))).toBe('secundario');
+    expect(usoDe(boton('Entregar la ropa'))).toBe('secundario');
+    expect(boton('Cobrar')).toHaveClass('min-h-12');
+    expect(usoDe(boton('Anular'))).toBe('peligro');
+    expect(usoDe(boton('Ver toda la ropa de Rosa Quispe'))).toBe('navegacion');
+  });
+
+  it('con la ropa ya lista, la principal es entregarla', async () => {
+    await abrirConRopaLista();
+    await abrirDetalle('000007');
+    expect(accionesPrincipales()).toEqual(['Entregar la ropa']);
+  });
+
+  it('en la ficha, volver a toda la ropa del local es navegación', async () => {
+    await abrirConRopaLista();
+    await elegirEnBuscador('rosa', /Rosa Quispe/);
+    await screen.findByRole('region', { name: 'Ficha de Rosa Quispe' });
+    expect(accionesPrincipales()).toEqual(['Registrar ropa']);
+    expect(usoDe(boton('Ver toda la ropa en el local'))).toBe('navegacion');
+  });
+
+  it('registrando, la única principal es Guardar, y salir sin guardar es navegación', async () => {
+    await abrirConRopaLista();
+    fireEvent.click(boton('Registrar ropa'));
+    await screen.findByRole('form', { name: 'Datos de la ropa' });
+    expect(accionesPrincipales()).toEqual(['Guardar']);
+    expect(usoDe(boton('Volver al mostrador sin guardar'))).toBe('navegacion');
   });
 });

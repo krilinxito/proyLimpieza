@@ -9,6 +9,7 @@ import { clienteDePrueba, ordenDePrueba, pagoDePrueba } from '../test/filasDePru
 import { tabletConRelojCorrido } from '../test/reloj';
 import { renderEnRuta } from '../test/render';
 import { sesionDePrueba } from '../test/sesion';
+import { accionesPrincipales, usoDe } from '../test/jerarquia';
 import { sinJerga } from '../test/jerga';
 
 /** La base local con la ropa del día de una sucursal: lo que el Inicio tiene que mostrar. */
@@ -130,6 +131,29 @@ describe('Inicio del ADMIN que no atiende — SPEC-KRILINXI-035', () => {
     const resumen = await principal().findByRole('region', { name: 'Resumen' });
     expect(within(resumen).getAllByRole('term')).toHaveLength(4);
     expect(principal().getByRole('link', { name: 'Ver las estadísticas' })).toHaveAttribute('href', '/estadisticas');
+  });
+});
+
+describe('Inicio: cada cosa con su estilo — SPEC-KRILINXI-037', () => {
+  it('lo cobrado hoy destaca, y cada boleta es una tarjeta que se toca, con su flecha', async () => {
+    const { control } = await sucursalConRopaDelDia();
+    renderEnRuta(<App />, '/', { baseLocal: control });
+    expect(await principal().findByRole('region', { name: 'Cobrado hoy' })).toHaveClass('bg-marca-suave');
+    const fila = principal().getByRole('link', { name: 'Boleta 000001, Rosa Quispe' });
+    expect(fila).toHaveClass('shadow-md');
+    expect(fila.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    // Sin nada para corregir, no hay ninguna acción que pida hacerse ya: las listas solo informan.
+    expect(accionesPrincipales()).toEqual([]);
+  });
+
+  it('el ADMIN que no atiende tiene una sola principal, y ver las estadísticas es navegación', async () => {
+    simularEstadisticas();
+    renderEnRuta(<App />, '/', { sesion: sesionDePrueba({ rol: 'ADMIN' }) });
+    const enlace = await principal().findByRole('link', { name: 'Ver las estadísticas' });
+    expect(usoDe(enlace)).toBe('navegacion');
+    expect(accionesPrincipales()).toEqual(['Atender en una sucursal']);
+    // El título y el botón ya dicen qué es: no hay un texto de ayuda que lo repita.
+    expect(principal().queryByText(/Para registrar, cobrar o entregar/)).not.toBeInTheDocument();
   });
 });
 

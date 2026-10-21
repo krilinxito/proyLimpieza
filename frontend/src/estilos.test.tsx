@@ -64,7 +64,8 @@ describe('Estilos con Tailwind — SPEC-KRILINXI-001', () => {
 
   it('las pantallas llevan puestas esas clases', async () => {
     renderEnRuta(<Inicio />);
-    // Desde SPEC-KRILINXI-035 el Inicio dice lo de hoy, en tarjetas del tema.
-    expect(await screen.findByRole('region', { name: 'Cobrado hoy' })).toHaveClass('bg-superficie', 'rounded-2xl');
+    // Desde SPEC-KRILINXI-035 el Inicio dice lo de hoy, en tarjetas del tema; desde SPEC-KRILINXI-037,
+    // lo cobrado es la tarjeta que destaca un número.
+    expect(await screen.findByRole('region', { name: 'Cobrado hoy' })).toHaveClass('bg-marca-suave', 'rounded-2xl');
   });
 });

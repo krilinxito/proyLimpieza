@@ -17,9 +17,10 @@ type Props = {
   alVolver: () => void;
   /**
    * Para que otra tarea agregue su acción al detalle, como entregar (SPEC-KRILINXI-009).
-   * Recibe la orden y una función para volver a leerla después de cambiarla.
+   * Recibe la orden, una función para volver a leerla después de cambiarla, y si su acción es la
+   * principal de la boleta (SPEC-KRILINXI-037): lo es cuando ya no queda ningún avance.
    */
-  accionesExtra?: (orden: OrdenVista, recargar: () => Promise<void>) => ReactNode;
+  accionesExtra?: (orden: OrdenVista, recargar: () => Promise<void>, como: { principal: boolean }) => ReactNode;
   /** Lo que dice el botón de volver: "Volver a la lista", o adónde vuelve (SPEC-KRILINXI-033). */
   textoVolver?: string;
 };
@@ -67,7 +68,7 @@ export function DetalleOrden({ ordenId, alVolver, accionesExtra, textoVolver = '
       <>
         <p className="mt-6 text-xl text-texto-suave">No se encontró esa boleta en esta sucursal.</p>
         <div className="mt-4">
-          <Boton variante="secundario" onClick={alVolver}>
+          <Boton variante="navegacion" onClick={alVolver}>
             {textoVolver}
           </Boton>
         </div>
@@ -76,6 +77,9 @@ export function DetalleOrden({ ordenId, alVolver, accionesExtra, textoVolver = '
   }
 
   const cerrada = estaCerrada(orden.estado);
+  // Una sola acción principal a la vista (SPEC-KRILINXI-037): el próximo avance, o lo que agregue
+  // quien usa el detalle (entregar) cuando la ropa ya no tiene a dónde avanzar.
+  const [siguiente, ...otrosAvances] = avancesDesde(orden.estado);
 
   async function pasarA(destino: EstadoOrden) {
     if (!ropa.lista || !orden) return;
@@ -148,26 +152,32 @@ export function DetalleOrden({ ordenId, alVolver, accionesExtra, textoVolver = '
 
       {!cerrada && !cobrando && (
         <div className="mt-2 grid gap-3">
-          {avancesDesde(orden.estado).map(({ destino, texto }) => (
-            <Boton key={destino} onClick={() => pasarA(destino)}>
+          {siguiente && <Boton onClick={() => pasarA(siguiente.destino)}>{siguiente.texto}</Boton>}
+          {otrosAvances.map(({ destino, texto }) => (
+            <Boton key={destino} variante="secundario" onClick={() => pasarA(destino)}>
               {texto}
             </Boton>
           ))}
-          {orden.saldo > 0 && (
-            <Boton
-              variante="secundario"
-              onClick={() => {
-                setHecho(null);
-                setCobrando(true);
-              }}
-            >
-              Cobrar
+          {accionesExtra?.(orden, recargar, { principal: !siguiente })}
+          {/* Lo que no es el paso siguiente va en una fila, más chico. */}
+          <div className="flex flex-wrap gap-3">
+            {orden.saldo > 0 && (
+              <Boton
+                variante="secundario"
+                tamano="compacto"
+                icono="cobrar"
+                onClick={() => {
+                  setHecho(null);
+                  setCobrando(true);
+                }}
+              >
+                Cobrar
+              </Boton>
+            )}
+            <Boton variante="peligro" tamano="compacto" onClick={() => setAnulando(true)}>
+              Anular
             </Boton>
-          )}
-          {accionesExtra?.(orden, recargar)}
-          <Boton variante="peligro" onClick={() => setAnulando(true)}>
-            Anular
-          </Boton>
+          </div>
         </div>
       )}
 
@@ -185,7 +195,7 @@ export function DetalleOrden({ ordenId, alVolver, accionesExtra, textoVolver = '
       )}
 
       <div className="mt-2">
-        <Boton variante="secundario" onClick={alVolver}>
+        <Boton variante="navegacion" onClick={alVolver}>
           {textoVolver}
         </Boton>
       </div>

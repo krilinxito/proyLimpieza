@@ -129,7 +129,6 @@ export function PantallaMostrador() {
     if (nueva.tipo !== 'registrando' && parametros.toString() !== '') setParametros({}, { replace: true });
   }
 
-
   function abrirBoleta(orden: OrdenVista) {
     if (orden.clienteId) ir({ tipo: 'ficha', clienteId: orden.clienteId, abierta: orden.id });
   }
@@ -145,7 +144,7 @@ export function PantallaMostrador() {
         <RegistrarEnMostrador clienteId={vista.clienteId} alRegistrar={(ropa) => ir({ tipo: 'registrada', ropa })} />
         <div className="mt-6">
           <Boton
-            variante="secundario"
+            variante="navegacion"
             onClick={() =>
               ir(vista.clienteId ? { tipo: 'ficha', clienteId: vista.clienteId, abierta: null } : { tipo: 'inicio' })
             }
@@ -171,10 +170,12 @@ export function PantallaMostrador() {
 
   return (
     <div className="mt-6">
-      {/* Siempre a mano, también con la ficha de un cliente abierta: ahí lo trae elegido. */}
+      {/* Siempre a mano, también con la ficha de un cliente abierta: ahí lo trae elegido. Es la
+          acción principal salvo con una boleta abierta, que trae la suya (SPEC-KRILINXI-037). */}
       <div className="mb-6">
         <Boton
           icono="registrar-ropa"
+          variante={vista.tipo === 'ficha' && vista.abierta ? 'secundario' : 'primario'}
           onClick={() => ir({ tipo: 'registrando', clienteId: vista.tipo === 'ficha' ? vista.clienteId : null })}
         >
           Registrar ropa
@@ -202,7 +203,7 @@ export function PantallaMostrador() {
             alAbrir={(ordenId) => setVista({ ...vista, abierta: ordenId })}
           />
           <div className="mt-6">
-            <Boton variante="secundario" onClick={() => ir({ tipo: 'inicio' })}>
+            <Boton variante="navegacion" onClick={() => ir({ tipo: 'inicio' })}>
               Ver toda la ropa en el local
             </Boton>
           </div>

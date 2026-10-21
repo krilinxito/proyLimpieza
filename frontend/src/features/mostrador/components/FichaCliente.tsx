@@ -68,9 +68,10 @@ export function FichaCliente({ clienteId, abierta, alAbrir }: Props) {
           ordenId={abierta}
           alVolver={() => alAbrir(null)}
           textoVolver={`Ver toda la ropa de ${nombre}`}
-          accionesExtra={(orden) => (
+          accionesExtra={(orden, _recargar, { principal }) => (
             <AccionEntregar
               orden={orden}
+              principal={principal}
               alEntregar={(entrega) => {
                 setEntregada(entrega);
                 // Se relee ya, mientras se muestra el resumen: al volver, la lista del cliente tiene
