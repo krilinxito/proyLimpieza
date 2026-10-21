@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-037
 name: 'Más visual, menos letra: cada cosa con su estilo'
 slug: jerarquia-visual
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-19
 scope:
