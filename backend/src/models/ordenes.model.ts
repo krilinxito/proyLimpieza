@@ -9,6 +9,8 @@ import pg from 'pg';
 import { pool } from '../db/pool.js';
 import type { EstadoOrden } from '../utils/dominio.js';
 import { formatear, type Centavos } from '../utils/money.js';
+import { salteo, type Paginacion } from '../utils/paginacion.js';
+import { ZONA_NEGOCIO, enElPeriodo, horaDelNegocio } from '../utils/periodo.js';
 import {
   conAuditoria,
   updateConAntes,
@@ -121,6 +123,167 @@ export async function buscarPorId(id: string): Promise<Orden | null> {
   ]);
   const fila = rows[0];
   return fila === undefined ? null : aOrden(fila);
+}
+
+// ------------------------------------------------------------------
+//  Historial para el admin — SPEC-KRILINXI-040
+// ------------------------------------------------------------------
+
+/** Lo que filtra el historial. `null` = ese filtro no se aplica. */
+export interface FiltrosHistorial {
+  /** `YYYY-MM-DD` de Bolivia, incluido. Sin ninguno de los dos, todo el historial. */
+  desde: string | null;
+  hasta: string | null;
+  sucursalId: string | null;
+  estado: EstadoOrden | null;
+  /** Parte del número de boleta, del nombre del cliente o de su teléfono. */
+  texto: string | null;
+  /** Solo las que todavía se deben (y no están anuladas, como en `/saldos`). */
+  conSaldo: boolean;
+}
+
+/** Una boleta del historial. Los montos, como los entrega Postgres: `"12.50"`. */
+export interface BoletaDelHistorial {
+  id: string;
+  numeroBoleta: string;
+  sucursal: { id: string; nombre: string };
+  cliente: { id: string; nombre: string; telefono: string };
+  descripcion: string;
+  estado: EstadoOrden;
+  /** En la hora de Bolivia, `YYYY-MM-DD HH:MM:SS`. */
+  fechaEntrada: string;
+  fechaEstimadaSalida: string | null;
+  precioTotal: string;
+  /** `null` mientras no se entregó. */
+  precioFinal: string | null;
+  pagado: string;
+  saldo: string;
+}
+
+interface FilaHistorial {
+  id: string;
+  numero_boleta: string;
+  sucursal_id: string;
+  sucursal_nombre: string;
+  cliente_id: string;
+  cliente_nombre: string;
+  cliente_telefono: string;
+  descripcion: string;
+  estado: EstadoOrden;
+  fecha_entrada: string;
+  fecha_estimada_salida: string | null;
+  precio_total: string;
+  precio_final: string | null;
+  pagado: string;
+  saldo: string;
+}
+
+// Los extremos de "todo el historial" cuando falta uno de los dos bordes. Así se
+// sigue usando `enElPeriodo`, que compara la columna sin tocarla (SPEC-ALE186-021).
+const DESDE_SIEMPRE = "DATE '0001-01-01'";
+const HASTA_SIEMPRE = "DATE '9999-12-30'";
+
+// Parámetros: $1 desde, $2 hasta, $3 zona, $4 sucursal, $5 estado, $6 texto (LIKE),
+// $7 teléfono (LIKE, o NULL si el texto no tiene dígitos), $8 solo con saldo.
+//
+// `vw_saldos` ya resuelve cuánto se pagó y cuánto se debe (precio_final si hubo
+// entrega, precio_total si no): se cruza con `ordenes` por id, como hace `/saldos`.
+// El estado no se recalcula desde `entregas`: el servidor pasa la orden a ENTREGADO
+// en la misma sentencia que registra la entrega (SPEC-ALE186-006).
+const HISTORIAL = `
+  historial AS (
+    SELECT o.id, o.numero_boleta, o.sucursal_id, s.nombre AS sucursal_nombre,
+           o.cliente_id, c.nombre AS cliente_nombre, c.telefono AS cliente_telefono,
+           o.descripcion, o.estado, o.fecha_entrada, o.fecha_estimada_salida,
+           o.precio_total, e.precio_final,
+           v.total_pagado::numeric(14,2)    AS pagado,
+           v.saldo_pendiente::numeric(14,2) AS saldo
+      FROM vw_saldos v
+      JOIN ordenes o    ON o.id = v.orden_id
+      JOIN sucursales s ON s.id = o.sucursal_id
+      JOIN clientes c   ON c.id = o.cliente_id
+      LEFT JOIN entregas e ON e.orden_id = o.id
+     WHERE ($1::date IS NULL AND $2::date IS NULL
+            OR ${enElPeriodo('o.fecha_entrada', {
+              desde: `COALESCE($1::date, ${DESDE_SIEMPRE})`,
+              hasta: `COALESCE($2::date, ${HASTA_SIEMPRE})`,
+              zona: '$3',
+            })})
+       AND ($4::uuid IS NULL OR o.sucursal_id = $4)
+       AND ($5::estado_orden IS NULL OR o.estado = $5)
+       AND ($6::text IS NULL
+            OR o.numero_boleta ILIKE $6
+            OR c.nombre ILIKE $6
+            OR ($7::text IS NOT NULL AND c.telefono LIKE $7))
+       AND (NOT $8::boolean OR (o.estado <> 'ANULADO' AND v.saldo_pendiente > 0))
+  )`;
+
+/** Un texto escrito por una persona, como patrón de `LIKE`: `%`, `_` y `\` valen por sí mismos. */
+function contiene(texto: string): string {
+  return `%${texto.replace(/[\\%_]/g, '\\$&')}%`;
+}
+
+function parametrosDelHistorial(filtros: FiltrosHistorial): unknown[] {
+  const digitos = filtros.texto?.replace(/\D/g, '') ?? '';
+  return [
+    filtros.desde,
+    filtros.hasta,
+    ZONA_NEGOCIO,
+    filtros.sucursalId,
+    filtros.estado,
+    filtros.texto === null ? null : contiene(filtros.texto),
+    digitos === '' ? null : `%${digitos}%`,
+    filtros.conSaldo,
+  ];
+}
+
+/**
+ * Una página del historial de boletas, de la más nueva a la más vieja, con su
+ * saldo ya calculado, y cuántas cumplen los filtros en total. Solo lee.
+ *
+ * Son dos consultas y no un `count(*) OVER ()`, por la misma razón que en la
+ * auditoría: una página más allá de la última no tiene filas sobre las que contar.
+ */
+export async function listar(
+  filtros: FiltrosHistorial,
+  paginacion: Paginacion,
+): Promise<{ total: number; boletas: BoletaDelHistorial[] }> {
+  const parametros = parametrosDelHistorial(filtros);
+
+  const { rows: conteo } = await pool.query<{ total: number }>(
+    `WITH ${HISTORIAL} SELECT count(*)::int AS total FROM historial`,
+    parametros,
+  );
+  const { rows } = await pool.query<FilaHistorial>(
+    `WITH ${HISTORIAL}
+     SELECT id, numero_boleta, sucursal_id, sucursal_nombre, cliente_id, cliente_nombre, cliente_telefono,
+            descripcion, estado,
+            to_char(${horaDelNegocio('fecha_entrada', '$3')}, 'YYYY-MM-DD HH24:MI:SS') AS fecha_entrada,
+            to_char(fecha_estimada_salida, 'YYYY-MM-DD') AS fecha_estimada_salida,
+            precio_total, precio_final, pagado, saldo
+       FROM historial
+      ORDER BY historial.fecha_entrada DESC, id DESC
+      LIMIT $9 OFFSET $10`,
+    [...parametros, paginacion.porPagina, salteo(paginacion)],
+  );
+
+  return {
+    total: conteo[0]?.total ?? 0,
+    boletas: rows.map((fila) => ({
+      id: fila.id,
+      numeroBoleta: fila.numero_boleta,
+      sucursal: { id: fila.sucursal_id, nombre: fila.sucursal_nombre },
+      cliente: { id: fila.cliente_id, nombre: fila.cliente_nombre, telefono: fila.cliente_telefono },
+      descripcion: fila.descripcion,
+      estado: fila.estado,
+      fechaEntrada: fila.fecha_entrada,
+      fechaEstimadaSalida: fila.fecha_estimada_salida,
+      precioTotal: fila.precio_total,
+      precioFinal: fila.precio_final,
+      pagado: fila.pagado,
+      saldo: fila.saldo,
+    })),
+  };
 }
 
 export interface OrdenNueva {

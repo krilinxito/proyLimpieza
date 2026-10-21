@@ -95,6 +95,12 @@ cerrada sin fecha no acepta ropa), el nombre único de sucursal es el índice
 SPEC-KRILINXI-028 agregó a las sync rules el bucket `atencion_admin`: el ADMIN que atiende el
 mostrador baja la ropa de la sucursal que manda la tablet en el parámetro de cliente `sucursal_id`
 (§7). La autorización es la fila del ADMIN activo que pide, nunca el parámetro.
+SPEC-KRILINXI-040 añadió la primera lectura de órdenes por API, `GET /api/ordenes` (solo ADMIN): el
+historial completo de boletas, paginado, de la más nueva a la más vieja, con el saldo de cada una
+calculado en Postgres (`vw_saldos`) y filtros por fechas de entrada, sucursal, estado, texto y
+"con saldo". **Sin `desde` no mira los últimos 30 días: trae todo**, así que no usa `leerPeriodo`. La
+ruta va antes del `requireAuthDeLaCola`: esa sesión que acepta tokens vencidos es solo para subir lo
+que escribió el mostrador (§13).
 
 `frontend/` tiene el scaffolding de SPEC-KRILINXI-001: Vite, Tailwind, rutas y su suite de
 tests. SPEC-KRILINXI-002 añadió las piezas que reutilizan todas las pantallas: `Boton`,
@@ -649,6 +655,9 @@ es caro y no aporta nada, porque el admin trabaja en la oficina, con conexión.
   Además, `/clientes` (SPEC-ALE186-017): cuántas veces se atendió a cada cliente en cada
   sucursal y cuánto pagó. Un cliente no es de ninguna sucursal; cada atención es de la
   sucursal de su orden.
+  Aparte de las estadísticas, el admin pide online el historial de boletas, `GET /api/ordenes`
+  (SPEC-KRILINXI-040): mismo criterio (no tiene esa ropa en la tablet), pero sin período por
+  defecto.
 - **Las fechas se miran en la hora de Bolivia** (`ZONA_NEGOCIO = 'America/La_Paz'`, en
   `utils/periodo.ts` desde SPEC-ALE186-012, junto con `leerPeriodo` y `horaDelNegocio`). Las columnas `TIMESTAMP` guardan la hora de la sesión de
   Postgres, que en el servidor es UTC: sin convertir, un cobro de las 21:00 caería en el día

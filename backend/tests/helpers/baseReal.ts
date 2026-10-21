@@ -66,13 +66,17 @@ export async function crearUsuario(
   return id;
 }
 
-export async function crearCliente(): Promise<string> {
+/**
+ * Un cliente. Sin campos: "Cliente de prueba" y 8 dígitos al azar (el teléfono es
+ * único en todo el sistema). Con `nombre` o `telefono` —SPEC-KRILINXI-040, para
+ * probar la búsqueda por texto— se eligen; el que falte sigue siendo el de siempre.
+ */
+export async function crearCliente(campos: { nombre?: string; telefono?: string } = {}): Promise<string> {
   const id = randomUUID();
-  // 8 dígitos al azar: el teléfono es único en todo el sistema.
-  const telefono = String(Math.floor(10_000_000 + Math.random() * 89_999_999));
+  const telefono = campos.telefono ?? String(Math.floor(10_000_000 + Math.random() * 89_999_999));
   await pool.query('INSERT INTO clientes (id, nombre, telefono) VALUES ($1, $2, $3)', [
     id,
-    'Cliente de prueba',
+    campos.nombre ?? 'Cliente de prueba',
     telefono,
   ]);
   return id;

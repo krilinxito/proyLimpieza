@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-040
 name: La API del historial de boletas
 slug: historial-boletas-api
-status: draft
+status: finished
 owner: krilinxito
 created: 2026-10-19
 scope:
@@ -13,7 +13,10 @@ scope:
   - CLAUDE.md
 priority: medium
 depends_on: []
-tests: []
+tests:
+  - backend\tests\db\ordenesHistorial.db.test.ts
+  - backend\tests\http\ordenesHistorial.test.ts
+  - backend\tests\unit\ordenesHistorial.model.test.ts
 ---
 
 ## Descripción
