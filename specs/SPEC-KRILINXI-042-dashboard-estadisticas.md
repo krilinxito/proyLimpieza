@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-042
 name: Estadísticas como dashboard
 slug: dashboard-estadisticas
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-19
 scope:
