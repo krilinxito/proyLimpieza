@@ -917,3 +917,29 @@ describe('La tendencia de lo cobrado — SPEC-KRILINXI-044', () => {
     expect((await figura()).querySelector('[style]')).toBeNull();
   });
 });
+
+describe('Las tarjetas no se pisan en una pantalla media — SPEC-KRILINXI-044', () => {
+  // jsdom no mide anchos: no puede ver una tarjeta que se sale de su columna. Lo que sí ve son las clases que lo
+  // evitan. Una tarjeta es una columna que puede ENCOGERSE (`min-w-0`, `grid-cols-1`): sin eso, su contenido
+  // (la barra de páginas, un gráfico) la ensancha y pisa a la vecina cuando la grilla de dos columnas queda angosta.
+  it('cada tarjeta es una columna que puede encogerse, para que su contenido no la ensanche', async () => {
+    simularEstadisticas();
+    await abrirPanel();
+    const regiones = ['Cobrado por forma de pago', 'Cobrado por sucursal', 'Cobrado por día', 'Ropa recibida', 'Falta cobrar', 'Ropa sin recoger', 'Lo que hizo cada persona', 'Clientes atendidos'];
+    await screen.findByRole('region', { name: 'Cobrado por forma de pago' });
+
+    for (const region of regiones) {
+      expect(seccion(region)).toHaveClass('grid', 'min-w-0', 'grid-cols-1');
+    }
+  });
+
+  it('la barra de páginas de una tarjeta se acomoda en renglones en vez de salirse', async () => {
+    simularEstadisticas({ clientes: { status: 200, data: clientesDePrueba({ total: 45 }) } });
+    await abrirPanel();
+    const paginas = await within(await screen.findByRole('region', { name: 'Clientes atendidos' })).findByRole('navigation', { name: 'Páginas de clientes' });
+
+    expect(paginas).toHaveClass('flex', 'flex-wrap');
+    // Con tres columnas `1fr auto 1fr` cada `1fr` no baja del ancho de su botón: era lo que la sacaba de la tarjeta.
+    expect(paginas.className).not.toMatch(/grid-cols-\[/);
+  });
+});

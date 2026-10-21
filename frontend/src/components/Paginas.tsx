@@ -23,8 +23,10 @@ type Props = {
 export function Paginas({ pagina, total, porPagina, irAPagina, nombre }: Props) {
   if (total === 0) return null;
   const paginas = Math.max(1, Math.ceil(total / porPagina));
+  // En renglones si no entra (una tarjeta angosta): con `grid-cols-[1fr_auto_1fr]` cada `1fr` no baja del ancho de
+  // su botón, y dos botones grandes más el texto se salían de la tarjeta.
   return (
-    <nav aria-label={nombre} className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+    <nav aria-label={nombre} className="mt-4 flex flex-wrap items-center justify-center gap-3">
       <Boton variante="secundario" onClick={() => irAPagina(pagina - 1)} disabled={pagina <= 1}>
         Anteriores
       </Boton>
