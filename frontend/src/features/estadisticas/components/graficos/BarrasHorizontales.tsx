@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { apilar, porciento } from './escalas';
 import { alUsar, CLASES_MARCA_TOCABLE } from './Grafico';
+import { PuntaRedondeada } from './PuntaRedondeada';
 
 export type Barra = {
   clave: string;
@@ -35,8 +36,9 @@ const ALTO = 24;
  * renglón. En la línea del nombre, con HTML, baja solo si no entra.
  *
  * El SVG no tiene `viewBox`: las posiciones van en porcentajes del ancho, así la barra se estira
- * con la pantalla y el texto queda del tamaño de la app. Los tramos se separan con un trazo del
- * color de la superficie, que se ve como un espacio blanco entre uno y otro.
+ * con la pantalla y el texto queda del tamaño de la app. Una barra de un solo valor es una sola
+ * pieza (`PuntaRedondeada`); en una apilada, solo el corte entre un tramo y el siguiente lleva una
+ * línea del color de la superficie, que se ve como un espacio entre uno y otro (SPEC-KRILINXI-036).
  */
 export function BarrasHorizontales({ barras, maximo, elegir }: Props) {
   return (
@@ -57,27 +59,36 @@ export function BarrasHorizontales({ barras, maximo, elegir }: Props) {
                 {barra.rotulo && <span className="text-lg font-semibold text-texto">{barra.rotulo}</span>}
               </span>
               <svg aria-hidden="true" width="100%" height={ALTO + 4} className="block">
-                {tramos.map((tramo) => (
-                  <rect
-                    key={tramo.clave}
-                    x={porciento(tramo.desde)}
-                    y="2"
-                    width={porciento(tramo.ancho)}
-                    height={ALTO}
-                    rx={unico ? 4 : 0}
-                    strokeWidth={tramos.length > 1 ? 2 : 0}
-                    className={`${tramo.clase} stroke-superficie`}
-                  />
-                ))}
-                {/* La punta redondeada y la base recta: se tapan las dos esquinas del lado del cero. */}
-                {unico && (
-                  <rect
-                    x="0"
-                    y="2"
-                    width={porciento(unico.ancho / 2)}
-                    height={ALTO}
-                    className={unico.clase}
-                  />
+                {unico ? (
+                  <PuntaRedondeada x="0" y="2" width={porciento(unico.ancho)} height={ALTO} hacia="derecha" clase={unico.clase} />
+                ) : (
+                  <>
+                    {tramos.map((tramo) => (
+                      <rect
+                        key={tramo.clave}
+                        data-tramo={tramo.clave}
+                        x={porciento(tramo.desde)}
+                        y="2"
+                        width={porciento(tramo.ancho)}
+                        height={ALTO}
+                        className={tramo.clase}
+                      />
+                    ))}
+                    {/* El corte entre un tramo y el siguiente, del color de la superficie: solo donde cambia
+                        la serie, no alrededor de cada tramo. */}
+                    {tramos.slice(1).map((tramo) => (
+                      <line
+                        key={tramo.clave}
+                        data-corte=""
+                        x1={porciento(tramo.desde)}
+                        x2={porciento(tramo.desde)}
+                        y1="2"
+                        y2={ALTO + 2}
+                        strokeWidth={2}
+                        className="stroke-superficie"
+                      />
+                    ))}
+                  </>
                 )}
               </svg>
               {barra.debajo}
