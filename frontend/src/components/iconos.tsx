@@ -126,6 +126,15 @@ const TRAZOS = {
   // tarjeta que se toca (lleva a algo). Las dos van con su texto al lado, como todas.
   volver: <path d="M19 12H5m6-6-6 6 6 6" />,
   seguir: <path d="m9 6 6 6-6 6" />,
+  // SPEC-KRILINXI-038: las acciones de una boleta. Lavar (una gota, para "Empezar a lavar") y
+  // anular (un círculo tachado). "Marcar como lista" usa `listo`.
+  lavar: <path d="M12 3s-6 6.5-6 11a6 6 0 0 0 12 0c0-4.5-6-11-6-11z" />,
+  anular: (
+    <>
+      <circle cx="12" cy="12" r="10" />
+      <path d="m5 5 14 14" />
+    </>
+  ),
 } satisfies Record<string, ReactElement>;
 
 export type NombreIcono = keyof typeof TRAZOS;

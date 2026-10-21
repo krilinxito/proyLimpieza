@@ -46,6 +46,23 @@ async function buscarBoleta(boleta: string) {
   return screen.findByRole('region', { name: `Boleta ${boleta}` });
 }
 
+/**
+ * Una boleta RECIBIDA y otra LISTA sin entregar, de Rosa: para ver cómo cambian las acciones con el
+ * estado (SPEC-KRILINXI-037 y SPEC-KRILINXI-038).
+ */
+const LISTA = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000007', estado: 'LISTO' });
+
+async function abrirConRopaLista() {
+  simularApi(() => 'sin-conexion');
+  const prueba = await baseLocalDePrueba();
+  await prueba.sembrar('clientes', [ROSA]);
+  await prueba.sembrar('ordenes', [RECIBIDA, LISTA]);
+  renderEnRuta(<App />, '/mostrador', { baseLocal: prueba.control });
+  await screen.findByRole('button', { name: 'Boleta 000001, Rosa Quispe' });
+}
+
+const boton = (nombre: string) => within(screen.getByRole('main')).getByRole('button', { name: nombre });
+
 function datoDelDetalle(detalle: HTMLElement, dato: string) {
   const termino = within(detalle).getByText(dato, { selector: 'dt' });
   return termino.nextElementSibling?.textContent;
@@ -314,19 +331,6 @@ describe('Mostrador con el tema — SPEC-KRILINXI-025 y SPEC-KRILINXI-033', () =
  * qué estilo se armó cada botón (ver `test/jerarquia.ts`).
  */
 describe('Mostrador: una sola acción principal a la vista — SPEC-KRILINXI-037', () => {
-  const LISTA = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000007', estado: 'LISTO' });
-
-  async function abrirConRopaLista() {
-    simularApi(() => 'sin-conexion');
-    const prueba = await baseLocalDePrueba();
-    await prueba.sembrar('clientes', [ROSA]);
-    await prueba.sembrar('ordenes', [RECIBIDA, LISTA]);
-    renderEnRuta(<App />, '/mostrador', { baseLocal: prueba.control });
-    await screen.findByRole('button', { name: 'Boleta 000001, Rosa Quispe' });
-  }
-
-  const boton = (nombre: string) => within(screen.getByRole('main')).getByRole('button', { name: nombre });
-
   it('sin buscar nada, la única principal es Registrar ropa, y cada boleta es una tarjeta que se toca', async () => {
     await abrirConRopaLista();
     expect(accionesPrincipales()).toEqual(['Registrar ropa']);
@@ -366,5 +370,78 @@ describe('Mostrador: una sola acción principal a la vista — SPEC-KRILINXI-037
     await screen.findByRole('form', { name: 'Datos de la ropa' });
     expect(accionesPrincipales()).toEqual(['Guardar']);
     expect(usoDe(boton('Volver al mostrador sin guardar'))).toBe('navegacion');
+  });
+});
+
+/**
+ * Las acciones de la boleta en fila — SPEC-KRILINXI-038. jsdom no calcula la disposición, así que se
+ * comprueba con qué clases se armó la fila (grilla de dos columnas en angosta, flex desde `sm`) y qué
+ * hay dentro y fuera de ella, buscándola por su nombre: "Qué hacer con esta ropa".
+ */
+describe('Mostrador: las acciones de la boleta en fila, con su símbolo — SPEC-KRILINXI-038', () => {
+  const fila = () => screen.getByRole('group', { name: 'Qué hacer con esta ropa' });
+  const nombres = (dentro: HTMLElement) => within(dentro).getAllByRole('button').map((b) => b.textContent?.trim());
+
+  it('van en una fila: dos columnas en pantalla angosta y de corrido en ancha, nunca una barra por renglón', async () => {
+    await abrirConRopaLista();
+    await abrirDetalle('000001');
+    expect(fila()).toHaveClass('grid-cols-2', 'sm:flex', 'sm:flex-wrap');
+    for (const accion of within(fila()).getAllByRole('button')) {
+      expect(accion).not.toHaveClass('w-full');
+      // De dedo: el compacto mide 48px (min-h-12).
+      expect(accion).toHaveClass('min-h-12');
+    }
+  });
+
+  it('cada acción lleva su ícono, decorativo: el nombre sigue siendo su palabra', async () => {
+    await abrirConRopaLista();
+    await abrirDetalle('000001');
+    // Desde RECIBIDO también se puede marcar como lista de una: es otro avance, secundario.
+    expect(nombres(fila())).toEqual(['Empezar a lavar', 'Marcar como lista', 'Cobrar', 'Entregar la ropa', 'Anular']);
+    for (const accion of within(fila()).getAllByRole('button')) {
+      expect(accion.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    }
+  });
+
+  it('la que sigue es la principal, cobrar y entregar secundarias, y anular de peligro, apartada al final', async () => {
+    await abrirConRopaLista();
+    await abrirDetalle('000001');
+    expect(accionesPrincipales(fila())).toEqual(['Empezar a lavar']);
+    expect(usoDe(boton('Cobrar'))).toBe('secundario');
+    expect(usoDe(boton('Entregar la ropa'))).toBe('secundario');
+    expect(usoDe(boton('Anular'))).toBe('peligro');
+    // En angosta, en su propio renglón; en ancha, empujada al final de la fila.
+    expect(boton('Anular').parentElement).toHaveClass('col-span-2', 'sm:ml-auto');
+  });
+
+  it('con la ropa lista, entregar es la que sigue', async () => {
+    await abrirConRopaLista();
+    await abrirDetalle('000007');
+    expect(accionesPrincipales(fila())).toEqual(['Entregar la ropa']);
+  });
+
+  it('volver a la ropa del cliente es navegación y va fuera de la fila', async () => {
+    await abrirConRopaLista();
+    await abrirDetalle('000001');
+    const volver = boton('Ver toda la ropa de Rosa Quispe');
+    expect(usoDe(volver)).toBe('navegacion');
+    expect(fila()).not.toContainElement(volver);
+    expect(fila()).not.toContainElement(boton('Ver toda la ropa en el local'));
+  });
+
+  it('al abrir el formulario de entrega, ocupa la fila entera', async () => {
+    await abrirConRopaLista();
+    await abrirDetalle('000007');
+    fireEvent.click(boton('Entregar la ropa'));
+    const formulario = await within(fila()).findByRole('form');
+    expect(formulario.closest('.col-span-2')).toHaveClass('sm:basis-full');
+  });
+
+  it('una boleta cerrada no ofrece acciones', async () => {
+    await abrir();
+    // Entregada: ya no está en la ropa del local, se llega por el buscador.
+    await buscarBoleta('000004');
+    expect(screen.queryByRole('group', { name: 'Qué hacer con esta ropa' })).not.toBeInTheDocument();
+    expect(within(screen.getByRole('main')).queryByRole('button', { name: 'Anular' })).not.toBeInTheDocument();
   });
 });
