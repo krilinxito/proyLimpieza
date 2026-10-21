@@ -1,9 +1,11 @@
 // Controller de órdenes. Valida la entrada, llama al model y arma la respuesta.
 // No escribe SQL (CLAUDE.md, sección 5).
 //
-// No hay GET a propósito: las órdenes de la sucursal bajan al dispositivo por el
-// bucket `sucursal` y se leen de SQLite local (sección 6). Tampoco hay DELETE:
-// una orden no se borra, se anula.
+// El mostrador no tiene GET a propósito: las órdenes de la sucursal bajan al
+// dispositivo por el bucket `sucursal` y se leen de SQLite local (sección 6). La
+// única lectura es el historial del ADMIN (`getOrdenes`, SPEC-KRILINXI-040), que
+// no tiene esa ropa en la tablet y la pide online, como las estadísticas
+// (sección 8). Tampoco hay DELETE: una orden no se borra, se anula.
 //
 // El cuerpo llega con los nombres de columna (`numero_boleta`, `cliente_id`...)
 // porque es lo que sube la cola de PowerSync: cada cambio local viaja con las
@@ -21,6 +23,7 @@ import * as sucursales from '../models/sucursales.model.js';
 import { ApiError, CODIGOS_ERROR } from '../utils/ApiError.js';
 import { esEstadoOrden, estadosDeOrigen, type EstadoOrden } from '../utils/dominio.js';
 import type { Centavos } from '../utils/money.js';
+import { leerPaginacion } from '../utils/paginacion.js';
 import type { Sesion } from '../utils/jwt.js';
 import {
   comoObjeto,
@@ -247,4 +250,74 @@ export async function patchOrden(req: Request, res: Response): Promise<void> {
     case 'estado-no-admitido':
       throw transicionInvalida(resultado.orden, cambios.estado);
   }
+}
+
+// ------------------------------------------------------------------
+//  Historial para el admin — SPEC-KRILINXI-040
+// ------------------------------------------------------------------
+
+// El largo del texto que se busca: nadie escribe más para encontrar una boleta,
+// y un texto enorme solo le daría trabajo de balde a Postgres.
+const LARGO_MAXIMO_TEXTO = 100;
+
+/** Una fecha opcional de la query string: `null` si no vino. */
+function leerFechaOpcional(valor: unknown, nombre: 'desde' | 'hasta'): string | null {
+  if (valor === undefined) return null;
+  if (!esFechaCalendario(valor)) {
+    throw invalido(`La fecha "${nombre}" no es válida. Escribila como año-mes-día, por ejemplo 2025-06-30.`);
+  }
+  return valor;
+}
+
+function leerTexto(valor: unknown): string | null {
+  if (valor === undefined) return null;
+  const texto = textoConContenido(valor);
+  if (typeof valor !== 'string' || (texto !== null && texto.length > LARGO_MAXIMO_TEXTO)) {
+    throw invalido('Escribí menos para buscar: un número de boleta, un nombre o un teléfono.');
+  }
+  return texto;
+}
+
+function leerConSaldo(valor: unknown): boolean {
+  if (valor === undefined || valor === 'false') return false;
+  if (valor === 'true') return true;
+  throw invalido('Para ver solo lo que se debe, usá con_saldo=true.');
+}
+
+/**
+ * GET /api/ordenes — el historial de boletas, solo para el ADMIN (lo exige la
+ * ruta). A diferencia de la auditoría y las estadísticas, sin `desde` no mira los
+ * últimos 30 días: es el historial completo (por eso no usa `leerPeriodo`).
+ */
+export async function getOrdenes(req: Request, res: Response): Promise<void> {
+  const { query } = req;
+
+  const desde = leerFechaOpcional(query.desde, 'desde');
+  const hasta = leerFechaOpcional(query.hasta, 'hasta');
+  // Las dos son `YYYY-MM-DD`, así que compararlas como texto es compararlas como fechas.
+  if (desde !== null && hasta !== null && desde > hasta) {
+    throw invalido('La fecha "desde" no puede ser posterior a "hasta".');
+  }
+
+  const { sucursal_id: sucursalId, estado } = query;
+  if (sucursalId !== undefined && !esUuid(sucursalId)) {
+    throw invalido('La sucursal elegida no es válida. Volvé a elegirla de la lista.');
+  }
+  if (estado !== undefined && !esEstadoOrden(estado)) {
+    throw invalido('Ese estado de la ropa no existe. Elegí uno de la lista.');
+  }
+
+  const filtros: ordenes.FiltrosHistorial = {
+    desde,
+    hasta,
+    sucursalId: sucursalId ?? null,
+    estado: estado ?? null,
+    texto: leerTexto(query.texto),
+    conSaldo: leerConSaldo(query.con_saldo),
+  };
+  const paginacion = leerPaginacion(query);
+
+  const { total, boletas } = await ordenes.listar(filtros, paginacion);
+
+  res.json({ desde, hasta, pagina: paginacion.pagina, porPagina: paginacion.porPagina, total, boletas });
 }
