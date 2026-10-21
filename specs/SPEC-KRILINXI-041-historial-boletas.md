@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-041
 name: Historial de boletas
 slug: historial-boletas
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-19
 scope:
