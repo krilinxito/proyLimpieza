@@ -28,8 +28,10 @@ export function SeccionPanel({
   entera?: boolean;
   children: ReactNode;
 }) {
+  // `grid-cols-1` y `min-w-0`: una columna que puede ENCOGERSE. Un `grid` sin columnas definidas deja que su
+  // contenido ensanche la tarjeta, y en una pantalla media (dos columnas con el menú al costado) pisaba a la vecina.
   return (
-    <section aria-label={nombre} className={`grid ${entera ? 'lg:col-span-2' : ''}`}>
+    <section aria-label={nombre} className={`grid min-w-0 grid-cols-1 ${entera ? 'lg:col-span-2' : ''}`}>
       <Tarjeta>
         <h2 className="text-2xl font-bold text-texto">{pregunta}</h2>
         <p className="mt-1 text-lg text-texto-suave">{periodo}</p>

@@ -6,6 +6,8 @@ import { baseLocalDePrueba } from '../../../test/baseLocalDePrueba';
 import {
   clientesDePrueba,
   ingresosDePrueba,
+  ingresosPorDiaDeDias,
+  ingresosPorDiaDePrueba,
   productividadDePrueba,
   saldosDePrueba,
   simularEstadisticas,
@@ -549,6 +551,7 @@ describe('El panel como dashboard — SPEC-KRILINXI-042', () => {
   const TARJETAS = [
     { region: 'Cobrado por forma de pago', pregunta: '¿Cuánto se cobró con cada forma de pago?', grafico: 'Cobrado con cada forma de pago' },
     { region: 'Cobrado por sucursal', pregunta: '¿Cuánto se cobró en cada sucursal?', grafico: 'Cobrado por sucursal y forma de pago' },
+    { region: 'Cobrado por día', pregunta: '¿Cómo vino la caja día a día?', grafico: 'Cobrado por día' },
     { region: 'Ropa recibida', pregunta: '¿Cuánta ropa entró cada día?', grafico: 'Ropa recibida por día' },
     { region: 'Falta cobrar', pregunta: '¿Cuánto falta cobrar, y desde hace cuánto?', grafico: 'Falta cobrar según los días' },
     { region: 'Ropa sin recoger', pregunta: '¿Cuánta ropa falta recoger, y desde hace cuánto?', grafico: 'Ropa sin recoger según los días' },
@@ -570,13 +573,14 @@ describe('El panel como dashboard — SPEC-KRILINXI-042', () => {
     expect(seccion('Resumen').compareDocumentPosition(grilla)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
-  it('los treinta días de ropa recibida ocupan la fila entera; las demás, una celda', async () => {
+  it('lo que necesita ancho (la caja y la ropa de treinta días) ocupa la fila entera; las demás, una celda', async () => {
     simularEstadisticas();
     await abrirPanel();
     await screen.findByRole('region', { name: 'Cobrado por forma de pago' });
 
-    expect(seccion('Ropa recibida')).toHaveClass('lg:col-span-2');
-    for (const { region } of TARJETAS.filter((t) => t.region !== 'Ropa recibida')) {
+    const anchas = ['Ropa recibida', 'Cobrado por día'];
+    for (const region of anchas) expect(seccion(region)).toHaveClass('lg:col-span-2');
+    for (const { region } of TARJETAS.filter((t) => !anchas.includes(t.region))) {
       expect(seccion(region)).not.toHaveClass('lg:col-span-2');
     }
   });
@@ -723,5 +727,219 @@ describe('El panel como dashboard — SPEC-KRILINXI-042', () => {
 
     expect(await screen.findByText('Las estadísticas necesitan conexión.')).toBeInTheDocument();
     for (const { region } of TARJETAS) expect(screen.queryByRole('region', { name: region })).not.toBeInTheDocument();
+  });
+});
+
+describe('La tendencia de lo cobrado — SPEC-KRILINXI-044', () => {
+  const tarjeta = async () => screen.findByRole('region', { name: 'Cobrado por día' });
+  const figura = async () => within(await tarjeta()).findByRole('figure', { name: 'Cobrado por día' });
+  /** Las líneas de una serie (los segmentos) y sus puntos, tal como las dibuja el SVG. */
+  const serie = (dibujo: HTMLElement, clave: string) => {
+    const grupo = dibujo.querySelector(`[data-serie="${clave}"]`);
+    return { lineas: [...(grupo?.querySelectorAll('line') ?? [])], puntos: [...(grupo?.querySelectorAll('circle') ?? [])] };
+  };
+
+  it('pide a la API lo cobrado día por día: los últimos 30 días si no se eligió nada', async () => {
+    const servidor = simularEstadisticas();
+    await abrirPanel();
+    await figura();
+
+    const pedido = servidor.pedidos.find((p) => p.ruta === '/estadisticas/ingresos-por-dia');
+    // No "hoy", que sería un solo punto: una tendencia necesita varios días.
+    expect(pedido?.parametros).toEqual({ desde: '2026-09-17', hasta: HOY });
+  });
+
+  it('con fechas y sucursal elegidas pide esas, como el resto del panel', async () => {
+    const servidor = simularEstadisticas();
+    await abrirPanel();
+    await figura();
+
+    fireEvent.click(await screen.findByRole('radio', { name: 'Centro' }));
+    fireEvent.change(screen.getByLabelText('Desde'), { target: { value: '2026-10-01' } });
+    fireEvent.change(screen.getByLabelText('Hasta'), { target: { value: '2026-10-15' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Ver estas fechas' }));
+
+    await waitFor(() =>
+      expect(servidor.pedidos.filter((p) => p.ruta === '/estadisticas/ingresos-por-dia').at(-1)?.parametros).toEqual({
+        desde: '2026-10-01',
+        hasta: '2026-10-15',
+        sucursal_id: SUCURSAL_CENTRO,
+      }),
+    );
+  });
+
+  it('dibuja una línea con el total de cada día: un punto por día y un tramo entre cada par', async () => {
+    simularEstadisticas();
+    await abrirPanel();
+    const dibujo = await figura();
+
+    const { lineas, puntos } = serie(dibujo, 'total');
+    expect(puntos).toHaveLength(3);
+    expect(lineas).toHaveLength(2);
+    // Cada día en el centro de su lugar: 1/6, 3/6 y 5/6 del ancho. El día más alto (Bs 125,50) llega arriba.
+    expect(puntos.map((p) => p.getAttribute('cx'))).toEqual(['16.67%', '50%', '83.33%']);
+    expect(puntos.map((p) => p.getAttribute('cy'))).toEqual(['73.86%', '18%', '100%']);
+    expect(puntos[0]).toHaveClass('fill-serie-1');
+    expect(lineas[0]).toHaveClass('stroke-serie-1');
+  });
+
+  it('un día sin cobros se dibuja en cero y la línea sigue hasta ahí, sin cortarse', async () => {
+    simularEstadisticas();
+    await abrirPanel();
+    const { lineas, puntos } = serie(await figura(), 'total');
+
+    // El 16/10 no cobró nada: su punto está sobre la línea de base, y el tramo que llega a él existe.
+    expect(puntos[2]?.getAttribute('cy')).toBe('100%');
+    expect(lineas[1]).toHaveAttribute('x2', '83.33%');
+    expect(lineas[1]).toHaveAttribute('y2', '100%');
+    // Y el tramo empieza donde terminó el anterior: sin saltos.
+    expect(lineas[1]?.getAttribute('x1')).toBe(lineas[0]?.getAttribute('x2'));
+    expect(lineas[1]?.getAttribute('y1')).toBe(lineas[0]?.getAttribute('y2'));
+  });
+
+  it('con treinta días dibuja treinta puntos, también los que están en cero, y el eje con unas pocas fechas', async () => {
+    simularEstadisticas({ ingresosPorDia: { status: 200, data: ingresosPorDiaDeDias(30, (i) => (i % 3 === 0 ? 0 : i * 10)) } });
+    await abrirPanel();
+    const dibujo = await figura();
+
+    expect(serie(dibujo, 'total').puntos).toHaveLength(30);
+    expect(within(dibujo).getAllByRole('button')).toHaveLength(30);
+    const eje = [...dibujo.querySelectorAll('[aria-hidden="true"] > span')].map((s) => s.textContent).filter(Boolean);
+    expect(eje).toEqual(['17/09', '23/09', '29/09', '05/10', '11/10', '16/10']);
+  });
+
+  it('se puede ver también por forma de pago: una línea por cada una, con su color y la leyenda de siempre', async () => {
+    simularEstadisticas();
+    await abrirPanel();
+    const dibujo = await figura();
+    // En el total no hay leyenda: con una sola serie, el color no dice nada solo.
+    expect(within(dibujo).queryByRole('list', { name: 'Formas de pago' })).not.toBeInTheDocument();
+
+    fireEvent.click(within(await tarjeta()).getByRole('radio', { name: 'Por forma de pago' }));
+
+    const formas = await within(await tarjeta()).findByRole('figure', { name: 'Cobrado por día' });
+    expect(formas.querySelectorAll('[data-serie]')).toHaveLength(4);
+    for (const [metodo, n] of [['EFECTIVO', 1], ['QR', 2], ['TARJETA', 3], ['TRANSFERENCIA', 4]] as const) {
+      const { lineas, puntos } = serie(formas, metodo);
+      expect(lineas[0]).toHaveClass(`stroke-serie-${n}`);
+      expect(puntos[0]).toHaveClass(`fill-serie-${n}`);
+      expect(puntos).toHaveLength(3);
+    }
+    const leyenda = within(formas).getByRole('list', { name: 'Formas de pago' });
+    expect(within(leyenda).getAllByRole('listitem').map((m) => m.textContent)).toEqual(['Efectivo', 'Pago con QR', 'Tarjeta', 'Transferencia']);
+    // El QR solo cobró el 15: su línea sube ese día y baja a cero los otros. Se mide contra el máximo de las formas (100).
+    expect(serie(formas, 'QR').puntos.map((p) => p.getAttribute('cy'))).toEqual(['100%', '79.09%', '100%']);
+    expect(serie(formas, 'EFECTIVO').puntos.map((p) => p.getAttribute('cy'))).toEqual(['67.2%', '18%', '100%']);
+  });
+
+  it('volver a "El total" deja una sola línea', async () => {
+    simularEstadisticas();
+    await abrirPanel();
+    await figura();
+    fireEvent.click(within(await tarjeta()).getByRole('radio', { name: 'Por forma de pago' }));
+    fireEvent.click(within(await tarjeta()).getByRole('radio', { name: 'El total' }));
+
+    expect((await figura()).querySelectorAll('[data-serie]')).toHaveLength(1);
+  });
+
+  it('nada se ve solo con el mouse: tocar o enfocar un día escribe su detalle en palabras', async () => {
+    simularEstadisticas();
+    await abrirPanel();
+    const dibujo = await figura();
+    expect(within(dibujo).getByText('Tocá un día para ver cuánto se cobró y con qué.')).toBeInTheDocument();
+
+    // Con el dedo.
+    fireEvent.click(within(dibujo).getByRole('button', { name: '15/10/2026: Bs 125,50. Efectivo Bs 100,00, Pago con QR Bs 25,50.' }));
+    expect(within(dibujo).getByText('15/10/2026: Bs 125,50. Efectivo Bs 100,00, Pago con QR Bs 25,50.', { selector: '[aria-live]' })).toBeInTheDocument();
+
+    // Con el teclado: es un botón, se llega con Tab. Un día sin cobros también se puede leer.
+    const vacio = within(dibujo).getByRole('button', { name: '16/10/2026: Bs 0,00.' });
+    act(() => vacio.focus());
+    expect(vacio).toHaveFocus();
+    expect(within(dibujo).getByText('16/10/2026: Bs 0,00.', { selector: '[aria-live]' })).toBeInTheDocument();
+    sinJerga();
+  });
+
+  it('tiene nombre accesible y su tabla con los mismos números para el lector de pantalla', async () => {
+    simularEstadisticas();
+    await abrirPanel();
+    const dibujo = await figura();
+
+    const tabla = within(dibujo).getByRole('table', { name: 'Cobrado por día' });
+    expect(tabla.parentElement).toHaveClass('sr-only');
+    expect(fila(await tarjeta(), 'Cobrado por día', '15/10/2026')).toEqual(['15/10/2026', 'Bs 125,50', 'Bs 100,00', 'Bs 25,50', 'Bs 0,00', 'Bs 0,00']);
+    // El día sin cobros también está en la tabla, en cero.
+    expect(fila(await tarjeta(), 'Cobrado por día', '16/10/2026')).toEqual(['16/10/2026', 'Bs 0,00', 'Bs 0,00', 'Bs 0,00', 'Bs 0,00', 'Bs 0,00']);
+  });
+
+  it('el total de arriba es el que manda el servidor: el panel no suma los días', async () => {
+    // A propósito, no es la suma de los días: si el panel sumara, se notaría.
+    simularEstadisticas({ ingresosPorDia: { status: 200, data: ingresosPorDiaDePrueba({ total: '999.99' }) } });
+    await abrirPanel();
+    await figura();
+
+    expect(within(await tarjeta()).getByText('Bs 999,99')).toBeInTheDocument();
+  });
+
+  it('sin ningún cobro en el período lo dice en palabras en vez de dibujar un gráfico vacío', async () => {
+    const dias = ingresosPorDiaDeDias(3, () => 0);
+    simularEstadisticas({ ingresosPorDia: { status: 200, data: dias } });
+    await abrirPanel();
+    const t = await tarjeta();
+
+    expect(await within(t).findByText('No hay datos en este período.')).toBeInTheDocument();
+    expect(within(t).queryByRole('figure')).not.toBeInTheDocument();
+  });
+
+  it('si la respuesta no encaja con su contrato, lo dice y se puede probar de nuevo, sin romper el resto del panel', async () => {
+    simularEstadisticas({ ingresosPorDia: { status: 200, data: { desde: '2026-10-14', hasta: '2026-10-16', total: 'mucho', porDia: [] } } });
+    await abrirPanel();
+    const t = await tarjeta();
+
+    expect(await within(t).findByText(/llegaron incompletas/)).toBeInTheDocument();
+    expect(within(t).getByRole('button', { name: 'Probar de nuevo' })).toBeInTheDocument();
+    // Las demás tarjetas siguen ahí.
+    expect(screen.getByRole('region', { name: 'Cobrado por forma de pago' })).toBeInTheDocument();
+    sinJerga();
+  });
+
+  it('si se corta internet al pedirla, la tarjeta dice que las estadísticas necesitan conexión', async () => {
+    simularEstadisticas({ ingresosPorDia: 'sin-conexion' });
+    await abrirPanel();
+
+    expect(await within(await tarjeta()).findByText('Las estadísticas necesitan conexión.')).toBeInTheDocument();
+  });
+
+  it('el gráfico no tiene estilos en línea', async () => {
+    simularEstadisticas();
+    await abrirPanel();
+
+    expect((await figura()).querySelector('[style]')).toBeNull();
+  });
+});
+
+describe('Las tarjetas no se pisan en una pantalla media — SPEC-KRILINXI-044', () => {
+  // jsdom no mide anchos: no puede ver una tarjeta que se sale de su columna. Lo que sí ve son las clases que lo
+  // evitan. Una tarjeta es una columna que puede ENCOGERSE (`min-w-0`, `grid-cols-1`): sin eso, su contenido
+  // (la barra de páginas, un gráfico) la ensancha y pisa a la vecina cuando la grilla de dos columnas queda angosta.
+  it('cada tarjeta es una columna que puede encogerse, para que su contenido no la ensanche', async () => {
+    simularEstadisticas();
+    await abrirPanel();
+    const regiones = ['Cobrado por forma de pago', 'Cobrado por sucursal', 'Cobrado por día', 'Ropa recibida', 'Falta cobrar', 'Ropa sin recoger', 'Lo que hizo cada persona', 'Clientes atendidos'];
+    await screen.findByRole('region', { name: 'Cobrado por forma de pago' });
+
+    for (const region of regiones) {
+      expect(seccion(region)).toHaveClass('grid', 'min-w-0', 'grid-cols-1');
+    }
+  });
+
+  it('la barra de páginas de una tarjeta se acomoda en renglones en vez de salirse', async () => {
+    simularEstadisticas({ clientes: { status: 200, data: clientesDePrueba({ total: 45 }) } });
+    await abrirPanel();
+    const paginas = await within(await screen.findByRole('region', { name: 'Clientes atendidos' })).findByRole('navigation', { name: 'Páginas de clientes' });
+
+    expect(paginas).toHaveClass('flex', 'flex-wrap');
+    // Con tres columnas `1fr auto 1fr` cada `1fr` no baja del ancho de su botón: era lo que la sacaba de la tarjeta.
+    expect(paginas.className).not.toMatch(/grid-cols-\[/);
   });
 });

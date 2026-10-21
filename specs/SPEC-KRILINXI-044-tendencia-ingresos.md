@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-044
 name: La tendencia de lo cobrado en el dashboard
 slug: tendencia-ingresos
-status: draft
+status: finished
 owner: krilinxito
 created: 2026-10-19
 scope:
@@ -14,7 +14,10 @@ priority: medium
 depends_on:
   - SPEC-KRILINXI-043
   - SPEC-KRILINXI-042
-tests: []
+tests:
+  - frontend\src\features\estadisticas\api\estadisticasApi.test.ts
+  - frontend\src\features\estadisticas\components\PantallaEstadisticas.test.tsx
+  - frontend\src\features\estadisticas\components\graficos\escalas.test.ts
 ---
 
 ## Descripción

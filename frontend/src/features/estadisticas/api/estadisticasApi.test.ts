@@ -4,6 +4,7 @@ import { simularApi } from '../../../test/apiFalsa';
 import {
   clientesDePrueba,
   ingresosDePrueba,
+  ingresosPorDiaDePrueba,
   productividadDePrueba,
   saldosDePrueba,
   simularEstadisticas,
@@ -14,12 +15,14 @@ import {
 import {
   leerClientes,
   leerIngresos,
+  leerIngresosPorDia,
   leerProductividad,
   leerSaldos,
   leerSinRecoger,
   leerVolumen,
   pedirClientes,
   pedirIngresos,
+  pedirIngresosPorDia,
   pedirSaldos,
   RespuestaRara,
 } from './estadisticasApi';
@@ -97,5 +100,58 @@ describe('Estadísticas: volumen, productividad y clientes — SPEC-KRILINXI-016
     const servidor = simularEstadisticas();
     await pedirClientes({ desde: '2026-09-17', hasta: '2026-10-16' }, 3);
     expect(servidor.pedidos[0]?.parametros).toEqual({ desde: '2026-09-17', hasta: '2026-10-16', pagina: 3, por_pagina: 20 });
+  });
+});
+
+describe('Estadísticas: lo cobrado por día — SPEC-KRILINXI-044', () => {
+  it('lee una respuesta válida, con los cuatro montos de cada día, también los días en cero', () => {
+    const leida = leerIngresosPorDia(ingresosPorDiaDePrueba());
+
+    expect(leida?.total).toBe('165.50');
+    expect(leida?.porDia).toHaveLength(3);
+    expect(leida?.porDia[2]).toEqual({
+      fecha: '2026-10-16',
+      total: '0.00',
+      porMetodo: { EFECTIVO: '0.00', QR: '0.00', TARJETA: '0.00', TRANSFERENCIA: '0.00' },
+    });
+  });
+
+  it('un período sin días es válido: la lista vacía no es una respuesta rota', () => {
+    expect(leerIngresosPorDia(ingresosPorDiaDePrueba({ porDia: [], total: '0.00' }))?.porDia).toEqual([]);
+  });
+
+  const DIA = { fecha: '2026-10-14', total: '1.00', porMetodo: { EFECTIVO: '1.00', QR: '0.00', TARJETA: '0.00', TRANSFERENCIA: '0.00' } };
+
+  it.each([
+    ['no es un objeto', 'hola'],
+    ['no trae el total', ingresosPorDiaDePrueba({ total: undefined })],
+    ['trae el total como número y no como texto', ingresosPorDiaDePrueba({ total: 165.5 })],
+    ['no trae la lista de días', ingresosPorDiaDePrueba({ porDia: undefined })],
+    ['un día sin fecha', ingresosPorDiaDePrueba({ porDia: [{ ...DIA, fecha: undefined }] })],
+    ['un día con una fecha mal escrita', ingresosPorDiaDePrueba({ porDia: [{ ...DIA, fecha: '14/10/2026' }] })],
+    ['un día sin total', ingresosPorDiaDePrueba({ porDia: [{ ...DIA, total: undefined }] })],
+    ['un día con un monto que no es un monto', ingresosPorDiaDePrueba({ porDia: [{ ...DIA, total: 'mucho' }] })],
+    ['un día con un monto negativo', ingresosPorDiaDePrueba({ porDia: [{ ...DIA, total: '-1.00' }] })],
+    ['un día sin el desglose', ingresosPorDiaDePrueba({ porDia: [{ ...DIA, porMetodo: undefined }] })],
+    ['un día al que le falta una forma de pago', ingresosPorDiaDePrueba({ porDia: [{ ...DIA, porMetodo: { EFECTIVO: '1.00', QR: '0.00', TARJETA: '0.00' } }] })],
+    ['una forma de pago con un monto roto', ingresosPorDiaDePrueba({ porDia: [{ ...DIA, porMetodo: { ...DIA.porMetodo, QR: 0 } }] })],
+  ])('no se fía de una respuesta que %s', (_caso, datos) => {
+    expect(leerIngresosPorDia(datos)).toBeNull();
+  });
+
+  it('pide a /estadisticas/ingresos-por-dia con el período y la sucursal como parámetros', async () => {
+    const servidor = simularEstadisticas();
+    const parametros = { desde: '2026-10-01', hasta: '2026-10-15', sucursal_id: SUCURSAL_CENTRO };
+
+    const datos = await pedirIngresosPorDia(parametros);
+
+    expect(servidor.pedidos.map((p) => [p.metodo, p.ruta, p.parametros])).toEqual([['GET', '/estadisticas/ingresos-por-dia', parametros]]);
+    expect(datos.porDia).toHaveLength(3);
+  });
+
+  it('si la respuesta no encaja con el contrato, falla con RespuestaRara', async () => {
+    simularEstadisticas({ ingresosPorDia: { status: 200, data: { cualquier: 'cosa' } } });
+
+    await expect(pedirIngresosPorDia({ desde: '2026-10-01', hasta: '2026-10-15' })).rejects.toBeInstanceOf(RespuestaRara);
   });
 });

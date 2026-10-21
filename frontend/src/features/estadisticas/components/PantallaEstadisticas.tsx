@@ -13,6 +13,7 @@ import { SeccionClientes } from './SeccionClientes';
 import { SeccionProductividad } from './SeccionProductividad';
 import { SeccionSaldos } from './SeccionSaldos';
 import { SeccionSinRecoger } from './SeccionSinRecoger';
+import { SeccionTendencia } from './SeccionTendencia';
 import { SeccionVolumen } from './SeccionVolumen';
 
 /**
@@ -75,6 +76,8 @@ export function PantallaEstadisticas() {
           <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
             <SeccionFormasDePago ingresos={estado.datos.ingresos} periodo={conMayuscula(describirPeriodo(filtro, 'ingresos'))} />
             <SeccionIngresos ingresos={estado.datos.ingresos} periodo={conMayuscula(describirPeriodo(filtro, 'ingresos'))} />
+            {/* Pide su propio dato (`useIngresosPorDia`): una tendencia son días, no el "hoy" de los indicadores. */}
+            <SeccionTendencia filtro={filtro} periodo={conMayuscula(describirPeriodo(filtro, 'historia'))} />
             <SeccionVolumen volumen={estado.datos.volumen} periodo={conMayuscula(describirPeriodo(filtro, 'historia'))} />
             <SeccionSaldos saldos={estado.datos.saldos} periodo={conMayuscula(describirPeriodo(filtro, 'pendientes'))} />
             <SeccionSinRecoger sinRecoger={estado.datos.sinRecoger} periodo={conMayuscula(describirPeriodo(filtro, 'pendientes'))} />

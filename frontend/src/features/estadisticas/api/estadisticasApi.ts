@@ -27,6 +27,7 @@ import {
   type Atenciones,
   type ClientesAtendidos,
   type Ingresos,
+  type IngresosPorDia,
   type Productividad,
   type Saldos,
   type SinRecoger,
@@ -74,6 +75,24 @@ export function leerIngresos(datos: unknown): Ingresos | null {
   });
   if (!porSucursal) return null;
   return { desde: datos.desde, hasta: datos.hasta, total: datos.total, porSucursal };
+}
+
+/** `/ingresos-por-dia` — SPEC-KRILINXI-043. Los cuatro montos de cada día tienen que estar, aunque sean "0.00". */
+export function leerIngresosPorDia(datos: unknown): IngresosPorDia | null {
+  if (!esObjeto(datos) || !esTexto(datos.desde) || !esTexto(datos.hasta) || !esMonto(datos.total)) return null;
+  const porDia = lista(datos.porDia, (d) => {
+    const { porMetodo } = d;
+    if (!esFecha(d.fecha) || !esMonto(d.total) || !esObjeto(porMetodo)) return null;
+    const montos = METODOS_PAGO.map((m) => porMetodo[m]);
+    if (!montos.every(esMonto)) return null;
+    return {
+      fecha: d.fecha,
+      total: d.total,
+      porMetodo: { EFECTIVO: montos[0], QR: montos[1], TARJETA: montos[2], TRANSFERENCIA: montos[3] },
+    };
+  });
+  if (!porDia) return null;
+  return { desde: datos.desde, hasta: datos.hasta, total: datos.total, porDia };
 }
 
 export function leerSaldos(datos: unknown): Saldos | null {
@@ -196,6 +215,7 @@ async function pedir<T>(ruta: string, parametros: Parametros | ParametrosPaginad
 }
 
 export const pedirIngresos = (parametros: Parametros) => pedir('/estadisticas/ingresos', parametros, leerIngresos);
+export const pedirIngresosPorDia = (parametros: Parametros) => pedir('/estadisticas/ingresos-por-dia', parametros, leerIngresosPorDia);
 export const pedirSaldos = (parametros: Parametros) => pedir('/estadisticas/saldos', parametros, leerSaldos);
 export const pedirSinRecoger = (parametros: Parametros) => pedir('/estadisticas/sin-recoger', parametros, leerSinRecoger);
 export const pedirVolumen = (parametros: Parametros) => pedir('/estadisticas/volumen', parametros, leerVolumen);
