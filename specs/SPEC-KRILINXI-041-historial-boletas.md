@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-041
 name: Historial de boletas
 slug: historial-boletas
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-19
 scope:
@@ -25,7 +25,15 @@ priority: medium
 depends_on:
   - SPEC-KRILINXI-040
   - SPEC-KRILINXI-037
-tests: []
+tests:
+  - frontend\src\features\historial\api\historialApi.test.ts
+  - frontend\src\features\historial\api\historialLocal.test.ts
+  - frontend\src\features\historial\components\PantallaHistorial.test.tsx
+  - frontend\src\features\historial\filtro.test.ts
+  - frontend\src\hooks\usePaginado.test.ts
+  - frontend\src\lib\tamanoDePagina.test.ts
+  - frontend\src\paginacion.test.tsx
+  - frontend\src\test\arquitectura.test.ts
 ---
 
 ## Descripción
