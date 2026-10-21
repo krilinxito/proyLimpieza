@@ -120,3 +120,54 @@ describe('Boton con el tema — SPEC-KRILINXI-022', () => {
     expect(boton.querySelector('svg')).not.toBeNull();
   });
 });
+
+/**
+ * La jerarquía — SPEC-KRILINXI-037. jsdom no pinta, así que se comprueba lo que hace distinta a cada
+ * variante por su FORMA, no solo por su color: lleno, con borde, con ícono de alerta, o sin caja y
+ * subrayado. Si dos variantes solo se distinguieran por el color, estos tests no podrían separarlas.
+ */
+describe('Boton: cuatro usos y un tamaño compacto — SPEC-KRILINXI-037', () => {
+  it('el principal es lleno, de todo el ancho', () => {
+    render(<Boton>Registrar ropa</Boton>);
+    expect(screen.getByRole('button', { name: 'Registrar ropa' })).toHaveClass('bg-marca', 'shadow-sm', 'w-full');
+  });
+
+  it('el secundario es con borde, sobre la superficie', () => {
+    render(<Boton variante="secundario">Cobrar</Boton>);
+    const boton = screen.getByRole('button', { name: 'Cobrar' });
+    expect(boton).toHaveClass('border-borde', 'bg-superficie');
+    expect(boton).not.toHaveClass('bg-marca');
+  });
+
+  it('el de peligro lleva siempre el ícono de alerta, aunque no se le pase', () => {
+    render(<Boton variante="peligro">Anular</Boton>);
+    const boton = screen.getByRole('button', { name: 'Anular' });
+    expect(boton).toHaveClass('bg-peligro');
+    expect(boton.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('el de navegación no tiene caja: subrayado, del ancho de su texto y con la flecha de volver', () => {
+    render(<Boton variante="navegacion">Volver a la lista</Boton>);
+    const boton = screen.getByRole('button', { name: 'Volver a la lista' });
+    expect(boton).toHaveClass('underline', 'bg-transparent', 'border-transparent', 'w-auto', 'text-marca');
+    expect(boton).not.toHaveClass('w-full');
+    expect(boton.querySelector('svg')).not.toBeNull();
+  });
+
+  it('el compacto es más bajo y del ancho de su texto, pero sigue siendo de dedo (48px)', () => {
+    render(
+      <Boton variante="secundario" tamano="compacto">
+        Cobrar
+      </Boton>,
+    );
+    const boton = screen.getByRole('button', { name: 'Cobrar' });
+    expect(boton).toHaveClass('min-h-12', 'text-lg', 'w-auto');
+    expect(boton).not.toHaveClass('min-h-14', 'w-full');
+  });
+
+  it('un botón deshabilitado no reacciona al pasarle por encima', () => {
+    render(<Boton disabled>Cobrar</Boton>);
+    const clases = screen.getByRole('button', { name: 'Cobrar' }).className.split(' ');
+    expect(clases.filter((c) => c.startsWith('hover:'))).toEqual([]);
+  });
+});

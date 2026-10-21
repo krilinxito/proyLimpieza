@@ -77,6 +77,10 @@ const TEXTOS: [texto: string, fondo: string][] = [
   ['peligro-texto', 'advertencia-fondo'],
   // La opción elegida (método de pago, sucursal…) se marca con `bg-marca-suave` y texto normal.
   ['texto', 'marca-suave'],
+  // SPEC-KRILINXI-037: el botón de navegación es texto de la marca, sin caja, sobre la página o una
+  // tarjeta; y la tarjeta que destaca un número lleva sus rótulos en `texto-suave` sobre `marca-suave`.
+  ['marca', 'fondo'],
+  ['texto-suave', 'marca-suave'],
 ];
 
 /**

@@ -122,6 +122,10 @@ const TRAZOS = {
     </>
   ),
   luna: <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />,
+  // SPEC-KRILINXI-037: la flecha de los botones de navegación ("Volver…") y la señal de una
+  // tarjeta que se toca (lleva a algo). Las dos van con su texto al lado, como todas.
+  volver: <path d="M19 12H5m6-6-6 6 6 6" />,
+  seguir: <path d="m9 6 6 6-6 6" />,
 } satisfies Record<string, ReactElement>;
 
 export type NombreIcono = keyof typeof TRAZOS;

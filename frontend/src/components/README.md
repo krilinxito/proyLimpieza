@@ -5,7 +5,7 @@ UI compartida entre features: botones, inputs, modales de confirmación. Nada qu
 
 Lo que ya existe — usalo antes de escribir uno propio (SPEC-KRILINXI-002):
 
-- `Boton` — grande, con variantes `primario`, `secundario` y `peligro`. Si su `onClick`
+- `Boton` — grande, con variantes `primario`, `secundario` y `peligro` (y `navegacion` desde SPEC-KRILINXI-037, ver abajo). Si su `onClick`
   devuelve una promesa, se deshabilita hasta que termine: un doble toque no cobra dos veces.
 - `CampoTexto` — etiqueta siempre visible y el error debajo, enlazado al input.
 - `ModalConfirmacion` — para toda acción irreversible. Dice qué va a pasar, y solo
@@ -25,6 +25,33 @@ Desde SPEC-KRILINXI-022:
   otra pantalla es un enlace, aunque se vea como botón: `Boton` es para acciones (SPEC-KRILINXI-024).
 - `Icono` (`iconos.tsx`) — los íconos de la app por nombre (`<Icono nombre="cobrar" />`).
   Siempre decorativos: van al lado de un texto que diga lo mismo, nunca solos.
+
+## Qué estilo lleva cada cosa (SPEC-KRILINXI-037)
+
+Lo importante y lo secundario no se ven igual. Cada uso se distingue por su **forma**, no solo por
+el color (los estilos viven en `estilosBoton.ts`, compartidos por `Boton` y `EnlaceBoton`):
+
+| Variante de `Boton` | Cómo se ve | Cuándo |
+|---|---|---|
+| `primario` (por defecto) | Lleno, de todo el ancho | Lo que hay que hacer ahora. **Una sola por pantalla a la vista**: "Registrar ropa", "Guardar", "Empezar a lavar". |
+| `secundario` | Con borde, sobre la superficie | Otra acción posible: "Cobrar" junto a un avance, "Cancelar". |
+| `peligro` | Lleno de rojo, siempre con el ícono de alerta | Lo que no tiene vuelta atrás ("Anular"), y su confirmación. |
+| `navegacion` | Sin caja, subrayado, con la flecha de volver | No hace nada, lleva a otro lado: "Volver a la lista", "Ver toda la ropa en el local". |
+
+`tamano="compacto"` (48px de alto, del ancho de su texto) para una **fila** de acciones secundarias,
+como Cobrar y Anular debajo del avance principal. Lo normal sigue siendo el grande.
+
+`EnlaceBoton` toma las mismas variantes (menos `peligro`: un enlace no destruye nada). Si lleva a
+otra pantalla es un enlace; si cambia lo que muestra la misma pantalla, es un `Boton`.
+
+| Tipo de `Tarjeta` | Cómo se ve | Cuándo |
+|---|---|---|
+| `informa` (por defecto) | Liviana: borde suave, sin sombra | Agrupar datos: la ropa, los pagos, un cliente. |
+| `destaca` | Fondo suave de la marca, franja gruesa a la izquierda | El número que importa: "Cobrado hoy". |
+| `toca` | Borde firme, sombra y una flecha a la derecha | Entera tocable, lleva a algo: una boleta en una lista. Es un `<button>` o un `<Link>` con `ESTILO_TARJETA.toca` y `<SenalTocable />`, porque una `<section>` no puede ir dentro de un botón. |
+
+**Menos letra:** un texto de ayuda que repite lo que ya dice la etiqueta o el título se quita. Los
+mensajes de error y las confirmaciones, nunca (CLAUDE.md §9).
 
 ## Colores: siempre del tema
 

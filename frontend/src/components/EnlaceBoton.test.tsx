@@ -19,3 +19,19 @@ describe('EnlaceBoton — SPEC-KRILINXI-024', () => {
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 });
+
+describe('EnlaceBoton con la jerarquía — SPEC-KRILINXI-037', () => {
+  it('el de navegación se ve igual que un botón de navegación: sin caja y subrayado', () => {
+    render(
+      <MemoryRouter>
+        <EnlaceBoton a="/estadisticas" variante="navegacion">
+          Ver las estadísticas
+        </EnlaceBoton>
+      </MemoryRouter>,
+    );
+    const enlace = screen.getByRole('link', { name: 'Ver las estadísticas' });
+    expect(enlace).toHaveClass('underline', 'bg-transparent', 'text-marca');
+    // Un enlace no se deshabilita: su hover no puede depender de `:enabled`, que no lo alcanza.
+    expect(enlace.className).not.toContain('enabled:');
+  });
+});

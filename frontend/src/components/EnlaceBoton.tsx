@@ -1,12 +1,15 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { estiloBoton, type TamanoBoton, type VarianteBoton } from './estilosBoton';
 import { Icono, type NombreIcono } from './iconos';
 
 type Props = {
   /** A dónde lleva, dentro de la app. */
   a: string;
   children: ReactNode;
-  variante?: 'primario' | 'secundario';
+  /** Las mismas de `Boton` (SPEC-KRILINXI-037): `navegacion` para "Volver…" o "Ver…". */
+  variante?: Exclude<VarianteBoton, 'peligro'>;
+  tamano?: TamanoBoton;
   icono?: NombreIcono;
 };
 
@@ -19,16 +22,9 @@ type Props = {
  * VE como botón porque para quien lo usa es "lo que hay que tocar", y un subrayado chico en
  * medio del texto es fácil de pasar por alto.
  */
-export function EnlaceBoton({ a, children, variante = 'primario', icono }: Props) {
-  const estilo =
-    variante === 'primario'
-      ? 'border-marca bg-marca text-sobre-marca shadow-sm hover:border-marca-fuerte hover:bg-marca-fuerte'
-      : 'border-borde bg-superficie text-texto hover:bg-fondo';
+export function EnlaceBoton({ a, children, variante = 'primario', tamano = 'normal', icono }: Props) {
   return (
-    <Link
-      to={a}
-      className={`inline-flex min-h-14 items-center justify-center gap-3 rounded-xl border-2 px-6 py-3 text-xl font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-foco ${estilo}`}
-    >
+    <Link to={a} className={estiloBoton(variante, tamano, { enlace: true })}>
       {icono && <Icono nombre={icono} />}
       {children}
     </Link>
