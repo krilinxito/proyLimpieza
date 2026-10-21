@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-040
 name: La API del historial de boletas
 slug: historial-boletas-api
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-19
 scope:
