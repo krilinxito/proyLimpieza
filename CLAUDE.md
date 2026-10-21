@@ -291,6 +291,10 @@ el escáner no ve las que no están escritas.
 SPEC-KRILINXI-038 puso las acciones de una boleta en una **fila de botones compactos con su ícono** (el grupo "Qué
 hacer con esta ropa" en `DetalleOrden`): dos columnas en angosto, de corrido desde `sm`, Anular aparte al final y volver
 fuera de la fila. Cada avance tiene su ícono en `ICONO_AVANCE`: un avance nuevo no compila sin el suyo.
+SPEC-KRILINXI-039 pasó Personal y Sucursales a una **grilla de tarjetas** (una por fila, dos desde 1024px), con las
+acciones adentro, compactas y con ícono. Cada cuenta lleva su inicial (`Avatar decorativo`, que no se anuncia porque el
+nombre ya es el título) y cada sucursal, cuántas personas trabajan ahí: `personasPorSucursal` cuenta en la base local
+las cuentas activas, y `usePersonasPorSucursal` da `null` mientras lee, así nunca dice un cero falso.
 
 SPEC-KRILINXI-012 corrige el reloj de la tablet: `lib/reloj` guarda el desfase con la hora
 del servidor que traen `login` y `renovar`, y `horaOficial()` es de donde salen
