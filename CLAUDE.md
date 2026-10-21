@@ -288,6 +288,9 @@ vista por pantalla**: en el detalle de una boleta es el próximo avance o, si no
 Mostrador y el Inicio; las demás pantallas, en sus specs. Para los tests, `test/jerarquia.ts`
 (`accionesPrincipales()`, `usoDe(boton)`). Las clases de Tailwind se escriben enteras, nunca armadas con `replace`:
 el escáner no ve las que no están escritas.
+SPEC-KRILINXI-038 puso las acciones de una boleta en una **fila de botones compactos con su ícono** (el grupo "Qué
+hacer con esta ropa" en `DetalleOrden`): dos columnas en angosto, de corrido desde `sm`, Anular aparte al final y volver
+fuera de la fila. Cada avance tiene su ícono en `ICONO_AVANCE`: un avance nuevo no compila sin el suyo.
 
 SPEC-KRILINXI-012 corrige el reloj de la tablet: `lib/reloj` guarda el desfase con la hora
 del servidor que traen `login` y `renovar`, y `horaOficial()` es de donde salen

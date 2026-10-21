@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Aviso } from '../../../components/Aviso';
 import { Boton } from '../../../components/Boton';
+import type { NombreIcono } from '../../../components/iconos';
 import { Insignia } from '../../../components/Insignia';
 import { Tarjeta } from '../../../components/Tarjeta';
 import { ModalConfirmacion } from '../../../components/ModalConfirmacion';
 import { TEXTO_ESTADO_ORDEN, TEXTO_METODO_PAGO, TEXTO_TIPO_PAGO, type EstadoOrden } from '../../../lib/dominio';
 import { formatearBs } from '../../../lib/money';
-import { avancesDesde, estaCerrada, TONO_ESTADO } from '../estado';
+import { avancesDesde, estaCerrada, TONO_ESTADO, type Avance } from '../estado';
 import { useRopa } from '../hooks/useRopa';
 import type { OrdenVista } from '../types';
 import { diaDe, fechaCorta } from './fechas';
@@ -24,6 +25,17 @@ type Props = {
   /** Lo que dice el botón de volver: "Volver a la lista", o adónde vuelve (SPEC-KRILINXI-033). */
   textoVolver?: string;
 };
+
+/** El ícono de cada avance, al lado de su palabra (SPEC-KRILINXI-038). */
+const ICONO_AVANCE: Record<Avance['destino'], NombreIcono> = { EN_PROCESO: 'lavar', LISTO: 'listo' };
+
+/**
+ * La fila de acciones de una boleta — SPEC-KRILINXI-038. En pantalla angosta, dos columnas; desde
+ * `sm`, una fila que se acomoda sola. Nunca una barra por renglón: con cuatro acciones apiladas a
+ * todo el ancho no se ve cuál es cuál. Lo que se abre dentro (el formulario de entrega) ocupa la
+ * fila entera con `col-span-2 sm:basis-full` (ver `AccionEntregar`).
+ */
+const CLASE_FILA = 'mt-2 grid grid-cols-2 items-start gap-3 sm:flex sm:flex-wrap sm:items-center';
 
 /** Pares dato/valor, uno debajo del otro. */
 function Datos({ pares }: { pares: [string, ReactNode][] }) {
@@ -151,30 +163,40 @@ export function DetalleOrden({ ordenId, alVolver, accionesExtra, textoVolver = '
       )}
 
       {!cerrada && !cobrando && (
-        <div className="mt-2 grid gap-3">
-          {siguiente && <Boton onClick={() => pasarA(siguiente.destino)}>{siguiente.texto}</Boton>}
+        <div role="group" aria-label="Qué hacer con esta ropa" className={CLASE_FILA}>
+          {siguiente && (
+            <Boton tamano="compacto" icono={ICONO_AVANCE[siguiente.destino]} onClick={() => pasarA(siguiente.destino)}>
+              {siguiente.texto}
+            </Boton>
+          )}
           {otrosAvances.map(({ destino, texto }) => (
-            <Boton key={destino} variante="secundario" onClick={() => pasarA(destino)}>
+            <Boton
+              key={destino}
+              variante="secundario"
+              tamano="compacto"
+              icono={ICONO_AVANCE[destino]}
+              onClick={() => pasarA(destino)}
+            >
               {texto}
             </Boton>
           ))}
+          {orden.saldo > 0 && (
+            <Boton
+              variante="secundario"
+              tamano="compacto"
+              icono="cobrar"
+              onClick={() => {
+                setHecho(null);
+                setCobrando(true);
+              }}
+            >
+              Cobrar
+            </Boton>
+          )}
           {accionesExtra?.(orden, recargar, { principal: !siguiente })}
-          {/* Lo que no es el paso siguiente va en una fila, más chico. */}
-          <div className="flex flex-wrap gap-3">
-            {orden.saldo > 0 && (
-              <Boton
-                variante="secundario"
-                tamano="compacto"
-                icono="cobrar"
-                onClick={() => {
-                  setHecho(null);
-                  setCobrando(true);
-                }}
-              >
-                Cobrar
-              </Boton>
-            )}
-            <Boton variante="peligro" tamano="compacto" onClick={() => setAnulando(true)}>
+          {/* Apartada de las demás: en angosta, en su propio renglón; en ancha, al final de la fila. */}
+          <div className="col-span-2 justify-self-start sm:ml-auto">
+            <Boton variante="peligro" tamano="compacto" icono="anular" onClick={() => setAnulando(true)}>
               Anular
             </Boton>
           </div>
