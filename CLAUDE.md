@@ -279,6 +279,16 @@ del negocio vive en `lib/diaDelNegocio.ts`** (`hoyEnBolivia`, `diaEnBolivia`), e
 guardadas: las que bajan del servidor vienen **sin zona** (`2026-10-18 22:00:00`, en UTC) y `new Date()` las
 leería como hora local. Los tests corren con `TZ=America/La_Paz` (`vite.config.ts`), la zona de las tablets.
 
+SPEC-KRILINXI-037 fijó la **jerarquía visual** en `components/` (tabla en `components/README.md`): `Boton` tiene
+`primario` (lleno), `secundario` (con borde), `peligro` (rojo y siempre con ícono) y `navegacion` (sin caja,
+subrayado, para volver o cambiar de vista), y `tamano="compacto"` para una fila de acciones; los estilos viven en
+`components/estilosBoton.ts`, compartidos con `EnlaceBoton`. `Tarjeta` informa (por defecto) o `destaca` un número,
+y lo que se toca entero usa `ESTILO_TARJETA.toca` con `SenalTocable` (la flecha). **Una sola acción principal a la
+vista por pantalla**: en el detalle de una boleta es el próximo avance o, si no queda, entregar. Ya lo usan el
+Mostrador y el Inicio; las demás pantallas, en sus specs. Para los tests, `test/jerarquia.ts`
+(`accionesPrincipales()`, `usoDe(boton)`). Las clases de Tailwind se escriben enteras, nunca armadas con `replace`:
+el escáner no ve las que no están escritas.
+
 SPEC-KRILINXI-012 corrige el reloj de la tablet: `lib/reloj` guarda el desfase con la hora
 del servidor que traen `login` y `renovar`, y `horaOficial()` es de donde salen
 `fecha_entrada`, `fecha_pago` y `fecha_entrega`, también sin internet. Ningún archivo de
