@@ -36,6 +36,14 @@ async function abrirPanel() {
 
 const seccion = (nombre: string) => screen.getByRole('region', { name: nombre });
 
+/** El "Ver el detalle" plegado de una tarjeta (SPEC-KRILINXI-042). */
+async function detalleDe(tarjeta: HTMLElement): Promise<HTMLElement> {
+  const resumen = await within(tarjeta).findByText('Ver el detalle');
+  const detalle = resumen.closest('details');
+  if (!detalle) throw new Error('La tarjeta no tiene su "Ver el detalle".');
+  return detalle;
+}
+
 /**
  * Las celdas de una fila de la tabla de un gráfico, por el encabezado de la fila. Desde
  * SPEC-KRILINXI-026 cada número del panel está en el dibujo y en su tabla: los tests leen la tabla,
@@ -52,7 +60,7 @@ describe('Panel de estadísticas — SPEC-KRILINXI-015', () => {
     simularEstadisticas();
     await abrirPanel();
 
-    expect(await screen.findByRole('heading', { name: 'Cobrado de hoy' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '¿Cuánto se cobró en cada sucursal?' })).toBeInTheDocument();
     expect(screen.queryByText('Esta parte todavía no está hecha.')).not.toBeInTheDocument();
     sinJerga();
   });
@@ -60,7 +68,7 @@ describe('Panel de estadísticas — SPEC-KRILINXI-015', () => {
   it('sin elegir nada pide los ingresos de hoy y todo lo pendiente hasta hoy, de todas las sucursales', async () => {
     const servidor = simularEstadisticas();
     await abrirPanel();
-    await screen.findByRole('heading', { name: 'Cobrado de hoy' });
+    await screen.findByRole('heading', { name: '¿Cuánto se cobró en cada sucursal?' });
 
     // Solo las tres de esta spec: volumen, productividad y clientes las revisa SPEC-KRILINXI-016.
     expect(Object.fromEntries(servidor.pedidos.map((p) => [p.ruta, p.parametros]))).toEqual(
@@ -75,9 +83,9 @@ describe('Panel de estadísticas — SPEC-KRILINXI-015', () => {
   it('muestra los ingresos por sucursal y por forma de pago, con los totales tal como llegan', async () => {
     simularEstadisticas();
     await abrirPanel();
-    await screen.findByRole('heading', { name: 'Cobrado de hoy' });
+    await screen.findByRole('heading', { name: '¿Cuánto se cobró en cada sucursal?' });
 
-    const cobrado = seccion('Cobrado');
+    const cobrado = seccion('Cobrado por sucursal');
     expect(within(cobrado).getAllByText('Bs 125,50')).not.toHaveLength(0);
     expect(within(cobrado).getByText('Centro: Bs 125,50')).toBeInTheDocument();
     // Sucursal, Efectivo, Pago con QR, Tarjeta, Transferencia y Total (SPEC-KRILINXI-026: la tabla del gráfico).
@@ -94,7 +102,7 @@ describe('Panel de estadísticas — SPEC-KRILINXI-015', () => {
   it('muestra los saldos y la ropa sin recoger con su antigüedad en días', async () => {
     simularEstadisticas();
     await abrirPanel();
-    await screen.findByRole('heading', { name: 'Falta cobrar hasta hoy' });
+    await screen.findByRole('heading', { name: '¿Cuánto falta cobrar, y desde hace cuánto?' });
 
     const saldos = seccion('Falta cobrar');
     expect(fila(saldos, 'Falta cobrar según los días', 'Más de 30 días')).toEqual(['Más de 30 días', '1 boleta', 'Bs 30,00']);
@@ -115,8 +123,9 @@ describe('Panel de estadísticas — SPEC-KRILINXI-015', () => {
     await abrirPanel();
 
     // Sin cobros no hay gráfico que dibujar, y lo dice (SPEC-KRILINXI-026).
-    await screen.findByRole('heading', { name: 'Cobrado de hoy' });
-    expect(within(seccion('Cobrado')).getByText('No hay datos en este período.')).toBeInTheDocument();
+    await screen.findByRole('heading', { name: '¿Cuánto se cobró en cada sucursal?' });
+    expect(within(seccion('Cobrado por sucursal')).getByText('No hay datos en este período.')).toBeInTheDocument();
+    expect(within(seccion('Cobrado por forma de pago')).getByText('No hay datos en este período.')).toBeInTheDocument();
     expect(screen.getByText('Nadie debe nada en este período.')).toBeInTheDocument();
     expect(screen.getByText('No hay ropa sin recoger en este período.')).toBeInTheDocument();
   });
@@ -124,14 +133,14 @@ describe('Panel de estadísticas — SPEC-KRILINXI-015', () => {
   it('elegir fechas y sucursal vuelve a pedir las tres secciones con ese período', async () => {
     const servidor = simularEstadisticas();
     await abrirPanel();
-    await screen.findByRole('heading', { name: 'Cobrado de hoy' });
+    await screen.findByRole('heading', { name: '¿Cuánto se cobró en cada sucursal?' });
 
     fireEvent.click(await screen.findByRole('radio', { name: 'Centro' }));
     fireEvent.change(screen.getByLabelText('Desde'), { target: { value: '2026-10-01' } });
     fireEvent.change(screen.getByLabelText('Hasta'), { target: { value: '2026-10-15' } });
     fireEvent.click(screen.getByRole('button', { name: 'Ver estas fechas' }));
 
-    expect(await screen.findByRole('heading', { name: 'Cobrado del 01/10/2026 al 15/10/2026' })).toBeInTheDocument();
+    expect((await screen.findAllByText('Del 01/10/2026 al 15/10/2026')).length).toBeGreaterThan(0);
     // El último pedido de cada una de las tres secciones de esta spec.
     const ultimoDe = (ruta: string) => servidor.pedidos.filter((p) => p.ruta === ruta).at(-1)?.parametros;
     const elegido = { desde: '2026-10-01', hasta: '2026-10-15', sucursal_id: SUCURSAL_CENTRO };
@@ -143,7 +152,7 @@ describe('Panel de estadísticas — SPEC-KRILINXI-015', () => {
   it('unas fechas al revés no se piden: se avisa qué corregir', async () => {
     const servidor = simularEstadisticas();
     await abrirPanel();
-    await screen.findByRole('heading', { name: 'Cobrado de hoy' });
+    await screen.findByRole('heading', { name: '¿Cuánto se cobró en cada sucursal?' });
     const antes = servidor.pedidos.length;
 
     fireEvent.change(screen.getByLabelText('Desde'), { target: { value: '2026-10-15' } });
@@ -172,7 +181,7 @@ describe('Panel de estadísticas — SPEC-KRILINXI-015', () => {
     simularEstadisticas();
     window.dispatchEvent(new Event('online'));
 
-    expect(await screen.findByRole('heading', { name: 'Cobrado de hoy' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '¿Cuánto se cobró en cada sucursal?' })).toBeInTheDocument();
     expect(screen.queryByText('Las estadísticas necesitan conexión.')).not.toBeInTheDocument();
   });
 
@@ -185,7 +194,7 @@ describe('Panel de estadísticas — SPEC-KRILINXI-015', () => {
     simularEstadisticas();
     fireEvent.click(screen.getByRole('button', { name: 'Probar de nuevo' }));
     await waitFor(() => expect(screen.queryByText(mensaje)).not.toBeInTheDocument());
-    expect(await screen.findByRole('heading', { name: 'Cobrado de hoy' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '¿Cuánto se cobró en cada sucursal?' })).toBeInTheDocument();
     sinJerga();
   });
 });
@@ -194,7 +203,7 @@ describe('Panel de estadísticas: volumen, productividad y clientes — SPEC-KRI
   it('sin elegir nada pide los últimos 30 días, y la primera página de clientes', async () => {
     const servidor = simularEstadisticas();
     await abrirPanel();
-    await screen.findByRole('heading', { name: 'Clientes atendidos de los últimos 30 días' });
+    await screen.findByRole('heading', { name: '¿Quiénes son los clientes que más vienen?' });
 
     const ultimos30 = { desde: '2026-09-17', hasta: HOY };
     const de = (ruta: string) => servidor.pedidos.find((p) => p.ruta === ruta)?.parametros;
@@ -209,7 +218,7 @@ describe('Panel de estadísticas: volumen, productividad y clientes — SPEC-KRI
   it('muestra cada día del período, también los que quedaron en 0, con sus anuladas', async () => {
     simularEstadisticas();
     await abrirPanel();
-    await screen.findByRole('heading', { name: 'Ropa recibida de los últimos 30 días' });
+    await screen.findByRole('heading', { name: '¿Cuánta ropa entró cada día?' });
 
     const volumen = seccion('Ropa recibida');
     expect(within(volumen).getByText('6 boletas')).toBeInTheDocument();
@@ -222,7 +231,7 @@ describe('Panel de estadísticas: volumen, productividad y clientes — SPEC-KRI
   it('muestra una fila por persona y por sucursal: quien trabajó en dos sale dos veces', async () => {
     simularEstadisticas();
     await abrirPanel();
-    await screen.findByRole('heading', { name: 'Lo que hizo cada persona de los últimos 30 días' });
+    await screen.findByRole('heading', { name: '¿Cuánto atendió cada persona?' });
 
     const personas = seccion('Lo que hizo cada persona');
     expect(within(personas).getByText('Ana Flores — Centro')).toBeInTheDocument();
@@ -236,7 +245,8 @@ describe('Panel de estadísticas: volumen, productividad y clientes — SPEC-KRI
     await abrirPanel();
 
     const clientes = await screen.findByRole('region', { name: 'Clientes atendidos' });
-    expect(await within(clientes).findByText('Rosa Quispe (70123456)')).toBeInTheDocument();
+    const detalle = within(await detalleDe(clientes));
+    expect(await detalle.findByText('Rosa Quispe (70123456)')).toBeInTheDocument();
     expect(within(clientes).getByText('Vino 3 veces · Pagó Bs 150,00 · Última vez: 15/10/2026 18:30')).toBeInTheDocument();
     expect(within(clientes).getByText('Norte: Vino 1 vez · Pagó Bs 50,00 · Última vez: 20/09/2026 10:00')).toBeInTheDocument();
     sinJerga();
@@ -272,7 +282,7 @@ describe('Panel de estadísticas: volumen, productividad y clientes — SPEC-KRI
     fireEvent.change(screen.getByLabelText('Hasta'), { target: { value: '2026-10-15' } });
     fireEvent.click(screen.getByRole('button', { name: 'Ver estas fechas' }));
 
-    await screen.findByRole('heading', { name: 'Clientes atendidos del 01/10/2026 al 15/10/2026' });
+    await within(await screen.findByRole('region', { name: 'Clientes atendidos' })).findByText('Del 01/10/2026 al 15/10/2026');
     const elegido = { desde: '2026-10-01', hasta: '2026-10-15', sucursal_id: SUCURSAL_CENTRO };
     const ultimoDe = (ruta: string) => servidor.pedidos.filter((p) => p.ruta === ruta).at(-1)?.parametros;
     await waitFor(() => expect(ultimoDe('/estadisticas/clientes')).toEqual({ ...elegido, pagina: 1, por_pagina: 20 }));
@@ -301,7 +311,7 @@ describe('Panel de estadísticas: volumen, productividad y clientes — SPEC-KRI
     expect(await within(clientes).findByText('Las estadísticas necesitan conexión.')).toBeInTheDocument();
     simularEstadisticas({ clientes: { status: 200, data: clientesDePrueba({ total: 45, pagina: 2 }) } });
     fireEvent.click(within(clientes).getByRole('button', { name: 'Probar de nuevo' }));
-    expect(await within(clientes).findByText('Rosa Quispe (70123456)')).toBeInTheDocument();
+    expect(await within(await detalleDe(clientes)).findByText('Rosa Quispe (70123456)')).toBeInTheDocument();
     sinJerga();
   });
 });
@@ -359,7 +369,7 @@ describe('El panel como tablero — SPEC-KRILINXI-026', () => {
       },
     });
     await abrirPanel();
-    await screen.findByRole('heading', { name: 'Cobrado de hoy' });
+    await screen.findByRole('heading', { name: '¿Cuánto se cobró en cada sucursal?' });
     const cobrado = grafico('Cobrado por sucursal y forma de pago');
 
     // La leyenda, con los cuatro métodos en su orden fijo.
@@ -416,7 +426,7 @@ describe('El panel como tablero — SPEC-KRILINXI-026', () => {
       },
     });
     await abrirPanel();
-    await screen.findByRole('heading', { name: 'Falta cobrar hasta hoy' });
+    await screen.findByRole('heading', { name: '¿Cuánto falta cobrar, y desde hace cuánto?' });
 
     const saldos = grafico('Falta cobrar según los días');
     const tramo = (nombre: RegExp) => within(saldos).getByRole('button', { name: nombre });
@@ -439,7 +449,7 @@ describe('El panel como tablero — SPEC-KRILINXI-026', () => {
     const [centro, norte] = productividadDePrueba().porEmpleado;
     simularEstadisticas({ productividad: { status: 200, data: productividadDePrueba({ porEmpleado: [norte, centro] }) } });
     await abrirPanel();
-    await screen.findByRole('heading', { name: 'Lo que hizo cada persona de los últimos 30 días' });
+    await screen.findByRole('heading', { name: '¿Cuánto atendió cada persona?' });
 
     const barras = within(grafico('Ropa recibida por cada persona')).getAllByRole('button');
     expect(barras.map((b) => b.querySelector('span > span')?.textContent)).toEqual(['Ana Flores (Centro)', 'Ana Flores (Norte)']);
@@ -452,7 +462,7 @@ describe('El panel como tablero — SPEC-KRILINXI-026', () => {
   it('nada se ve solo con el mouse: tocar o enfocar una barra escribe su detalle en palabras', async () => {
     simularEstadisticas();
     await abrirPanel();
-    await screen.findByRole('heading', { name: 'Ropa recibida de los últimos 30 días' });
+    await screen.findByRole('heading', { name: '¿Cuánta ropa entró cada día?' });
     const porDia = grafico('Ropa recibida por día');
     expect(within(porDia).getByText('Tocá un día para ver cuánta ropa entró.')).toBeInTheDocument();
 
@@ -477,7 +487,7 @@ describe('El panel como tablero — SPEC-KRILINXI-026', () => {
   it('cada gráfico tiene nombre, y su tabla con los mismos números para el lector de pantalla', async () => {
     simularEstadisticas();
     await abrirPanel();
-    await screen.findByRole('heading', { name: 'Ropa recibida de los últimos 30 días' });
+    await screen.findByRole('heading', { name: '¿Cuánta ropa entró cada día?' });
 
     for (const nombre of [
       'Cobrado por sucursal y forma de pago',
@@ -499,7 +509,7 @@ describe('El panel como tablero — SPEC-KRILINXI-026', () => {
   it('debajo de cada gráfico sigue el detalle de siempre', async () => {
     simularEstadisticas();
     await abrirPanel();
-    await screen.findByRole('heading', { name: 'Falta cobrar hasta hoy' });
+    await screen.findByRole('heading', { name: '¿Cuánto falta cobrar, y desde hace cuánto?' });
 
     const saldos = seccion('Falta cobrar');
     expect(grafico('Falta cobrar según los días').compareDocumentPosition(within(saldos).getByRole('list', { name: 'Boletas con saldo' }))).toBe(
@@ -531,5 +541,187 @@ describe('El panel como tablero — SPEC-KRILINXI-026', () => {
     await abrirPanel();
     await screen.findByRole('region', { name: 'Resumen' });
     expect(screen.getByRole('main').querySelector('[style]')).toBeNull();
+  });
+});
+
+describe('El panel como dashboard — SPEC-KRILINXI-042', () => {
+  /** Cada pregunta del tablero: su tarjeta, cómo se lee en voz alta y el gráfico que la contesta. */
+  const TARJETAS = [
+    { region: 'Cobrado por forma de pago', pregunta: '¿Cuánto se cobró con cada forma de pago?', grafico: 'Cobrado con cada forma de pago' },
+    { region: 'Cobrado por sucursal', pregunta: '¿Cuánto se cobró en cada sucursal?', grafico: 'Cobrado por sucursal y forma de pago' },
+    { region: 'Ropa recibida', pregunta: '¿Cuánta ropa entró cada día?', grafico: 'Ropa recibida por día' },
+    { region: 'Falta cobrar', pregunta: '¿Cuánto falta cobrar, y desde hace cuánto?', grafico: 'Falta cobrar según los días' },
+    { region: 'Ropa sin recoger', pregunta: '¿Cuánta ropa falta recoger, y desde hace cuánto?', grafico: 'Ropa sin recoger según los días' },
+    { region: 'Lo que hizo cada persona', pregunta: '¿Cuánto atendió cada persona?', grafico: 'Ropa recibida por cada persona' },
+    { region: 'Clientes atendidos', pregunta: '¿Quiénes son los clientes que más vienen?', grafico: 'Veces que vino cada cliente' },
+  ] as const;
+
+  it('debajo de los indicadores hay una grilla de tarjetas: una por fila en angosta y dos desde 1024px', async () => {
+    simularEstadisticas();
+    await abrirPanel();
+    const primera = await screen.findByRole('region', { name: 'Cobrado por forma de pago' });
+
+    const grilla = primera.parentElement as HTMLElement;
+    // `lg:grid-cols-2` es desde 1024px; sin prefijo, una sola columna.
+    expect(grilla).toHaveClass('grid', 'grid-cols-1', 'gap-6', 'lg:grid-cols-2');
+    expect(grilla).not.toHaveClass('grid-cols-2');
+    // Las siete tarjetas son hijas de la misma grilla, y vienen después de los indicadores.
+    expect([...grilla.children].map((c) => c.getAttribute('aria-label'))).toEqual(TARJETAS.map((t) => t.region));
+    expect(seccion('Resumen').compareDocumentPosition(grilla)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
+  it('los treinta días de ropa recibida ocupan la fila entera; las demás, una celda', async () => {
+    simularEstadisticas();
+    await abrirPanel();
+    await screen.findByRole('region', { name: 'Cobrado por forma de pago' });
+
+    expect(seccion('Ropa recibida')).toHaveClass('lg:col-span-2');
+    for (const { region } of TARJETAS.filter((t) => t.region !== 'Ropa recibida')) {
+      expect(seccion(region)).not.toHaveClass('lg:col-span-2');
+    }
+  });
+
+  it.each(TARJETAS)('"$pregunta" tiene su título en palabras, su gráfico con nombre y su tabla para el lector de pantalla', async ({ region, pregunta, grafico }) => {
+    simularEstadisticas();
+    await abrirPanel();
+    const tarjeta = await screen.findByRole('region', { name: region });
+
+    expect(within(tarjeta).getByRole('heading', { name: pregunta, level: 2 })).toBeInTheDocument();
+    const figura = await within(tarjeta).findByRole('figure', { name: grafico });
+    const tabla = within(figura).getByRole('table', { name: grafico });
+    expect(tabla.parentElement).toHaveClass('sr-only');
+    sinJerga();
+  });
+
+  it('cada tarjeta dice qué período mira, debajo de su pregunta', async () => {
+    simularEstadisticas();
+    await abrirPanel();
+    await screen.findByRole('region', { name: 'Cobrado por forma de pago' });
+
+    expect(within(seccion('Cobrado por forma de pago')).getByText('De hoy')).toBeInTheDocument();
+    expect(within(seccion('Falta cobrar')).getByText('Hasta hoy')).toBeInTheDocument();
+    expect(within(seccion('Ropa recibida')).getByText('De los últimos 30 días')).toBeInTheDocument();
+  });
+
+  it('el gráfico de forma de pago suma lo de todas las sucursales, con el color de cada forma y las cuatro en su orden', async () => {
+    simularEstadisticas({
+      ingresos: {
+        status: 200,
+        data: ingresosDePrueba({
+          total: '160.00',
+          porSucursal: [
+            ...ingresosDePrueba().porSucursal,
+            {
+              sucursalId: SUCURSAL_NORTE,
+              sucursal: 'Norte',
+              total: '34.50',
+              porMetodo: { EFECTIVO: '10.00', QR: '0.00', TARJETA: '0.00', TRANSFERENCIA: '24.50' },
+            },
+          ],
+        }),
+      },
+    });
+    await abrirPanel();
+    const tarjeta = await screen.findByRole('region', { name: 'Cobrado por forma de pago' });
+    const figura = within(tarjeta).getByRole('figure', { name: 'Cobrado con cada forma de pago' });
+
+    const barras = within(figura).getAllByRole('button');
+    expect(barras.map((b) => b.querySelector('span > span')?.textContent)).toEqual(['Efectivo', 'Pago con QR', 'Tarjeta', 'Transferencia']);
+    // Efectivo: 100 del Centro + 10 del Norte. QR: solo el Centro. Tarjeta, nada. Transferencia: solo el Norte.
+    expect(within(figura).getByRole('button', { name: 'Efectivo: Bs 110,00 cobrado.' })).toBeInTheDocument();
+    expect(within(figura).getByRole('button', { name: 'Pago con QR: Bs 25,50 cobrado.' })).toBeInTheDocument();
+    expect(within(figura).getByRole('button', { name: 'Tarjeta: Bs 0,00 cobrado.' })).toBeInTheDocument();
+    expect(within(figura).getByRole('button', { name: 'Transferencia: Bs 24,50 cobrado.' })).toBeInTheDocument();
+    // El color sigue a la forma de pago, como en todo el panel; la que está en cero no tiene barra.
+    expect(barras[0]?.querySelector('rect')).toHaveClass('fill-serie-1');
+    expect(barras[1]?.querySelector('rect')).toHaveClass('fill-serie-2');
+    expect(barras[2]?.querySelector('rect')).toBeNull();
+    expect(barras[3]?.querySelector('rect')).toHaveClass('fill-serie-4');
+    // La más larga llega a todo el ancho, y las demás se miden con su escala.
+    expect(barras[0]?.querySelector('[data-barra]')).toHaveAttribute('width', '100%');
+    expect(barras[1]?.querySelector('[data-barra]')).toHaveAttribute('width', '23.18%');
+    // El total general, tal como lo manda el servidor; y la tabla para el lector de pantalla.
+    expect(within(tarjeta).getByText('Bs 160,00')).toBeInTheDocument();
+    expect(fila(tarjeta, 'Cobrado con cada forma de pago', 'Efectivo')).toEqual(['Efectivo', 'Bs 110,00']);
+  });
+
+  it('el detalle en listas va en "Ver el detalle", plegado por defecto, y se abre con un toque', async () => {
+    simularEstadisticas();
+    await abrirPanel();
+    await screen.findByRole('region', { name: 'Cobrado por forma de pago' });
+
+    for (const region of ['Falta cobrar', 'Ropa sin recoger', 'Lo que hizo cada persona', 'Clientes atendidos']) {
+      const detalle = await detalleDe(seccion(region));
+      expect(detalle).not.toHaveAttribute('open');
+      expect(within(detalle).getByText('Ver el detalle')).toBeInTheDocument();
+      // El gráfico queda a la vista, fuera del detalle plegado.
+      expect(detalle.contains(within(seccion(region)).getByRole('figure'))).toBe(false);
+    }
+
+    const saldos = await detalleDe(seccion('Falta cobrar'));
+    fireEvent.click(within(saldos).getByText('Ver el detalle'));
+    expect(saldos).toHaveAttribute('open');
+    expect(within(saldos).getByRole('list', { name: 'Boletas con saldo' })).toHaveTextContent('Boleta 001234 — Rosa Quispe');
+  });
+
+  it('las tarjetas que se leen enteras en su gráfico no tienen detalle que plegar', async () => {
+    simularEstadisticas();
+    await abrirPanel();
+    await screen.findByRole('region', { name: 'Cobrado por forma de pago' });
+
+    for (const region of ['Cobrado por forma de pago', 'Cobrado por sucursal', 'Ropa recibida']) {
+      expect(within(seccion(region)).queryByText('Ver el detalle')).not.toBeInTheDocument();
+    }
+  });
+
+  it('los clientes que más vienen son una barra por cliente con cuántas veces vino, y la barra de páginas va arriba del detalle', async () => {
+    simularEstadisticas({ clientes: { status: 200, data: clientesDePrueba({ total: 45 }) } });
+    await abrirPanel();
+    const tarjeta = await screen.findByRole('region', { name: 'Clientes atendidos' });
+    const figura = await within(tarjeta).findByRole('figure', { name: 'Veces que vino cada cliente' });
+
+    const barra = within(figura).getByRole('button', { name: /^Rosa Quispe \(70123456\): Vino 3 veces · Pagó Bs 150,00/ });
+    expect(within(barra).getByText('Vino 3 veces')).toBeInTheDocument();
+    expect(barra.querySelector('rect')).toHaveClass('fill-serie-1');
+    expect(fila(tarjeta, 'Veces que vino cada cliente', 'Rosa Quispe (70123456)')).toEqual([
+      'Rosa Quispe (70123456)',
+      '3 veces',
+      'Bs 150,00',
+      '15/10/2026 18:30',
+    ]);
+    // Pasar de página cambia también el gráfico, no solo la lista: por eso no está dentro del detalle.
+    const paginas = within(tarjeta).getByRole('navigation', { name: 'Páginas de clientes' });
+    expect(paginas.compareDocumentPosition(await detalleDe(tarjeta))).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
+  it('sin clientes en el período, lo dice en palabras en vez de dibujar un gráfico vacío', async () => {
+    simularEstadisticas({ clientes: { status: 200, data: clientesDePrueba({ clientes: [], total: 0 }) } });
+    await abrirPanel();
+    const tarjeta = await screen.findByRole('region', { name: 'Clientes atendidos' });
+
+    expect(await within(tarjeta).findByText('No vino ningún cliente en este período.')).toBeInTheDocument();
+    expect(within(tarjeta).queryByRole('figure')).not.toBeInTheDocument();
+  });
+
+  it('el filtro de arriba cambia todas las tarjetas a la vez', async () => {
+    simularEstadisticas();
+    await abrirPanel();
+    await screen.findByRole('region', { name: 'Cobrado por forma de pago' });
+
+    fireEvent.change(screen.getByLabelText('Desde'), { target: { value: '2026-10-01' } });
+    fireEvent.change(screen.getByLabelText('Hasta'), { target: { value: '2026-10-15' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Ver estas fechas' }));
+
+    for (const { region } of TARJETAS) {
+      expect(await within(await screen.findByRole('region', { name: region })).findByText('Del 01/10/2026 al 15/10/2026')).toBeInTheDocument();
+    }
+  });
+
+  it('sin internet dice que las estadísticas necesitan conexión y no dibuja ninguna tarjeta', async () => {
+    simularEstadisticas('sin-conexion');
+    await abrirPanel();
+
+    expect(await screen.findByText('Las estadísticas necesitan conexión.')).toBeInTheDocument();
+    for (const { region } of TARJETAS) expect(screen.queryByRole('region', { name: region })).not.toBeInTheDocument();
   });
 });

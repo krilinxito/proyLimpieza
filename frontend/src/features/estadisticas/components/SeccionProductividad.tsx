@@ -5,6 +5,7 @@ import { BarrasHorizontales } from './graficos/BarrasHorizontales';
 import { COLOR_UNICO } from './graficos/colores';
 import { masRecibidasPrimero } from './graficos/escalas';
 import { Grafico } from './graficos/Grafico';
+import { Detalle } from './Detalle';
 import { bs, veces } from './montos';
 import { SeccionPanel } from './SeccionPanel';
 
@@ -15,7 +16,8 @@ const quien = (f: Fila) => `${f.usuario.nombreCompleto} — ${f.sucursal.nombre}
 const resumen = (f: Fila) => `Recibió ${f.ordenesRecibidas} · Cobró ${veces(f.cobros)} (${bs(f.montoCobrado)}) · Entregó ${f.entregas}`;
 
 /**
- * Lo que hizo cada persona, por sucursal — SPEC-KRILINXI-016. Quien trabajó en dos sucursales
+ * ¿Cuánto atendió cada persona? — SPEC-KRILINXI-016, por sucursal; el detalle va plegado en "Ver el detalle"
+ * (SPEC-KRILINXI-042). Quien trabajó en dos sucursales
  * aparece dos veces: cada registro cuenta en la sucursal donde se hizo (SPEC-ALE186-012).
  *
  * Desde SPEC-KRILINXI-026, arriba va un gráfico de cuánta ropa recibió cada uno, de más a menos.
@@ -26,7 +28,7 @@ export function SeccionProductividad({ productividad, periodo }: { productividad
   const ordenadas = masRecibidasPrimero(filas);
   const paginas = usePaginado(filas, productividad);
   return (
-    <SeccionPanel nombre="Lo que hizo cada persona" titulo={`Lo que hizo cada persona ${periodo}`}>
+    <SeccionPanel nombre="Lo que hizo cada persona" pregunta="¿Cuánto atendió cada persona?" periodo={periodo}>
       <Grafico
         nombre="Ropa recibida por cada persona"
         vacio={filas.length === 0}
@@ -56,16 +58,18 @@ export function SeccionProductividad({ productividad, periodo }: { productividad
       {filas.length === 0 ? (
         <p className="mt-4 text-xl text-texto-suave">Nadie registró nada en este período.</p>
       ) : (
-        <ul aria-label="Personas" className="mt-4 grid gap-3">
-          {(paginas.visibles ?? []).map((f) => (
-            <li key={clave(f)} className="rounded-xl border border-borde-suave p-4 text-xl">
-              <p className="font-semibold text-texto">{quien(f)}</p>
-              <p className="mt-1 text-texto-suave">{resumen(f)}</p>
-            </li>
-          ))}
-        </ul>
+        <Detalle>
+          <ul aria-label="Personas" className="mt-2 grid gap-3">
+            {(paginas.visibles ?? []).map((f) => (
+              <li key={clave(f)} className="rounded-xl border border-borde-suave p-4 text-xl">
+                <p className="font-semibold text-texto">{quien(f)}</p>
+                <p className="mt-1 text-texto-suave">{resumen(f)}</p>
+              </li>
+            ))}
+          </ul>
+          <Paginas pagina={paginas.pagina} total={paginas.total} porPagina={paginas.porPagina} irAPagina={paginas.irAPagina} nombre="Páginas de lo que hizo cada persona" />
+        </Detalle>
       )}
-      <Paginas pagina={paginas.pagina} total={paginas.total} porPagina={paginas.porPagina} irAPagina={paginas.irAPagina} nombre="Páginas de lo que hizo cada persona" />
     </SeccionPanel>
   );
 }

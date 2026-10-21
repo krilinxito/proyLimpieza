@@ -20,8 +20,8 @@ function detalle(s: DeSucursal): string {
 }
 
 /**
- * Cuánto se cobró, por sucursal y por forma de pago — SPEC-KRILINXI-015, como gráfico desde
- * SPEC-KRILINXI-026: una barra por sucursal, apilada por método. Es "parte de un todo", y con
+ * ¿Cuánto se cobró en cada sucursal? — SPEC-KRILINXI-015, como gráfico desde SPEC-KRILINXI-026 y
+ * como una de las tarjetas del dashboard desde SPEC-KRILINXI-042: una barra por sucursal, apilada por método. Es "parte de un todo", y con
  * cuatro partes una barra apilada se compara mejor que una torta.
  *
  * Los totales vienen sumados del servidor. Los centavos de `desdeDecimal` son solo para medir las
@@ -30,7 +30,7 @@ function detalle(s: DeSucursal): string {
 export function SeccionIngresos({ ingresos, periodo }: { ingresos: Ingresos; periodo: string }) {
   const totales = ingresos.porSucursal.map((s) => desdeDecimal(s.total));
   return (
-    <SeccionPanel nombre="Cobrado" titulo={`Cobrado ${periodo}`}>
+    <SeccionPanel nombre="Cobrado por sucursal" pregunta="¿Cuánto se cobró en cada sucursal?" periodo={periodo}>
       <p className="mt-2 text-3xl font-bold text-texto">{bs(ingresos.total)}</p>
       <Grafico
         nombre="Cobrado por sucursal y forma de pago"

@@ -17,8 +17,9 @@ const delDia = (dia: Volumen['porDia'][number]) => `${boletas(dia.ordenes)}${dia
  * quedan en 0: un día sin ropa es un dato, no un hueco en el eje.
  */
 export function SeccionVolumen({ volumen, periodo }: { volumen: Volumen; periodo: string }) {
+  // Los treinta días necesitan ancho: la tarjeta ocupa la fila entera (`entera`).
   return (
-    <SeccionPanel nombre="Ropa recibida" titulo={`Ropa recibida ${periodo}`}>
+    <SeccionPanel nombre="Ropa recibida" pregunta="¿Cuánta ropa entró cada día?" periodo={periodo} entera>
       <p className="mt-2 text-3xl font-bold text-texto">{boletas(volumen.total)}</p>
       {volumen.anuladas > 0 && <p className="mt-1 text-xl text-texto-suave">De esas, {anuladas(volumen.anuladas)}.</p>}
       <Grafico
