@@ -12,7 +12,8 @@
     "check": "npm run check --workspaces --if-present"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=24 <25",
+    "npm": ">=11 <12"
   },
   "devDependencies": {
     "typescript": "5.9.3"
