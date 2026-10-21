@@ -23,6 +23,18 @@ export const COLOR_METODO: Record<MetodoPago, Color> = {
   TRANSFERENCIA: { marca: 'fill-serie-4', muestra: 'bg-serie-4' },
 };
 
+/**
+ * El trazo de cada línea de un gráfico de líneas — SPEC-KRILINXI-044. Es el mismo color que la barra de esa
+ * forma de pago (`COLOR_METODO`), pero como `stroke`: una línea se pinta con trazo, no con relleno. Los
+ * puntos de la línea sí usan el relleno (`COLOR_METODO[m].marca`).
+ */
+export const TRAZO_METODO: Record<MetodoPago, string> = {
+  EFECTIVO: 'stroke-serie-1',
+  QR: 'stroke-serie-2',
+  TARJETA: 'stroke-serie-3',
+  TRANSFERENCIA: 'stroke-serie-4',
+};
+
 /** Las barras de una sola serie (la ropa de cada día, lo que recibió cada persona): un solo color. */
 export const COLOR_UNICO: Color = COLOR_METODO.EFECTIVO;
 

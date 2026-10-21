@@ -240,6 +240,14 @@ debajo. El detalle en listas (cada boleta, persona o cliente) va plegado en "Ver
 **Excepción a §8**: el total por forma de pago lo suma el frontend, en centavos enteros
 (`features/estadisticas/totalesPorFormaDePago.ts`), porque `/ingresos` solo lo trae por sucursal; es la única suma
 de dinero del frontend, y su test la compara con el total que suma Postgres. Cuando la API lo traiga, se borra.
+SPEC-KRILINXI-044 sumó al dashboard la tarjeta "¿Cómo vino la caja día a día?" (`SeccionTendencia`): un **gráfico de
+líneas del proyecto** (`graficos/Lineas.tsx`, SVG sin `viewBox` y sin librería, con un `<line>` entre cada par de días
+porque una `<polyline>` no admite porcentajes) con lo cobrado cada día, y a elección una línea por forma de pago (cuatro
+como mucho, con los `serie-1…4` y la leyenda de siempre). Pide `GET /api/estadisticas/ingresos-por-dia` (SPEC-KRILINXI-043)
+**aparte del panel** (`useIngresosPorDia`, por defecto los últimos 30 días): así el Inicio del admin, que reusa
+`usePanel`, no pide de más. Cada día es un botón sobre el dibujo (tocar o enfocar escribe su detalle), los días sin cobros
+se dibujan en cero sin cortar la línea, y no se suma nada en el frontend. Para los tests, `ingresosPorDiaDePrueba` e
+`ingresosPorDiaDeDias` en `test/estadisticasDePrueba.ts`.
 SPEC-KRILINXI-027 cerró la ola con las pantallas de gestión: Personal, Sucursales, ¿Quién hizo qué? y
 Registros para corregir. Cada cuenta, sucursal, registro de la auditoría y rechazo es una `Tarjeta`; su
 estado, una `Insignia` (qué tono lleva cada estado lo decide la feature, como `TONO_ESTADO`), y el

@@ -34,6 +34,47 @@ export function ingresosDePrueba(cambios: Record<string, unknown> = {}) {
   };
 }
 
+const EN_CERO = { EFECTIVO: '0.00', QR: '0.00', TARJETA: '0.00', TRANSFERENCIA: '0.00' };
+
+/**
+ * `GET /api/estadisticas/ingresos-por-dia` — SPEC-KRILINXI-044 (el contrato es de SPEC-KRILINXI-043). Tres días:
+ * el 14 con Bs 40,00 en efectivo, el 15 con Bs 125,50 (100 de efectivo y 25,50 de QR) y el 16 sin cobros, que
+ * viene igual, en cero. El total es el de todo el período, como lo suma el servidor.
+ *
+ *     simularEstadisticas({ ingresosPorDia: { status: 200, data: ingresosPorDiaDePrueba({ porDia: [] }) } });
+ */
+export function ingresosPorDiaDePrueba(cambios: Record<string, unknown> = {}) {
+  return {
+    desde: '2026-10-14',
+    hasta: '2026-10-16',
+    total: '165.50',
+    porDia: [
+      { fecha: '2026-10-14', total: '40.00', porMetodo: { ...EN_CERO, EFECTIVO: '40.00' } },
+      { fecha: '2026-10-15', total: '125.50', porMetodo: { ...EN_CERO, EFECTIVO: '100.00', QR: '25.50' } },
+      { fecha: '2026-10-16', total: '0.00', porMetodo: EN_CERO },
+    ],
+    ...cambios,
+  };
+}
+
+/**
+ * Lo cobrado en `dias` días que terminan el 16/10/2026, con `efectivo(i)` en efectivo el día i (de 0, el primero).
+ * El total del día y el del período salen de acá, sumados en el test: el servidor los suma en la API de verdad.
+ */
+export function ingresosPorDiaDeDias(dias: number, efectivo: (i: number) => number = (i) => i * 10) {
+  const fin = Date.UTC(2026, 9, 16);
+  const porDia = Array.from({ length: dias }, (_, i) => {
+    const monto = efectivo(i).toFixed(2);
+    return {
+      fecha: new Date(fin - (dias - 1 - i) * 86_400_000).toISOString().slice(0, 10),
+      total: monto,
+      porMetodo: { ...EN_CERO, EFECTIVO: monto },
+    };
+  });
+  const total = porDia.reduce((suma, d) => suma + Math.round(Number(d.total) * 100), 0) / 100;
+  return ingresosPorDiaDePrueba({ desde: porDia[0]?.fecha, hasta: porDia.at(-1)?.fecha, total: total.toFixed(2), porDia });
+}
+
 export function saldosDePrueba(cambios: Record<string, unknown> = {}) {
   return {
     desde: '2000-01-01',
@@ -195,6 +236,7 @@ export function clientesDePrueba(cambios: Record<string, unknown> = {}) {
 
 type Respuestas = {
   ingresos?: RespuestaFalsa;
+  ingresosPorDia?: RespuestaFalsa;
   saldos?: RespuestaFalsa;
   sinRecoger?: RespuestaFalsa;
   volumen?: RespuestaFalsa;
@@ -210,6 +252,8 @@ export function simularEstadisticas(respuestas: Respuestas | 'sin-conexion' = {}
     switch (pedido.ruta) {
       case '/estadisticas/ingresos':
         return respuestas.ingresos ?? ok(ingresosDePrueba());
+      case '/estadisticas/ingresos-por-dia':
+        return respuestas.ingresosPorDia ?? ok(ingresosPorDiaDePrueba());
       case '/estadisticas/saldos':
         return respuestas.saldos ?? ok(saldosDePrueba());
       case '/estadisticas/sin-recoger':

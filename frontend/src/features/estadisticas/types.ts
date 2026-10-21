@@ -31,6 +31,22 @@ export type Ingresos = {
   }[];
 };
 
+/** Lo cobrado un día, con el desglose por forma de pago — `/ingresos-por-dia`, SPEC-KRILINXI-043. */
+export type IngresoDia = {
+  /** `YYYY-MM-DD`, día de Bolivia. */
+  fecha: string;
+  total: MontoTexto;
+  porMetodo: Record<MetodoPago, MontoTexto>;
+};
+
+/** `/ingresos-por-dia`: todos los días del período, también los que quedan en "0.00". */
+export type IngresosPorDia = {
+  desde: string;
+  hasta: string;
+  total: MontoTexto;
+  porDia: IngresoDia[];
+};
+
 export type Saldos = {
   desde: string;
   hasta: string;
