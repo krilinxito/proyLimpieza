@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-045
 name: Versiones fijas de Node y npm para el monorepo
 slug: engines-npm
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-21
 scope:
@@ -13,7 +13,8 @@ scope:
   - CLAUDE.md
 priority: low
 depends_on: []
-tests: []
+tests:
+  - backend\tests\unit\versionesDelEntorno.test.ts
 ---
 
 ## Descripción
