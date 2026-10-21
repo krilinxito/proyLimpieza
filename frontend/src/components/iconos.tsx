@@ -155,6 +155,13 @@ const TRAZOS = {
       <path d="M8 11V7a4 4 0 0 1 7.8-1.2" />
     </>
   ),
+  // SPEC-KRILINXI-041: el Historial de boletas (una hoja con renglones).
+  historial: (
+    <>
+      <rect x="5" y="3" width="14" height="18" rx="2" />
+      <path d="M9 8h6M9 12h6M9 16h4" />
+    </>
+  ),
 } satisfies Record<string, ReactElement>;
 
 export type NombreIcono = keyof typeof TRAZOS;

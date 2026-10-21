@@ -65,7 +65,7 @@ describe('Marco: el menú — SPEC-KRILINXI-023', () => {
     abrir();
     // El Mostrador junta Ropa en el local, Entregar ropa y Cobrar desde SPEC-KRILINXI-033.
     // Registrar ropa es un botón del Mostrador desde SPEC-KRILINXI-034.
-    expect(nombres(menu())).toEqual(['Inicio', 'Mostrador', 'Clientes']);
+    expect(nombres(menu())).toEqual(['Inicio', 'Mostrador', 'Clientes', 'Historial de boletas']);
     for (const enlace of within(menu()).getAllByRole('link')) {
       expect(enlace.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
     }
@@ -73,7 +73,15 @@ describe('Marco: el menú — SPEC-KRILINXI-023', () => {
 
   it('un ADMIN ve el Inicio y lo suyo, sin Registrar ropa', () => {
     abrir('/', ADMIN);
-    expect(nombres(menu())).toEqual(['Inicio', 'Clientes', 'Personal', 'Sucursales', '¿Quién hizo qué?', 'Estadísticas']);
+    expect(nombres(menu())).toEqual([
+      'Inicio',
+      'Clientes',
+      'Historial de boletas',
+      'Personal',
+      'Sucursales',
+      '¿Quién hizo qué?',
+      'Estadísticas',
+    ]);
   });
 
   it('marca la pantalla actual, y solo esa, como página actual', () => {

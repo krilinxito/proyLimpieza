@@ -31,7 +31,8 @@ export const MENSAJES_ACCION = {
 } as const;
 
 // La orden con su cliente y su entrega. Los pagos se leen aparte: son varios por orden.
-const SELECT_ORDENES = `
+// Exportada desde SPEC-KRILINXI-041: el historial de boletas lee lo mismo con otros filtros.
+export const SELECT_ORDENES = `
   SELECT o.id, o.numero_boleta, o.cliente_id, o.descripcion, o.estado, o.fecha_entrada, o.fecha_estimada_salida,
          o.precio_total, c.nombre AS cliente_nombre, c.telefono AS cliente_telefono,
          e.id AS entrega_id, e.precio_final
@@ -107,7 +108,8 @@ function aOrden(fila: Fila, pagos: PagoVisto[]): OrdenVista | null {
   };
 }
 
-async function armar(base: BaseLocal, filas: Fila[]): Promise<OrdenVista[]> {
+/** De las filas de `SELECT_ORDENES` a órdenes con su estado efectivo, sus pagos y su saldo. */
+export async function armar(base: BaseLocal, filas: Fila[]): Promise<OrdenVista[]> {
   const ids = filas.map((f) => f.id).filter((id): id is string => typeof id === 'string');
   const pagos = await pagosPorOrden(base, ids);
   return filas.flatMap((fila) => {

@@ -4,6 +4,7 @@ import { PantallaAuditoria } from '../features/auditoria/components/PantallaAudi
 import { PantallaIngreso } from '../features/auth/components/PantallaIngreso';
 import { ConSucursalDeTrabajo } from '../features/atencion/components/ConSucursalDeTrabajo';
 import { PantallaClientes } from '../features/clientes/components/PantallaClientes';
+import { PantallaHistorial } from '../features/historial/components/PantallaHistorial';
 import { PantallaMostrador, PARAMETRO_REGISTRAR } from '../features/mostrador/components/PantallaMostrador';
 import { PantallaEstadisticas } from '../features/estadisticas/components/PantallaEstadisticas';
 import { PantallaParaCorregir } from '../features/pendientes/components/PantallaParaCorregir';
@@ -121,6 +122,21 @@ export const RUTAS: readonly Ruta[] = [
     elemento: (
       <Pantalla titulo="Clientes">
         <PantallaClientes />
+      </Pantalla>
+    ),
+  },
+  {
+    camino: '/boletas',
+    titulo: 'Historial de boletas',
+    enMenu: true,
+    icono: 'historial',
+    descripcion: 'Buscar boletas pasadas por número, cliente, fecha o saldo.',
+    // Para todos, pero cada uno ve lo suyo (SPEC-KRILINXI-041): quien atiende, su sucursal; el
+    // admin que no atiende, todas. Por eso no es `mostrador`: el admin sin sucursal también entra.
+    acceso: TODOS,
+    elemento: (
+      <Pantalla titulo="Historial de boletas">
+        <PantallaHistorial />
       </Pantalla>
     ),
   },

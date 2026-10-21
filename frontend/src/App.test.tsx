@@ -77,7 +77,7 @@ describe('App: menú por rol — SPEC-KRILINXI-003', () => {
     renderEnRuta(<App />, '/', { sesion: sesionDePrueba({ rol: 'EMPLEADO' }) });
     // Ropa en el local, Entregar ropa y Cobrar son una sola tarea desde SPEC-KRILINXI-033: el Mostrador.
     // Y Registrar ropa también, desde SPEC-KRILINXI-034: es un botón del Mostrador.
-    expect(nombresDelMenu()).toEqual(['Mostrador', 'Clientes']);
+    expect(nombresDelMenu()).toEqual(['Mostrador', 'Clientes', 'Historial de boletas']);
   });
 
   it('un ADMIN además ve Estadísticas, y no ve Registrar ropa (SPEC-KRILINXI-006)', () => {
@@ -86,7 +86,14 @@ describe('App: menú por rol — SPEC-KRILINXI-003', () => {
     // son del mostrador.
     // Personal y Sucursales desde SPEC-KRILINXI-017.
     // ¿Quién hizo qué? desde SPEC-KRILINXI-018.
-    expect(nombresDelMenu()).toEqual(['Clientes', 'Personal', 'Sucursales', '¿Quién hizo qué?', 'Estadísticas']);
+    expect(nombresDelMenu()).toEqual([
+      'Clientes',
+      'Historial de boletas',
+      'Personal',
+      'Sucursales',
+      '¿Quién hizo qué?',
+      'Estadísticas',
+    ]);
   });
 
   it.each(['/personal', '/sucursales', '/quien-hizo-que'])(
