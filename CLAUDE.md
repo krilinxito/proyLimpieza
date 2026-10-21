@@ -406,6 +406,15 @@ Saldo de una orden = (precio_final o, si aún no hay entrega, precio_total) − 
 
 PERN con TypeScript de punta a punta.
 
+**Versiones de Node y npm** (SPEC-KRILINXI-045) — **Node 24 (LTS) con el npm 11 que trae**, para todo el equipo:
+`engines` de la raíz dice `node >=24 <25` y `npm >=11 <12`, `.npmrc` tiene `engine-strict=true` y `.nvmrc` dice `24`.
+Con otra versión, `npm install` **falla** (`EBADENGINE`, con lo que se requiere y lo que hay) en vez de instalar
+igual. Cómo tener la versión: con nvm, `nvm install 24 && nvm use` (lee `.nvmrc`); en Windows sin nvm,
+`winget install OpenJS.NodeJS.LTS`. Se comprueba con `node --version` (v24.x) y `npm --version` (11.x). Por qué importa:
+cada versión de npm normaliza `package-lock.json` distinto, y el lock cambiaba según quién corriera `npm install`
+(ver §13). Un test (`backend/tests/unit/versionesDelEntorno.test.ts`) vigila que `package.json`, `.npmrc`, `.nvmrc` y el
+lock digan lo mismo.
+
 **Backend** — Node + Express + `pg` (SQL directo, sin ORM) + JWT + cors, con nodemon
 en `npm run dev`.
 
@@ -838,6 +847,16 @@ Nada se implementa sin una spec aprobada.
   alternativa era perder el trabajo. Salir confirmando, en cambio, sigue borrando la base
   aunque haya cosas sin subir; desde SPEC-KRILINXI-010 el aviso de salida lo dice, con el
   número de registros que se perderían, pero no lo impide.
+
+- **`package-lock.json` se commitea solo con Node 24 y npm 11** (SPEC-KRILINXI-045, ver §4). Cada versión de npm
+  normaliza el lock a su manera —npm 11.19, por ejemplo, borra las 26 líneas `"peer": true` de los `@esbuild/*`—, y
+  antes de fijar la versión el lock cambiaba en los PRs sin que ninguna dependencia hubiera cambiado. Con `engine-strict`
+  eso ya no pasa por accidente. Si `git status` te muestra el lock modificado sin que hayas tocado dependencias, no lo
+  commitees: revisá `node --version` y `npm --version`, volvé al lock con `git checkout package-lock.json` y
+  reinstalá con la versión acordada. Cambiar de versión (a Node 26, a npm 12) es una decisión del equipo y una spec: se
+  cambian `engines`, `.nvmrc` y el lock **juntos**, en el mismo PR.
+  Una advertencia que hoy sale y no se trató: npm 11.19 avisa que `bcrypt`, `better-sqlite3` y `esbuild` tienen scripts de
+  instalación "no cubiertos por `allowScripts`". Es solo un aviso (todo funciona); aprobarlos explícitamente es una spec aparte.
 
 - **El monorepo tiene DOS versiones de TypeScript, y la raíz fija una a propósito.**
   El frontend usa TypeScript 7 y el backend 5.9. Al instalar, npm hoistea a la raíz una
