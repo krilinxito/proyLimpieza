@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-043
 name: Lo cobrado por día, en la API
 slug: ingresos-por-dia-api
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-19
 scope:
