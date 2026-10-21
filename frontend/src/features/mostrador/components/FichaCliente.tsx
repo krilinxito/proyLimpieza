@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Paginas } from '../../../components/Paginas';
+import { usePaginado } from '../../../hooks/usePaginado';
 import { TarjetaCliente } from '../../clientes/components/TarjetaCliente';
 import type { Cliente } from '../../clientes/types';
 import { AccionEntregar } from '../../entregas/components/AccionEntregar';
@@ -30,6 +32,7 @@ export function FichaCliente({ clienteId, abierta, alAbrir }: Props) {
   const [cliente, setCliente] = useState<Cliente | null | undefined>(undefined);
   const [ropa, setRopa] = useState<OrdenVista[] | null>(null);
   const [entregada, setEntregada] = useState<EntregaLista | null>(null);
+  const paginas = usePaginado(ropa);
 
   const recargar = useCallback(async () => {
     if (!mostrador.lista) return;
@@ -86,15 +89,16 @@ export function FichaCliente({ clienteId, abierta, alAbrir }: Props) {
           <h2 className="mt-8 text-2xl font-bold text-texto">Su ropa en esta sucursal</h2>
           {ropa === null && <p className="mt-4 text-xl text-texto-suave">Buscando…</p>}
           {ropa?.length === 0 && <p className="mt-4 text-xl text-texto-suave">No dejó ropa en esta sucursal.</p>}
-          {ropa && ropa.length > 0 && (
+          {paginas.visibles && paginas.visibles.length > 0 && (
             <ul className="mt-4 grid gap-3">
-              {ropa.map((orden) => (
+              {paginas.visibles.map((orden) => (
                 <li key={orden.id}>
                   <TarjetaOrden orden={orden} alElegir={() => alAbrir(orden.id)} />
                 </li>
               ))}
             </ul>
           )}
+          <Paginas pagina={paginas.pagina} total={paginas.total} porPagina={paginas.porPagina} irAPagina={paginas.irAPagina} nombre="Páginas de la ropa del cliente" />
         </>
       )}
     </section>

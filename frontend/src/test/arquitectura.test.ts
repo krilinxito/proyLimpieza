@@ -320,3 +320,66 @@ describe('La sucursal de trabajo, de un solo lugar — SPEC-KRILINXI-029', () =>
     expect(encontrados).toEqual([]);
   });
 });
+
+/**
+ * Ninguna lista larga se muestra de golpe — SPEC-KRILINXI-041. Toda lista que puede crecer se
+ * pagina (`<Paginas>`, con el tamaño que pide el ancho de la pantalla: `usePaginado` o
+ * `useTamanoDePagina`). Una lista de tarjetas con 200 boletas obliga a bajar con el dedo hasta
+ * perderse, y en la tablet del mostrador nadie vuelve a subir.
+ *
+ * El test no puede saber cuánto crece cada lista, así que obliga a decidirlo: cada archivo con un
+ * `<ul>` o `<ol>` tiene que estar en una de las dos listas de abajo. Si no está en ninguna, el test
+ * falla y quien escribe la lista elige: la pagina, o explica por qué es corta por construcción.
+ */
+const PAGINAN = [
+  'features/historial/components/PantallaHistorial.tsx',
+  'features/mostrador/components/PantallaMostrador.tsx',
+  'features/mostrador/components/FichaCliente.tsx',
+  'features/mostrador/components/HoyEnLaSucursal.tsx',
+  'features/usuarios/components/PantallaPersonal.tsx',
+  'features/sucursales/components/PantallaSucursales.tsx',
+  'features/pendientes/components/PantallaParaCorregir.tsx',
+  'features/auditoria/components/PantallaAuditoria.tsx',
+  'features/estadisticas/components/SeccionClientes.tsx',
+  'features/estadisticas/components/SeccionSaldos.tsx',
+  'features/estadisticas/components/SeccionSinRecoger.tsx',
+  'features/estadisticas/components/SeccionProductividad.tsx',
+];
+
+/** Listas que no crecen con el negocio, y por qué. */
+const CORTAS: Record<string, string> = {
+  'components/BuscadorVivo.tsx': 'muestra como mucho 6 resultados y avisa si hay más (SPEC-KRILINXI-032)',
+  'components/marco/MenuPrincipal.tsx': 'las pantallas del menú: una docena, fijas en el código',
+  'features/ordenes/components/DetalleOrden.tsx': 'los pagos de UNA boleta: dos o tres',
+  'features/auditoria/components/TarjetaRegistro.tsx': 'lo que cambió en UN registro: un puñado de campos',
+  'features/estadisticas/components/graficos/BarrasHorizontales.tsx': 'las barras de un gráfico, con su propia tabla',
+  'features/estadisticas/components/graficos/Leyenda.tsx': 'la leyenda de un gráfico: tres o cuatro series',
+};
+
+describe('Las listas largas se paginan — SPEC-KRILINXI-041', () => {
+  const CON_LISTA = archivosFuente('features', 'components', 'pages').filter(
+    ({ ruta, fuente }) => ruta.endsWith('.tsx') && /<(ul|ol)\b/.test(sinComentarios(fuente)),
+  );
+
+  it('revisa las listas de la app, no una lista vacía', () => {
+    expect(CON_LISTA.map(({ ruta }) => ruta)).toEqual(expect.arrayContaining([...PAGINAN, ...Object.keys(CORTAS)]));
+  });
+
+  it.each(PAGINAN)('%s dibuja la barra de páginas', (ruta) => {
+    const archivo = archivosFuente('features').find((a) => a.ruta === ruta);
+    expect(archivo?.fuente).toMatch(/<Paginas\b/);
+  });
+
+  it('toda lista nueva elige: se pagina, o se declara corta con su motivo', () => {
+    const sinDecidir = CON_LISTA.filter(({ ruta }) => !PAGINAN.includes(ruta) && !(ruta in CORTAS)).map(({ ruta }) => ruta);
+    expect(sinDecidir).toEqual([]);
+  });
+
+  it('el tamaño de página sale de un solo lugar: ningún archivo repite los números 6, 10 y 20 de la regla', () => {
+    // Quien necesite el tamaño lo pide a `useTamanoDePagina` / `usePaginado`, que leen `lib/tamanoDePagina.ts`.
+    const culpables = archivosFuente('features', 'components', 'pages', 'hooks')
+      .filter(({ fuente }) => /(?:por_pagina|porPagina|POR_PAGINA)\s*[:=]\s*(?:6|10|20)\b/.test(sinComentarios(fuente)))
+      .map(({ ruta }) => ruta);
+    expect(culpables).toEqual([]);
+  });
+});

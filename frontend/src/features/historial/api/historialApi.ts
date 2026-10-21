@@ -11,10 +11,9 @@
 import { api, RespuestaRara } from '../../../lib/api';
 import { esEstadoOrden } from '../../../lib/dominio';
 import { desdeDecimal } from '../../../lib/money';
+import { POR_PAGINA_ANCHA } from '../../../lib/tamanoDePagina';
 import type { ParametrosHistorial } from '../filtro';
 import type { BoletaListada, PaginaHistorial } from '../types';
-
-export const BOLETAS_POR_PAGINA = 20;
 
 export const ERROR_HISTORIAL = 'No se pudo traer el historial. Probá de nuevo y, si sigue pasando, avisale al encargado.';
 const INCOMPLETA = 'La lista llegó incompleta. Probá de nuevo y, si sigue pasando, avisale al encargado.';
@@ -81,8 +80,13 @@ export function leerPagina(datos: unknown): PaginaHistorial | null {
   };
 }
 
-export async function pedirHistorial(parametros: ParametrosHistorial, pagina: number): Promise<PaginaHistorial> {
-  const { data } = await api.get<unknown>('/ordenes', { params: { ...parametros, pagina, por_pagina: BOLETAS_POR_PAGINA } });
+/** Una página del historial. `porPagina` es lo que entra en la pantalla (`useTamanoDePagina`). */
+export async function pedirHistorial(
+  parametros: ParametrosHistorial,
+  pagina: number,
+  porPagina: number = POR_PAGINA_ANCHA,
+): Promise<PaginaHistorial> {
+  const { data } = await api.get<unknown>('/ordenes', { params: { ...parametros, pagina, por_pagina: porPagina } });
   const leida = leerPagina(data);
   if (!leida) throw new RespuestaRara(INCOMPLETA);
   return leida;

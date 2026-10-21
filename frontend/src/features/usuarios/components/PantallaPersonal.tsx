@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { AvisoResultado, AvisoSinRed, avisoDe } from '../../../components/AvisosAdmin';
 import { Boton } from '../../../components/Boton';
 import { Insignia, type TonoInsignia } from '../../../components/Insignia';
+import { Paginas } from '../../../components/Paginas';
 import { ModalConfirmacion } from '../../../components/ModalConfirmacion';
 import { Avatar } from '../../../components/marco/Avatar';
 import { Tarjeta } from '../../../components/Tarjeta';
 import { useEnLinea } from '../../../hooks/useEnLinea';
+import { usePaginado } from '../../../hooks/usePaginado';
 import { useSession } from '../../../hooks/useSession';
 import { TEXTO_ROL } from '../../../lib/dominio';
 import { useSucursalesAbiertas } from '../../sucursales/hooks/useSucursales';
@@ -40,6 +42,7 @@ export function PantallaPersonal() {
   const sucursales = useSucursalesAbiertas();
   const enLinea = useEnLinea();
   const { sesion } = useSession();
+  const paginas = usePaginado(cuentas);
   const [edicion, setEdicion] = useState<Edicion>(null);
   const [baja, setBaja] = useState<Cuenta | null>(null);
   const [aviso, setAviso] = useState<ReturnType<typeof avisoDe> | null>(null);
@@ -89,7 +92,7 @@ export function PantallaPersonal() {
         </Boton>
       </div>
       <ul className="mt-6 grid gap-4 lg:grid-cols-2">
-        {cuentas.map((c) => (
+        {(paginas.visibles ?? []).map((c) => (
           // `grid` en el renglón: la tarjeta se estira, y las de una misma fila quedan del mismo alto.
           <li key={c.id} className="grid">
             <Tarjeta titulo={c.nombreCompleto}>
@@ -129,6 +132,7 @@ export function PantallaPersonal() {
           </li>
         ))}
       </ul>
+      <Paginas pagina={paginas.pagina} total={paginas.total} porPagina={paginas.porPagina} irAPagina={paginas.irAPagina} nombre="Páginas del personal" />
       <ModalConfirmacion
         abierto={baja !== null}
         titulo={`¿Dar de baja a ${baja?.nombreCompleto ?? ''}?`}

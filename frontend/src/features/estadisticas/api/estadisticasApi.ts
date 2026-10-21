@@ -20,6 +20,7 @@ export const ERROR_ESTADISTICAS =
 
 const INCOMPLETAS = 'Las estadísticas llegaron incompletas. Probá de nuevo y, si sigue pasando, avisale al encargado.';
 import { METODOS_PAGO } from '../../../lib/dominio';
+import { POR_PAGINA_ANCHA } from '../../../lib/tamanoDePagina';
 import type { Parametros } from '../periodo';
 import {
   TRAMOS,
@@ -200,11 +201,11 @@ export const pedirSinRecoger = (parametros: Parametros) => pedir('/estadisticas/
 export const pedirVolumen = (parametros: Parametros) => pedir('/estadisticas/volumen', parametros, leerVolumen);
 export const pedirProductividad = (parametros: Parametros) => pedir('/estadisticas/productividad', parametros, leerProductividad);
 
-/** Cuántos clientes por página. El backend admite hasta 200; 20 se leen sin bajar demasiado. */
-export const CLIENTES_POR_PAGINA = 20;
-
 type ParametrosPaginados = Parametros & { pagina: number; por_pagina: number };
 
-/** Una página de clientes, desde 1. */
-export const pedirClientes = (parametros: Parametros, pagina: number) =>
-  pedir('/estadisticas/clientes', { ...parametros, pagina, por_pagina: CLIENTES_POR_PAGINA }, leerClientes);
+/**
+ * Una página de clientes, desde 1. `porPagina` es lo que entra en la pantalla (`useTamanoDePagina`,
+ * SPEC-KRILINXI-041); el backend admite hasta 200.
+ */
+export const pedirClientes = (parametros: Parametros, pagina: number, porPagina: number = POR_PAGINA_ANCHA) =>
+  pedir('/estadisticas/clientes', { ...parametros, pagina, por_pagina: porPagina }, leerClientes);

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { usePagina } from '../../../hooks/usePaginado';
 import { usePedidoOnline, type EstadoPedido } from '../../../hooks/usePedidoOnline';
+import { useTamanoDePagina } from '../../../hooks/useTamanoDePagina';
 import { useBaseLocal } from '../../../lib/powersync';
 import { hoyEnBolivia } from '../../estadisticas/periodo';
 import { useSucursales } from '../../sucursales/hooks/useSucursales';
@@ -15,11 +17,14 @@ import type { NombresConocidos, PaginaAuditoria } from '../types';
  * render (→ SPEC-KRILINXI-016, "reiniciar un estado cuando cambia otro sin useEffect").
  */
 export function useAuditoria(filtro: FiltroAuditoria) {
-  const [elegida, setElegida] = useState({ filtro, pagina: 1 });
-  const pagina = elegida.filtro === filtro ? elegida.pagina : 1;
-  const irAPagina = useCallback((nueva: number) => setElegida({ filtro, pagina: nueva }), [filtro]);
+  // Cuántos registros entran en una página depende de la pantalla (SPEC-KRILINXI-041).
+  const porPagina = useTamanoDePagina();
+  const { pagina, irAPagina } = usePagina(filtro, porPagina);
 
-  const pedir = useCallback(() => pedirAuditoria(parametrosAuditoria(filtro, hoyEnBolivia()), pagina), [filtro, pagina]);
+  const pedir = useCallback(
+    () => pedirAuditoria(parametrosAuditoria(filtro, hoyEnBolivia()), pagina, porPagina),
+    [filtro, pagina, porPagina],
+  );
   const { estado, recargar } = usePedidoOnline(pedir, ERROR_AUDITORIA);
   return { estado, recargar, pagina, irAPagina };
 }

@@ -3,6 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import { Boton } from '../../../components/Boton';
 import { BuscadorVivo } from '../../../components/BuscadorVivo';
 import { Insignia } from '../../../components/Insignia';
+import { Paginas } from '../../../components/Paginas';
+import { usePaginado } from '../../../hooks/usePaginado';
 import { TEXTO_ESTADO_ORDEN } from '../../../lib/dominio';
 import { TONO_ESTADO } from '../../ordenes/estado';
 import { ResumenRopa } from '../../ordenes/components/ResumenRopa';
@@ -74,6 +76,7 @@ function ResultadoEncontrado({ encontrado }: { encontrado: Encontrado }) {
 function RopaEnElLocal({ alElegir }: { alElegir: (orden: OrdenVista) => void }) {
   const mostrador = useMostrador();
   const [ordenes, setOrdenes] = useState<OrdenVista[] | null>(null);
+  const paginas = usePaginado(ordenes);
 
   useEffect(() => {
     if (!mostrador.lista) return;
@@ -92,15 +95,16 @@ function RopaEnElLocal({ alElegir }: { alElegir: (orden: OrdenVista) => void }) 
       <h2 className="mt-8 text-2xl font-bold text-texto">Ropa en el local</h2>
       {ordenes === null && <p className="mt-4 text-xl text-texto-suave">Buscando…</p>}
       {ordenes?.length === 0 && <p className="mt-4 text-xl text-texto-suave">No hay ropa en el local.</p>}
-      {ordenes && ordenes.length > 0 && (
+      {paginas.visibles && paginas.visibles.length > 0 && (
         <ul className="mt-4 grid gap-3">
-          {ordenes.map((orden) => (
+          {paginas.visibles.map((orden) => (
             <li key={orden.id}>
               <TarjetaOrden orden={orden} alElegir={() => alElegir(orden)} />
             </li>
           ))}
         </ul>
       )}
+      <Paginas pagina={paginas.pagina} total={paginas.total} porPagina={paginas.porPagina} irAPagina={paginas.irAPagina} nombre="Páginas de la ropa en el local" />
     </>
   );
 }

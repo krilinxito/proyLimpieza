@@ -6,9 +6,8 @@
  * respuesta externa contra su contrato"); si no encaja, `RespuestaRara`.
  */
 import { api, RespuestaRara } from '../../../lib/api';
+import { POR_PAGINA_ANCHA } from '../../../lib/tamanoDePagina';
 import { ACCIONES, TABLAS, type Accion, type PaginaAuditoria, type RegistroAuditoria, type Tabla } from '../types';
-
-export const REGISTROS_POR_PAGINA = 20;
 
 export const ERROR_AUDITORIA = 'No se pudo traer quién hizo qué. Probá de nuevo y, si sigue pasando, avisale al encargado.';
 const INCOMPLETA = 'La consulta llegó incompleta. Probá de nuevo y, si sigue pasando, avisale al encargado.';
@@ -68,8 +67,13 @@ export type ParametrosAuditoria = {
   revisar?: 'true';
 };
 
-export async function pedirAuditoria(parametros: ParametrosAuditoria, pagina: number): Promise<PaginaAuditoria> {
-  const { data } = await api.get<unknown>('/auditoria', { params: { ...parametros, pagina, por_pagina: REGISTROS_POR_PAGINA } });
+/** Una página de la auditoría. `porPagina` es lo que entra en la pantalla (`useTamanoDePagina`, SPEC-KRILINXI-041). */
+export async function pedirAuditoria(
+  parametros: ParametrosAuditoria,
+  pagina: number,
+  porPagina: number = POR_PAGINA_ANCHA,
+): Promise<PaginaAuditoria> {
+  const { data } = await api.get<unknown>('/auditoria', { params: { ...parametros, pagina, por_pagina: porPagina } });
   const leida = leerPagina(data);
   if (!leida) throw new RespuestaRara(INCOMPLETA);
   return leida;

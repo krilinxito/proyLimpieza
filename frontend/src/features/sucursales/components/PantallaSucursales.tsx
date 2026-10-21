@@ -4,8 +4,10 @@ import { Boton } from '../../../components/Boton';
 import { Icono } from '../../../components/iconos';
 import { Insignia, type TonoInsignia } from '../../../components/Insignia';
 import { ModalConfirmacion } from '../../../components/ModalConfirmacion';
+import { Paginas } from '../../../components/Paginas';
 import { Tarjeta } from '../../../components/Tarjeta';
 import { useEnLinea } from '../../../hooks/useEnLinea';
+import { usePaginado } from '../../../hooks/usePaginado';
 import { cambiosDeSucursal, usePersonasPorSucursal, useSucursales } from '../hooks/useSucursales';
 import type { Sucursal } from '../types';
 import { FormularioSucursal } from './FormularioSucursal';
@@ -40,6 +42,7 @@ export function PantallaSucursales() {
   const sucursales = useSucursales();
   const personas = usePersonasPorSucursal();
   const enLinea = useEnLinea();
+  const paginas = usePaginado(sucursales);
   const [edicion, setEdicion] = useState<Edicion>(null);
   const [apertura, setApertura] = useState<Sucursal | null>(null);
   const [aviso, setAviso] = useState<ReturnType<typeof avisoDe> | null>(null);
@@ -89,7 +92,7 @@ export function PantallaSucursales() {
         </Boton>
       </div>
       <ul className="mt-6 grid gap-4 lg:grid-cols-2">
-        {sucursales.map((s) => (
+        {(paginas.visibles ?? []).map((s) => (
           // `grid` en el renglón: la tarjeta se estira, y las de una misma fila quedan del mismo alto.
           <li key={s.id} className="grid">
             <Tarjeta titulo={s.nombre}>
@@ -129,6 +132,7 @@ export function PantallaSucursales() {
           </li>
         ))}
       </ul>
+      <Paginas pagina={paginas.pagina} total={paginas.total} porPagina={paginas.porPagina} irAPagina={paginas.irAPagina} nombre="Páginas de las sucursales" />
       <ModalConfirmacion
         abierto={apertura !== null}
         titulo={

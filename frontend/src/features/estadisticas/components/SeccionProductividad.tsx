@@ -1,3 +1,5 @@
+import { Paginas } from '../../../components/Paginas';
+import { usePaginado } from '../../../hooks/usePaginado';
 import type { Productividad } from '../types';
 import { BarrasHorizontales } from './graficos/BarrasHorizontales';
 import { COLOR_UNICO } from './graficos/colores';
@@ -22,6 +24,7 @@ const resumen = (f: Fila) => `Recibió ${f.ordenesRecibidas} · Cobró ${veces(f
 export function SeccionProductividad({ productividad, periodo }: { productividad: Productividad; periodo: string }) {
   const filas = productividad.porEmpleado;
   const ordenadas = masRecibidasPrimero(filas);
+  const paginas = usePaginado(filas, productividad);
   return (
     <SeccionPanel nombre="Lo que hizo cada persona" titulo={`Lo que hizo cada persona ${periodo}`}>
       <Grafico
@@ -54,7 +57,7 @@ export function SeccionProductividad({ productividad, periodo }: { productividad
         <p className="mt-4 text-xl text-texto-suave">Nadie registró nada en este período.</p>
       ) : (
         <ul aria-label="Personas" className="mt-4 grid gap-3">
-          {filas.map((f) => (
+          {(paginas.visibles ?? []).map((f) => (
             <li key={clave(f)} className="rounded-xl border border-borde-suave p-4 text-xl">
               <p className="font-semibold text-texto">{quien(f)}</p>
               <p className="mt-1 text-texto-suave">{resumen(f)}</p>
@@ -62,6 +65,7 @@ export function SeccionProductividad({ productividad, periodo }: { productividad
           ))}
         </ul>
       )}
+      <Paginas pagina={paginas.pagina} total={paginas.total} porPagina={paginas.porPagina} irAPagina={paginas.irAPagina} nombre="Páginas de lo que hizo cada persona" />
     </SeccionPanel>
   );
 }
