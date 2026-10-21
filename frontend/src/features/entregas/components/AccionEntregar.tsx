@@ -9,8 +9,23 @@ import { FormularioEntrega } from './FormularioEntrega';
  * SPEC-KRILINXI-009. Desde SPEC-KRILINXI-033 vive aparte, porque lo usa el Mostrador (antes era
  * parte de la pantalla /entregar, que ya no existe).
  */
-export function AccionEntregar({ orden, alEntregar }: { orden: OrdenVista; alEntregar: (entrega: EntregaLista) => void }) {
+export function AccionEntregar({
+  orden,
+  alEntregar,
+  principal = true,
+}: {
+  orden: OrdenVista;
+  alEntregar: (entrega: EntregaLista) => void;
+  /** Si es la acción principal de la boleta (SPEC-KRILINXI-037): sí cuando la ropa ya está lista. */
+  principal?: boolean;
+}) {
   const [abierto, setAbierto] = useState(false);
-  if (!abierto) return <Boton onClick={() => setAbierto(true)}>Entregar la ropa</Boton>;
+  if (!abierto) {
+    return (
+      <Boton variante={principal ? 'primario' : 'secundario'} icono="entregar" onClick={() => setAbierto(true)}>
+        Entregar la ropa
+      </Boton>
+    );
+  }
   return <FormularioEntrega orden={orden} alEntregar={alEntregar} alCancelar={() => setAbierto(false)} />;
 }

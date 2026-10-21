@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-037
 name: 'Más visual, menos letra: cada cosa con su estilo'
 slug: jerarquia-visual
-status: draft
+status: finished
 owner: krilinxito
 created: 2026-10-19
 scope:
@@ -15,7 +15,15 @@ scope:
   - CLAUDE.md
 priority: high
 depends_on: []
-tests: []
+tests:
+  - frontend/src/components/Boton.test.tsx
+  - frontend/src/components/EnlaceBoton.test.tsx
+  - frontend/src/components/piezas.test.tsx
+  - frontend/src/estilos.test.tsx
+  - frontend/src/features/mostrador/components/PantallaMostrador.test.tsx
+  - frontend/src/pages/Inicio.test.tsx
+  - frontend/src/test/jerarquia.ts
+  - frontend/src/test/tema.test.ts
 ---
 
 ## Descripción

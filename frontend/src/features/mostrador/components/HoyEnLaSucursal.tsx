@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Aviso } from '../../../components/Aviso';
 import { EnlaceBoton } from '../../../components/EnlaceBoton';
-import { Tarjeta } from '../../../components/Tarjeta';
+import { ESTILO_TARJETA, SenalTocable, Tarjeta } from '../../../components/Tarjeta';
 import { useConexion } from '../../../hooks/useConexion';
 import { TEXTO_METODO_PAGO } from '../../../lib/dominio';
 import { formatearBs } from '../../../lib/money';
@@ -17,7 +17,8 @@ function boletas(n: number): string {
 
 /**
  * Una boleta de la lista: entera tocable, lleva a esa boleta en el Mostrador. Un enlace, no un
- * botón: lleva a otra pantalla (SPEC-KRILINXI-024). Su nombre es la boleta y el cliente.
+ * botón: lleva a otra pantalla (SPEC-KRILINXI-024). Su nombre es la boleta y el cliente. Se ve
+ * como una tarjeta que se toca, con su flecha (SPEC-KRILINXI-037).
  */
 function FilaBoleta({ orden, detalle }: { orden: OrdenVista; detalle: string }) {
   return (
@@ -25,13 +26,16 @@ function FilaBoleta({ orden, detalle }: { orden: OrdenVista; detalle: string }) 
       <Link
         to={enlaceABoleta(orden)}
         aria-label={`Boleta ${orden.numeroBoleta}, ${orden.clienteNombre}`}
-        className="flex min-h-14 flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-xl border-2 border-borde-suave bg-superficie px-4 py-3 text-xl transition-colors hover:border-marca focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-foco"
+        className={`flex min-h-14 items-center gap-3 text-xl ${ESTILO_TARJETA.toca}`}
       >
-        <span>
-          <span className="font-semibold text-texto">Boleta {orden.numeroBoleta}</span>
-          <span className="text-texto-suave"> · {orden.clienteNombre}</span>
+        <span className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-4 gap-y-1">
+          <span>
+            <span className="font-semibold text-texto">Boleta {orden.numeroBoleta}</span>
+            <span className="text-texto-suave"> · {orden.clienteNombre}</span>
+          </span>
+          <span className="text-lg text-texto-suave">{detalle}</span>
         </span>
-        <span className="text-lg text-texto-suave">{detalle}</span>
+        <SenalTocable />
       </Link>
     </li>
   );
@@ -84,7 +88,8 @@ export function HoyEnLaSucursal() {
               ? 'Hay 1 registro que no se pudo guardar y hay que revisar.'
               : `Hay ${paraCorregir} registros que no se pudieron guardar y hay que revisar.`}
           </Aviso>
-          <EnlaceBoton a="/para-corregir" variante="secundario">
+          {/* Lo único que pide hacer algo ya: la acción principal del Inicio (SPEC-KRILINXI-037). */}
+          <EnlaceBoton a="/para-corregir">
             Revisar los registros
           </EnlaceBoton>
         </div>
@@ -104,7 +109,7 @@ export function HoyEnLaSucursal() {
         detalle={(orden) => `Era para el ${fechaCorta(orden.fechaEstimada ?? '')}`}
       />
 
-      <Tarjeta titulo="Cobrado hoy">
+      <Tarjeta titulo="Cobrado hoy" tipo="destaca">
         <p className="text-4xl font-bold text-texto">{formatearBs(cobrado.total)}</p>
         {cobrado.porMetodo.length === 0 ? (
           <p className="mt-2 text-xl text-texto-suave">Todavía no se cobró nada hoy.</p>

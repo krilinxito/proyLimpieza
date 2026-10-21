@@ -38,11 +38,9 @@ export function AtenderEnUnaSucursal() {
   return (
     <div className="mt-8">
       <Tarjeta titulo="Atender en una sucursal">
-        <p className="text-lg text-texto-suave">
-          Para registrar, cobrar o entregar ropa en el mostrador de una sucursal, con tu cuenta.
-        </p>
+        {/* Sin texto de ayuda: el título y el botón ya dicen qué es (SPEC-KRILINXI-037). */}
         {!eligiendo ? (
-          <div className="mt-4 w-auto">
+          <div className="w-auto">
             <Boton icono="sucursales" onClick={() => setEligiendo(true)}>
               Atender en una sucursal
             </Boton>

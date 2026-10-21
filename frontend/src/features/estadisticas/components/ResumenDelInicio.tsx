@@ -44,7 +44,7 @@ export function ResumenDelInicio() {
             }}
           />
           <div className="mt-4">
-            <EnlaceBoton a="/estadisticas" variante="secundario" icono="estadisticas">
+            <EnlaceBoton a="/estadisticas" variante="navegacion" icono="estadisticas">
               Ver las estadísticas
             </EnlaceBoton>
           </div>

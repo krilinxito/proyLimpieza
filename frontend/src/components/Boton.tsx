@@ -1,27 +1,21 @@
 import { useRef, useState, type ReactNode } from 'react';
+import { estiloBoton, type TamanoBoton, type VarianteBoton } from './estilosBoton';
 import { Icono, type NombreIcono } from './iconos';
 
-export type VarianteBoton = 'primario' | 'secundario' | 'peligro';
-
-// Solo colores del tema (SPEC-KRILINXI-022). `enabled:hover:` para que un botón deshabilitado
-// no "reaccione" al pasarle el dedo o el mouse, como si se pudiera tocar.
-const ESTILO: Record<VarianteBoton, string> = {
-  primario: 'border-marca bg-marca text-sobre-marca shadow-sm enabled:hover:border-marca-fuerte enabled:hover:bg-marca-fuerte',
-  secundario: 'border-borde bg-superficie text-texto enabled:hover:bg-fondo',
-  peligro: 'border-peligro bg-peligro text-sobre-marca shadow-sm enabled:hover:border-peligro-fuerte enabled:hover:bg-peligro-fuerte',
-};
+export type { TamanoBoton, VarianteBoton } from './estilosBoton';
 
 /**
- * Lo que comparten las tres variantes — SPEC-KRILINXI-022:
- * - El anillo de foco solo con teclado (`focus-visible`): quien navega con Tab ve dónde está, y
- *   quien toca con el dedo no ve un recuadro naranja que no pidió.
- * - Deshabilitado se distingue por algo más que el color: el borde pasa a punteado y el cursor
- *   dice que no se puede. Un botón apenas más pálido no lo nota todo el mundo.
+ * El ícono que lleva una variante si no se le da otro (SPEC-KRILINXI-037): lo que no tiene vuelta
+ * atrás se reconoce también por la forma, no solo por el rojo, y volver lleva su flecha.
  */
-const BASE =
-  'inline-flex min-h-14 w-full items-center justify-center gap-3 rounded-xl border-2 px-6 py-3 text-xl font-semibold transition-colors ' +
-  'focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-foco ' +
-  'disabled:cursor-not-allowed disabled:border-dashed disabled:opacity-60 disabled:shadow-none';
+const ICONO_DE: Partial<Record<VarianteBoton, NombreIcono>> = { peligro: 'alerta', navegacion: 'volver' };
+
+/**
+ * Lo propio de un botón, encima de su variante (`estilosBoton.ts`) — SPEC-KRILINXI-022: deshabilitado
+ * se distingue por algo más que el color, el borde pasa a punteado y el cursor dice que no se puede.
+ * Un botón apenas más pálido no lo nota todo el mundo.
+ */
+const DESHABILITADO = 'disabled:cursor-not-allowed disabled:border-dashed disabled:opacity-60 disabled:shadow-none';
 
 type Props = {
   children: ReactNode;
@@ -30,7 +24,10 @@ type Props = {
    * los maneja quien pasa la función: el botón solo se vuelve a habilitar.
    */
   onClick?: () => void | Promise<void>;
+  /** Qué peso tiene (SPEC-KRILINXI-037): `primario` uno solo por pantalla; ver `components/README.md`. */
   variante?: VarianteBoton;
+  /** `compacto` en una fila de acciones secundarias. */
+  tamano?: TamanoBoton;
   /** `submit` para el botón que envía un formulario. */
   type?: 'button' | 'submit';
   disabled?: boolean;
@@ -40,7 +37,10 @@ type Props = {
   textoOcupado?: string;
   /** Para el botón que debe tener el foco al aparecer, como "Cancelar" en un modal. */
   autoFocus?: boolean;
-  /** Un ícono antes del texto. Decorativo: el nombre del botón sigue siendo su texto. */
+  /**
+   * Un ícono antes del texto. Decorativo: el nombre del botón sigue siendo su texto. El de peligro
+   * lleva siempre uno (el de alerta si no se le da otro), y el de navegación, la flecha de volver.
+   */
   icono?: NombreIcono;
 };
 
@@ -55,6 +55,7 @@ export function Boton({
   children,
   onClick,
   variante = 'primario',
+  tamano = 'normal',
   type = 'button',
   disabled = false,
   ocupado = false,
@@ -68,6 +69,7 @@ export function Boton({
   const enCurso = useRef(false);
 
   const estaOcupado = ocupado || trabajando;
+  const elIcono = icono ?? ICONO_DE[variante];
 
   async function manejarClick() {
     if (!onClick || enCurso.current) return;
@@ -88,9 +90,9 @@ export function Boton({
       disabled={disabled || estaOcupado}
       aria-busy={estaOcupado}
       autoFocus={autoFocus}
-      className={`${BASE} ${ESTILO[variante]}`}
+      className={`${estiloBoton(variante, tamano)} ${DESHABILITADO}`}
     >
-      {icono && <Icono nombre={icono} />}
+      {elIcono && <Icono nombre={elIcono} />}
       {estaOcupado && textoOcupado ? textoOcupado : children}
     </button>
   );

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { Aviso, type TipoAviso } from './Aviso';
 import { Insignia, type TonoInsignia } from './Insignia';
-import { Tarjeta } from './Tarjeta';
+import { ESTILO_TARJETA, SenalTocable, Tarjeta } from './Tarjeta';
 
 describe('Aviso — SPEC-KRILINXI-022', () => {
   it.each<[TipoAviso, 'alert' | 'status']>([
@@ -77,5 +77,41 @@ describe('Insignia — SPEC-KRILINXI-022', () => {
   ])('con tono %s se pinta con su fondo y el texto siempre está', (tono, fondo) => {
     render(<Insignia tono={tono}>Lista para entregar</Insignia>);
     expect(screen.getByText('Lista para entregar')).toHaveClass(fondo);
+  });
+});
+
+describe('Tarjeta: la que informa, la que destaca y la que se toca — SPEC-KRILINXI-037', () => {
+  it('por defecto informa: liviana, sin sombra', () => {
+    render(<Tarjeta titulo="Pagos">Todavía no pagó nada.</Tarjeta>);
+    const tarjeta = screen.getByRole('region', { name: 'Pagos' });
+    expect(tarjeta).toHaveClass('bg-superficie', 'border-borde-suave');
+    expect(tarjeta.className).not.toMatch(/shadow/);
+  });
+
+  it('la que destaca un número va sobre el color suave de la marca, con una franja', () => {
+    render(
+      <Tarjeta titulo="Cobrado hoy" tipo="destaca">
+        Bs 120,00
+      </Tarjeta>,
+    );
+    expect(screen.getByRole('region', { name: 'Cobrado hoy' })).toHaveClass('bg-marca-suave', 'border-l-8');
+  });
+
+  it('las tres se distinguen por su forma, no solo por el color', () => {
+    // Borde fino / franja gruesa / borde doble con sombra: lo que queda si se le quita el color.
+    const forma = (clases: string) => clases.split(' ').filter((c) => /^(border(-2|-l-8)?|shadow-md)$/.test(c)).join(' ');
+    const formas = Object.values(ESTILO_TARJETA).map(forma);
+    expect(new Set(formas).size).toBe(3);
+  });
+
+  it('la señal de que se toca es una flecha decorativa: el nombre lo pone el texto de la tarjeta', () => {
+    render(
+      <button type="button" className={ESTILO_TARJETA.toca}>
+        Boleta 001234
+        <SenalTocable />
+      </button>,
+    );
+    const boton = screen.getByRole('button', { name: 'Boleta 001234' });
+    expect(boton.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
   });
 });
