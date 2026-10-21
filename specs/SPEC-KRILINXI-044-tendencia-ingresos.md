@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-044
 name: La tendencia de lo cobrado en el dashboard
 slug: tendencia-ingresos
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-19
 scope:
