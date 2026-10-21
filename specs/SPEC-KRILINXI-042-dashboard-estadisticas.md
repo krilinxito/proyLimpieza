@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-042
 name: Estadísticas como dashboard
 slug: dashboard-estadisticas
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-19
 scope:
@@ -14,7 +14,9 @@ priority: medium
 depends_on:
   - SPEC-KRILINXI-036
   - SPEC-KRILINXI-037
-tests: []
+tests:
+  - frontend\src\features\estadisticas\components\PantallaEstadisticas.test.tsx
+  - frontend\src\features\estadisticas\totalesPorFormaDePago.test.ts
 ---
 
 ## Descripción
