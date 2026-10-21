@@ -3,8 +3,10 @@ id: SPEC-KRILINXI-041
 spec: specs/SPEC-KRILINXI-041-historial-boletas.md
 explica:
   - achicar en sql lo barato y decidir en javascript lo que es regla del negocio
+  - paginar en memoria o en el servidor
   - un tipo comun para dos origenes de datos
   - una clave estable para no repetir un pedido
+  - una pagina que deja de existir
 ---
 
 # SPEC-KRILINXI-041 — Historial de boletas
@@ -96,6 +98,22 @@ identidad pediría de más y volvería a la página 1 sin motivo. La solución (
 serializan los parámetros que de verdad se mandan (`JSON.stringify`) y esa cadena es la clave: si la cadena
 es igual, no cambió nada. Dos objetos distintos que dicen lo mismo dan la misma clave.
 
+**Paginar en memoria o en el servidor: dónde se corta la lista.** Una lista se puede partir en dos
+lugares. Si **ya está entera en la tablet** (lo que sale de la base local, o una respuesta de la API que
+trae todo, como `saldos`), se corta en el cliente con `usePaginado` (`hooks/usePaginado.ts`): `items.slice(...)`
+y listo, sin red. Si **es demasiado grande para traerla entera** (el historial completo, la auditoría), se
+corta en el servidor: se le pide `pagina` y `por_pagina`, y la respuesta trae el `total` para saber cuántas
+páginas hay (→ SPEC-ALE186-012). La pantalla no distingue: las dos terminan en la misma barra `<Paginas>`. Lo que
+cambia es quién corta, y por eso `usePagina` (solo guarda "en qué página voy") sirve a las dos.
+
+**Una página que deja de existir.** La página elegida es un número guardado, y el mundo cambia debajo:
+se descarta el único registro de la última página, se corrige una boleta, la tablet se gira y entran
+más filas. Sin cuidado, la barra diría "Página 3 de 2" sobre una lista vacía: un callejón sin salida.
+`usePaginado` lo evita calculando `Math.min(pedida, ultima)` en cada render, en vez de confiar en el número
+guardado (`hooks/usePaginado.ts`, el test `si la lista se achica y la página ya no existe…`). Y el
+tamaño de la pantalla entra en la clave de reinicio (`usePagina(reinicio, porPagina)`): la página 3 de a 6
+no es la página 3 de a 20.
+
 **Ya explicado antes:**
 
 - **Paginación con limit/offset y total aparte** → SPEC-ALE186-012 (`specs/notas/SPEC-ALE186-012-auditoria-consulta.md`)
@@ -119,8 +137,19 @@ es igual, no cambió nada. Dos objetos distintos que dicen lo mismo dan la misma
 - **Las anuladas dicen "Anulada: no se cobra"** en vez de "Falta pagar": una anulada sin cobros tiene un
   saldo positivo en la cuenta, pero nadie lo debe, y mostrarlo como deuda confundiría.
 - **Menú, después de Clientes.** Va junto a las demás búsquedas y no desplaza al Mostrador.
-- **Local pagina en el hook, sobre lo ya leído** (20 por página); la API pagina ella. Misma barra
-  (`Paginas`) y mismo tamaño, así que se ven igual.
+- **Local pagina en el hook, sobre lo ya leído; la API pagina ella.** Misma barra (`Paginas`) y mismo tamaño
+  (el que pide la pantalla), así que se ven igual.
+- **Se pidió paginar toda la interfaz, no solo el historial** (ampliación de la spec): "ninguna lista larga se
+  muestra de golpe". Se recorrieron todos los `<ul>`; las que crecen se paginan y las que no, se declaran
+  cortas con su motivo en `test/arquitectura.test.ts`. *Descartado:* paginar solo el historial y dejar el resto
+  para otra spec, porque la ropa en el local del Mostrador es la lista que más crece en el día a día.
+- **El tamaño depende del ancho: 6 / 10 / 20** (menos de 640px, hasta 1023px, desde 1024px; los cortes de Tailwind
+  que ya usa el resto de la app). Es una elección mía: el pedido decía "dependiendo de la pantalla" sin
+  números. Sale de un solo lugar (`lib/tamanoDePagina.ts`) y se cambia ahí. *Descartado:* mirar también el alto de
+  la pantalla (más fino, pero la tablet del mostrador casi siempre es la misma y complica la prueba).
+- **Los gráficos no se paginan, sus listas sí.** El gráfico de productividad dibuja una barra por persona y
+  trae su tabla accesible; es un solo objeto visual y personas hay pocas. La lista de debajo sí se pagina.
+- **La barra del buscador (`BuscadorVivo`) queda como está:** ya muestra como mucho 6 resultados y avisa si hay más.
 - **Dos botones "Limpiar filtros" cuando no hay resultados:** el de la barra y el del aviso. El del aviso
   está donde se mira cuando la lista queda vacía; el de la barra, siempre a mano. Se aceptó la repetición.
 
@@ -131,6 +160,16 @@ es igual, no cambió nada. Dos objetos distintos que dicen lo mismo dan la misma
   borde de Bolivia (las dos formas de guardar la fecha), el buscador, el estado efectivo y el saldo.
 - `api/historialApi.test.ts` — el contrato: una respuesta rota (o una sola boleta rota) se rechaza entera.
 - `components/PantallaHistorial.test.tsx` — la `App` entera, de la pantalla al SQL o a la API falsa.
+- `lib/tamanoDePagina.test.ts` y `hooks/usePaginado.test.ts` — la regla de los tamaños y el hook (con `renderHook`):
+  reinicio, página que deja de existir, cambio de tamaño de pantalla.
+- `paginacion.test.tsx` — **una prueba por cada lista paginada**, sobre la `App`, con 7 elementos en una pantalla
+  angosta (6 + 1), más el `por_pagina` que se pide a la API según el ancho, girar la tablet y descartar el único
+  registro de la última página.
+- `test/arquitectura.test.ts` — toda lista nueva elige: se pagina o se declara corta.
+
+**Se creó** también `test/pantalla.ts` (`conAnchoDePantalla`, `cambiarAnchoDePantalla`): jsdom es una pantalla
+ancha de 1024px (20 por página), y esto la angosta (500px → 6) para probar la paginación sin sembrar 21 filas.
+Una próxima lista paginada se prueba así: `conAnchoDePantalla(500)`, siete filas, y se espera "Página 1 de 2".
 
 **Se reusó** todo el kit existente: `baseLocalDePrueba`/`sembrar`, `renderEnRuta`, `simularApi`,
 `tabletConRelojCorrido`, `sinJerga`, `accionesPrincipales` y las factories de `filasDePrueba`. **Se creó**

@@ -311,6 +311,12 @@ atiende, el **historial completo** de todas las sucursales, pedido a `GET /api/o
 solo lectura, sin acciones (no tiene la ropa en su tablet). Si se eligen fechas, valen esas aun si pasan de los 30 días. El
 texto del buscador solo filtra cuando alcanza (`alcanzaParaBuscar`, SPEC-KRILINXI-032), y en la API espera una pausa antes de
 pedirse. Para los tests, `test/historialDePrueba.ts` arma respuestas válidas de `GET /api/ordenes`.
+En la misma spec, **ninguna lista larga se muestra de golpe** (§9): `usePaginado` parte las que ya están en memoria
+(la ropa en el local y la de un cliente, lo de "Hoy en la sucursal", Personal, Sucursales, los registros para
+corregir, saldos, ropa sin recoger y productividad) y `useTamanoDePagina` fija el `por_pagina` de las que pagina la
+API (historial, auditoría y clientes de las estadísticas). El tamaño depende del ancho del dispositivo
+(`lib/tamanoDePagina.ts`), y si la tablet se gira la lista se ajusta y vuelve a la primera página. Para los tests,
+`test/pantalla.ts` (`conAnchoDePantalla(500)`) pone una pantalla angosta.
 
 SPEC-KRILINXI-012 corrige el reloj de la tablet: `lib/reloj` guarda el desfase con la hora
 del servidor que traen `login` y `renovar`, y `horaOficial()` es de donde salen
@@ -709,6 +715,10 @@ Requisitos concretos, no buenas intenciones:
 - **Los errores dicen qué hacer**, en español y sin códigos: "Ese número de boleta ya
   está usado en esta sucursal. Revisá el papel y volvé a escribirlo."
 - Pocos campos por pantalla y un solo camino claro para cada tarea.
+- **Ninguna lista larga se muestra de golpe** (SPEC-KRILINXI-041). Toda lista que puede crecer —boletas, ropa,
+  cuentas, registros— se pagina, con una barra de páginas en palabras, y cuántas filas entran depende del ancho
+  del dispositivo (6 en un celular, 10 en una tablet vertical, 20 en una pantalla ancha, de `lib/tamanoDePagina.ts`).
+  El buscador completa la paginación, no la reemplaza. Un test de arquitectura obliga a que una lista nueva elija.
 
 ---
 
