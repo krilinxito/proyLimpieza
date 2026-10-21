@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-038
 name: Las acciones de la boleta en fila, con su símbolo
 slug: acciones-boleta-en-fila
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-19
 scope:
@@ -13,7 +13,8 @@ scope:
 priority: medium
 depends_on:
   - SPEC-KRILINXI-037
-tests: []
+tests:
+  - frontend/src/features/mostrador/components/PantallaMostrador.test.tsx
 ---
 
 ## Descripción
