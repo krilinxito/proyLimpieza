@@ -19,6 +19,7 @@ describe('Rutas: lo que necesita el menú — SPEC-KRILINXI-023', () => {
       'Inicio',
       'Mostrador',
       'Clientes',
+      'Historial de boletas',
     ]);
   });
 
@@ -26,6 +27,7 @@ describe('Rutas: lo que necesita el menú — SPEC-KRILINXI-023', () => {
     expect(destinosDelMenu('ADMIN', false).map((d) => d.titulo)).toEqual([
       'Inicio',
       'Clientes',
+      'Historial de boletas',
       'Personal',
       'Sucursales',
       '¿Quién hizo qué?',
@@ -38,6 +40,7 @@ describe('Rutas: lo que necesita el menú — SPEC-KRILINXI-023', () => {
       'Inicio',
       'Mostrador',
       'Clientes',
+      'Historial de boletas',
       'Personal',
       'Sucursales',
       '¿Quién hizo qué?',

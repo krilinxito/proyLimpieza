@@ -53,6 +53,21 @@ otra pantalla es un enlace; si cambia lo que muestra la misma pantalla, es un `B
 **Menos letra:** un texto de ayuda que repite lo que ya dice la etiqueta o el título se quita. Los
 mensajes de error y las confirmaciones, nunca (CLAUDE.md §9).
 
+## Las listas largas se paginan (SPEC-KRILINXI-041)
+
+Ninguna lista que pueda crecer se muestra de golpe, en ninguna pantalla: se parte en páginas con
+`Paginas` ("Anteriores · Página 2 de 3 · Siguientes"; se ve siempre que haya algo, también "Página 1 de 1", y no con la lista vacía). Cuántas filas
+entran depende del ancho del dispositivo (6 en angosta, 10 en mediana, 20 en ancha) y se decide en un solo
+lugar, `lib/tamanoDePagina.ts`:
+
+- **La lista ya está en memoria** (la base local, o una respuesta entera de la API): `usePaginado(items, reinicio)`
+  devuelve `visibles`, `pagina`, `total`, `porPagina` e `irAPagina`. `reinicio` es lo que vuelve a la primera página
+  al cambiar (el filtro).
+- **La API pagina** (la auditoría, el historial completo): `useTamanoDePagina()` da el `por_pagina` que se pide, y
+  `usePagina(filtro, porPagina)` guarda la página elegida.
+- Un `<ul>` nuevo tiene que estar en `PAGINAN` o en `CORTAS` (con su motivo) en `test/arquitectura.test.ts`: si no,
+  el test falla. Para probarla sin sembrar 21 filas, `test/pantalla.ts` (`conAnchoDePantalla(500)` → 6 por página).
+
 ## Colores: siempre del tema
 
 Los colores viven en `src/index.css`, en `@theme`, y Tailwind arma las clases con su nombre:

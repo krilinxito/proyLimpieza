@@ -1,3 +1,5 @@
+import { Paginas } from '../../../components/Paginas';
+import { usePaginado } from '../../../hooks/usePaginado';
 import { esEstadoOrden, TEXTO_ESTADO_ORDEN } from '../../../lib/dominio';
 import type { Saldos } from '../types';
 import { Antiguedad } from './Antiguedad';
@@ -6,6 +8,7 @@ import { SeccionPanel } from './SeccionPanel';
 
 /** Lo que los clientes todavía deben: el gráfico por antigüedad y, debajo, cada boleta. */
 export function SeccionSaldos({ saldos, periodo }: { saldos: Saldos; periodo: string }) {
+  const paginas = usePaginado(saldos.ordenes, saldos);
   return (
     <SeccionPanel nombre="Falta cobrar" titulo={`Falta cobrar ${periodo}`}>
       <p className="mt-2 text-3xl font-bold text-texto">{bs(saldos.total)}</p>
@@ -14,7 +17,7 @@ export function SeccionSaldos({ saldos, periodo }: { saldos: Saldos; periodo: st
         <p className="mt-4 text-xl text-texto-suave">Nadie debe nada en este período.</p>
       ) : (
         <ul aria-label="Boletas con saldo" className="mt-4 grid gap-3">
-          {saldos.ordenes.map((o) => (
+          {(paginas.visibles ?? []).map((o) => (
             <li key={o.ordenId} className="rounded-xl border border-borde-suave p-4 text-xl">
               <p className="font-semibold text-texto">
                 Boleta {o.numeroBoleta} — {o.cliente}
@@ -27,6 +30,7 @@ export function SeccionSaldos({ saldos, periodo }: { saldos: Saldos; periodo: st
           ))}
         </ul>
       )}
+      <Paginas pagina={paginas.pagina} total={paginas.total} porPagina={paginas.porPagina} irAPagina={paginas.irAPagina} nombre="Páginas de las boletas con saldo" />
     </SeccionPanel>
   );
 }

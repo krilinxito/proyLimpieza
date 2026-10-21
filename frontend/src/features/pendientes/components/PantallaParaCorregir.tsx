@@ -3,7 +3,9 @@ import { Aviso } from '../../../components/Aviso';
 import { Boton } from '../../../components/Boton';
 import { EnlaceBoton } from '../../../components/EnlaceBoton';
 import { ModalConfirmacion } from '../../../components/ModalConfirmacion';
+import { Paginas } from '../../../components/Paginas';
 import { Tarjeta } from '../../../components/Tarjeta';
+import { usePaginado } from '../../../hooks/usePaginado';
 import type { RegistroParaCorregir } from '../types';
 import { useCorreccion } from '../hooks/useCorreccion';
 import { useParaCorregir } from '../hooks/useParaCorregir';
@@ -25,6 +27,7 @@ function cuando(fecha: string): string {
 export function PantallaParaCorregir() {
   const registros = useParaCorregir();
   const correccion = useCorreccion();
+  const paginas = usePaginado(registros);
   const [corrigiendo, setCorrigiendo] = useState<RegistroParaCorregir | null>(null);
   const [descartando, setDescartando] = useState<RegistroParaCorregir | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -112,7 +115,7 @@ export function PantallaParaCorregir() {
         o descartalo si no va.
       </p>
       <ul className="mt-6 grid gap-4">
-        {registros.map((registro) => (
+        {(paginas.visibles ?? []).map((registro) => (
           <li key={registro.id}>
             <Tarjeta>
               <p className="text-xl font-semibold text-texto">{registro.que}</p>
@@ -140,6 +143,7 @@ export function PantallaParaCorregir() {
           </li>
         ))}
       </ul>
+      <Paginas pagina={paginas.pagina} total={paginas.total} porPagina={paginas.porPagina} irAPagina={paginas.irAPagina} nombre="Páginas de los registros para corregir" />
       <ModalConfirmacion
         abierto={descartando !== null}
         titulo={`¿Descartar «${descartando?.que ?? ''}»?`}

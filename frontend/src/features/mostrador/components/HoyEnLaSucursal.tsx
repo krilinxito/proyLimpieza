@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom';
 import { Aviso } from '../../../components/Aviso';
 import { EnlaceBoton } from '../../../components/EnlaceBoton';
+import { Paginas } from '../../../components/Paginas';
 import { ESTILO_TARJETA, SenalTocable, Tarjeta } from '../../../components/Tarjeta';
 import { useConexion } from '../../../hooks/useConexion';
+import { usePaginado } from '../../../hooks/usePaginado';
 import { TEXTO_METODO_PAGO } from '../../../lib/dominio';
 import { formatearBs } from '../../../lib/money';
 import { fechaCorta } from '../../ordenes/components/fechas';
@@ -48,16 +50,20 @@ function ListaDelDia({ titulo, ordenes, vacia, detalle }: {
   vacia: string;
   detalle: (orden: OrdenVista) => string;
 }) {
+  const paginas = usePaginado(ordenes);
   return (
     <Tarjeta titulo={`${titulo} (${boletas(ordenes.length)})`}>
       {ordenes.length === 0 ? (
         <p className="text-xl text-texto-suave">{vacia}</p>
       ) : (
-        <ul className="grid gap-2">
-          {ordenes.map((orden) => (
-            <FilaBoleta key={orden.id} orden={orden} detalle={detalle(orden)} />
-          ))}
-        </ul>
+        <>
+          <ul className="grid gap-2">
+            {(paginas.visibles ?? []).map((orden) => (
+              <FilaBoleta key={orden.id} orden={orden} detalle={detalle(orden)} />
+            ))}
+          </ul>
+          <Paginas pagina={paginas.pagina} total={paginas.total} porPagina={paginas.porPagina} irAPagina={paginas.irAPagina} nombre={`Páginas de ${titulo.toLowerCase()}`} />
+        </>
       )}
     </Tarjeta>
   );
