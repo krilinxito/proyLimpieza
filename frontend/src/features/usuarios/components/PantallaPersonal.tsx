@@ -3,6 +3,7 @@ import { AvisoResultado, AvisoSinRed, avisoDe } from '../../../components/Avisos
 import { Boton } from '../../../components/Boton';
 import { Insignia, type TonoInsignia } from '../../../components/Insignia';
 import { ModalConfirmacion } from '../../../components/ModalConfirmacion';
+import { Avatar } from '../../../components/marco/Avatar';
 import { Tarjeta } from '../../../components/Tarjeta';
 import { useEnLinea } from '../../../hooks/useEnLinea';
 import { useSession } from '../../../hooks/useSession';
@@ -29,6 +30,10 @@ const estadoDe = (cuenta: Cuenta) => ESTADO_CUENTA[cuenta.activo ? 'activa' : 'b
  * El personal para el admin — SPEC-KRILINXI-017: las cuentas (de la base local), y darlas de
  * alta, cambiar sus datos y darlas de baja (directo a la API, nunca por la cola: llevan la
  * contraseña).
+ *
+ * Desde SPEC-KRILINXI-039 es una grilla de tarjetas: una por fila en angosto, dos desde 1024px. Cada
+ * una con el círculo de la inicial (el de la cabecera), lo que importa en un renglón, y sus acciones
+ * adentro, compactas y con su ícono.
  */
 export function PantallaPersonal() {
   const cuentas = useCuentas();
@@ -83,19 +88,27 @@ export function PantallaPersonal() {
           Agregar una persona
         </Boton>
       </div>
-      <ul className="mt-6 grid gap-4">
+      <ul className="mt-6 grid gap-4 lg:grid-cols-2">
         {cuentas.map((c) => (
-          <li key={c.id}>
+          // `grid` en el renglón: la tarjeta se estira, y las de una misma fila quedan del mismo alto.
+          <li key={c.id} className="grid">
             <Tarjeta titulo={c.nombreCompleto}>
-              <Insignia tono={estadoDe(c).tono}>{estadoDe(c).texto}</Insignia>
-              <p className="mt-2 text-xl text-texto">
-                Entra como «{c.username}» · {TEXTO_ROL[c.rol]}
-                {c.sucursal && ` · ${c.sucursal}`}
-              </p>
+              <div className="flex items-start gap-4">
+                <Avatar nombre={c.nombreCompleto} decorativo />
+                <div className="grid justify-items-start gap-2">
+                  <Insignia tono={estadoDe(c).tono}>{estadoDe(c).texto}</Insignia>
+                  <p className="text-xl text-texto">
+                    Entra como «{c.username}» · {TEXTO_ROL[c.rol]}
+                    {c.sucursal && ` · ${c.sucursal}`}
+                  </p>
+                </div>
+              </div>
               {c.activo && (
-                <div className="mt-4 grid grid-cols-2 gap-3">
+                <div className="mt-4 flex flex-wrap gap-3">
                   <Boton
                     variante="secundario"
+                    tamano="compacto"
+                    icono="editar"
                     disabled={!enLinea}
                     onClick={() => {
                       setAviso(null);
@@ -106,7 +119,7 @@ export function PantallaPersonal() {
                   </Boton>
                   {/* Un admin no puede darse de baja a sí mismo (SPEC-ALE186-009). */}
                   {c.id !== sesion?.usuario.id && (
-                    <Boton variante="peligro" disabled={!enLinea} onClick={() => setBaja(c)}>
+                    <Boton variante="peligro" tamano="compacto" icono="anular" disabled={!enLinea} onClick={() => setBaja(c)}>
                       Dar de baja
                     </Boton>
                   )}

@@ -24,3 +24,19 @@ export async function listarSucursales(base: BaseLocal): Promise<Sucursal[]> {
   );
   return filas.map(aSucursal).filter((s): s is Sucursal => s !== null);
 }
+
+/**
+ * Cuántas personas trabajan en cada sucursal: las cuentas activas asignadas a ella — SPEC-KRILINXI-039.
+ * Una dada de baja ya no trabaja ahí, y un ADMIN no tiene sucursal. Las que no aparecen tienen 0.
+ */
+export async function personasPorSucursal(base: BaseLocal): Promise<Map<string, number>> {
+  const filas = await base.consultar(
+    `SELECT sucursal_id, COUNT(*) AS personas FROM usuarios
+      WHERE activo = 1 AND sucursal_id IS NOT NULL GROUP BY sucursal_id`,
+  );
+  const cuantas = new Map<string, number>();
+  for (const { sucursal_id, personas } of filas) {
+    if (typeof sucursal_id === 'string' && typeof personas === 'number') cuantas.set(sucursal_id, personas);
+  }
+  return cuantas;
+}

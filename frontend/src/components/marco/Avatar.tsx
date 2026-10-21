@@ -6,13 +6,13 @@
  * un botón (un botón que no hace nada es peor que ninguno); cuando exista el perfil, pasa a ser
  * el botón que lo abre.
  */
-export function Avatar({ nombre }: { nombre: string }) {
+export function Avatar({ nombre, decorativo = false }: { nombre: string; decorativo?: boolean }) {
   const inicial = nombre.trim().charAt(0).toLocaleUpperCase('es') || '?';
   return (
     <span
-      role="img"
-      aria-label={`Perfil de ${nombre}`}
-      title="Perfil"
+      // Decorativo al lado del nombre (la tarjeta de una cuenta en Personal, SPEC-KRILINXI-039): el
+      // lector de pantalla ya lee el nombre en el título, y "Perfil de…" lo repetiría.
+      {...(decorativo ? { 'aria-hidden': true } : { role: 'img', 'aria-label': `Perfil de ${nombre}`, title: 'Perfil' })}
       className="inline-flex size-12 shrink-0 items-center justify-center rounded-full bg-marca text-xl font-bold text-sobre-marca"
     >
       <span aria-hidden="true">{inicial}</span>

@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { AvisoResultado, AvisoSinRed, avisoDe } from '../../../components/AvisosAdmin';
 import { Boton } from '../../../components/Boton';
+import { Icono } from '../../../components/iconos';
 import { Insignia, type TonoInsignia } from '../../../components/Insignia';
 import { ModalConfirmacion } from '../../../components/ModalConfirmacion';
 import { Tarjeta } from '../../../components/Tarjeta';
 import { useEnLinea } from '../../../hooks/useEnLinea';
-import { cambiosDeSucursal, useSucursales } from '../hooks/useSucursales';
+import { cambiosDeSucursal, usePersonasPorSucursal, useSucursales } from '../hooks/useSucursales';
 import type { Sucursal } from '../types';
 import { FormularioSucursal } from './FormularioSucursal';
 
@@ -22,12 +23,22 @@ const ESTADO_SUCURSAL: Record<'abierta' | 'cerrada', { texto: string; tono: Tono
 
 const estadoDe = (sucursal: Sucursal) => ESTADO_SUCURSAL[sucursal.activa ? 'abierta' : 'cerrada'];
 
+/** "Nadie trabaja acá" / "1 persona trabaja acá" / "3 personas trabajan acá" — SPEC-KRILINXI-039. */
+export function textoPersonas(cuantas: number): string {
+  if (cuantas === 0) return 'Nadie trabaja acá';
+  return cuantas === 1 ? '1 persona trabaja acá' : `${cuantas} personas trabajan acá`;
+}
+
 /**
  * Las sucursales para el admin — SPEC-KRILINXI-017: verlas (de la base local), darlas de alta,
  * cambiar sus datos, cerrarlas y volver a abrirlas (directo a la API).
+ *
+ * Desde SPEC-KRILINXI-039 es una grilla de tarjetas (una por fila en angosto, dos desde 1024px), y cada
+ * una dice cuántas personas trabajan ahí, contadas en la base local.
  */
 export function PantallaSucursales() {
   const sucursales = useSucursales();
+  const personas = usePersonasPorSucursal();
   const enLinea = useEnLinea();
   const [edicion, setEdicion] = useState<Edicion>(null);
   const [apertura, setApertura] = useState<Sucursal | null>(null);
@@ -77,16 +88,25 @@ export function PantallaSucursales() {
           Agregar sucursal
         </Boton>
       </div>
-      <ul className="mt-6 grid gap-4">
+      <ul className="mt-6 grid gap-4 lg:grid-cols-2">
         {sucursales.map((s) => (
-          <li key={s.id}>
+          // `grid` en el renglón: la tarjeta se estira, y las de una misma fila quedan del mismo alto.
+          <li key={s.id} className="grid">
             <Tarjeta titulo={s.nombre}>
               <Insignia tono={estadoDe(s).tono}>{estadoDe(s).texto}</Insignia>
               {s.direccion && <p className="mt-2 text-xl text-texto">{s.direccion}</p>}
               {s.telefono && <p className="mt-1 text-xl text-texto">Teléfono: {s.telefono}</p>}
-              <div className="mt-4 grid grid-cols-2 gap-3">
+              {personas && (
+                <p className="mt-2 flex items-center gap-2 text-xl text-texto-suave">
+                  <Icono nombre="personal" />
+                  {textoPersonas(personas.get(s.id) ?? 0)}
+                </p>
+              )}
+              <div className="mt-4 flex flex-wrap gap-3">
                 <Boton
                   variante="secundario"
+                  tamano="compacto"
+                  icono="editar"
                   disabled={!enLinea}
                   onClick={() => {
                     setAviso(null);
@@ -97,6 +117,8 @@ export function PantallaSucursales() {
                 </Boton>
                 <Boton
                   variante={s.activa ? 'peligro' : 'secundario'}
+                  tamano="compacto"
+                  icono={s.activa ? 'candado' : 'candado-abierto'}
                   disabled={!enLinea}
                   onClick={() => setApertura(s)}
                 >

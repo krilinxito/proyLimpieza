@@ -7,19 +7,28 @@ import { sinJerga } from '../../../test/jerga';
 import { sinRed } from '../../../test/red';
 import { renderEnRuta } from '../../../test/render';
 import { sesionDePrueba } from '../../../test/sesion';
+import { accionesPrincipales, usoDe } from '../../../test/jerarquia';
 import { MENSAJES_SUCURSAL } from '../api/sucursalesApi';
+import { textoPersonas } from './PantallaSucursales';
 
 const CENTRO = '00000000-0000-4000-8000-0000000000c1';
 const SUR = '00000000-0000-4000-8000-0000000000c3';
 
-/** /sucursales abierta por un ADMIN, con Centro abierta y Sur cerrada en la base local. */
-async function abrir(responder: Parameters<typeof simularApi>[0] = () => ({ status: 200, data: {} })) {
+/**
+ * /sucursales abierta por un ADMIN, con Centro abierta y Sur cerrada en la base local. `usuarios` suma
+ * cuentas, para contar quién trabaja en cada una (SPEC-KRILINXI-039).
+ */
+async function abrir(
+  responder: Parameters<typeof simularApi>[0] = () => ({ status: 200, data: {} }),
+  usuarios: Record<string, unknown>[] = [],
+) {
   const servidor = simularApi(responder);
   const { control, db, sembrar } = await baseLocalDePrueba();
   await sembrar('sucursales', [
     { id: CENTRO, nombre: 'Centro', direccion: 'Av. Busch 123', telefono: '2201', activa: 1 },
     { id: SUR, nombre: 'Sur', direccion: null, telefono: null, activa: 0 },
   ]);
+  if (usuarios.length > 0) await sembrar('usuarios', usuarios);
   renderEnRuta(<App />, '/sucursales', { sesion: sesionDePrueba({ rol: 'ADMIN' }), baseLocal: control });
   await screen.findByRole('region', { name: 'Centro' });
   return { servidor, db };
@@ -121,5 +130,63 @@ describe('Sucursales con el tema — SPEC-KRILINXI-027', () => {
     await abrir();
     expect(tarjeta('Centro').getByRole('button', { name: 'Cerrar sucursal' })).toBeDisabled();
     expect(tarjeta('Sur').getByRole('button', { name: 'Volver a abrir' })).toBeDisabled();
+  });
+});
+
+describe('Sucursales en una grilla de tarjetas — SPEC-KRILINXI-039', () => {
+  const empleada = (id: string, sucursal_id: string, activo = 1) => ({
+    id,
+    nombre_completo: `Persona ${id.slice(-2)}`,
+    username: `p${id.slice(-2)}`,
+    rol: 'EMPLEADO',
+    sucursal_id,
+    activo,
+  });
+  const PERSONAL = [
+    empleada('00000000-0000-4000-8000-0000000000e1', CENTRO),
+    empleada('00000000-0000-4000-8000-0000000000e2', CENTRO),
+    // Dada de baja: ya no trabaja ahí.
+    empleada('00000000-0000-4000-8000-0000000000e3', CENTRO, 0),
+    { id: '00000000-0000-4000-8000-0000000000e4', nombre_completo: 'Ana', username: 'ana', rol: 'ADMIN', sucursal_id: null, activo: 1 },
+  ];
+
+  it('una tarjeta por fila en angosto y dos desde 1024px (lg)', async () => {
+    await abrir();
+    const lista = screen.getByRole('region', { name: 'Centro' }).closest('ul');
+    expect(lista).toHaveClass('grid', 'lg:grid-cols-2');
+  });
+
+  it('cada tarjeta dice cuántas personas trabajan ahí, contando solo las cuentas activas', async () => {
+    await abrir(undefined, PERSONAL);
+    expect(await tarjeta('Centro').findByText('2 personas trabajan acá')).toBeInTheDocument();
+    expect(tarjeta('Sur').getByText('Nadie trabaja acá')).toBeInTheDocument();
+  });
+
+  it.each([
+    [0, 'Nadie trabaja acá'],
+    [1, '1 persona trabaja acá'],
+    [3, '3 personas trabajan acá'],
+  ])('con %i, dice «%s»', (cuantas, texto) => {
+    expect(textoPersonas(cuantas)).toBe(texto);
+  });
+
+  it('las acciones van dentro de la tarjeta, compactas y con su ícono; cerrar es de peligro', async () => {
+    await abrir();
+    for (const nombre of ['Cambiar datos', 'Cerrar sucursal']) {
+      const accion = tarjeta('Centro').getByRole('button', { name: nombre });
+      expect(accion).toHaveClass('min-h-12');
+      expect(accion.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    }
+    expect(usoDe(tarjeta('Centro').getByRole('button', { name: 'Cerrar sucursal' }))).toBe('peligro');
+    // Volver a abrir no destruye nada: secundario.
+    expect(usoDe(tarjeta('Sur').getByRole('button', { name: 'Volver a abrir' }))).toBe('secundario');
+    // La única principal de la pantalla sigue siendo dar de alta.
+    expect(accionesPrincipales()).toEqual(['Agregar sucursal']);
+  });
+
+  it('cerrar sigue pidiendo confirmación', async () => {
+    await abrir();
+    fireEvent.click(tarjeta('Centro').getByRole('button', { name: 'Cerrar sucursal' }));
+    expect(screen.getByRole('dialog', { name: '¿Cerrar la sucursal Centro?' })).toBeInTheDocument();
   });
 });

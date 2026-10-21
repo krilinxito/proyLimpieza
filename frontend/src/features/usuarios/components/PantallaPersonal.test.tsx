@@ -3,6 +3,7 @@ import { fireEvent, screen, within } from '@testing-library/react';
 import { App } from '../../../App';
 import { cuerpoError, simularApi } from '../../../test/apiFalsa';
 import { baseLocalDePrueba } from '../../../test/baseLocalDePrueba';
+import { accionesPrincipales, usoDe } from '../../../test/jerarquia';
 import { sinJerga } from '../../../test/jerga';
 import { sinRed } from '../../../test/red';
 import { renderEnRuta } from '../../../test/render';
@@ -183,5 +184,34 @@ describe('Personal con el tema — SPEC-KRILINXI-027', () => {
     const rosa = within(screen.getByRole('region', { name: 'Rosa Quispe' }));
     expect(rosa.getByRole('button', { name: 'Cambiar datos' })).toBeDisabled();
     expect(rosa.getByRole('button', { name: 'Dar de baja' })).toBeDisabled();
+  });
+});
+
+describe('Personal en una grilla de tarjetas — SPEC-KRILINXI-039', () => {
+  it('una tarjeta por fila en angosto y dos desde 1024px (lg)', async () => {
+    await abrir();
+    expect(screen.getByRole('region', { name: 'Rosa Quispe' }).closest('ul')).toHaveClass('grid', 'lg:grid-cols-2');
+  });
+
+  it('cada cuenta lleva el círculo con su inicial, decorativo: el nombre ya está en el título', async () => {
+    await abrir();
+    const rosa = screen.getByRole('region', { name: 'Rosa Quispe' });
+    const inicial = within(rosa).getByText('R');
+    const circulo = inicial.parentElement;
+    expect(circulo).toHaveClass('rounded-full');
+    expect(circulo).toHaveAttribute('aria-hidden', 'true');
+    // No se anuncia como una imagen "Perfil de…" en cada tarjeta.
+    expect(within(rosa).queryByRole('img')).not.toBeInTheDocument();
+  });
+
+  it('las acciones van dentro de la tarjeta, compactas y con su ícono; dar de baja es de peligro', async () => {
+    await abrir();
+    for (const nombre of ['Cambiar datos', 'Dar de baja']) {
+      const accion = tarjeta('Rosa Quispe').getByRole('button', { name: nombre });
+      expect(accion).toHaveClass('min-h-12');
+      expect(accion.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    }
+    expect(usoDe(tarjeta('Rosa Quispe').getByRole('button', { name: 'Dar de baja' }))).toBe('peligro');
+    expect(accionesPrincipales()).toEqual(['Agregar una persona']);
   });
 });
