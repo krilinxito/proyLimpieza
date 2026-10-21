@@ -135,6 +135,26 @@ const TRAZOS = {
       <path d="m5 5 14 14" />
     </>
   ),
+  // SPEC-KRILINXI-039: las acciones de Personal y Sucursales. Cambiar datos (un lápiz), cerrar una
+  // sucursal (un candado) y volver a abrirla (el candado abierto).
+  editar: (
+    <>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
+    </>
+  ),
+  candado: (
+    <>
+      <rect x="4" y="11" width="16" height="10" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+    </>
+  ),
+  'candado-abierto': (
+    <>
+      <rect x="4" y="11" width="16" height="10" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 7.8-1.2" />
+    </>
+  ),
 } satisfies Record<string, ReactElement>;
 
 export type NombreIcono = keyof typeof TRAZOS;

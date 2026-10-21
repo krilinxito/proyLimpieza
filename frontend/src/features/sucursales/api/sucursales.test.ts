@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { cuerpoError, simularApi } from '../../../test/apiFalsa';
 import { baseLocalDePrueba } from '../../../test/baseLocalDePrueba';
 import { cambiarApertura, crearSucursal, editarSucursal, MENSAJES_SUCURSAL } from './sucursalesApi';
-import { listarSucursales } from './sucursalesLocal';
+import { listarSucursales, personasPorSucursal } from './sucursalesLocal';
 
 const CENTRO = { id: '00000000-0000-4000-8000-0000000000c1', nombre: 'Centro', direccion: 'Av. Busch 123', telefono: null, activa: true };
 const ok = () => simularApi(() => ({ status: 201, data: {} }));
@@ -70,5 +70,18 @@ describe('Sucursales: los cambios van directo a la API — SPEC-KRILINXI-017', (
     expect(await crearSucursal({ nombre: 'Norte', direccion: '', telefono: '' })).toEqual({ tipo: 'rechazado', mensaje: repetido });
     simularApi(() => 'sin-conexion');
     expect(await crearSucursal({ nombre: 'Norte', direccion: '', telefono: '' })).toEqual({ tipo: 'sin-conexion' });
+  });
+});
+
+describe('Sucursales: cuántas personas trabajan en cada una — SPEC-KRILINXI-039', () => {
+  it('cuenta las cuentas activas de cada sucursal; ni las dadas de baja ni el ADMIN', async () => {
+    const { control, sembrar } = await baseLocalDePrueba();
+    await sembrar('usuarios', [
+      { id: 'u1', nombre_completo: 'Rosa', username: 'rosa', rol: 'EMPLEADO', sucursal_id: 'c', activo: 1 },
+      { id: 'u2', nombre_completo: 'Beto', username: 'beto', rol: 'EMPLEADO', sucursal_id: 'c', activo: 0 },
+      { id: 'u3', nombre_completo: 'Luz', username: 'luz', rol: 'EMPLEADO', sucursal_id: 'n', activo: 1 },
+      { id: 'u4', nombre_completo: 'Ana', username: 'ana', rol: 'ADMIN', sucursal_id: null, activo: 1 },
+    ]);
+    expect(await personasPorSucursal(control.base)).toEqual(new Map([['c', 1], ['n', 1]]));
   });
 });

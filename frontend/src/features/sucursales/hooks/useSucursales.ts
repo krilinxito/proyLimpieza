@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useBaseLocal } from '../../../lib/powersync';
 import { cambiarApertura, crearSucursal, editarSucursal } from '../api/sucursalesApi';
-import { listarSucursales } from '../api/sucursalesLocal';
+import { listarSucursales, personasPorSucursal } from '../api/sucursalesLocal';
 import type { DatosSucursal, ResultadoSucursal, Sucursal } from '../types';
 
 /**
@@ -29,6 +29,32 @@ export function useSucursales(): Sucursal[] | null {
   }, [base]);
 
   return sucursales;
+}
+
+/**
+ * Cuántas personas trabajan en cada sucursal, al día como la lista — SPEC-KRILINXI-039. `null` mientras
+ * se lee la primera vez: decir "nadie trabaja acá" un instante sería un cero falso.
+ */
+export function usePersonasPorSucursal(): Map<string, number> | null {
+  const base = useBaseLocal();
+  const [cuantas, setCuantas] = useState<Map<string, number> | null>(null);
+
+  useEffect(() => {
+    if (!base) return;
+    let vigente = true;
+    const leer = () => {
+      personasPorSucursal(base)
+        .then((leidas) => vigente && setCuantas(leidas))
+        .catch((error: unknown) => console.error('No se pudo contar el personal de cada sucursal.', error));
+    };
+    const dejar = base.observarEstado(leer);
+    return () => {
+      vigente = false;
+      dejar();
+    };
+  }, [base]);
+
+  return cuantas;
 }
 
 /** Solo las abiertas: las que pueden recibir personal (y las que tienen caja que mirar). */
