@@ -101,6 +101,11 @@ calculado en Postgres (`vw_saldos`) y filtros por fechas de entrada, sucursal, e
 "con saldo". **Sin `desde` no mira los últimos 30 días: trae todo**, así que no usa `leerPeriodo`. La
 ruta va antes del `requireAuthDeLaCola`: esa sesión que acepta tokens vencidos es solo para subir lo
 que escribió el mostrador (§13).
+SPEC-KRILINXI-043 añadió `GET /api/estadisticas/ingresos-por-dia` (solo ADMIN): lo cobrado día por día, con el
+total del día y su desglose por forma de pago, para dibujar una tendencia. Mismo contrato de período y sucursal que
+las demás estadísticas (`leerPeriodo`: sin `desde`, los últimos 30 días) y la forma de `/volumen`: **todos los días
+del período, también los que quedan en `"0.00"`**. Todo lo suma Postgres, y **la suma de los días da lo mismo que
+`/ingresos`** para el mismo período y sucursal (lo comprueba un test contra la base real).
 
 `frontend/` tiene el scaffolding de SPEC-KRILINXI-001: Vite, Tailwind, rutas y su suite de
 tests. SPEC-KRILINXI-002 añadió las piezas que reutilizan todas las pantallas: `Boton`,
@@ -678,7 +683,8 @@ es caro y no aporta nada, porque el admin trabaja en la oficina, con conexión.
   corresponde una fila por cada una, la misma regla que la auditoría (SPEC-ALE186-012).
   Además, `/clientes` (SPEC-ALE186-017): cuántas veces se atendió a cada cliente en cada
   sucursal y cuánto pagó. Un cliente no es de ninguna sucursal; cada atención es de la
-  sucursal de su orden.
+  sucursal de su orden. Y `/ingresos-por-dia` (SPEC-KRILINXI-043): lo cobrado en cada día del
+  período, con el desglose por forma de pago; el día de un cobro es el de Bolivia.
   Aparte de las estadísticas, el admin pide online el historial de boletas, `GET /api/ordenes`
   (SPEC-KRILINXI-040): mismo criterio (no tiene esa ropa en la tablet), pero sin período por
   defecto.

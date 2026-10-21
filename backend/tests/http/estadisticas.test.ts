@@ -13,6 +13,7 @@ import { conSesion } from '../helpers/usuarios.js';
 vi.mock('../../src/models/estadisticas.model.js', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../src/models/estadisticas.model.js')>()),
   ingresos: vi.fn(),
+  ingresosPorDia: vi.fn(), // SPEC-KRILINXI-043
   saldos: vi.fn(),
   sinRecoger: vi.fn(),
   volumen: vi.fn(), // SPEC-ALE186-013
@@ -22,6 +23,7 @@ vi.mock('../../src/models/estadisticas.model.js', async (importOriginal) => ({
 
 const modelo = await import('../../src/models/estadisticas.model.js');
 const ingresos = vi.mocked(modelo.ingresos);
+const ingresosPorDia = vi.mocked(modelo.ingresosPorDia);
 const saldos = vi.mocked(modelo.saldos);
 const sinRecoger = vi.mocked(modelo.sinRecoger);
 const volumen = vi.mocked(modelo.volumen);
@@ -29,7 +31,8 @@ const productividad = vi.mocked(modelo.productividad);
 const clientes = vi.mocked(modelo.clientes);
 
 const ADMIN = conSesion({ rol: 'ADMIN', sucursalId: null });
-const ENDPOINTS = ['/ingresos', '/saldos', '/sin-recoger'] as const;
+// `/ingresos-por-dia` (SPEC-KRILINXI-043) hereda de acá los casos de quién entra y de cómo se lee el período.
+const ENDPOINTS = ['/ingresos', '/ingresos-por-dia', '/saldos', '/sin-recoger'] as const;
 
 const TRAMOS_EN_CERO = [
   { tramo: 'HASTA_7_DIAS', cantidad: 0, total: '0.00' },
@@ -43,12 +46,18 @@ function pedir(endpoint: string, query: Record<string, string> = {}, sesion = AD
 
 /** El período con que el controller llamó al model en la última petición. */
 function periodoPedido() {
-  return (ingresos.mock.calls.at(-1) ?? saldos.mock.calls.at(-1) ?? sinRecoger.mock.calls.at(-1))?.[0];
+  return (
+    ingresos.mock.calls.at(-1) ??
+    ingresosPorDia.mock.calls.at(-1) ??
+    saldos.mock.calls.at(-1) ??
+    sinRecoger.mock.calls.at(-1)
+  )?.[0];
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
   ingresos.mockResolvedValue({ total: '0.00', porSucursal: [] });
+  ingresosPorDia.mockResolvedValue({ total: '0.00', porDia: [] });
   saldos.mockResolvedValue({ total: '0.00', cantidad: 0, porAntiguedad: [...TRAMOS_EN_CERO], ordenes: [] });
   sinRecoger.mockResolvedValue({
     cantidad: 0,
@@ -73,6 +82,7 @@ describe('Estadísticas: quién puede verlas — SPEC-ALE186-008', () => {
 
     expectApiError(res, { status: 403, codigo: 'SIN_PERMISO' });
     expect(ingresos).not.toHaveBeenCalled();
+    expect(ingresosPorDia).not.toHaveBeenCalled();
     expect(saldos).not.toHaveBeenCalled();
     expect(sinRecoger).not.toHaveBeenCalled();
   });
@@ -288,5 +298,30 @@ describe('Estadísticas: atenciones de cada cliente — SPEC-ALE186-017', () => 
     expectApiError(await pedir('/clientes', {}, conSesion()), { status: 403, codigo: 'SIN_PERMISO' });
     expectApiError(await testApi().get('/api/estadisticas/clientes'), { status: 401, codigo: 'NO_AUTENTICADO' });
     expect(clientes).not.toHaveBeenCalled();
+  });
+});
+
+describe('GET /api/estadisticas/ingresos-por-dia — SPEC-KRILINXI-043', () => {
+  const DIA = (fecha: string, total: string, porMetodo: Partial<Record<string, string>> = {}) => ({
+    fecha,
+    total,
+    porMetodo: { EFECTIVO: '0.00', QR: '0.00', TARJETA: '0.00', TRANSFERENCIA: '0.00', ...porMetodo },
+  });
+
+  it('responde el período, el total y un registro por día con su desglose, tal como lo manda el model', async () => {
+    const porDia = [DIA('2025-04-01', '15.50', { EFECTIVO: '10.00', QR: '5.50' }), DIA('2025-04-02', '0.00')];
+    ingresosPorDia.mockResolvedValue({ total: '15.50', porDia });
+
+    const res = await pedir('/ingresos-por-dia', { desde: '2025-04-01', hasta: '2025-04-02' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ desde: '2025-04-01', hasta: '2025-04-02', total: '15.50', porDia });
+  });
+
+  it('le pasa al model el período y la sucursal, y nada más', async () => {
+    await pedir('/ingresos-por-dia', { desde: '2025-01-01', hasta: '2025-01-31', sucursal_id: IDS.sucursal });
+
+    expect(ingresosPorDia).toHaveBeenCalledOnce();
+    expect(ingresosPorDia).toHaveBeenCalledWith({ desde: '2025-01-01', hasta: '2025-01-31', sucursalId: IDS.sucursal });
   });
 });

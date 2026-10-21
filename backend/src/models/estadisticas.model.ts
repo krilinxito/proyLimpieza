@@ -116,6 +116,83 @@ export async function ingresos(periodo: Periodo): Promise<Ingresos> {
 }
 
 // ------------------------------------------------------------------
+//  Ingresos por día — SPEC-KRILINXI-043
+// ------------------------------------------------------------------
+
+export interface IngresoDia {
+  /** `YYYY-MM-DD`, día del negocio. */
+  fecha: string;
+  /** Lo cobrado ese día, como lo suma Postgres: `"125.50"`; `"0.00"` si no hubo cobros. */
+  total: string;
+  porMetodo: MontosPorMetodo;
+}
+
+export interface IngresosPorDia {
+  /** Lo cobrado en todo el período: el mismo número que `/ingresos` para el mismo período y sucursal. */
+  total: string;
+  porDia: IngresoDia[];
+}
+
+interface FilaIngresoDia {
+  fecha: string;
+  metodo: MetodoPago | null;
+  total_metodo: string | null;
+  total_dia: string;
+  total_general: string;
+}
+
+/**
+ * Lo cobrado día por día, con TODOS los días del período, también los que quedan en cero.
+ *
+ * Es la forma de `volumen` (los días vienen de `generate_series` y el `LEFT JOIN` los completa: un
+ * día sin cobros no desaparece, y una línea no salta días) con los montos de `ingresos` (las funciones
+ * de ventana suman en Postgres: `OVER (PARTITION BY día)` es lo de cada día, y `OVER ()`, lo de todo el
+ * período). Así ningún monto se suma en JavaScript (CLAUDE.md §8).
+ *
+ * El día de un cobro es el de Bolivia: `horaDelNegocio` solo agrupa, y el filtro por período usa
+ * `enElPeriodo` sobre `fecha_pago` para que sirva su índice (SPEC-ALE186-021). Un cobro de las 21:00 cae
+ * en ese día, no en el siguiente. La suma de todos los días da lo mismo que `ingresos`: las dos filtran
+ * `pagos` con las mismas condiciones.
+ */
+export async function ingresosPorDia(periodo: Periodo): Promise<IngresosPorDia> {
+  const { rows } = await pool.query<FilaIngresoDia>(
+    `WITH dias AS (
+       SELECT d::date AS fecha FROM generate_series($1::date, $2::date, interval '1 day') AS d
+     ),
+     cobros AS (
+       SELECT ${diaLocal('p.fecha_pago', '$4')}::date AS fecha, p.metodo, SUM(p.monto) AS monto
+         FROM pagos p
+        WHERE ${delPeriodo('p.fecha_pago')}
+          AND ($3::uuid IS NULL OR p.sucursal_id = $3)
+        GROUP BY 1, 2
+     )
+     SELECT to_char(dias.fecha, 'YYYY-MM-DD')                                    AS fecha,
+            cobros.metodo,
+            cobros.monto::numeric(14,2)                                          AS total_metodo,
+            COALESCE(SUM(cobros.monto) OVER (PARTITION BY dias.fecha), 0)::numeric(14,2) AS total_dia,
+            COALESCE(SUM(cobros.monto) OVER (), 0)::numeric(14,2)                AS total_general
+       FROM dias
+       LEFT JOIN cobros ON cobros.fecha = dias.fecha
+      ORDER BY dias.fecha, cobros.metodo`,
+    [periodo.desde, periodo.hasta, periodo.sucursalId, ZONA_NEGOCIO],
+  );
+
+  // Reacomodar las filas (una por día y método con cobros) en un registro por día, con los métodos sin
+  // cobros en "0.00". Es reacomodar, no sumar.
+  const porDia = new Map<string, IngresoDia>();
+  for (const fila of rows) {
+    let dia = porDia.get(fila.fecha);
+    if (dia === undefined) {
+      dia = { fecha: fila.fecha, total: fila.total_dia, porMetodo: metodosEnCero() };
+      porDia.set(fila.fecha, dia);
+    }
+    if (fila.metodo !== null && fila.total_metodo !== null) dia.porMetodo[fila.metodo] = fila.total_metodo;
+  }
+
+  return { total: rows[0]?.total_general ?? CERO, porDia: [...porDia.values()] };
+}
+
+// ------------------------------------------------------------------
 //  Antigüedad
 // ------------------------------------------------------------------
 
