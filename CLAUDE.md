@@ -716,7 +716,7 @@ Requisitos concretos, no buenas intenciones:
   está usado en esta sucursal. Revisá el papel y volvé a escribirlo."
 - Pocos campos por pantalla y un solo camino claro para cada tarea.
 - **Ninguna lista larga se muestra de golpe** (SPEC-KRILINXI-041). Toda lista que puede crecer —boletas, ropa,
-  cuentas, registros— se pagina, con una barra de páginas en palabras, y cuántas filas entran depende del ancho
+  cuentas, registros— se pagina, con una barra de páginas en palabras que se ve siempre ("Página 1 de 1" si cabe todo), y cuántas filas entran depende del ancho
   del dispositivo (6 en un celular, 10 en una tablet vertical, 20 en una pantalla ancha, de `lib/tamanoDePagina.ts`).
   El buscador completa la paginación, no la reemplaza. Un test de arquitectura obliga a que una lista nueva elija.
 

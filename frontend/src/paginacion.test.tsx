@@ -66,10 +66,23 @@ describe('La ropa en el local se pagina — SPEC-KRILINXI-041', () => {
     expect(screen.getByText('Página 2 de 2')).toBeInTheDocument();
   });
 
-  it('si todo entra en una página no hay barra: en una pantalla ancha, siete entran', async () => {
+  it('si todo entra en una página, la barra se ve igual: "Página 1 de 1" con los botones apagados', async () => {
     await abrirMostrador('/mostrador', 7);
 
     expect(botonesDeBoletas()).toHaveLength(7);
+    const paginas = within(screen.getByRole('navigation', { name: 'Páginas de la ropa en el local' }));
+    expect(paginas.getByText('Página 1 de 1')).toBeInTheDocument();
+    expect(paginas.getByRole('button', { name: 'Anteriores' })).toBeDisabled();
+    expect(paginas.getByRole('button', { name: 'Siguientes' })).toBeDisabled();
+  });
+
+  it('sin ropa en el local no hay barra: no tendría nada que paginar', async () => {
+    tabletConRelojCorrido(0);
+    simularApi(() => 'sin-conexion');
+    const prueba = await baseLocalDePrueba();
+    renderEnRuta(<App />, '/mostrador', { baseLocal: prueba.control });
+
+    expect(await screen.findByText('No hay ropa en el local.')).toBeInTheDocument();
     expect(barra('Páginas de la ropa en el local')).not.toBeInTheDocument();
   });
 
@@ -80,12 +93,12 @@ describe('La ropa en el local se pagina — SPEC-KRILINXI-041', () => {
     cambiarAnchoDePantalla(500);
 
     await waitFor(() => expect(botonesDeBoletas()).toHaveLength(6));
-    expect(barra('Páginas de la ropa en el local')).toBeInTheDocument();
+    expect(screen.getByText('Página 1 de 2')).toBeInTheDocument();
 
     cambiarAnchoDePantalla(1200);
 
     await waitFor(() => expect(botonesDeBoletas()).toHaveLength(7));
-    expect(barra('Páginas de la ropa en el local')).not.toBeInTheDocument();
+    expect(screen.getByText('Página 1 de 1')).toBeInTheDocument();
   });
 
   it('en una pantalla mediana entran diez', async () => {
@@ -210,9 +223,9 @@ describe('Los registros para corregir se paginan — SPEC-KRILINXI-041', () => {
     fireEvent.click(enLaPantalla().getByRole('button', { name: 'Descartar' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Sí, descartar' }));
 
-    // Quedan seis: una sola página, y la barra desaparece.
+    // Quedan seis: una sola página, y la barra lo dice.
     await waitFor(() => expect(enLaPantalla().getAllByRole('listitem')).toHaveLength(6));
-    expect(barra('Páginas de los registros para corregir')).not.toBeInTheDocument();
+    expect(within(screen.getByRole('navigation', { name: 'Páginas de los registros para corregir' })).getByText('Página 1 de 1')).toBeInTheDocument();
   });
 });
 

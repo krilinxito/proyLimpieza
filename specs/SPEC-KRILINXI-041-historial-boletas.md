@@ -38,7 +38,7 @@ El EMPLEADO (o el ADMIN mientras atiende) ve los **últimos 30 días** de su suc
 
 ## Criterios de aceptación
 
-- [ ] Todas las listas que pueden crecer se paginan (Anteriores · Página 2 de 3 · Siguientes), también las que se leen de la base local; cuando no pasan de una página, no se muestra ninguna barra.
+- [ ] Todas las listas que pueden crecer se paginan (Anteriores · Página 2 de 3 · Siguientes), también las que se leen de la base local; la barra se ve siempre que haya algo en la lista, también con una sola página ("Página 1 de 1", con los botones apagados), para saber que está paginada; con la lista vacía no se dibuja.
 - [ ] Cuántas boletas (o filas) entran en una página depende del ancho de la pantalla —6 en angosta (menos de 640px), 10 en mediana (hasta 1023px) y 20 en ancha— y sale de un solo lugar; si la pantalla cambia de tamaño, la página se ajusta sin quedar fuera de rango.
 - [ ] Cambiar un filtro o lo que se busca vuelve a la primera página; si al borrarse un registro (por ejemplo, al corregir uno) la página actual queda vacía, se pasa a la última que tenga.
 - [ ] Un test de arquitectura vigila que las pantallas con listas largas usen la paginación, para que una lista nueva no nazca sin ella.
