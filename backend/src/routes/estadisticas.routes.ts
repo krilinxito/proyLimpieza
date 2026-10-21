@@ -3,6 +3,7 @@ import { Router } from 'express';
 import {
   getClientes,
   getIngresos,
+  getIngresosPorDia,
   getProductividad,
   getSaldos,
   getSinRecoger,
@@ -18,6 +19,7 @@ export const estadisticasRouter = Router();
 estadisticasRouter.use(requireAuth, requireRol('ADMIN'));
 
 estadisticasRouter.get('/ingresos', getIngresos);
+estadisticasRouter.get('/ingresos-por-dia', getIngresosPorDia);
 estadisticasRouter.get('/saldos', getSaldos);
 estadisticasRouter.get('/sin-recoger', getSinRecoger);
 estadisticasRouter.get('/volumen', getVolumen);

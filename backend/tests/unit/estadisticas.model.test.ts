@@ -94,3 +94,84 @@ describe('Estadísticas model: atenciones de cada cliente — SPEC-ALE186-017', 
     expect((query.mock.calls[1] as [string])[0]).toContain("'gastado', ps.gastado::numeric(14,2)::text");
   });
 });
+
+describe('Estadísticas model: ingresos por día — SPEC-KRILINXI-043', () => {
+  /** Una fila del SQL: un día, y uno de sus métodos con cobros (o ninguno). */
+  const fila = (fecha: string, metodo: string | null, totalMetodo: string | null, totalDia: string, totalGeneral: string) => ({
+    fecha,
+    metodo,
+    total_metodo: totalMetodo,
+    total_dia: totalDia,
+    total_general: totalGeneral,
+  });
+
+  it('manda el período, la sucursal y la zona como parámetros, nunca escritos en el SQL', async () => {
+    await estadisticas.ingresosPorDia(PERIODO);
+
+    const [sql, valores] = llamada();
+    expect(valores).toEqual(['2025-05-01', '2025-05-31', SUCURSAL, 'America/La_Paz']);
+    for (const valor of ['2025-05-01', SUCURSAL, 'America/La_Paz']) expect(sql).not.toContain(valor);
+  });
+
+  it('filtra por período con `enElPeriodo` sobre fecha_pago, para que sirva su índice', async () => {
+    await estadisticas.ingresosPorDia(PERIODO);
+
+    const [sql] = llamada();
+    expect(sql).toContain(enElPeriodo('p.fecha_pago', PARAMETROS_DEL_PERIODO));
+    expect(sql).not.toMatch(/::date BETWEEN/);
+  });
+
+  it('agrupa por el día de Bolivia, no por el de la zona del servidor', async () => {
+    await estadisticas.ingresosPorDia(PERIODO);
+
+    // `horaDelNegocio` convierte la columna a la zona del negocio ($4) y recién después toma el día.
+    expect(llamada()[0]).toMatch(/AT TIME ZONE current_setting\('TimeZone'\)\) AT TIME ZONE \$4\)::date AS fecha/);
+  });
+
+  it('arma todos los días del período, para que los que no tienen cobros salgan en cero', async () => {
+    await estadisticas.ingresosPorDia(PERIODO);
+
+    expect(llamada()[0]).toMatch(/generate_series\(\$1::date, \$2::date[\s\S]*LEFT JOIN cobros/);
+  });
+
+  it('las sumas las hace Postgres, con funciones de ventana: el model no suma ningún monto', async () => {
+    await estadisticas.ingresosPorDia(PERIODO);
+
+    const [sql] = llamada();
+    expect(sql).toMatch(/SUM\(cobros\.monto\) OVER \(PARTITION BY dias\.fecha\)/);
+    expect(sql).toMatch(/SUM\(cobros\.monto\) OVER \(\)/);
+  });
+
+  it('reacomoda las filas en un registro por día, con las cuatro formas de pago y "0.00" en las que no cobraron', async () => {
+    query.mockResolvedValue({
+      rows: [
+        fila('2025-05-01', 'EFECTIVO', '10.00', '15.50', '15.50'),
+        fila('2025-05-01', 'QR', '5.50', '15.50', '15.50'),
+        fila('2025-05-02', null, null, '0.00', '15.50'),
+      ],
+    });
+
+    const resultado = await estadisticas.ingresosPorDia(PERIODO);
+
+    expect(resultado).toEqual({
+      total: '15.50',
+      porDia: [
+        { fecha: '2025-05-01', total: '15.50', porMetodo: { EFECTIVO: '10.00', QR: '5.50', TARJETA: '0.00', TRANSFERENCIA: '0.00' } },
+        { fecha: '2025-05-02', total: '0.00', porMetodo: { EFECTIVO: '0.00', QR: '0.00', TARJETA: '0.00', TRANSFERENCIA: '0.00' } },
+      ],
+    });
+  });
+
+  it('devuelve los montos tal como llegan de Postgres, sin tocarlos', async () => {
+    query.mockResolvedValue({ rows: [fila('2025-05-01', 'EFECTIVO', '0.10', '0.30', '0.30'), fila('2025-05-01', 'QR', '0.20', '0.30', '0.30')] });
+
+    const { total, porDia } = await estadisticas.ingresosPorDia(PERIODO);
+
+    expect(total).toBe('0.30');
+    expect(porDia[0]?.total).toBe('0.30');
+  });
+
+  it('sin filas, el total es "0.00" y no hay días', async () => {
+    expect(await estadisticas.ingresosPorDia(PERIODO)).toEqual({ total: '0.00', porDia: [] });
+  });
+});

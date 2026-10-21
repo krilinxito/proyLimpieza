@@ -20,6 +20,13 @@ export async function getIngresos(req: Request, res: Response): Promise<void> {
   res.json({ desde: periodo.desde, hasta: periodo.hasta, ...resultado });
 }
 
+/** GET /api/estadisticas/ingresos-por-dia — SPEC-KRILINXI-043 */
+export async function getIngresosPorDia(req: Request, res: Response): Promise<void> {
+  const periodo = leerPeriodo(req.query);
+  const resultado = await estadisticas.ingresosPorDia(periodo);
+  res.json({ desde: periodo.desde, hasta: periodo.hasta, ...resultado });
+}
+
 /** GET /api/estadisticas/saldos */
 export async function getSaldos(req: Request, res: Response): Promise<void> {
   const periodo = leerPeriodo(req.query);
