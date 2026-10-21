@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-039
 name: Personal y Sucursales como tarjetas con su información
 slug: tarjetas-personal-sucursales
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-19
 scope:
