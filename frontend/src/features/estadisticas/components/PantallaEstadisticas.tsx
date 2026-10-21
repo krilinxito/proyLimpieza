@@ -4,8 +4,10 @@ import { Boton } from '../../../components/Boton';
 import { usePanel } from '../hooks/usePanel';
 import { useSucursalesAbiertas } from '../../sucursales/hooks/useSucursales';
 import { describirPeriodo, FILTRO_INICIAL, type Filtro } from '../periodo';
+import { conMayuscula } from './Detalle';
 import { FiltroPanel } from './FiltroPanel';
 import { Indicadores } from './Indicadores';
+import { SeccionFormasDePago } from './SeccionFormasDePago';
 import { SeccionIngresos } from './SeccionIngresos';
 import { SeccionClientes } from './SeccionClientes';
 import { SeccionProductividad } from './SeccionProductividad';
@@ -21,6 +23,10 @@ import { SeccionVolumen } from './SeccionVolumen';
  *
  * Desde SPEC-KRILINXI-026 es un tablero: arriba los indicadores, y cada sección con su gráfico y,
  * debajo, el detalle de siempre. Ni los indicadores ni los gráficos aparecen sin el panel listo.
+ *
+ * Desde SPEC-KRILINXI-042 es un dashboard: debajo de los indicadores, una grilla de tarjetas (dos por
+ * fila desde 1024px, una en pantalla angosta), cada una con un gráfico que responde una pregunta, y
+ * el detalle en tablas plegado en "Ver el detalle". El filtro de arriba cambia todas a la vez.
  */
 export function PantallaEstadisticas() {
   const [filtro, setFiltro] = useState<Filtro>(FILTRO_INICIAL);
@@ -66,13 +72,16 @@ export function PantallaEstadisticas() {
               historia: describirPeriodo(filtro, 'historia'),
             }}
           />
-          <SeccionIngresos ingresos={estado.datos.ingresos} periodo={describirPeriodo(filtro, 'ingresos')} />
-          <SeccionSaldos saldos={estado.datos.saldos} periodo={describirPeriodo(filtro, 'pendientes')} />
-          <SeccionSinRecoger sinRecoger={estado.datos.sinRecoger} periodo={describirPeriodo(filtro, 'pendientes')} />
-          <SeccionVolumen volumen={estado.datos.volumen} periodo={describirPeriodo(filtro, 'historia')} />
-          <SeccionProductividad productividad={estado.datos.productividad} periodo={describirPeriodo(filtro, 'historia')} />
-          {/* Solo con el panel listo: sin internet ya lo dice el aviso de arriba, una sola vez. */}
-          <SeccionClientes filtro={filtro} periodo={describirPeriodo(filtro, 'historia')} />
+          <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <SeccionFormasDePago ingresos={estado.datos.ingresos} periodo={conMayuscula(describirPeriodo(filtro, 'ingresos'))} />
+            <SeccionIngresos ingresos={estado.datos.ingresos} periodo={conMayuscula(describirPeriodo(filtro, 'ingresos'))} />
+            <SeccionVolumen volumen={estado.datos.volumen} periodo={conMayuscula(describirPeriodo(filtro, 'historia'))} />
+            <SeccionSaldos saldos={estado.datos.saldos} periodo={conMayuscula(describirPeriodo(filtro, 'pendientes'))} />
+            <SeccionSinRecoger sinRecoger={estado.datos.sinRecoger} periodo={conMayuscula(describirPeriodo(filtro, 'pendientes'))} />
+            <SeccionProductividad productividad={estado.datos.productividad} periodo={conMayuscula(describirPeriodo(filtro, 'historia'))} />
+            {/* Solo con el panel listo: sin internet ya lo dice el aviso de arriba, una sola vez. */}
+            <SeccionClientes filtro={filtro} periodo={conMayuscula(describirPeriodo(filtro, 'historia'))} />
+          </div>
         </>
       )}
     </>

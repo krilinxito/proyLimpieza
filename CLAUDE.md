@@ -227,6 +227,14 @@ dato depende del mouse: cada barra es un botón que, al tocarlo o enfocarlo, esc
 gráfico (`Grafico`) tiene nombre y una tabla `sr-only` con los mismos números, que es donde los tests
 leen los valores. Los colores son `serie-1`…`serie-4` (uno por forma de pago, validados con todas sus
 parejas para daltonismo, ver la bitácora) y `antiguedad-1`…`3` en el tema.
+SPEC-KRILINXI-042 hizo de `/estadisticas` un **dashboard**: debajo de los indicadores, una grilla de siete tarjetas
+(`SeccionPanel`: dos por fila desde 1024px, una en angosta; la de ropa recibida ocupa la fila entera), cada una con
+**un gráfico que responde una pregunta** escrita en palabras ("¿Cuánto se cobró en cada sucursal?") y su período
+debajo. El detalle en listas (cada boleta, persona o cliente) va plegado en "Ver el detalle" (`Detalle`, un
+`<details>`). Sumó el gráfico de forma de pago y el de clientes que más vienen. No hizo falta ningún color nuevo.
+**Excepción a §8**: el total por forma de pago lo suma el frontend, en centavos enteros
+(`features/estadisticas/totalesPorFormaDePago.ts`), porque `/ingresos` solo lo trae por sucursal; es la única suma
+de dinero del frontend, y su test la compara con el total que suma Postgres. Cuando la API lo traiga, se borra.
 SPEC-KRILINXI-027 cerró la ola con las pantallas de gestión: Personal, Sucursales, ¿Quién hizo qué? y
 Registros para corregir. Cada cuenta, sucursal, registro de la auditoría y rechazo es una `Tarjeta`; su
 estado, una `Insignia` (qué tono lleva cada estado lo decide la feature, como `TONO_ESTADO`), y el
@@ -683,7 +691,9 @@ es caro y no aporta nada, porque el admin trabaja en la oficina, con conexión.
   cada fila y Postgres no puede buscar en su índice. `horaDelNegocio` queda para lo que se
   MUESTRA (el `SELECT`, el `GROUP BY` por día), donde no estorba.
 - **Los montos se suman en Postgres y salen como texto** (`"125.50"`), incluidos los totales
-  por sucursal y el general. El frontend no suma: muestra.
+  por sucursal y el general. El frontend no suma: muestra. **Una excepción, declarada**
+  (SPEC-KRILINXI-042): el total por forma de pago de todas las sucursales juntas, que `/ingresos` no trae, se suma en
+  el frontend en centavos enteros (`totalesPorFormaDePago.ts`) hasta que la API lo dé.
 - Métricas de la primera versión:
   - **Ingresos** por período y sucursal, desglosados por `metodo_pago`.
   - **Saldos pendientes** de cobro, con antigüedad.
