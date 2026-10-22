@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-047
 name: Documentar el diseño actual de la interfaz
 slug: documentar-diseno
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-22
 scope:
@@ -13,7 +13,8 @@ scope:
   - CLAUDE.md
 priority: medium
 depends_on: []
-tests: []
+tests:
+  - frontend\src\test\disenoDocumentado.test.ts
 ---
 
 ## Descripción
