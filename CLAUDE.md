@@ -262,6 +262,12 @@ como mucho, con los `serie-1…4` y la leyenda de siempre). Pide `GET /api/estad
 `usePanel`, no pide de más. Cada día es un botón sobre el dibujo (tocar o enfocar escribe su detalle), los días sin cobros
 se dibujan en cero sin cortar la línea, y no se suma nada en el frontend. Para los tests, `ingresosPorDiaDePrueba` e
 `ingresosPorDiaDeDias` en `test/estadisticasDePrueba.ts`.
+SPEC-KRILINXI-050 puso orden en el tablero: a la vista, los cuatro indicadores y **tres tarjetas** (la caja día a día, con qué se pagó y lo
+que falta cobrar); las otras cinco (por sucursal, ropa recibida, sin recoger, productividad y clientes) están bajo **"Ver más estadísticas"**
+(`VerMas`, un `<details>` controlado que no monta sus hijos cerrado). La productividad salió de `usePanel` a `useProductividad`: como los clientes, no se
+pide hasta que se despliega; lo que alimenta los indicadores se pide siempre. Mientras llegan los datos hay un **esqueleto** (`Esqueleto`,
+`EsqueletoDelTablero`) y nunca un número; una tarjeta con su propio pedido que falla lo dice ella (`AvisoDeTarjeta`), pero si falla una de las cuatro
+del panel, falla el panel entero.
 SPEC-KRILINXI-027 cerró la ola con las pantallas de gestión: Personal, Sucursales, ¿Quién hizo qué? y
 Registros para corregir. Cada cuenta, sucursal, registro de la auditoría y rechazo es una `Tarjeta`; su
 estado, una `Insignia` (qué tono lleva cada estado lo decide la feature, como `TONO_ESTADO`), y el

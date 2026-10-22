@@ -126,9 +126,8 @@ export type Panel = {
   ingresos: Ingresos;
   saldos: Saldos;
   sinRecoger: SinRecoger;
-  /** SPEC-KRILINXI-016. Los clientes van aparte: se paginan sin volver a pedir el resto. */
+  /** SPEC-KRILINXI-016. Los clientes y la productividad van aparte (SPEC-KRILINXI-050): solo las usan tarjetas plegadas. */
   volumen: Volumen;
-  productividad: Productividad;
 };
 
 /** Una sucursal para el filtro, leída de la base local. */

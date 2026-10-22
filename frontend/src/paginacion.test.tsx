@@ -284,6 +284,8 @@ describe('Lo que se pide a la API depende de la pantalla — SPEC-KRILINXI-041',
     tabletConRelojCorrido(0);
     const servidor = simularEstadisticas();
     await abrirComoAdmin('/estadisticas', async () => undefined);
+    // Los clientes están en "Ver más estadísticas" y no se piden hasta que se despliega (SPEC-KRILINXI-050).
+    fireEvent.click(await screen.findByText('Ver más estadísticas'));
 
     await waitFor(() => expect(servidor.pedidos.some((p) => p.ruta === '/estadisticas/clientes')).toBe(true));
     expect(servidor.pedidos.find((p) => p.ruta === '/estadisticas/clientes')?.parametros).toMatchObject({ por_pagina: esperadas });

@@ -1,5 +1,3 @@
-import { Aviso } from '../../../components/Aviso';
-import { Boton } from '../../../components/Boton';
 import { Paginas } from '../../../components/Paginas';
 import { useClientesAtendidos } from '../hooks/useClientesAtendidos';
 import { fechaParaLeer, type Filtro } from '../periodo';
@@ -9,6 +7,7 @@ import { BarrasHorizontales } from './graficos/BarrasHorizontales';
 import { COLOR_UNICO } from './graficos/colores';
 import { hayDatos } from './graficos/escalas';
 import { Grafico } from './graficos/Grafico';
+import { AvisoDeTarjeta, Esqueleto } from './Esqueleto';
 import { bs, veces } from './montos';
 import { SeccionPanel } from './SeccionPanel';
 
@@ -33,18 +32,9 @@ export function SeccionClientes({ filtro, periodo }: { filtro: Filtro; periodo: 
 
   return (
     <SeccionPanel nombre="Clientes atendidos" pregunta="¿Quiénes son los clientes que más vienen?" periodo={periodo}>
-      {estado.tipo === 'cargando' && <p className="mt-4 text-xl text-texto-suave">Buscando los clientes…</p>}
+      {estado.tipo === 'cargando' && <Esqueleto texto="Buscando los clientes…" />}
 
-      {(estado.tipo === 'sin-conexion' || estado.tipo === 'error') && (
-        <div className="mt-4">
-          <Aviso tipo={estado.tipo === 'sin-conexion' ? 'advertencia' : 'error'}>
-            <p>{estado.tipo === 'sin-conexion' ? 'Las estadísticas necesitan conexión.' : estado.mensaje}</p>
-            <div className="mt-4">
-              <Boton onClick={recargar}>Probar de nuevo</Boton>
-            </div>
-          </Aviso>
-        </div>
-      )}
+      {(estado.tipo === 'sin-conexion' || estado.tipo === 'error') && <AvisoDeTarjeta estado={estado} recargar={recargar} />}
 
       {estado.tipo === 'listo' && estado.datos.clientes.length === 0 && (
         <p className="mt-4 text-xl text-texto-suave">No vino ningún cliente en este período.</p>
