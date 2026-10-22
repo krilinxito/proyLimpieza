@@ -150,6 +150,12 @@ SPEC-KRILINXI-046 hizo que el formulario de entrega **no pida ningún monto si l
 sin "Precio final", "Cuánto paga ahora" ni "¿Cómo paga?", y en su lugar el aviso "Ya está todo pagado". La entrega se guarda con el
 precio de la boleta y sin pago final (`datosAEnviar` en `FormularioEntrega`). Consecuencia aceptada: en una boleta ya pagada no se
 puede cargar un recargo al entregar. Con saldo pendiente, el formulario es el de siempre.
+SPEC-KRILINXI-047 dejó por escrito el **sistema visual** y para quién es el producto: `frontend/PRODUCT.md` (usuarios, propósito,
+restricciones) y `frontend/DESIGN.md` (colores, letra, componentes y patrones, con su complemento `frontend/.impeccable/design.json`),
+generados con la skill impeccable a partir del código. **No reemplazan a `src/index.css`**: los colores siguen viviendo ahí, y el
+DESIGN.md los describe. Un test (`src/test/disenoDocumentado.test.ts`) lo ata al código: falla si el documento nombra un color que el
+tema no tiene, o si el tema tiene un color que el documento no nombra. Un color nuevo, entonces, se agrega a `index.css` (los dos
+bloques, §4) **y** al DESIGN.md. La carpeta de la skill (`.claude/skills/impeccable`) no se versiona; se instala con `npx impeccable install`.
 SPEC-KRILINXI-010 renueva la sesión sin pedir la contraseña: cada vez que PowerSync pide
 credenciales, `features/auth/renovacion.ts` mira el `exp` del `tokenPowerSync` y, si le quedan
 menos de 2 minutos (o no se lee), cambia el par en `/renovar` con el token de la API —una sola
@@ -736,6 +742,9 @@ es caro y no aporta nada, porque el admin trabaja en la oficina, con conexión.
 ---
 
 ## 9. Interfaz para quienes no son técnicos
+
+Cómo se ve la app (colores, letra, componentes) está en `frontend/DESIGN.md`, y para quién es, en `frontend/PRODUCT.md`
+(SPEC-KRILINXI-047). Leelos antes de pulir una pantalla.
 
 Requisitos concretos, no buenas intenciones:
 
