@@ -137,20 +137,8 @@ export function DetalleOrden({ ordenId, alVolver, accionesExtra, textoVolver = '
         </dl>
       </Tarjeta>
 
-      <Tarjeta titulo="Pagos" nivel={3}>
-        {orden.pagos.length === 0 ? (
-          <p className="text-xl text-texto-suave">Todavía no pagó nada.</p>
-        ) : (
-          <ul className="grid gap-2 text-xl" aria-label="Pagos">
-            {orden.pagos.map((pago) => (
-              <li key={pago.id} className="rounded-xl bg-fondo px-4 py-2">
-                {TEXTO_TIPO_PAGO[pago.tipo]} — {TEXTO_METODO_PAGO[pago.metodo]} — {formatearBs(pago.monto)}
-              </li>
-            ))}
-          </ul>
-        )}
-      </Tarjeta>
-
+      {/* Lo que se viene a hacer va justo debajo de lo que falta pagar (SPEC-KRILINXI-049): los pagos, que
+          se miran menos, quedan después. */}
       {aviso && <Aviso tipo="error">{aviso}</Aviso>}
       {hecho && <Aviso tipo="exito">{hecho}</Aviso>}
 
@@ -194,12 +182,6 @@ export function DetalleOrden({ ordenId, alVolver, accionesExtra, textoVolver = '
             </Boton>
           )}
           {accionesExtra?.(orden, recargar, { principal: !siguiente })}
-          {/* Apartada de las demás: en angosta, en su propio renglón; en ancha, al final de la fila. */}
-          <div className="col-span-2 justify-self-start sm:ml-auto">
-            <Boton variante="peligro" tamano="compacto" icono="anular" onClick={() => setAnulando(true)}>
-              Anular
-            </Boton>
-          </div>
         </div>
       )}
 
@@ -214,6 +196,29 @@ export function DetalleOrden({ ordenId, alVolver, accionesExtra, textoVolver = '
           }}
           alCancelar={() => setCobrando(false)}
         />
+      )}
+
+      <Tarjeta titulo="Pagos" nivel={3}>
+        {orden.pagos.length === 0 ? (
+          <p className="text-xl text-texto-suave">Todavía no pagó nada.</p>
+        ) : (
+          <ul className="grid gap-2 text-xl" aria-label="Pagos">
+            {orden.pagos.map((pago) => (
+              <li key={pago.id} className="rounded-xl bg-fondo px-4 py-2">
+                {TEXTO_TIPO_PAGO[pago.tipo]} — {TEXTO_METODO_PAGO[pago.metodo]} — {formatearBs(pago.monto)}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Tarjeta>
+
+      {/* Anular, lo único que no tiene vuelta atrás, aparte de las acciones de todos los días y al final. */}
+      {!cerrada && (
+        <div className="mt-2">
+          <Boton variante="peligro" tamano="compacto" icono="anular" onClick={() => setAnulando(true)}>
+            Anular
+          </Boton>
+        </div>
       )}
 
       <div className="mt-2">
