@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-048
 name: Registrar ropa más corto y sin pérdida de lo escrito
 slug: registrar-ropa-corto
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-22
 scope:
@@ -15,7 +15,9 @@ scope:
 priority: high
 depends_on:
   - SPEC-KRILINXI-047
-tests: []
+tests:
+  - frontend\src\features\mostrador\components\RegistrarEnMostrador.test.tsx
+  - frontend\src\features\ordenes\components\atajosDeFecha.test.ts
 ---
 
 ## Descripción
