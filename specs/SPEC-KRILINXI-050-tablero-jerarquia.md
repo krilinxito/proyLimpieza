@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-050
 name: Tablero del admin con una pregunta principal y el resto a pedido
 slug: tablero-jerarquia
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-22
 scope:
@@ -15,7 +15,9 @@ scope:
 priority: medium
 depends_on:
   - SPEC-KRILINXI-047
-tests: []
+tests:
+  - frontend\src\features\estadisticas\components\PantallaEstadisticas.test.tsx
+  - frontend\src\paginacion.test.tsx
 ---
 
 ## Descripción
