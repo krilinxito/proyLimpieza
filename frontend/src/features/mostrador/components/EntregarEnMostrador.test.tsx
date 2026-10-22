@@ -5,6 +5,7 @@ import { simularApi } from '../../../test/apiFalsa';
 import { baseLocalDePrueba } from '../../../test/baseLocalDePrueba';
 import { elegirEnBuscador } from '../../../test/buscador';
 import { clienteDePrueba, ordenDePrueba, pagoDePrueba } from '../../../test/filasDePrueba';
+import { accionesPrincipales } from '../../../test/jerarquia';
 import { sinJerga } from '../../../test/jerga';
 import { renderEnRuta } from '../../../test/render';
 import { sesionDePrueba } from '../../../test/sesion';
@@ -196,5 +197,117 @@ describe('Entregar en el Mostrador con el tema — SPEC-KRILINXI-025 y SPEC-KRIL
 
     const hecho = await screen.findByText(/^Ropa entregada: boleta/);
     expect(hecho.closest('[role="status"]')).toHaveClass('bg-exito-fondo');
+  });
+});
+
+/**
+ * Una boleta ya pagada no pide ningún monto al entregar — SPEC-KRILINXI-046. Tres boletas de Rosa:
+ * la de siempre (Bs 50, adelantó 20: falta pagar 30), una pagada en partes (20 de adelanto y 30 después) y una
+ * de precio cero. Las dos últimas no tienen nada que cobrar.
+ */
+const PAGADA = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '001240', estado: 'LISTO' });
+const SIN_PRECIO = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '001241', estado: 'LISTO', precio_total: '0.00' });
+
+async function abrirConPagadas() {
+  const servidor = simularApi(() => 'sin-conexion');
+  const prueba = await baseLocalDePrueba();
+  await prueba.sembrar('clientes', [ROSA]);
+  await prueba.sembrar('ordenes', [LISTA, PAGADA, SIN_PRECIO]);
+  await prueba.sembrar('pagos', [
+    pagoDePrueba({ orden_id: LISTA.id, monto: '20.00' }),
+    pagoDePrueba({ orden_id: PAGADA.id, monto: '20.00' }),
+    pagoDePrueba({ orden_id: PAGADA.id, monto: '30.00', tipo: 'PAGO_FINAL' }),
+  ]);
+  renderEnRuta(<App />, '/mostrador', { baseLocal: prueba.control });
+  await screen.findByRole('button', { name: 'Boleta 001234, Rosa Quispe' });
+  return { ...prueba, servidor };
+}
+
+/** Toca "Entregar" y espera la confirmación de esa boleta. */
+async function confirmacionDe(formulario: HTMLElement, boleta: string) {
+  fireEvent.click(within(formulario).getByRole('button', { name: 'Entregar' }));
+  return screen.findByRole('dialog', { name: `¿Entregar la ropa de la boleta ${boleta}?` });
+}
+
+const CAMPOS_DE_DINERO = ['Precio final (Bs)', 'Cuánto paga ahora (Bs, si paga)'];
+
+describe('Entregar una boleta ya pagada: sin pedir montos — SPEC-KRILINXI-046', () => {
+  it('no muestra ningún campo de dinero: dice que ya está todo pagado, en palabras', async () => {
+    await abrirConPagadas();
+    const formulario = await abrirEntrega('001240');
+
+    for (const campo of CAMPOS_DE_DINERO) expect(within(formulario).queryByLabelText(campo)).not.toBeInTheDocument();
+    // Ni la pregunta de cómo paga, ni sus opciones.
+    expect(within(formulario).queryByText('¿Cómo paga?')).not.toBeInTheDocument();
+    expect(within(formulario).queryByLabelText('Efectivo')).not.toBeInTheDocument();
+    // En su lugar, un aviso de éxito; y la línea de "cuánto falta" ya no tiene qué decir.
+    expect(within(formulario).getByRole('status')).toHaveTextContent('Ya está todo pagado');
+    expect(within(formulario).queryByText(/Falta pagar|No falta pagar/)).not.toBeInTheDocument();
+    sinJerga();
+  });
+
+  it('se entrega con solo elegir si trae la boleta: sin monto, sin deuda en la confirmación y sin pago nuevo', async () => {
+    const { db, control, servidor } = await abrirConPagadas();
+    const formulario = await abrirEntrega('001240');
+
+    fireEvent.click(within(formulario).getByLabelText('Trae la boleta'));
+    const dialogo = await confirmacionDe(formulario, '001240');
+    expect(dialogo).toHaveTextContent('Esta acción no se puede deshacer.');
+    expect(dialogo).not.toHaveTextContent('debiendo');
+    sinJerga();
+    fireEvent.click(screen.getByRole('button', { name: 'Sí, entregar' }));
+
+    expect(await resumen()).toMatchObject({ Boleta: '001240', Retiró: 'Trajo la boleta', 'Precio final': 'Bs 50,00', 'Queda debiendo': 'Nada' });
+    // La entrega lleva el precio de la boleta, y NO se encola ningún pago: solo la entrega.
+    expect(await control.base.consultar('SELECT precio_final FROM entregas')).toEqual([{ precio_final: '50.00' }]);
+    expect(await control.base.consultar("SELECT count(*) AS n FROM pagos WHERE orden_id = ?", [PAGADA.id])).toEqual([{ n: 2 }]);
+    expect((await db.getCrudBatch(100))?.crud.map((c) => [c.op, c.table])).toEqual([['PUT', 'entregas']]);
+    expect(servidor.pedidos).toEqual([]);
+  });
+
+  it('sin boleta sigue pidiendo nombre y carnet de quien retira, y ningún monto', async () => {
+    await abrirConPagadas();
+    const formulario = await abrirEntrega('001240');
+
+    fireEvent.click(within(formulario).getByLabelText('No trae la boleta'));
+    escribir(formulario, 'Nombre de quien retira', 'Juan Mamani');
+    escribir(formulario, 'Carnet de quien retira', '445566');
+    for (const campo of CAMPOS_DE_DINERO) expect(within(formulario).queryByLabelText(campo)).not.toBeInTheDocument();
+
+    await confirmacionDe(formulario, '001240');
+    fireEvent.click(screen.getByRole('button', { name: 'Sí, entregar' }));
+    expect(await resumen()).toMatchObject({ Retiró: 'Juan Mamani (carnet 445566)' });
+  });
+
+  it('una boleta pagada en partes cuenta como pagada, y una de precio cero también', async () => {
+    await abrirConPagadas();
+
+    // 001240: 20 de adelanto + 30 después = 50. 001241: no cuesta nada.
+    for (const boleta of ['001240', '001241']) {
+      const formulario = await abrirEntrega(boleta);
+      expect(within(formulario).getByRole('status')).toHaveTextContent('Ya está todo pagado');
+      expect(within(formulario).queryByLabelText('Precio final (Bs)')).not.toBeInTheDocument();
+      fireEvent.click(within(formulario).getByRole('button', { name: 'Cancelar' }));
+    }
+  });
+
+  it('si falta pagar algo, el formulario es el de siempre: precio final, lo que falta y cuánto paga ahora', async () => {
+    await abrirConPagadas();
+    const formulario = await abrirEntrega('001234');
+
+    expect(within(formulario).getByLabelText('Precio final (Bs)')).toHaveValue('50.00');
+    expect(within(formulario).getByText('Falta pagar Bs 30,00.')).toBeInTheDocument();
+    expect(within(formulario).getByLabelText('Cuánto paga ahora (Bs, si paga)')).toBeInTheDocument();
+    expect(within(formulario).queryByText('Ya está todo pagado')).not.toBeInTheDocument();
+    // Al escribir un pago, aparece cómo paga.
+    escribir(formulario, 'Cuánto paga ahora (Bs, si paga)', '30');
+    expect(within(formulario).getByText('¿Cómo paga?')).toBeInTheDocument();
+  });
+
+  it('sigue habiendo una sola acción principal a la vista: Entregar', async () => {
+    await abrirConPagadas();
+    await abrirEntrega('001240');
+
+    expect(accionesPrincipales()).toEqual(['Entregar']);
   });
 });

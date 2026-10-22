@@ -146,6 +146,10 @@ debiendo. **El frontend nunca escribe `ordenes.estado = 'ENTREGADO'`**: lo hace 
 en la tablet se ve por `estadoEfectivo`. Con eso, el flujo del mostrador está completo
 (registrar → avanzar → cobrar → entregar). Las pantallas del mostrador piden una sucursal de
 trabajo: la del EMPLEADO, o la que eligió el ADMIN (SPEC-KRILINXI-029).
+SPEC-KRILINXI-046 hizo que el formulario de entrega **no pida ningún monto si la boleta ya está pagada** (`orden.saldo <= 0`):
+sin "Precio final", "Cuánto paga ahora" ni "¿Cómo paga?", y en su lugar el aviso "Ya está todo pagado". La entrega se guarda con el
+precio de la boleta y sin pago final (`datosAEnviar` en `FormularioEntrega`). Consecuencia aceptada: en una boleta ya pagada no se
+puede cargar un recargo al entregar. Con saldo pendiente, el formulario es el de siempre.
 SPEC-KRILINXI-010 renueva la sesión sin pedir la contraseña: cada vez que PowerSync pide
 credenciales, `features/auth/renovacion.ts` mira el `exp` del `tokenPowerSync` y, si le quedan
 menos de 2 minutos (o no se lee), cambia el par en `/renovar` con el token de la API —una sola

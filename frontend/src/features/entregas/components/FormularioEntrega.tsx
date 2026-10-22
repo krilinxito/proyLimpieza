@@ -36,6 +36,11 @@ function saldoConPrecio(orden: OrdenVista, precioFinal: string): number | null {
  * Entregar la ropa — SPEC-KRILINXI-009. Valida quien guarda (`api/entregasLocal`); esto
  * muestra lo que le contesta y, antes de escribir, pide confirmación diciendo cuánto queda
  * debiendo el cliente si queda algo.
+ *
+ * Si la boleta **ya está pagada** (lo pagado cubre su precio) no pide ningún monto — SPEC-KRILINXI-046:
+ * ni el precio final ni cuánto paga ahora ni cómo paga. Un campo de dinero en una boleta sin deuda da a
+ * entender que hay que escribir algo, y no hay nada que cobrar. En su lugar dice "Ya está todo pagado", y
+ * la entrega se guarda con el precio de la boleta y sin pago final (ver `datosAEnviar`).
  */
 export function FormularioEntrega({ orden, alEntregar, alCancelar }: Props) {
   const entregar = useEntregar();
@@ -55,14 +60,25 @@ export function FormularioEntrega({ orden, alEntregar, alCancelar }: Props) {
   const cambiar = (campo: 'retiradoPorNombre' | 'retiradoPorCarnet' | 'precioFinal' | 'pagoFinal') => (valor: string) =>
     setDatos((d) => ({ ...d, [campo]: valor }));
 
+  // `orden.saldo` ya es precio de la boleta − pagos (la ropa todavía no tiene entrega): cero o menos, no hay nada que cobrar.
+  const yaPagada = orden.saldo <= 0;
   const saldo = saldoConPrecio(orden, datos.precioFinal);
+
+  /**
+   * Lo que se manda a validar y guardar. En una boleta ya pagada, el precio final es el de la boleta y no hay pago
+   * ni método, **aunque el estado del formulario diga otra cosa**: si algo se había escrito antes de que la boleta
+   * quedara pagada (por ejemplo, un cobro que bajó de otra tablet), esos campos ya no se ven y no pueden contar.
+   */
+  const datosAEnviar: DatosEntrega = yaPagada
+    ? { ...datos, precioFinal: aDecimal(orden.precioTotal), pagoFinal: '', metodoPago: null }
+    : datos;
 
   async function revisar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     if (!entregar.lista) return;
     setAviso(null);
     try {
-      const resultado = await entregar.preparar(orden.id, datos);
+      const resultado = await entregar.preparar(orden.id, datosAEnviar);
       if (resultado.tipo === 'invalida') setErrores(resultado.errores);
       else if (resultado.tipo === 'no-se-puede') setAviso(resultado.mensaje);
       else {
@@ -78,7 +94,7 @@ export function FormularioEntrega({ orden, alEntregar, alCancelar }: Props) {
   async function guardar() {
     if (!entregar.lista) return;
     try {
-      const resultado = await entregar.registrar(orden.id, datos);
+      const resultado = await entregar.registrar(orden.id, datosAEnviar);
       setConfirmar(null);
       if (resultado.tipo === 'lista') alEntregar(resultado.entrega);
       else if (resultado.tipo === 'no-se-puede') setAviso(resultado.mensaje);
@@ -150,33 +166,41 @@ export function FormularioEntrega({ orden, alEntregar, alCancelar }: Props) {
         </>
       )}
 
-      <CampoTexto
-        etiqueta="Precio final (Bs)"
-        value={datos.precioFinal}
-        onChange={cambiar('precioFinal')}
-        error={errores.precioFinal}
-        inputMode="decimal"
-        autoComplete="off"
-      />
-      <p className="text-xl text-texto" aria-live="polite">
-        {saldo === null ? ' ' : saldo > 0 ? `Falta pagar ${formatearBs(saldo)}.` : 'No falta pagar nada.'}
-      </p>
+      {yaPagada ? (
+        <div className="mt-2">
+          <Aviso tipo="exito">Ya está todo pagado: no hay nada que cobrar.</Aviso>
+        </div>
+      ) : (
+        <>
+          <CampoTexto
+            etiqueta="Precio final (Bs)"
+            value={datos.precioFinal}
+            onChange={cambiar('precioFinal')}
+            error={errores.precioFinal}
+            inputMode="decimal"
+            autoComplete="off"
+          />
+          <p className="text-xl text-texto" aria-live="polite">
+            {saldo === null ? ' ' : saldo > 0 ? `Falta pagar ${formatearBs(saldo)}.` : 'No falta pagar nada.'}
+          </p>
 
-      <CampoTexto
-        etiqueta="Cuánto paga ahora (Bs, si paga)"
-        value={datos.pagoFinal}
-        onChange={cambiar('pagoFinal')}
-        error={errores.pagoFinal}
-        inputMode="decimal"
-        autoComplete="off"
-      />
-      {datos.pagoFinal.trim() !== '' && (
-        <ElegirMetodo
-          value={datos.metodoPago}
-          onChange={(metodo) => setDatos((d) => ({ ...d, metodoPago: metodo }))}
-          error={errores.metodoPago}
-          pregunta="¿Cómo paga?"
-        />
+          <CampoTexto
+            etiqueta="Cuánto paga ahora (Bs, si paga)"
+            value={datos.pagoFinal}
+            onChange={cambiar('pagoFinal')}
+            error={errores.pagoFinal}
+            inputMode="decimal"
+            autoComplete="off"
+          />
+          {datos.pagoFinal.trim() !== '' && (
+            <ElegirMetodo
+              value={datos.metodoPago}
+              onChange={(metodo) => setDatos((d) => ({ ...d, metodoPago: metodo }))}
+              error={errores.metodoPago}
+              pregunta="¿Cómo paga?"
+            />
+          )}
+        </>
       )}
 
       {aviso && (
