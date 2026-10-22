@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-22T00:00:00.000Z",
+  "title": "Design System: Lavandería",
+  "extensions": {
+    "colorMeta": {
+      "azul-del-mostrador": { "role": "primary", "displayName": "Azul del mostrador", "canonical": "#1e40af", "tonalRamp": ["#dbeafe", "#1e40af", "#1e3a8a"] },
+      "papel-frio": { "role": "neutral", "displayName": "Papel frío", "canonical": "#f1f5f9" },
+      "tinta-de-pizarra": { "role": "neutral", "displayName": "Tinta de pizarra", "canonical": "#0f172a" },
+      "naranja-de-foco": { "role": "accent", "displayName": "Naranja de foco", "canonical": "#c2410c" },
+      "rojo-sin-vuelta-atras": { "role": "danger", "displayName": "Rojo de no-hay-vuelta-atrás", "canonical": "#b91c1c" },
+      "serie-efectivo": { "role": "data-series", "displayName": "Efectivo", "canonical": "#3a83fc" },
+      "serie-qr": { "role": "data-series", "displayName": "Pago con QR", "canonical": "#e55108" },
+      "serie-tarjeta": { "role": "data-series", "displayName": "Tarjeta", "canonical": "#0f9958" },
+      "serie-transferencia": { "role": "data-series", "displayName": "Transferencia", "canonical": "#d14ead" }
+    },
+    "typographyMeta": {
+      "body": { "displayName": "Cuerpo", "purpose": "El texto base de toda la app: 18px, para leer de pie a un brazo de distancia." },
+      "label": { "displayName": "Rótulo", "purpose": "Botones y lo que se toca." },
+      "title": { "displayName": "Título de tarjeta", "purpose": "El h2 de una tarjeta o sección." },
+      "headline": { "displayName": "Título de pantalla", "purpose": "El h1 de cada pantalla." },
+      "figure": { "displayName": "Cifra grande", "purpose": "El número que importa en un tablero." }
+    },
+    "shadows": [
+      { "name": "sutil", "value": "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)", "purpose": "La cabecera y el botón principal." },
+      { "name": "media", "value": "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)", "purpose": "Las tarjetas que se tocan." },
+      { "name": "flotante", "value": "0 25px 50px -12px rgb(0 0 0 / 0.25)", "purpose": "El cuadro de confirmación, sobre un velo oscuro." }
+    ],
+    "motion": [
+      { "name": "cambio-de-color", "value": "150ms cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Hover de botones y del menú: solo cambia el color, nada se mueve de lugar." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Botón primario",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Lo que hay que hacer ahora. Uno solo por pantalla.",
+      "html": "<button class=\"ds-btn-primario\">Registrar ropa</button>",
+      "css": ".ds-btn-primario { display: inline-flex; align-items: center; justify-content: center; gap: 12px; width: 100%; min-height: 56px; padding: 12px 24px; font: 700 1.25rem/1.4 'Atkinson Hyperlegible', system-ui, sans-serif; color: #ffffff; background: #1e40af; border: 2px solid #1e40af; border-radius: 12px; box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1); transition: background-color 150ms, border-color 150ms; cursor: pointer; } .ds-btn-primario:hover { background: #1e3a8a; border-color: #1e3a8a; }"
+    },
+    {
+      "name": "Botón secundario",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Otra acción posible, que no es la principal.",
+      "html": "<button class=\"ds-btn-secundario\">Cancelar</button>",
+      "css": ".ds-btn-secundario { display: inline-flex; align-items: center; justify-content: center; gap: 12px; width: 100%; min-height: 56px; padding: 12px 24px; font: 700 1.25rem/1.4 'Atkinson Hyperlegible', system-ui, sans-serif; color: #0f172a; background: #ffffff; border: 2px solid #64748b; border-radius: 12px; transition: background-color 150ms; cursor: pointer; } .ds-btn-secundario:hover { background: #f1f5f9; }"
+    },
+    {
+      "name": "Botón de peligro",
+      "kind": "button",
+      "refersTo": "button-peligro",
+      "description": "Lo que no tiene vuelta atrás. Siempre con el ícono de alerta.",
+      "html": "<button class=\"ds-btn-peligro\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 7v6M12 17h.01\"/></svg>Anular</button>",
+      "css": ".ds-btn-peligro { display: inline-flex; align-items: center; justify-content: center; gap: 12px; width: 100%; min-height: 56px; padding: 12px 24px; font: 700 1.25rem/1.4 'Atkinson Hyperlegible', system-ui, sans-serif; color: #ffffff; background: #b91c1c; border: 2px solid #b91c1c; border-radius: 12px; box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1); transition: background-color 150ms, border-color 150ms; cursor: pointer; } .ds-btn-peligro:hover { background: #991b1b; border-color: #991b1b; }"
+    },
+    {
+      "name": "Botón de navegación",
+      "kind": "button",
+      "refersTo": "button-navegacion",
+      "description": "Sin caja y subrayado: no hace nada, lleva a otro lado.",
+      "html": "<button class=\"ds-btn-navegacion\">Volver a la lista</button>",
+      "css": ".ds-btn-navegacion { display: inline-flex; align-items: center; gap: 12px; min-height: 56px; padding: 12px 4px; font: 700 1.25rem/1.4 'Atkinson Hyperlegible', system-ui, sans-serif; color: #1e40af; background: transparent; border: 2px solid transparent; border-radius: 12px; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; cursor: pointer; } .ds-btn-navegacion:hover { text-decoration-thickness: 4px; }"
+    },
+    {
+      "name": "Tarjeta que informa",
+      "kind": "card",
+      "refersTo": "card-informa",
+      "description": "Agrupa datos: liviana, con borde suave y sin sombra.",
+      "html": "<section class=\"ds-tarjeta\"><h2>Datos del cliente</h2><p>Rosa Quispe · 70123456</p></section>",
+      "css": ".ds-tarjeta { padding: 20px; color: #0f172a; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; font: 400 1.125rem/1.6 'Atkinson Hyperlegible', system-ui, sans-serif; } .ds-tarjeta h2 { margin: 0 0 12px; font: 700 1.5rem/1.33 'Atkinson Hyperlegible', system-ui, sans-serif; }"
+    },
+    {
+      "name": "Tarjeta que se toca",
+      "kind": "card",
+      "refersTo": "card-toca",
+      "description": "Entera tocable: borde firme, sombra media y una flecha a la derecha.",
+      "html": "<button class=\"ds-tarjeta-toca\"><span><strong>Boleta 001234</strong><br>Rosa Quispe</span><span aria-hidden=\"true\">›</span></button>",
+      "css": ".ds-tarjeta-toca { display: flex; width: 100%; align-items: center; gap: 12px; justify-content: space-between; padding: 16px; text-align: left; color: #0f172a; background: #ffffff; border: 2px solid #64748b; border-radius: 16px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); font: 400 1.25rem/1.4 'Atkinson Hyperlegible', system-ui, sans-serif; transition: border-color 150ms; cursor: pointer; } .ds-tarjeta-toca:hover { border-color: #1e40af; } .ds-tarjeta-toca span:last-child { color: #1e40af; font-size: 2rem; }"
+    },
+    {
+      "name": "Insignia de estado",
+      "kind": "chip",
+      "refersTo": "insignia",
+      "description": "La palabra del estado, con un tono que ayuda a encontrarla.",
+      "html": "<span class=\"ds-insignia\">Listo para retirar</span>",
+      "css": ".ds-insignia { display: inline-flex; align-items: center; padding: 2px 12px; font: 700 1.125rem/1.6 'Atkinson Hyperlegible', system-ui, sans-serif; color: #166534; background: #f0fdf4; border: 1px solid #86efac; border-radius: 9999px; }"
+    },
+    {
+      "name": "Aviso de éxito",
+      "kind": "custom",
+      "refersTo": "aviso-exito",
+      "description": "Un aviso siempre lleva texto y su ícono: el color solo acompaña.",
+      "html": "<div class=\"ds-aviso\" role=\"status\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"m8 12 3 3 5-6\"/></svg><div>Ya está todo pagado: no hay nada que cobrar.</div></div>",
+      "css": ".ds-aviso { display: flex; align-items: flex-start; gap: 12px; padding: 16px; font: 400 1.25rem/1.4 'Atkinson Hyperlegible', system-ui, sans-serif; color: #166534; background: #f0fdf4; border: 2px solid #86efac; border-radius: 12px; }"
+    },
+    {
+      "name": "Campo de texto",
+      "kind": "input",
+      "refersTo": "campo-texto",
+      "description": "Etiqueta siempre visible encima; nunca un placeholder en su lugar.",
+      "html": "<div class=\"ds-campo\"><label for=\"telefono\">Teléfono del cliente</label><input id=\"telefono\" value=\"70123456\"></div>",
+      "css": ".ds-campo label { display: block; font: 700 1.25rem/1.4 'Atkinson Hyperlegible', system-ui, sans-serif; color: #0f172a; } .ds-campo input { box-sizing: border-box; width: 100%; min-height: 56px; margin-top: 8px; padding: 0 16px; font: 400 1.25rem/1.4 'Atkinson Hyperlegible', system-ui, sans-serif; color: #0f172a; background: #ffffff; border: 2px solid #64748b; border-radius: 12px; } .ds-campo input:focus-visible { outline: 3px solid #c2410c; outline-offset: 2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "El mostrador sin sorpresas",
+    "overview": "Un sistema visual hecho para quien atiende de pie, con prisa y muchas veces sin anteojos: cada cosa está donde se espera, se llama como en el negocio y nada se mueve ni se esconde. Es plano y claro: superficies lisas separadas por bordes, letra grande, un solo azul para lo que hay que hacer ahora y rojo solo para lo que no tiene vuelta atrás. Rechaza explícitamente una app de oficina sobrecargada de datos.",
+    "keyCharacteristics": [
+      "Letra de 18px de base y botones de al menos 56px de alto.",
+      "Una sola acción principal a la vista por pantalla.",
+      "Lo que se toca se ve distinto de lo que solo informa: borde firme, sombra y flecha.",
+      "El color nunca es lo único que dice algo.",
+      "El mismo sistema en tema claro y oscuro, con tokens."
+    ],
+    "rules": [
+      { "name": "La regla de solo tokens", "body": "Ningún componente usa un color suelto ni la paleta cruda de Tailwind: se pinta con el nombre del tema. Un color nuevo va en index.css en los dos temas, con su contraste medido.", "section": "colors" },
+      { "name": "La regla de color nunca solo", "body": "El estado va en palabras, lo irreversible lleva ícono además del rojo, lo actual del menú va en negrita con una barra.", "section": "colors" },
+      { "name": "La regla de los 18px", "body": "El texto base nunca baja de 18px: si no entra, se pagina o se pliega.", "section": "typography" },
+      { "name": "La regla de lo que se toca", "body": "Una tarjeta que lleva a otro lado se distingue de una que solo informa por borde firme, sombra y flecha.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do dejar una sola acción principal a la vista por pantalla.",
+      "Do confirmar toda acción irreversible diciendo qué va a pasar, con el verbo.",
+      "Do escribir en el idioma del negocio y mensajes de error que digan qué hacer.",
+      "Do pintar con los tokens del tema, y agregar todo color nuevo en los dos temas.",
+      "Do paginar toda lista que pueda crecer."
+    ],
+    "donts": [
+      "Don't hacer una app de oficina sobrecargada de datos: sin tablas densas ni letra chica.",
+      "Don't usar colores sueltos ni la paleta cruda de Tailwind en un componente.",
+      "Don't usar estilos en línea: la política de seguridad los ignora en la tablet.",
+      "Don't poner dos acciones principales juntas, ni un Volver a todo el ancho.",
+      "Don't usar jerga del sistema en pantalla."
+    ]
+  }
+}
