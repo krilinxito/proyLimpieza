@@ -332,6 +332,9 @@ el escáner no ve las que no están escritas.
 SPEC-KRILINXI-038 puso las acciones de una boleta en una **fila de botones compactos con su ícono** (el grupo "Qué
 hacer con esta ropa" en `DetalleOrden`): dos columnas en angosto, de corrido desde `sm`, Anular aparte al final y volver
 fuera de la fila. Cada avance tiene su ícono en `ICONO_AVANCE`: un avance nuevo no compila sin el suyo.
+SPEC-KRILINXI-049 reordenó el detalle de la boleta: la fila "Qué hacer con esta ropa" (y el formulario de cobro, que ocupa su
+lugar) va **justo debajo de las Cuentas**, antes de la lista de pagos, y tiene como mucho cuatro botones: **Anular salió de la fila**
+y queda solo, al final de la boleta, con su confirmación de siempre.
 SPEC-KRILINXI-039 pasó Personal y Sucursales a una **grilla de tarjetas** (una por fila, dos desde 1024px), con las
 acciones adentro, compactas y con ícono. Cada cuenta lleva su inicial (`Avatar decorativo`, que no se anuncia porque el
 nombre ya es el título) y cada sucursal, cuántas personas trabajan ahí: `personasPorSucursal` cuenta en la base local

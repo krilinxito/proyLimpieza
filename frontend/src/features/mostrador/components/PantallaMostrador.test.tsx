@@ -397,21 +397,21 @@ describe('Mostrador: las acciones de la boleta en fila, con su símbolo — SPEC
     await abrirConRopaLista();
     await abrirDetalle('000001');
     // Desde RECIBIDO también se puede marcar como lista de una: es otro avance, secundario.
-    expect(nombres(fila())).toEqual(['Empezar a lavar', 'Marcar como lista', 'Cobrar', 'Entregar la ropa', 'Anular']);
+    expect(nombres(fila())).toEqual(['Empezar a lavar', 'Marcar como lista', 'Cobrar', 'Entregar la ropa']);
     for (const accion of within(fila()).getAllByRole('button')) {
       expect(accion.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
     }
   });
 
-  it('la que sigue es la principal, cobrar y entregar secundarias, y anular de peligro, apartada al final', async () => {
+  it('la que sigue es la principal, cobrar y entregar secundarias, y anular de peligro, fuera de la fila', async () => {
     await abrirConRopaLista();
     await abrirDetalle('000001');
     expect(accionesPrincipales(fila())).toEqual(['Empezar a lavar']);
     expect(usoDe(boton('Cobrar'))).toBe('secundario');
     expect(usoDe(boton('Entregar la ropa'))).toBe('secundario');
     expect(usoDe(boton('Anular'))).toBe('peligro');
-    // En angosta, en su propio renglón; en ancha, empujada al final de la fila.
-    expect(boton('Anular').parentElement).toHaveClass('col-span-2', 'sm:ml-auto');
+    // Desde SPEC-KRILINXI-049 anular ya no comparte fila con las acciones de todos los días.
+    expect(fila()).not.toContainElement(boton('Anular'));
   });
 
   it('con la ropa lista, entregar es la que sigue', async () => {
@@ -443,5 +443,69 @@ describe('Mostrador: las acciones de la boleta en fila, con su símbolo — SPEC
     await buscarBoleta('000004');
     expect(screen.queryByRole('group', { name: 'Qué hacer con esta ropa' })).not.toBeInTheDocument();
     expect(within(screen.getByRole('main')).queryByRole('button', { name: 'Anular' })).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Las acciones de la boleta, justo debajo de lo que falta pagar — SPEC-KRILINXI-049. jsdom no mide
+ * la pantalla, así que "arriba" se comprueba por el orden en el documento.
+ */
+describe('Mostrador: las acciones de la boleta suben y anular queda aparte — SPEC-KRILINXI-049', () => {
+  const fila = () => screen.getByRole('group', { name: 'Qué hacer con esta ropa' });
+  const despues = (a: Node, b: Node) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+
+  it('la fila de acciones está después de "Falta pagar" y antes de los pagos', async () => {
+    await abrirConRopaLista();
+    await abrirDetalle('000001');
+    const faltaPagar = screen.getByText('Falta pagar', { selector: 'dt' });
+    const pagos = screen.getByRole('heading', { name: 'Pagos' });
+
+    expect(despues(faltaPagar, fila())).toBe(true);
+    expect(despues(fila(), pagos)).toBe(true);
+  });
+
+  it('la fila tiene como mucho cuatro botones y anular no está en ella', async () => {
+    await abrirConRopaLista();
+    for (const boleta of ['000001', '000007']) {
+      if (boleta !== '000001') {
+        fireEvent.click(boton('Ver toda la ropa de Rosa Quispe'));
+      }
+      if (boleta === '000007') fireEvent.click(await screen.findByRole('button', { name: 'Boleta 000007, Rosa Quispe' }));
+      else await abrirDetalle(boleta);
+      await screen.findByRole('region', { name: `Boleta ${boleta}` });
+      expect(within(fila()).getAllByRole('button').length).toBeLessThanOrEqual(4);
+      expect(within(fila()).queryByRole('button', { name: 'Anular' })).not.toBeInTheDocument();
+    }
+  });
+
+  it('anular queda al final de la boleta, después de los pagos, con su confirmación de siempre', async () => {
+    await abrirConRopaLista();
+    await abrirDetalle('000001');
+    const anular = boton('Anular');
+    expect(despues(screen.getByRole('heading', { name: 'Pagos' }), anular)).toBe(true);
+    expect(usoDe(anular)).toBe('peligro');
+    expect(anular.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+
+    fireEvent.click(anular);
+    expect(screen.getByRole('dialog', { name: '¿Anular la boleta 000001?' })).toHaveTextContent(
+      'Esta acción no se puede deshacer.',
+    );
+  });
+
+  it('cobrar abre su formulario en el mismo lugar que la fila: debajo de lo que falta pagar', async () => {
+    await abrirConRopaLista();
+    await abrirDetalle('000001');
+    fireEvent.click(boton('Cobrar'));
+    const formulario = await screen.findByRole('form', { name: 'Cobrar' });
+
+    expect(screen.queryByRole('group', { name: 'Qué hacer con esta ropa' })).not.toBeInTheDocument();
+    expect(despues(screen.getByText('Falta pagar', { selector: 'dt' }), formulario)).toBe(true);
+    expect(despues(formulario, screen.getByRole('heading', { name: 'Pagos' }))).toBe(true);
+  });
+
+  it('sigue habiendo una sola acción principal, la misma de antes', async () => {
+    await abrirConRopaLista();
+    await abrirDetalle('000001');
+    expect(accionesPrincipales()).toEqual(['Empezar a lavar']);
   });
 });
