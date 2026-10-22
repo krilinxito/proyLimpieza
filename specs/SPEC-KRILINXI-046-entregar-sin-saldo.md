@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-046
 name: Entregar una boleta ya pagada sin pedir montos
 slug: entregar-sin-saldo
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-21
 scope:
@@ -11,7 +11,8 @@ scope:
   - CLAUDE.md
 priority: medium
 depends_on: []
-tests: []
+tests:
+  - frontend\src\features\mostrador\components\EntregarEnMostrador.test.tsx
 ---
 
 ## Descripción
