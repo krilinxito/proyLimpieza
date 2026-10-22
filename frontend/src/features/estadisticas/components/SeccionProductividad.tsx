@@ -1,11 +1,14 @@
 import { Paginas } from '../../../components/Paginas';
 import { usePaginado } from '../../../hooks/usePaginado';
+import { useProductividad } from '../hooks/useProductividad';
+import type { Filtro } from '../periodo';
 import type { Productividad } from '../types';
 import { BarrasHorizontales } from './graficos/BarrasHorizontales';
 import { COLOR_UNICO } from './graficos/colores';
 import { masRecibidasPrimero } from './graficos/escalas';
 import { Grafico } from './graficos/Grafico';
 import { Detalle } from './Detalle';
+import { AvisoDeTarjeta, Esqueleto } from './Esqueleto';
 import { bs, veces } from './montos';
 import { SeccionPanel } from './SeccionPanel';
 
@@ -22,13 +25,27 @@ const resumen = (f: Fila) => `Recibió ${f.ordenesRecibidas} · Cobró ${veces(f
  *
  * Desde SPEC-KRILINXI-026, arriba va un gráfico de cuánta ropa recibió cada uno, de más a menos.
  * Las personas no son un orden ni series distintas: todas las barras llevan el mismo color.
+ *
+ * Desde SPEC-KRILINXI-050 pide su propio dato (`useProductividad`) cuando se despliega "Ver más estadísticas",
+ * y por eso tiene su propio esqueleto y su propio aviso si falla.
  */
-export function SeccionProductividad({ productividad, periodo }: { productividad: Productividad; periodo: string }) {
+export function SeccionProductividad({ filtro, periodo }: { filtro: Filtro; periodo: string }) {
+  const { estado, recargar } = useProductividad(filtro);
+  return (
+    <SeccionPanel nombre="Lo que hizo cada persona" pregunta="¿Cuánto atendió cada persona?" periodo={periodo}>
+      {estado.tipo === 'cargando' && <Esqueleto texto="Buscando lo que hizo cada persona…" />}
+      {(estado.tipo === 'sin-conexion' || estado.tipo === 'error') && <AvisoDeTarjeta estado={estado} recargar={recargar} />}
+      {estado.tipo === 'listo' && <PorPersona productividad={estado.datos} />}
+    </SeccionPanel>
+  );
+}
+
+function PorPersona({ productividad }: { productividad: Productividad }) {
   const filas = productividad.porEmpleado;
   const ordenadas = masRecibidasPrimero(filas);
   const paginas = usePaginado(filas, productividad);
   return (
-    <SeccionPanel nombre="Lo que hizo cada persona" pregunta="¿Cuánto atendió cada persona?" periodo={periodo}>
+    <>
       <Grafico
         nombre="Ropa recibida por cada persona"
         vacio={filas.length === 0}
@@ -70,6 +87,6 @@ export function SeccionProductividad({ productividad, periodo }: { productividad
           <Paginas pagina={paginas.pagina} total={paginas.total} porPagina={paginas.porPagina} irAPagina={paginas.irAPagina} nombre="Páginas de lo que hizo cada persona" />
         </Detalle>
       )}
-    </SeccionPanel>
+    </>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { App } from '../../../App';
 import { cuerpoError } from '../../../test/apiFalsa';
 import { baseLocalDePrueba } from '../../../test/baseLocalDePrueba';
@@ -21,12 +21,29 @@ import { tabletConRelojCorrido } from '../../../test/reloj';
 import { renderEnRuta } from '../../../test/render';
 import { sesionDePrueba } from '../../../test/sesion';
 import { DESDE_SIEMPRE } from '../periodo';
+import { Esqueleto } from './Esqueleto';
 
 // `tabletConRelojCorrido(0)` deja la tablet en el 16/10/2026, 10:05 en Bolivia.
 const HOY = '2026-10-16';
 
-/** El panel abierto por un ADMIN, con dos sucursales en la base local. */
-async function abrirPanel() {
+/**
+ * Abre "Ver más estadísticas" (SPEC-KRILINXI-050): ahí están las cinco tarjetas que no se ven de entrada. Espera a que el
+ * panel esté listo, que es cuando aparece.
+ */
+async function desplegarMas() {
+  const resumen = await screen.findByText('Ver más estadísticas');
+  const detalle = resumen.closest('details');
+  if (!detalle) throw new Error('"Ver más estadísticas" no está en un <details>.');
+  if (!detalle.open) fireEvent.click(resumen);
+  await waitFor(() => expect(detalle).toHaveAttribute('open'));
+}
+
+/**
+ * El panel abierto por un ADMIN, con dos sucursales en la base local. Por defecto despliega "Ver más estadísticas" cuando
+ * el panel está listo, para que los tests de cada tarjeta las encuentren todas (SPEC-KRILINXI-050); `desplegar: false`
+ * para los que miran la carga, el error o la falta de internet, donde el panel no llega a estar listo.
+ */
+async function abrirPanel({ desplegar = true }: { desplegar?: boolean } = {}) {
   tabletConRelojCorrido(0);
   const { control, sembrar } = await baseLocalDePrueba();
   await sembrar('sucursales', [
@@ -34,6 +51,7 @@ async function abrirPanel() {
     { id: '00000000-0000-4000-8000-0000000000c2', nombre: 'Norte', activa: 1 },
   ]);
   renderEnRuta(<App />, '/estadisticas', { sesion: sesionDePrueba({ rol: 'ADMIN' }), baseLocal: control });
+  if (desplegar) await desplegarMas();
 }
 
 const seccion = (nombre: string) => screen.getByRole('region', { name: nombre });
@@ -167,7 +185,7 @@ describe('Panel de estadísticas — SPEC-KRILINXI-015', () => {
 
   it('sin internet dice que las estadísticas necesitan conexión y no muestra ningún número', async () => {
     simularEstadisticas('sin-conexion');
-    await abrirPanel();
+    await abrirPanel({ desplegar: false });
 
     expect(await screen.findByText('Las estadísticas necesitan conexión.')).toBeInTheDocument();
     expect(screen.queryByText(/Bs \d/)).not.toBeInTheDocument();
@@ -177,12 +195,13 @@ describe('Panel de estadísticas — SPEC-KRILINXI-015', () => {
 
   it('cuando vuelve internet, carga sola', async () => {
     simularEstadisticas('sin-conexion');
-    await abrirPanel();
+    await abrirPanel({ desplegar: false });
     await screen.findByText('Las estadísticas necesitan conexión.');
 
     simularEstadisticas();
     window.dispatchEvent(new Event('online'));
 
+    await desplegarMas();
     expect(await screen.findByRole('heading', { name: '¿Cuánto se cobró en cada sucursal?' })).toBeInTheDocument();
     expect(screen.queryByText('Las estadísticas necesitan conexión.')).not.toBeInTheDocument();
   });
@@ -190,12 +209,13 @@ describe('Panel de estadísticas — SPEC-KRILINXI-015', () => {
   it('si la API responde un error, muestra su mensaje y deja probar de nuevo', async () => {
     const mensaje = 'La sucursal elegida no es válida. Volvé a elegirla de la lista.';
     simularEstadisticas({ saldos: { status: 400, data: cuerpoError('VALIDACION', mensaje) } });
-    await abrirPanel();
+    await abrirPanel({ desplegar: false });
 
     expect(await screen.findByText(mensaje)).toBeInTheDocument();
     simularEstadisticas();
     fireEvent.click(screen.getByRole('button', { name: 'Probar de nuevo' }));
     await waitFor(() => expect(screen.queryByText(mensaje)).not.toBeInTheDocument());
+    await desplegarMas();
     expect(await screen.findByRole('heading', { name: '¿Cuánto se cobró en cada sucursal?' })).toBeInTheDocument();
     sinJerga();
   });
@@ -294,7 +314,7 @@ describe('Panel de estadísticas: volumen, productividad y clientes — SPEC-KRI
 
   it('sin internet estas secciones tampoco muestran números', async () => {
     simularEstadisticas('sin-conexion');
-    await abrirPanel();
+    await abrirPanel({ desplegar: false });
 
     expect(await screen.findByText('Las estadísticas necesitan conexión.')).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Ropa recibida' })).not.toBeInTheDocument();
@@ -531,7 +551,7 @@ describe('El panel como tablero — SPEC-KRILINXI-026', () => {
 
   it('sin internet no hay indicadores ni gráficos', async () => {
     simularEstadisticas('sin-conexion');
-    await abrirPanel();
+    await abrirPanel({ desplegar: false });
 
     expect(await screen.findByText('Las estadísticas necesitan conexión.')).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Resumen' })).not.toBeInTheDocument();
@@ -548,16 +568,20 @@ describe('El panel como tablero — SPEC-KRILINXI-026', () => {
 
 describe('El panel como dashboard — SPEC-KRILINXI-042', () => {
   /** Cada pregunta del tablero: su tarjeta, cómo se lee en voz alta y el gráfico que la contesta. */
-  const TARJETAS = [
-    { region: 'Cobrado por forma de pago', pregunta: '¿Cuánto se cobró con cada forma de pago?', grafico: 'Cobrado con cada forma de pago' },
-    { region: 'Cobrado por sucursal', pregunta: '¿Cuánto se cobró en cada sucursal?', grafico: 'Cobrado por sucursal y forma de pago' },
+  // Las tres de a la vista, en su orden, y las cinco que se despliegan con "Ver más estadísticas" (SPEC-KRILINXI-050).
+  const A_LA_VISTA = [
     { region: 'Cobrado por día', pregunta: '¿Cómo vino la caja día a día?', grafico: 'Cobrado por día' },
-    { region: 'Ropa recibida', pregunta: '¿Cuánta ropa entró cada día?', grafico: 'Ropa recibida por día' },
+    { region: 'Cobrado por forma de pago', pregunta: '¿Cuánto se cobró con cada forma de pago?', grafico: 'Cobrado con cada forma de pago' },
     { region: 'Falta cobrar', pregunta: '¿Cuánto falta cobrar, y desde hace cuánto?', grafico: 'Falta cobrar según los días' },
+  ] as const;
+  const PLEGADAS = [
+    { region: 'Cobrado por sucursal', pregunta: '¿Cuánto se cobró en cada sucursal?', grafico: 'Cobrado por sucursal y forma de pago' },
+    { region: 'Ropa recibida', pregunta: '¿Cuánta ropa entró cada día?', grafico: 'Ropa recibida por día' },
     { region: 'Ropa sin recoger', pregunta: '¿Cuánta ropa falta recoger, y desde hace cuánto?', grafico: 'Ropa sin recoger según los días' },
     { region: 'Lo que hizo cada persona', pregunta: '¿Cuánto atendió cada persona?', grafico: 'Ropa recibida por cada persona' },
     { region: 'Clientes atendidos', pregunta: '¿Quiénes son los clientes que más vienen?', grafico: 'Veces que vino cada cliente' },
   ] as const;
+  const TARJETAS = [...A_LA_VISTA, ...PLEGADAS];
 
   it('debajo de los indicadores hay una grilla de tarjetas: una por fila en angosta y dos desde 1024px', async () => {
     simularEstadisticas();
@@ -568,9 +592,13 @@ describe('El panel como dashboard — SPEC-KRILINXI-042', () => {
     // `lg:grid-cols-2` es desde 1024px; sin prefijo, una sola columna.
     expect(grilla).toHaveClass('grid', 'grid-cols-1', 'gap-6', 'lg:grid-cols-2');
     expect(grilla).not.toHaveClass('grid-cols-2');
-    // Las siete tarjetas son hijas de la misma grilla, y vienen después de los indicadores.
-    expect([...grilla.children].map((c) => c.getAttribute('aria-label'))).toEqual(TARJETAS.map((t) => t.region));
+    // Desde SPEC-KRILINXI-050 las de a la vista son tres, hijas de la misma grilla y después de los indicadores;
+    // las otras cinco están en otra grilla igual, dentro de "Ver más estadísticas".
+    expect([...grilla.children].map((c) => c.getAttribute('aria-label'))).toEqual(A_LA_VISTA.map((t) => t.region));
     expect(seccion('Resumen').compareDocumentPosition(grilla)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    const plegadas = seccion('Cobrado por sucursal').parentElement as HTMLElement;
+    expect(plegadas).toHaveClass('grid', 'grid-cols-1', 'gap-6', 'lg:grid-cols-2');
+    expect([...plegadas.children].map((c) => c.getAttribute('aria-label'))).toEqual(PLEGADAS.map((t) => t.region));
   });
 
   it('lo que necesita ancho (la caja y la ropa de treinta días) ocupa la fila entera; las demás, una celda', async () => {
@@ -723,7 +751,7 @@ describe('El panel como dashboard — SPEC-KRILINXI-042', () => {
 
   it('sin internet dice que las estadísticas necesitan conexión y no dibuja ninguna tarjeta', async () => {
     simularEstadisticas('sin-conexion');
-    await abrirPanel();
+    await abrirPanel({ desplegar: false });
 
     expect(await screen.findByText('Las estadísticas necesitan conexión.')).toBeInTheDocument();
     for (const { region } of TARJETAS) expect(screen.queryByRole('region', { name: region })).not.toBeInTheDocument();
@@ -941,5 +969,116 @@ describe('Las tarjetas no se pisan en una pantalla media — SPEC-KRILINXI-044',
     expect(paginas).toHaveClass('flex', 'flex-wrap');
     // Con tres columnas `1fr auto 1fr` cada `1fr` no baja del ancho de su botón: era lo que la sacaba de la tarjeta.
     expect(paginas.className).not.toMatch(/grid-cols-\[/);
+  });
+});
+
+describe('El tablero con una pregunta principal y el resto a pedido — SPEC-KRILINXI-050', () => {
+  const PLEGADAS_ = ['Cobrado por sucursal', 'Ropa recibida', 'Ropa sin recoger', 'Lo que hizo cada persona', 'Clientes atendidos'];
+  const A_LA_VISTA_ = ['Cobrado por día', 'Cobrado por forma de pago', 'Falta cobrar'];
+
+  it('de entrada se ven los cuatro indicadores y tres tarjetas, con la caja día a día primero; las otras cinco, plegadas', async () => {
+    simularEstadisticas();
+    await abrirPanel({ desplegar: false });
+    await screen.findByText('Ver más estadísticas');
+
+    expect(within(seccion('Resumen')).getAllByRole('definition').length).toBeGreaterThanOrEqual(4);
+    const grilla = seccion('Cobrado por día').parentElement as HTMLElement;
+    expect([...grilla.children].map((c) => c.getAttribute('aria-label'))).toEqual(A_LA_VISTA_);
+    for (const region of PLEGADAS_) expect(screen.queryByRole('region', { name: region })).not.toBeInTheDocument();
+    expect(screen.getByText('Ver más estadísticas').closest('details')).not.toHaveAttribute('open');
+  });
+
+  it('"Ver más estadísticas" despliega las otras cinco con lo de siempre, y se vuelve a plegar', async () => {
+    simularEstadisticas();
+    await abrirPanel({ desplegar: false });
+    await desplegarMas();
+    for (const region of PLEGADAS_) expect(await screen.findByRole('region', { name: region })).toBeInTheDocument();
+    expect(fila(seccion('Cobrado por sucursal'), 'Cobrado por sucursal y forma de pago', 'Centro')[5]).toBe('Bs 125,50');
+
+    fireEvent.click(screen.getByText('Ver más estadísticas'));
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Cobrado por sucursal' })).not.toBeInTheDocument());
+    // Las de a la vista no se mueven.
+    for (const region of A_LA_VISTA_) expect(seccion(region)).toBeInTheDocument();
+  });
+
+  it('plegar y desplegar no pierde el filtro elegido', async () => {
+    const servidor = simularEstadisticas();
+    await abrirPanel({ desplegar: false });
+    await desplegarMas();
+    fireEvent.click(await screen.findByRole('radio', { name: 'Centro' }));
+    await waitFor(() => expect(servidor.pedidos.some((p) => (p.parametros as { sucursal_id?: string })?.sucursal_id === SUCURSAL_CENTRO)).toBe(true));
+
+    fireEvent.click(screen.getByText('Ver más estadísticas'));
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Clientes atendidos' })).not.toBeInTheDocument());
+    await desplegarMas();
+
+    expect(screen.getByRole('radio', { name: 'Centro' })).toBeChecked();
+    expect(await screen.findByRole('region', { name: 'Clientes atendidos' })).toBeInTheDocument();
+  });
+
+  it('la productividad y los clientes no se piden hasta que se despliega; lo que alimenta los indicadores sí', async () => {
+    const servidor = simularEstadisticas();
+    await abrirPanel({ desplegar: false });
+    await screen.findByText('Ver más estadísticas');
+    const rutas = () => servidor.pedidos.map((p) => p.ruta);
+
+    for (const ruta of ['/estadisticas/ingresos', '/estadisticas/saldos', '/estadisticas/sin-recoger', '/estadisticas/volumen', '/estadisticas/ingresos-por-dia']) {
+      expect(rutas()).toContain(ruta);
+    }
+    expect(rutas()).not.toContain('/estadisticas/productividad');
+    expect(rutas()).not.toContain('/estadisticas/clientes');
+
+    await desplegarMas();
+    await screen.findByRole('region', { name: 'Lo que hizo cada persona' });
+    await waitFor(() => {
+      expect(rutas()).toContain('/estadisticas/productividad');
+      expect(rutas()).toContain('/estadisticas/clientes');
+    });
+    // Con los mismos últimos 30 días que el volumen.
+    const de = (ruta: string) => servidor.pedidos.find((p) => p.ruta === ruta)?.parametros;
+    expect(de('/estadisticas/productividad')).toEqual(de('/estadisticas/volumen'));
+  });
+
+  it('mientras llega el panel hay un esqueleto, y ningún número', async () => {
+    simularEstadisticas();
+    await abrirPanel({ desplegar: false });
+    const carga = await screen.findByText('Buscando las estadísticas…');
+
+    // Se mira el esqueleto en sí (puede que el panel ya haya llegado cuando corre la comprobación): es un estado, y
+    // lo único que dice es que está buscando, sin ningún monto ni cantidad.
+    const estado = carga.closest('[role="status"]');
+    expect(estado).not.toBeNull();
+    expect(estado?.textContent).toBe('Buscando las estadísticas…');
+  });
+
+  it('si una tarjeta que pide su propio dato falla, lo dice ahí, con "Probar de nuevo", y el resto sigue a la vista', async () => {
+    simularEstadisticas({ productividad: 'sin-conexion' });
+    await abrirPanel({ desplegar: false });
+    await desplegarMas();
+
+    const persona = await screen.findByRole('region', { name: 'Lo que hizo cada persona' });
+    expect(await within(persona).findByText('Las estadísticas necesitan conexión.')).toBeInTheDocument();
+    expect(within(persona).getByRole('button', { name: 'Probar de nuevo' })).toBeInTheDocument();
+    // Las demás, con sus números.
+    expect(within(seccion('Clientes atendidos')).queryByText('Las estadísticas necesitan conexión.')).not.toBeInTheDocument();
+    expect(within(seccion('Falta cobrar')).getAllByText(/Bs 30,00/).length).toBeGreaterThan(0);
+    expect(within(seccion('Cobrado por día')).queryByText('Las estadísticas necesitan conexión.')).not.toBeInTheDocument();
+  });
+
+  it('sin internet, el tablero dice "Las estadísticas necesitan conexión" una sola vez y no muestra ninguna tarjeta', async () => {
+    simularEstadisticas('sin-conexion');
+    await abrirPanel({ desplegar: false });
+
+    expect(await screen.findAllByText('Las estadísticas necesitan conexión.')).toHaveLength(1);
+    expect(screen.queryByText('Ver más estadísticas')).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Cobrado por día' })).not.toBeInTheDocument();
+  });
+
+  it('el esqueleto de una tarjeta tiene un alto fijo y se anuncia como estado, sin dibujar nada', () => {
+    render(<Esqueleto texto="Buscando algo…" />);
+    const estado = screen.getByRole('status');
+
+    expect(within(estado).getByText('Buscando algo…')).toHaveClass('sr-only');
+    expect(estado.querySelector('[aria-hidden="true"]')).toHaveClass('h-64');
   });
 });

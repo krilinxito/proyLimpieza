@@ -1,6 +1,4 @@
 import { useState } from 'react';
-import { Aviso } from '../../../components/Aviso';
-import { Boton } from '../../../components/Boton';
 import { METODOS_PAGO, TEXTO_METODO_PAGO } from '../../../lib/dominio';
 import { desdeDecimal } from '../../../lib/money';
 import { useIngresosPorDia } from '../hooks/useIngresosPorDia';
@@ -11,6 +9,7 @@ import { hayDatos } from './graficos/escalas';
 import { Grafico } from './graficos/Grafico';
 import { Leyenda } from './graficos/Leyenda';
 import { Lineas } from './graficos/Lineas';
+import { AvisoDeTarjeta, Esqueleto } from './Esqueleto';
 import { bs } from './montos';
 import { SeccionPanel } from './SeccionPanel';
 
@@ -42,18 +41,9 @@ export function SeccionTendencia({ filtro, periodo }: { filtro: Filtro; periodo:
 
   return (
     <SeccionPanel nombre="Cobrado por día" pregunta="¿Cómo vino la caja día a día?" periodo={periodo} entera>
-      {estado.tipo === 'cargando' && <p className="mt-4 text-xl text-texto-suave">Buscando lo cobrado cada día…</p>}
+      {estado.tipo === 'cargando' && <Esqueleto texto="Buscando lo cobrado cada día…" />}
 
-      {(estado.tipo === 'sin-conexion' || estado.tipo === 'error') && (
-        <div className="mt-4">
-          <Aviso tipo={estado.tipo === 'sin-conexion' ? 'advertencia' : 'error'}>
-            <p>{estado.tipo === 'sin-conexion' ? 'Las estadísticas necesitan conexión.' : estado.mensaje}</p>
-            <div className="mt-4">
-              <Boton onClick={recargar}>Probar de nuevo</Boton>
-            </div>
-          </Aviso>
-        </div>
-      )}
+      {(estado.tipo === 'sin-conexion' || estado.tipo === 'error') && <AvisoDeTarjeta estado={estado} recargar={recargar} />}
 
       {estado.tipo === 'listo' && <Tendencia dias={estado.datos.porDia} total={estado.datos.total} vista={vista} alCambiar={setVista} />}
     </SeccionPanel>
