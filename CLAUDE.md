@@ -150,6 +150,10 @@ SPEC-KRILINXI-046 hizo que el formulario de entrega **no pida ningún monto si l
 sin "Precio final", "Cuánto paga ahora" ni "¿Cómo paga?", y en su lugar el aviso "Ya está todo pagado". La entrega se guarda con el
 precio de la boleta y sin pago final (`datosAEnviar` en `FormularioEntrega`). Consecuencia aceptada: en una boleta ya pagada no se
 puede cargar un recargo al entregar. Con saldo pendiente, el formulario es el de siempre.
+SPEC-KRILINXI-048 acortó **Registrar ropa**: el adelanto se pregunta primero ("No deja adelanto" / "Deja adelanto") y su importe y su forma de
+pago aparecen solo si deja (al volver a "No deja" se vacían, y no se guarda ningún pago); "Para cuándo estará lista" suma tres atajos
+(`atajosDeFecha`, con el día de Bolivia); y "Volver al mostrador sin guardar" pide confirmar si hay algo escrito (`FormularioRopa` avisa con
+`alCambiarEscrito`; un cliente que ya venía de su ficha no cuenta). Un campo nuevo del formulario va también en `hayEscrito`.
 SPEC-KRILINXI-047 dejó por escrito el **sistema visual** y para quién es el producto: `frontend/PRODUCT.md` (usuarios, propósito,
 restricciones) y `frontend/DESIGN.md` (colores, letra, componentes y patrones, con su complemento `frontend/.impeccable/design.json`),
 generados con la skill impeccable a partir del código. **No reemplazan a `src/index.css`**: los colores siguen viviendo ahí, y el
