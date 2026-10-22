@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-049
 name: Acciones de la boleta justo debajo de lo que falta pagar
 slug: boleta-acciones-arriba
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-22
 scope:
@@ -13,7 +13,8 @@ scope:
 priority: medium
 depends_on:
   - SPEC-KRILINXI-047
-tests: []
+tests:
+  - frontend\src\features\mostrador\components\PantallaMostrador.test.tsx
 ---
 
 ## Descripción
