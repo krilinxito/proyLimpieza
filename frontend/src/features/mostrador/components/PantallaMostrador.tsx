@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Boton } from '../../../components/Boton';
 import { BuscadorVivo } from '../../../components/BuscadorVivo';
 import { Insignia } from '../../../components/Insignia';
+import { ModalConfirmacion } from '../../../components/ModalConfirmacion';
 import { Paginas } from '../../../components/Paginas';
 import { usePaginado } from '../../../hooks/usePaginado';
 import { TEXTO_ESTADO_ORDEN } from '../../../lib/dominio';
@@ -125,6 +126,9 @@ export function PantallaMostrador() {
   const [vista, setVista] = useState<Vista>(() => vistaInicial(parametros));
   // Cambia cada vez que se elige algo: vuelve a montar el buscador, que queda vacío.
   const [vuelta, setVuelta] = useState(0);
+  // Lo escrito en el formulario de la ropa y si se está por descartar (SPEC-KRILINXI-048).
+  const [hayEscrito, setHayEscrito] = useState(false);
+  const [saliendo, setSaliendo] = useState(false);
 
   function ir(nueva: Vista) {
     setVista(nueva);
@@ -143,19 +147,33 @@ export function PantallaMostrador() {
   }
 
   if (vista.tipo === 'registrando') {
+    const volver = () => {
+      setSaliendo(false);
+      ir(vista.clienteId ? { tipo: 'ficha', clienteId: vista.clienteId, abierta: null } : { tipo: 'inicio' });
+    };
     return (
       <div className="mt-6">
-        <RegistrarEnMostrador clienteId={vista.clienteId} alRegistrar={(ropa) => ir({ tipo: 'registrada', ropa })} />
+        <RegistrarEnMostrador
+          clienteId={vista.clienteId}
+          alRegistrar={(ropa) => ir({ tipo: 'registrada', ropa })}
+          alCambiarEscrito={setHayEscrito}
+        />
         <div className="mt-6">
-          <Boton
-            variante="navegacion"
-            onClick={() =>
-              ir(vista.clienteId ? { tipo: 'ficha', clienteId: vista.clienteId, abierta: null } : { tipo: 'inicio' })
-            }
-          >
+          {/* Con algo escrito, volver lo descartaría: se pregunta antes (SPEC-KRILINXI-048). */}
+          <Boton variante="navegacion" onClick={() => (hayEscrito ? setSaliendo(true) : volver())}>
             Volver al mostrador sin guardar
           </Boton>
         </div>
+        <ModalConfirmacion
+          abierto={saliendo}
+          titulo="¿Salir sin guardar?"
+          mensaje="Se pierde lo que escribiste: esta ropa no queda registrada."
+          textoConfirmar="Sí, salir"
+          textoCancelar="Seguir escribiendo"
+          peligroso
+          onConfirmar={volver}
+          onCancelar={() => setSaliendo(false)}
+        />
       </div>
     );
   }

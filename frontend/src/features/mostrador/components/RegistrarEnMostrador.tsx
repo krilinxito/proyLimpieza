@@ -9,6 +9,8 @@ type Props = {
   /** El cliente de la ficha que estaba abierta, o null para elegirlo en el formulario. */
   clienteId: string | null;
   alRegistrar: (ropa: RopaRegistrada) => void;
+  /** Si hay algo escrito que se perdería al salir (SPEC-KRILINXI-048); el Mostrador pregunta antes de volver. */
+  alCambiarEscrito?: (hayEscrito: boolean) => void;
 };
 
 /**
@@ -16,7 +18,7 @@ type Props = {
  * cliente, lo lee y lo pone ya elegido; si no, el formulario empieza por el buscador. Guardar es lo
  * de siempre (`useRegistrarRopa`, en la sucursal de trabajo), ahora con el cliente nuevo incluido.
  */
-export function RegistrarEnMostrador({ clienteId, alRegistrar }: Props) {
+export function RegistrarEnMostrador({ clienteId, alRegistrar, alCambiarEscrito }: Props) {
   const mostrador = useMostrador();
   const registro = useRegistrarRopa();
   // undefined mientras se lee el cliente de la ficha; null si no hay ninguno elegido.
@@ -35,5 +37,12 @@ export function RegistrarEnMostrador({ clienteId, alRegistrar }: Props) {
   }, [clienteId, mostrador]);
 
   if (cliente === undefined || !registro.lista) return <p className="mt-6 text-xl text-texto-suave">Preparando…</p>;
-  return <FormularioRopa clienteInicial={cliente} registrar={registro.registrar} alRegistrar={alRegistrar} />;
+  return (
+    <FormularioRopa
+      clienteInicial={cliente}
+      registrar={registro.registrar}
+      alRegistrar={alRegistrar}
+      alCambiarEscrito={alCambiarEscrito}
+    />
+  );
 }

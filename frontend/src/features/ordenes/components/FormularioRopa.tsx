@@ -1,11 +1,13 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useId, useState, type FormEvent } from 'react';
 import { Aviso } from '../../../components/Aviso';
 import { Boton } from '../../../components/Boton';
 import { Tarjeta } from '../../../components/Tarjeta';
 import { CampoTexto } from '../../../components/CampoTexto';
+import { hoyEnBolivia } from '../../../lib/diaDelNegocio';
 import { ElegirClienteDeLaRopa } from '../../clientes/components/ElegirClienteDeLaRopa';
 import type { Cliente, ClienteElegido } from '../../clientes/types';
 import type { DatosRopa, ErroresRopa, ResultadoRegistro, RopaRegistrada } from '../types';
+import { atajosDeFecha } from './atajosDeFecha';
 import { ElegirMetodo } from './ElegirMetodo';
 
 const NO_SE_GUARDO = 'No se pudo guardar la ropa. Probá de nuevo y, si sigue pasando, avisale al encargado.';
@@ -15,6 +17,11 @@ type Props = {
   clienteInicial: Cliente | null;
   registrar: (datos: DatosRopa) => Promise<ResultadoRegistro>;
   alRegistrar: (ropa: RopaRegistrada) => void;
+  /**
+   * Avisa si hay algo escrito que se perdería al salir (SPEC-KRILINXI-048): quien tiene el botón de
+   * volver pregunta antes de descartarlo. Un cliente que ya venía elegido no cuenta como escrito.
+   */
+  alCambiarEscrito?: (hayEscrito: boolean) => void;
 };
 
 /**
@@ -22,7 +29,7 @@ type Props = {
  * se elige con el buscador o se da de alta ahí mismo, y se guarda todo junto. Valida quien guarda
  * (`api/ordenesLocal`); este formulario muestra lo que le contesta, campo por campo.
  */
-export function FormularioRopa({ clienteInicial, registrar, alRegistrar }: Props) {
+export function FormularioRopa({ clienteInicial, registrar, alRegistrar, alCambiarEscrito }: Props) {
   const [cliente, setCliente] = useState<ClienteElegido | null>(
     clienteInicial ? { tipo: 'existente', cliente: clienteInicial } : null,
   );
@@ -36,6 +43,9 @@ export function FormularioRopa({ clienteInicial, registrar, alRegistrar }: Props
     adelanto: '',
     metodoAdelanto: null,
   });
+  // El adelanto se pregunta primero (SPEC-KRILINXI-048): sus campos aparecen solo si deja.
+  const [dejaAdelanto, setDejaAdelanto] = useState(false);
+  const grupoAdelanto = useId();
   const [errores, setErrores] = useState<ErroresRopa>({});
   const [errorGeneral, setErrorGeneral] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
@@ -44,9 +54,32 @@ export function FormularioRopa({ clienteInicial, registrar, alRegistrar }: Props
     (campo: 'numeroBoleta' | 'descripcion' | 'precio' | 'fechaEstimada' | 'adelanto') => (valor: string) =>
       setDatos((d) => ({ ...d, [campo]: valor }));
 
+  const elClienteViene =
+    clienteInicial !== null && cliente?.tipo === 'existente' && cliente.cliente.id === clienteInicial.id;
+  const hayEscrito =
+    (cliente !== null && !elClienteViene) ||
+    [datos.numeroBoleta, datos.descripcion, datos.precio, datos.fechaEstimada, datos.adelanto].some((t) => t.trim() !== '');
+  useEffect(() => {
+    alCambiarEscrito?.(hayEscrito);
+    return () => alCambiarEscrito?.(false);
+  }, [hayEscrito, alCambiarEscrito]);
+
+  function elegirAdelanto(deja: boolean) {
+    setDejaAdelanto(deja);
+    // Si no deja, lo escrito del adelanto no se guarda ni se queda esperando.
+    if (!deja) {
+      setDatos((d) => ({ ...d, adelanto: '', metodoAdelanto: null }));
+      setErrores((e) => ({ ...e, adelanto: undefined, metodoAdelanto: undefined }));
+    }
+  }
+
   async function guardar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     if (guardando) return;
+    if (dejaAdelanto && datos.adelanto.trim() === '') {
+      setErrores({ adelanto: 'Escribí cuánto deja de adelanto, o elegí «No deja adelanto».' });
+      return;
+    }
     setGuardando(true);
     setErrorGeneral(null);
     try {
@@ -124,6 +157,13 @@ export function FormularioRopa({ clienteInicial, registrar, alRegistrar }: Props
             inputMode="decimal"
             autoComplete="off"
           />
+          <div role="group" aria-label="Para cuándo, en un toque" className="mt-4 flex flex-wrap gap-3">
+            {atajosDeFecha(hoyEnBolivia()).map(({ texto, fecha }) => (
+              <Boton key={texto} variante="secundario" tamano="compacto" onClick={() => cambiar('fechaEstimada')(fecha)}>
+                {texto}
+              </Boton>
+            ))}
+          </div>
           <CampoTexto
             etiqueta="Para cuándo estará lista (si se sabe)"
             type="date"
@@ -136,20 +176,47 @@ export function FormularioRopa({ clienteInicial, registrar, alRegistrar }: Props
 
       <div className="mt-4">
         <Tarjeta titulo="Adelanto">
-          <CampoTexto
-            etiqueta="Cuánto deja de adelanto (Bs, si deja)"
-            value={datos.adelanto}
-            onChange={cambiar('adelanto')}
-            error={errores.adelanto}
-            inputMode="decimal"
-            autoComplete="off"
-          />
-          {datos.adelanto.trim() !== '' && (
-            <ElegirMetodo
-              value={datos.metodoAdelanto}
-              onChange={(metodo) => setDatos((d) => ({ ...d, metodoAdelanto: metodo }))}
-              error={errores.metodoAdelanto}
-            />
+          <fieldset>
+            <legend className="text-xl font-semibold text-texto">¿Deja adelanto?</legend>
+            <div className="mt-2 grid grid-cols-2 gap-3">
+              {[
+                { deja: false, texto: 'No deja adelanto' },
+                { deja: true, texto: 'Deja adelanto' },
+              ].map(({ deja, texto }) => (
+                <label
+                  key={texto}
+                  className={`flex min-h-14 items-center gap-3 rounded-lg border-2 px-4 text-xl ${
+                    dejaAdelanto === deja ? 'border-marca bg-marca-suave font-semibold' : 'border-borde bg-superficie'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name={grupoAdelanto}
+                    className="size-6"
+                    checked={dejaAdelanto === deja}
+                    onChange={() => elegirAdelanto(deja)}
+                  />
+                  {texto}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          {dejaAdelanto && (
+            <>
+              <CampoTexto
+                etiqueta="Cuánto deja de adelanto (Bs)"
+                value={datos.adelanto}
+                onChange={cambiar('adelanto')}
+                error={errores.adelanto}
+                inputMode="decimal"
+                autoComplete="off"
+              />
+              <ElegirMetodo
+                value={datos.metodoAdelanto}
+                onChange={(metodo) => setDatos((d) => ({ ...d, metodoAdelanto: metodo }))}
+                error={errores.metodoAdelanto}
+              />
+            </>
           )}
         </Tarjeta>
       </div>

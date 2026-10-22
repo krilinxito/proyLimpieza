@@ -5,6 +5,8 @@ import { App } from '../../../App';
 import { simularApi } from '../../../test/apiFalsa';
 import { baseLocalDePrueba } from '../../../test/baseLocalDePrueba';
 import { elegirEnBuscador, escribirEnBuscador } from '../../../test/buscador';
+import { hoyEnBolivia } from '../../../lib/diaDelNegocio';
+import { sumarDias } from '../../ordenes/components/atajosDeFecha';
 import { sinJerga } from '../../../test/jerga';
 import { renderEnRuta } from '../../../test/render';
 import { sesionDePrueba } from '../../../test/sesion';
@@ -34,6 +36,11 @@ async function abrir(ruta = '/registrar-ropa') {
 
 function escribir(etiqueta: string, valor: string) {
   fireEvent.change(screen.getByLabelText(etiqueta), { target: { value: valor } });
+}
+
+/** Elige "Deja adelanto": hasta entonces el formulario no pide ni el importe ni cómo paga (SPEC-KRILINXI-048). */
+function dejaAdelanto() {
+  fireEvent.click(screen.getByLabelText('Deja adelanto'));
 }
 
 /** Busca a Rosa en el formulario y la elige: queda como cliente, sin salir del formulario. */
@@ -78,7 +85,8 @@ describe('Registrar ropa: el recorrido — SPEC-KRILINXI-006 y SPEC-KRILINXI-034
     escribir('Qué ropa deja', '2 pantalones, 1 saco');
     escribir('Precio (Bs)', '50');
     escribir('Para cuándo estará lista (si se sabe)', '2026-10-10');
-    escribir('Cuánto deja de adelanto (Bs, si deja)', '20,50');
+    dejaAdelanto();
+    escribir('Cuánto deja de adelanto (Bs)', '20,50');
     fireEvent.click(screen.getByLabelText('Pago con QR'));
     await guardar();
 
@@ -114,8 +122,64 @@ describe('Registrar ropa: el recorrido — SPEC-KRILINXI-006 y SPEC-KRILINXI-034
     await abrir();
     await elegirARosa();
     expect(screen.queryByRole('group', { name: '¿Cómo paga el adelanto?' })).not.toBeInTheDocument();
-    escribir('Cuánto deja de adelanto (Bs, si deja)', '10');
+    expect(screen.queryByLabelText('Cuánto deja de adelanto (Bs)')).not.toBeInTheDocument();
+    dejaAdelanto();
+    expect(screen.getByLabelText('Cuánto deja de adelanto (Bs)')).toBeInTheDocument();
     expect(screen.getByRole('group', { name: '¿Cómo paga el adelanto?' })).toBeInTheDocument();
+  });
+
+  it('el adelanto se pregunta primero: sin elegir "Deja adelanto" no hay importe ni forma de pago — SPEC-KRILINXI-048', async () => {
+    await abrir();
+    await elegirARosa();
+    expect(screen.getByLabelText('No deja adelanto')).toBeChecked();
+
+    // Al volver a "No deja adelanto" se ocultan, y lo escrito no se guarda.
+    dejaAdelanto();
+    escribir('Cuánto deja de adelanto (Bs)', '10');
+    fireEvent.click(screen.getByLabelText('No deja adelanto'));
+    expect(screen.queryByLabelText('Cuánto deja de adelanto (Bs)')).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: '¿Cómo paga el adelanto?' })).not.toBeInTheDocument();
+  });
+
+  it('guardar sin adelanto crea solo la orden, aunque se haya escrito un adelanto y se haya arrepentido — SPEC-KRILINXI-048', async () => {
+    const { db } = await abrir();
+    await elegirARosa();
+    cargarRopa('001260');
+    dejaAdelanto();
+    escribir('Cuánto deja de adelanto (Bs)', '4');
+    fireEvent.click(screen.getByLabelText('Efectivo'));
+    fireEvent.click(screen.getByLabelText('No deja adelanto'));
+    await guardar();
+
+    expect(await resumen()).toMatchObject({ Adelanto: 'No dejó', 'Falta pagar': 'Bs 10,00' });
+    expect(await cola(db)).toEqual([['PUT', 'ordenes']]);
+  });
+
+  it('si elige "Deja adelanto" y no escribe el importe, lo dice y no guarda nada — SPEC-KRILINXI-048', async () => {
+    const { db } = await abrir();
+    await elegirARosa();
+    cargarRopa('001261');
+    dejaAdelanto();
+    await guardar();
+
+    expect(await screen.findByText('Escribí cuánto deja de adelanto, o elegí «No deja adelanto».')).toBeInTheDocument();
+    expect(await db.getCrudBatch()).toBeNull();
+  });
+
+  it('los atajos de fecha llenan "Para cuándo estará lista" con el día de Bolivia — SPEC-KRILINXI-048', async () => {
+    await abrir();
+    await elegirARosa();
+    const campo = screen.getByLabelText('Para cuándo estará lista (si se sabe)');
+    const atajos = within(screen.getByRole('group', { name: 'Para cuándo, en un toque' }));
+    expect(atajos.getAllByRole('button').map((b) => b.textContent)).toEqual(['Mañana', 'En 3 días', 'En una semana']);
+
+    for (const [texto, dias] of [['Mañana', 1], ['En 3 días', 3], ['En una semana', 7]] as const) {
+      fireEvent.click(atajos.getByRole('button', { name: texto }));
+      expect(campo).toHaveValue(sumarDias(hoyEnBolivia(), dias));
+    }
+    // El selector sigue sirviendo para cualquier otra fecha.
+    escribir('Para cuándo estará lista (si se sabe)', '2026-12-24');
+    expect(campo).toHaveValue('2026-12-24');
   });
 
   it('"Cambiar de cliente" vuelve al buscador sin perder la ropa escrita', async () => {
@@ -155,7 +219,8 @@ describe('Registrar ropa: lo que se corrige en pantalla — SPEC-KRILINXI-006 y 
     const { db } = await abrir();
     await elegirARosa();
     cargarRopa('001237');
-    escribir('Cuánto deja de adelanto (Bs, si deja)', '15');
+    dejaAdelanto();
+    escribir('Cuánto deja de adelanto (Bs)', '15');
     fireEvent.click(screen.getByLabelText('Efectivo'));
     await guardar();
 
@@ -264,13 +329,58 @@ describe('Registrar ropa desde el Mostrador — SPEC-KRILINXI-034', () => {
     expect(screen.getByRole('form', { name: 'Datos de la ropa' })).toBeInTheDocument();
   });
 
-  it('"Volver al mostrador sin guardar" no guarda nada', async () => {
+  it('"Volver al mostrador sin guardar" no guarda nada, y con algo escrito pide confirmar antes', async () => {
     const { db } = await abrir();
     await elegirARosa();
     cargarRopa('001243');
     fireEvent.click(screen.getByRole('button', { name: 'Volver al mostrador sin guardar' }));
+
+    const aviso = await screen.findByRole('dialog');
+    expect(within(aviso).getByText('¿Salir sin guardar?')).toBeInTheDocument();
+    expect(within(aviso).getByText(/Se pierde lo que escribiste/)).toBeInTheDocument();
+    fireEvent.click(within(aviso).getByRole('button', { name: 'Sí, salir' }));
     expect(await screen.findByRole('heading', { name: 'Ropa en el local' })).toBeInTheDocument();
     expect(await db.getCrudBatch()).toBeNull();
+  });
+
+  it('cancelar la confirmación deja el formulario como estaba — SPEC-KRILINXI-048', async () => {
+    await abrir();
+    await elegirARosa();
+    cargarRopa('001244');
+    fireEvent.click(screen.getByRole('button', { name: 'Volver al mostrador sin guardar' }));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Seguir escribiendo' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Número de la boleta')).toHaveValue('001244');
+    expect(screen.getByLabelText('Qué ropa deja')).toHaveValue('Camisa');
+  });
+
+  it('con el formulario vacío, volver no pregunta nada — SPEC-KRILINXI-048', async () => {
+    await abrir();
+    fireEvent.click(screen.getByRole('button', { name: 'Volver al mostrador sin guardar' }));
+
+    expect(await screen.findByRole('heading', { name: 'Ropa en el local' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('el cliente que ya viene de su ficha no cuenta como escrito: volver no pregunta — SPEC-KRILINXI-048', async () => {
+    await abrir('/mostrador');
+    await elegirEnBuscador('rosa', /Rosa Quispe/);
+    await screen.findByRole('region', { name: 'Ficha de Rosa Quispe' });
+    fireEvent.click(within(screen.getByRole('main')).getByRole('button', { name: 'Registrar ropa' }));
+    await screen.findByRole('form', { name: 'Datos de la ropa' });
+    fireEvent.click(screen.getByRole('button', { name: 'Volver al mostrador sin guardar' }));
+
+    expect(await screen.findByRole('region', { name: 'Ficha de Rosa Quispe' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('un cliente elegido a mano cuenta como escrito: volver pregunta aunque no se haya cargado la ropa — SPEC-KRILINXI-048', async () => {
+    await abrir();
+    await elegirARosa();
+    // Rosa se eligió en el buscador (el formulario no la traía de una ficha), así que se perdería.
+    fireEvent.click(screen.getByRole('button', { name: 'Volver al mostrador sin guardar' }));
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
   });
 
   it('un ADMIN que no está atendiendo ve cómo empezar, no el formulario (SPEC-KRILINXI-029)', async () => {
@@ -291,7 +401,8 @@ describe('Registrar ropa: el idioma del mostrador — SPEC-KRILINXI-006 y SPEC-K
     sinJerga();
 
     cargarRopa('001238');
-    escribir('Cuánto deja de adelanto (Bs, si deja)', '5');
+    dejaAdelanto();
+    escribir('Cuánto deja de adelanto (Bs)', '5');
     fireEvent.click(screen.getByLabelText('Tarjeta'));
     await guardar();
     await screen.findByText('Ropa registrada con la boleta 001238.');
