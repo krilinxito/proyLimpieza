@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-057
 name: 'Registrar ropa: guardar al final dentro de la boleta'
 slug: registrar-ropa-boleta
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-23
 scope:
@@ -11,7 +11,11 @@ scope:
   - frontend/src/features/mostrador/**
 priority: medium
 depends_on: []
-tests: []
+tests:
+  - frontend\src\components\piezas.test.tsx
+  - frontend\src\features\mostrador\components\EntregarEnMostrador.test.tsx
+  - frontend\src\features\mostrador\components\PantallaMostrador.test.tsx
+  - frontend\src\features\mostrador\components\RegistrarEnMostrador.test.tsx
 ---
 
 ## Descripción
