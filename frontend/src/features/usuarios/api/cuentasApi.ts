@@ -81,3 +81,8 @@ export async function editarCuenta(cuenta: Cuenta, datos: DatosEdicion): Promise
 export async function darDeBaja(cuenta: Cuenta): Promise<ResultadoCuenta> {
   return resultadoDe(await enviar(() => api.patch(`/usuarios/${cuenta.id}`, { activo: false })));
 }
+
+/** Volver a dar de alta una cuenta dada de baja: `activo: true` (SPEC-KRILINXI-051). Vuelve a poder entrar. */
+export async function darDeAlta(cuenta: Cuenta): Promise<ResultadoCuenta> {
+  return resultadoDe(await enviar(() => api.patch(`/usuarios/${cuenta.id}`, { activo: true })));
+}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useBaseLocal } from '../../../lib/powersync';
-import { crearCuenta, darDeBaja, editarCuenta } from '../api/cuentasApi';
+import { crearCuenta, darDeAlta, darDeBaja, editarCuenta } from '../api/cuentasApi';
 import { listarCuentas } from '../api/cuentasLocal';
 import type { Cuenta, DatosAlta, DatosEdicion, ResultadoCuenta } from '../types';
 
@@ -35,4 +35,5 @@ export const cambiosDeCuenta: {
   crear: (datos: DatosAlta) => Promise<ResultadoCuenta>;
   editar: (cuenta: Cuenta, datos: DatosEdicion) => Promise<ResultadoCuenta>;
   darDeBaja: (cuenta: Cuenta) => Promise<ResultadoCuenta>;
-} = { crear: crearCuenta, editar: editarCuenta, darDeBaja };
+  darDeAlta: (cuenta: Cuenta) => Promise<ResultadoCuenta>;
+} = { crear: crearCuenta, editar: editarCuenta, darDeBaja, darDeAlta };
