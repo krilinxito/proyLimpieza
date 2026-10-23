@@ -369,6 +369,10 @@ y la entrega suben como dos pedidos, la tablet los escribe en una sola transacci
 el pago al recibir la entrega. En la pantalla, `Entregar` se apaga hasta que lo que se paga ahora cubre lo que falta, y el resumen ya no tiene "Queda debiendo". Un recargo al entregar
 se cobra en el mismo acto. Riesgo conocido: una entrega sin internet cuyo pago el servidor rechaza (o una escrita por una versión anterior, entrega antes que pago) vuelve como 409 y
 va a **Para corregir**.
+SPEC-KRILINXI-057 ordenó **Registrar ropa en dos pasos dentro del mismo `FormularioRopa`**: sin cliente elegido solo se ve el buscador (sin los datos de la boleta ni "Guardar"); con uno elegido, o dado de alta ahí
+mismo, la boleta, con un único "Guardar" al final. El botón de la tarjeta de cliente nuevo dice **"Atrás"**, y volver a elegir cliente no pierde lo escrito de la boleta (su estado vive en el formulario, no en los
+pasos). Dentro del detalle de una boleta del Mostrador hay un botón secundario **"Nueva boleta de este cliente"** (fuera de la fila de acciones, que sigue en cuatro como mucho) que abre Registrar ropa con ese cliente ya elegido.
+No se creó ruta nueva por boleta: siguen `/registrar-ropa` y `/mostrador?registrar`.
 SPEC-KRILINXI-041 agregó el **Historial de boletas** (`/boletas`, `features/historial/`), en el menú para todos, y **cada uno
 ve lo que le corresponde** (`useModoDelHistorial`, que sale de `useSucursalDeTrabajo`): quien atiende, su sucursal de
 trabajo de los **últimos 30 días**, de la base local y también sin internet (`listarHistorialLocal`, que reusa

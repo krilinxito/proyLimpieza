@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Boton } from '../../../components/Boton';
 import { Paginas } from '../../../components/Paginas';
 import { usePaginado } from '../../../hooks/usePaginado';
 import { TarjetaCliente } from '../../clientes/components/TarjetaCliente';
@@ -16,6 +17,8 @@ type Props = {
   /** La boleta abierta dentro de la ficha, o null para ver toda su ropa. */
   abierta: string | null;
   alAbrir: (ordenId: string | null) => void;
+  /** Abre Registrar ropa con este cliente ya elegido (SPEC-KRILINXI-057). */
+  alRegistrar: () => void;
 };
 
 /**
@@ -27,7 +30,7 @@ type Props = {
  * Después de entregar muestra el resumen de la entrega; al volver, la ropa del cliente ya figura
  * entregada, sin tener que buscarla de nuevo.
  */
-export function FichaCliente({ clienteId, abierta, alAbrir }: Props) {
+export function FichaCliente({ clienteId, abierta, alAbrir, alRegistrar }: Props) {
   const mostrador = useMostrador();
   const [cliente, setCliente] = useState<Cliente | null | undefined>(undefined);
   const [ropa, setRopa] = useState<OrdenVista[] | null>(null);
@@ -66,24 +69,33 @@ export function FichaCliente({ clienteId, abierta, alAbrir }: Props) {
       {cliente && <TarjetaCliente cliente={cliente} titulo="Cliente" />}
 
       {abierta ? (
-        <DetalleOrden
-          key={abierta}
-          ordenId={abierta}
-          alVolver={() => alAbrir(null)}
-          textoVolver={`Ver toda la ropa de ${nombre}`}
-          accionesExtra={(orden, _recargar, { principal }) => (
-            <AccionEntregar
-              orden={orden}
-              principal={principal}
-              alEntregar={(entrega) => {
-                setEntregada(entrega);
-                // Se relee ya, mientras se muestra el resumen: al volver, la lista del cliente tiene
-                // que decir Entregado desde el primer instante, no la ropa como estaba antes.
-                recargar().catch((error: unknown) => console.error('No se pudo leer la ficha del cliente.', error));
-              }}
-            />
-          )}
-        />
+        <>
+          <DetalleOrden
+            key={abierta}
+            ordenId={abierta}
+            alVolver={() => alAbrir(null)}
+            textoVolver={`Ver toda la ropa de ${nombre}`}
+            accionesExtra={(orden, _recargar, { principal }) => (
+              <AccionEntregar
+                orden={orden}
+                principal={principal}
+                alEntregar={(entrega) => {
+                  setEntregada(entrega);
+                  // Se relee ya, mientras se muestra el resumen: al volver, la lista del cliente tiene
+                  // que decir Entregado desde el primer instante, no la ropa como estaba antes.
+                  recargar().catch((error: unknown) => console.error('No se pudo leer la ficha del cliente.', error));
+                }}
+              />
+            )}
+          />
+          {/* Otra boleta del mismo cliente, sin volver a buscarlo (SPEC-KRILINXI-057). Secundaria y fuera de la fila de
+            acciones de la boleta: la principal sigue siendo una sola (SPEC-KRILINXI-037) y la fila no pasa de cuatro (049). */}
+          <div className="mt-6">
+            <Boton variante="secundario" icono="registrar-ropa" onClick={alRegistrar}>
+              Nueva boleta de este cliente
+            </Boton>
+          </div>
+        </>
       ) : (
         <>
           <h2 className="mt-8 text-2xl font-bold text-texto">Su ropa en esta sucursal</h2>
@@ -98,7 +110,13 @@ export function FichaCliente({ clienteId, abierta, alAbrir }: Props) {
               ))}
             </ul>
           )}
-          <Paginas pagina={paginas.pagina} total={paginas.total} porPagina={paginas.porPagina} irAPagina={paginas.irAPagina} nombre="Páginas de la ropa del cliente" />
+          <Paginas
+            pagina={paginas.pagina}
+            total={paginas.total}
+            porPagina={paginas.porPagina}
+            irAPagina={paginas.irAPagina}
+            nombre="Páginas de la ropa del cliente"
+          />
         </>
       )}
     </section>

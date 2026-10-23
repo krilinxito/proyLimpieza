@@ -28,6 +28,11 @@ type Props = {
  * La ropa que deja un cliente, con el cliente arriba en el mismo formulario — SPEC-KRILINXI-034:
  * se elige con el buscador o se da de alta ahí mismo, y se guarda todo junto. Valida quien guarda
  * (`api/ordenesLocal`); este formulario muestra lo que le contesta, campo por campo.
+ *
+ * Son dos pasos en el mismo componente (SPEC-KRILINXI-057): **sin cliente elegido solo se ve el
+ * buscador**, sin los datos de la boleta ni "Guardar"; con uno elegido (o dado de alta ahí mismo), la
+ * boleta, con un único "Guardar" al final. Volver a elegir cliente no pierde lo ya escrito, porque
+ * el estado de la boleta vive acá y no en los pasos.
  */
 export function FormularioRopa({ clienteInicial, registrar, alRegistrar, alCambiarEscrito }: Props) {
   const [cliente, setCliente] = useState<ClienteElegido | null>(
@@ -103,6 +108,24 @@ export function FormularioRopa({ clienteInicial, registrar, alRegistrar, alCambi
     }
   }
 
+  // Paso 1: todavía no hay cliente. Solo el buscador: nada de la boleta, y nada que guardar.
+  if (cliente === null) {
+    return (
+      <div className="mt-6">
+        <ElegirClienteDeLaRopa
+          valor={cliente}
+          alCambiar={(valor) => {
+            setCliente(valor);
+            setOcupadoPor(null);
+          }}
+          errores={errores}
+          deshabilitado={guardando}
+        />
+      </div>
+    );
+  }
+
+  // Paso 2: la boleta, con el cliente arriba. Guardar está una sola vez, al final.
   return (
     <form onSubmit={guardar} noValidate aria-label="Datos de la ropa" className="mt-6 grid gap-2">
       <ElegirClienteDeLaRopa
@@ -139,8 +162,8 @@ export function FormularioRopa({ clienteInicial, registrar, alRegistrar, alCambi
             onChange={cambiar('numeroBoleta')}
             error={errores.numeroBoleta}
             autoComplete="off"
-            // Con el cliente ya elegido se empieza por la boleta; si no, por el buscador del cliente.
-            autoFocus={clienteInicial !== null}
+            // Con un cliente que ya existe se empieza por la boleta; con uno nuevo, por su nombre.
+            autoFocus={cliente.tipo === 'existente'}
           />
           <CampoTexto
             etiqueta="Qué deja"

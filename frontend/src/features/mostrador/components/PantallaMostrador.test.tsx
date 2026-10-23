@@ -367,6 +367,8 @@ describe('Mostrador: una sola acción principal a la vista — SPEC-KRILINXI-037
   it('registrando, la única principal es Guardar, y salir sin guardar es navegación', async () => {
     await abrirConRopaLista();
     fireEvent.click(boton('Registrar ropa'));
+    // Primero se elige el cliente: ahí todavía no hay nada que guardar (SPEC-KRILINXI-057).
+    await elegirEnBuscador('zz', 'Cliente nuevo');
     await screen.findByRole('form', { name: 'Datos de la ropa' });
     expect(accionesPrincipales()).toEqual(['Guardar']);
     expect(usoDe(boton('Volver al mostrador sin guardar'))).toBe('navegacion');
@@ -507,5 +509,59 @@ describe('Mostrador: las acciones de la boleta suben y anular queda aparte — S
     await abrirConRopaLista();
     await abrirDetalle('000001');
     expect(accionesPrincipales()).toEqual(['Empezar a lavar']);
+  });
+});
+
+/**
+ * Otra boleta del mismo cliente desde el detalle de una boleta — SPEC-KRILINXI-057. Es el atajo para
+ * cargar la segunda prenda de quien ya está en el mostrador, sin volver a buscarlo.
+ */
+describe('Mostrador: "Nueva boleta de este cliente" dentro de una boleta — SPEC-KRILINXI-057', () => {
+  const NUEVA = 'Nueva boleta de este cliente';
+  const escribir = (etiqueta: string, valor: string) =>
+    fireEvent.change(screen.getByLabelText(etiqueta), { target: { value: valor } });
+
+  it('abre Registrar ropa con el cliente de la boleta ya elegido, sin buscador, y al guardar vuelve a su ficha con la boleta nueva', async () => {
+    await abrirConRopaLista();
+    await abrirDetalle('000001');
+
+    fireEvent.click(boton(NUEVA));
+
+    const formulario = await screen.findByRole('form', { name: 'Datos de la ropa' });
+    // Rosa ya viene elegida, y no hay dónde buscar a otro cliente en la boleta.
+    expect(within(formulario).getByRole('region', { name: 'Cliente' })).toHaveTextContent('Rosa Quispe');
+    expect(screen.queryByRole('combobox', { name: /Buscar cliente/ })).not.toBeInTheDocument();
+
+    escribir('Número de la boleta', '000050');
+    escribir('Qué deja', '1 camisa');
+    escribir('Precio (Bs)', '12');
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Ver la boleta en la ficha de Rosa Quispe' }));
+    expect(await screen.findByRole('region', { name: 'Boleta 000050' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Ficha de Rosa Quispe' })).toBeInTheDocument();
+  });
+
+  it('es un botón secundario, fuera de la fila de acciones, y la principal sigue siendo una sola', async () => {
+    await abrirConRopaLista();
+    await abrirDetalle('000001');
+    const fila = screen.getByRole('group', { name: 'Qué hacer con esta ropa' });
+
+    expect(usoDe(boton(NUEVA))).toBe('secundario');
+    expect(fila).not.toContainElement(boton(NUEVA));
+    // La fila sigue con sus cuatro botones como mucho (SPEC-KRILINXI-049).
+    expect(within(fila).getAllByRole('button').length).toBeLessThanOrEqual(4);
+    expect(accionesPrincipales()).toEqual(['Empezar a lavar']);
+    expect(boton(NUEVA).querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    sinJerga();
+  });
+
+  it('solo está dentro de una boleta: en la lista de la ropa del cliente queda "Registrar ropa", como siempre', async () => {
+    await abrirConRopaLista();
+    await elegirEnBuscador('rosa', /Rosa Quispe/);
+    await screen.findByRole('region', { name: 'Ficha de Rosa Quispe' });
+
+    expect(within(screen.getByRole('main')).queryByRole('button', { name: NUEVA })).not.toBeInTheDocument();
+    expect(boton('Registrar ropa')).toBeInTheDocument();
   });
 });

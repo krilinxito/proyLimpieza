@@ -223,6 +223,7 @@ export function PantallaMostrador() {
             clienteId={vista.clienteId}
             abierta={vista.abierta}
             alAbrir={(ordenId) => setVista({ ...vista, abierta: ordenId })}
+            alRegistrar={() => ir({ tipo: 'registrando', clienteId: vista.clienteId })}
           />
           <div className="mt-6">
             <Boton variante="navegacion" onClick={() => ir({ tipo: 'inicio' })}>
