@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-056
 name: Entregar solo con la boleta pagada por completo
 slug: entrega-saldo-cero
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-23
 scope:
@@ -14,7 +14,13 @@ scope:
 priority: medium
 depends_on:
   - SPEC-KRILINXI-055
-tests: []
+tests:
+  - backend\tests\db\entregas.db.test.ts
+  - backend\tests\db\horaDelServidor.db.test.ts
+  - backend\tests\http\entregas.test.ts
+  - backend\tests\unit\entregas.model.test.ts
+  - frontend\src\features\entregas\api\entregasLocal.test.ts
+  - frontend\src\features\mostrador\components\EntregarEnMostrador.test.tsx
 ---
 
 ## Descripción
