@@ -101,6 +101,9 @@ calculado en Postgres (`vw_saldos`) y filtros por fechas de entrada, sucursal, e
 "con saldo". **Sin `desde` no mira los últimos 30 días: trae todo**, así que no usa `leerPeriodo`. La
 ruta va antes del `requireAuthDeLaCola`: esa sesión que acepta tokens vencidos es solo para subir lo
 que escribió el mostrador (§13).
+SPEC-KRILINXI-060 sumó a cada boleta de `GET /api/ordenes` el campo `retiro`: `null` mientras no se entregó, y si se entregó
+`{ tipo: 'CON_BOLETA' | 'SIN_BOLETA', nombre: string | null, carnet: string | null }` (nombre y carnet solo vienen con SIN_BOLETA, que el
+schema los exige). Sale del `LEFT JOIN entregas` que ya traía `precioFinal`, sin consulta nueva.
 SPEC-KRILINXI-043 añadió `GET /api/estadisticas/ingresos-por-dia` (solo ADMIN): lo cobrado día por día, con el
 total del día y su desglose por forma de pago, para dibujar una tendencia. Mismo contrato de período y sucursal que
 las demás estadísticas (`leerPeriodo`: sin `desde`, los últimos 30 días) y la forma de `/volumen`: **todos los días
@@ -400,6 +403,11 @@ corregir, saldos, ropa sin recoger y productividad) y `useTamanoDePagina` fija e
 API (historial, auditoría y clientes de las estadísticas). El tamaño depende del ancho del dispositivo
 (`lib/tamanoDePagina.ts`), y si la tablet se gira la lista se ajusta y vuelve a la primera página. Para los tests,
 `test/pantalla.ts` (`conAnchoDePantalla(500)`) pone una pantalla angosta.
+
+SPEC-KRILINXI-060 muestra **quién retiró la ropa** en el detalle de una boleta entregada, con el par "Retiró": el nombre y el carnet si fue sin
+boleta, "Con la boleta" si no, y nada si no se entregó. En el Mostrador sale de la base local (`SELECT_ORDENES` trae las columnas de la
+entrega); en el historial del admin, del campo `retiro` de la API. Las dos fuentes arman el mismo `Retiro` (`features/ordenes/retiro.ts`, que
+también lo redacta con `textoDelRetiro`).
 
 SPEC-KRILINXI-012 corrige el reloj de la tablet: `lib/reloj` guarda el desfase con la hora
 del servidor que traen `login` y `renovar`, y `horaOficial()` es de donde salen

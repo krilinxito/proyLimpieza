@@ -6,6 +6,7 @@ import { TEXTO_ESTADO_ORDEN } from '../../../lib/dominio';
 import { formatearBs } from '../../../lib/money';
 import { fechaCorta } from '../../ordenes/components/fechas';
 import { TONO_ESTADO } from '../../ordenes/estado';
+import { textoDelRetiro } from '../../ordenes/retiro';
 import type { BoletaListada } from '../types';
 import { textoDelSaldo } from './FilaDeBoleta';
 
@@ -40,6 +41,7 @@ export function DetalleDeSoloLectura({ boleta, alVolver }: { boleta: BoletaLista
             ['Sucursal', boleta.sucursalNombre ?? ''],
             ['Ropa', boleta.descripcion],
             ['Entró', boleta.dia ? fechaCorta(boleta.dia) : 'Sin fecha'],
+            ...(boleta.retiro ? ([['Retiró', textoDelRetiro(boleta.retiro)]] as [string, ReactNode][]) : []),
             ['Precio', formatearBs(boleta.precioTotal)],
             ...(boleta.precioFinal === null ? [] : ([['Precio final', formatearBs(boleta.precioFinal)]] as [string, ReactNode][])),
             ['Pagado', formatearBs(boleta.pagado)],

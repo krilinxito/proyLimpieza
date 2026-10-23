@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-060
 name: Mostrar quién retiró la ropa cuando fue sin boleta
 slug: boleta-quien-recogio
-status: draft
+status: finished
 owner: krilinxito
 created: 2026-10-23
 scope:
@@ -14,7 +14,13 @@ scope:
 priority: medium
 depends_on:
   - SPEC-KRILINXI-056
-tests: []
+tests:
+  - backend\tests\db\ordenesHistorial.db.test.ts
+  - backend\tests\unit\ordenesHistorial.model.test.ts
+  - frontend\src\features\historial\api\historialApi.test.ts
+  - frontend\src\features\historial\components\PantallaHistorial.test.tsx
+  - frontend\src\features\mostrador\components\PantallaMostrador.test.tsx
+  - frontend\src\features\ordenes\retiro.test.ts
 ---
 
 ## Descripción
@@ -30,6 +36,18 @@ Una entrega sin boleta exige nombre y carnet de quien retira, pero ese dato no s
 - [ ] Tests de backend (con dobles y contra la base real) y de frontend con el id de esta spec, sin jerga, y suite completa en verde.
 
 ## Notas
+
+### Contrato de `GET /api/ordenes`
+
+Cada elemento de `boletas` suma un campo `retiro`:
+
+```json
+"retiro": null
+"retiro": { "tipo": "CON_BOLETA", "nombre": null, "carnet": null }
+"retiro": { "tipo": "SIN_BOLETA", "nombre": "Luis Mamani", "carnet": "1234567 LP" }
+```
+
+`null` mientras la boleta no se entregó. El resto de la respuesta no cambia.
 
 <!--
 Convención de trazabilidad: todo test relacionado con esta spec debe llevar su id

@@ -1,5 +1,6 @@
 import type { Centavos } from '../../lib/money';
 import type { EstadoOrden, MetodoPago, TipoPago } from '../../lib/dominio';
+import type { Retiro } from './retiro';
 import type { Cliente, ClienteElegido } from '../clientes/types';
 
 /** Lo que escribe el empleado al registrar ropa, tal cual, sin limpiar. */
@@ -81,6 +82,8 @@ export type OrdenVista = {
   precioTotal: Centavos;
   /** El de la entrega; null si todavía no se entregó. */
   precioFinal: Centavos | null;
+  /** Quién retiró la ropa (SPEC-KRILINXI-060); null si todavía no se entregó. */
+  retiro: Retiro | null;
   pagado: Centavos;
   saldo: Centavos;
   pagos: PagoVisto[];

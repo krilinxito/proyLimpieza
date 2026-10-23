@@ -333,6 +333,47 @@ describe('Historial de boletas del administrador — SPEC-KRILINXI-041', () => {
     expect(await screen.findByRole('button', { name: 'Boleta 001234, Rosa Quispe' })).toBeInTheDocument();
   });
 
+  it('una entregada sin boleta dice quién la retiró, con su nombre y carnet — SPEC-KRILINXI-060', async () => {
+    const sinBoleta = boletaDePrueba({
+      numeroBoleta: '000555',
+      estado: 'ENTREGADO',
+      precioFinal: '50.00',
+      pagado: '50.00',
+      saldo: '0.00',
+      retiro: { tipo: 'SIN_BOLETA', nombre: 'Luis Mamani', carnet: '1234567 LP' },
+    });
+    await abrirComoAdmin(() => ({ status: 200, data: paginaDeBoletas([sinBoleta]) }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Boleta 000555, Rosa Quispe' }));
+
+    const detalle = await screen.findByRole('region', { name: 'Boleta 000555' });
+    expect(within(detalle).getByText('Retiró', { selector: 'dt' }).nextElementSibling?.textContent).toBe('Luis Mamani, 1234567 LP');
+    sinJerga();
+  });
+
+  it('una entregada con boleta lo dice, sin nombre — SPEC-KRILINXI-060', async () => {
+    const conBoleta = boletaDePrueba({
+      numeroBoleta: '000556',
+      estado: 'ENTREGADO',
+      precioFinal: '50.00',
+      pagado: '50.00',
+      saldo: '0.00',
+      retiro: { tipo: 'CON_BOLETA', nombre: null, carnet: null },
+    });
+    await abrirComoAdmin(() => ({ status: 200, data: paginaDeBoletas([conBoleta]) }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Boleta 000556, Rosa Quispe' }));
+
+    const detalle = await screen.findByRole('region', { name: 'Boleta 000556' });
+    expect(within(detalle).getByText('Retiró', { selector: 'dt' }).nextElementSibling?.textContent).toBe('Con la boleta');
+  });
+
+  it('una boleta sin entregar no habla de retiro — SPEC-KRILINXI-060', async () => {
+    await abrirComoAdmin();
+    fireEvent.click(await screen.findByRole('button', { name: 'Boleta 001234, Rosa Quispe' }));
+
+    const detalle = await screen.findByRole('region', { name: 'Boleta 001234' });
+    expect(within(detalle).queryByText('Retiró')).not.toBeInTheDocument();
+  });
+
   it('una boleta sin entregar no muestra precio final', async () => {
     await abrirComoAdmin();
     fireEvent.click(await screen.findByRole('button', { name: 'Boleta 001234, Rosa Quispe' }));

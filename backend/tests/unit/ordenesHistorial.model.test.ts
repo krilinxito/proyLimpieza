@@ -133,6 +133,9 @@ describe('Historial de boletas: el SQL que arma el model — SPEC-KRILINXI-040',
             fecha_estimada_salida: null,
             precio_total: '45.50',
             precio_final: null,
+            tipo_retiro: null,
+            retirado_por_nombre: null,
+            retirado_por_carnet: null,
             pagado: '10.00',
             saldo: '35.50',
           },
@@ -155,10 +158,34 @@ describe('Historial de boletas: el SQL que arma el model — SPEC-KRILINXI-040',
           fechaEstimadaSalida: null,
           precioTotal: '45.50',
           precioFinal: null,
+          retiro: null,
           pagado: '10.00',
           saldo: '35.50',
         },
       ],
     });
+  });
+
+  it('arma el retiro de una boleta entregada: sin boleta con nombre y carnet, con boleta sin ellos — SPEC-KRILINXI-060', async () => {
+    const base = {
+      id: 'o', numero_boleta: '1', sucursal_id: 's', sucursal_nombre: 'Centro', cliente_id: 'c',
+      cliente_nombre: 'Rosa', cliente_telefono: '7', descripcion: '', estado: 'ENTREGADO',
+      fecha_entrada: '2026-09-30 10:15:00', fecha_estimada_salida: null, precio_total: '1.00',
+      precio_final: '1.00', pagado: '1.00', saldo: '0.00',
+    };
+    query.mockReset();
+    query.mockResolvedValueOnce({ rows: [{ total: 2 }] }).mockResolvedValueOnce({
+      rows: [
+        { ...base, tipo_retiro: 'SIN_BOLETA', retirado_por_nombre: 'Luis', retirado_por_carnet: '123 LP' },
+        { ...base, tipo_retiro: 'CON_BOLETA', retirado_por_nombre: null, retirado_por_carnet: null },
+      ],
+    });
+
+    const { boletas } = await ordenes.listar(SIN_FILTROS, PAGINA);
+
+    expect(boletas.map((b) => b.retiro)).toEqual([
+      { tipo: 'SIN_BOLETA', nombre: 'Luis', carnet: '123 LP' },
+      { tipo: 'CON_BOLETA', nombre: null, carnet: null },
+    ]);
   });
 });

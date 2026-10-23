@@ -243,6 +243,38 @@ describe('Mostrador: la boleta — SPEC-KRILINXI-008 y SPEC-KRILINXI-033', () =>
     }
   });
 
+  it('una entregada sin boleta dice quién la retiró, leído de la base local y sin internet — SPEC-KRILINXI-060', async () => {
+    const sinBoleta = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000005', estado: 'LISTO' });
+    const { sembrar } = await abrir();
+    await sembrar('ordenes', [sinBoleta]);
+    await sembrar('entregas', [
+      entregaDePrueba({
+        orden_id: sinBoleta.id,
+        tipo_retiro: 'SIN_BOLETA',
+        retirado_por_nombre: 'Luis Mamani',
+        retirado_por_carnet: '1234567 LP',
+      }),
+    ]);
+    const detalle = await buscarBoleta('000005');
+
+    expect(datoDelDetalle(detalle, 'Retiró')).toBe('Luis Mamani, 1234567 LP');
+    sinJerga();
+  });
+
+  it('una entregada con boleta lo dice — SPEC-KRILINXI-060', async () => {
+    await abrir();
+    const detalle = await buscarBoleta('000004');
+
+    expect(datoDelDetalle(detalle, 'Retiró')).toBe('Con la boleta');
+  });
+
+  it('una boleta sin entregar no muestra nada de retiro — SPEC-KRILINXI-060', async () => {
+    await abrir();
+    const detalle = await abrirDetalle('000001');
+
+    expect(within(detalle).queryByText('Retiró')).not.toBeInTheDocument();
+  });
+
   it('un ADMIN que no está atendiendo ve cómo empezar (SPEC-KRILINXI-029)', () => {
     renderEnRuta(<App />, '/mostrador', { sesion: sesionDePrueba({ rol: 'ADMIN' }) });
     expect(screen.getByText(/elige en qué sucursal vas a atender/)).toBeInTheDocument();
