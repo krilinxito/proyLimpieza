@@ -22,10 +22,10 @@ describe('CampoTexto — SPEC-KRILINXI-002', () => {
 
   it('muestra el error debajo y lo asocia al input para lectores de pantalla', () => {
     render(
-      <CampoTexto etiqueta="Teléfono" value="" onChange={() => {}} error="Escribí el teléfono del cliente." />,
+      <CampoTexto etiqueta="Teléfono" value="" onChange={() => {}} error="Escribe el teléfono del cliente." />,
     );
     const input = screen.getByLabelText('Teléfono');
-    expect(input).toHaveAccessibleDescription('Escribí el teléfono del cliente.');
+    expect(input).toHaveAccessibleDescription('Escribe el teléfono del cliente.');
     expect(input).toHaveAttribute('aria-invalid', 'true');
   });
 
@@ -56,11 +56,11 @@ describe('CampoTexto — SPEC-KRILINXI-002', () => {
 
 describe('CampoTexto con el tema — SPEC-KRILINXI-022', () => {
   it('el error lleva el ícono de alerta, en el tono de peligro, y se sigue leyendo solo su texto', () => {
-    render(<CampoTexto etiqueta="Teléfono" value="" onChange={() => {}} error="Escribí el teléfono del cliente." />);
+    render(<CampoTexto etiqueta="Teléfono" value="" onChange={() => {}} error="Escribe el teléfono del cliente." />);
     const input = screen.getByLabelText('Teléfono');
     expect(input).toHaveClass('border-peligro');
-    expect(input).toHaveAccessibleDescription('Escribí el teléfono del cliente.');
-    const error = screen.getByText('Escribí el teléfono del cliente.').closest('p');
+    expect(input).toHaveAccessibleDescription('Escribe el teléfono del cliente.');
+    const error = screen.getByText('Escribe el teléfono del cliente.').closest('p');
     expect(error).toHaveClass('text-peligro-texto');
     expect(error?.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
   });

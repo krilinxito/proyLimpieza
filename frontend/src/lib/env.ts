@@ -14,7 +14,7 @@ export type Entorno = {
   powersyncUrl: string;
 };
 
-const COPIAR_ENV = 'Copiá el archivo .env.example a .env y volvé a arrancar.';
+const COPIAR_ENV = 'Copia el archivo .env.example a .env y vuelve a arrancar.';
 
 function leerUrl(fuente: Record<string, string | undefined>, nombre: string, falta: string): string {
   const valor = fuente[nombre]?.trim();

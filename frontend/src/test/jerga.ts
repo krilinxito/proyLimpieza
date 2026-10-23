@@ -9,7 +9,7 @@
  *     await buscar('70123456');
  *     sinJerga();                 // revisa todo lo que hay en pantalla en este momento
  *
- * Llamala en CADA paso de la pantalla, no solo al abrirla: los textos que fallan suelen
+ * Llámala en CADA paso de la pantalla, no solo al abrirla: los textos que fallan suelen
  * ser los de los pasos del final (un aviso de éxito, un error), que nadie mira dos veces.
  */
 import { expect } from 'vitest';

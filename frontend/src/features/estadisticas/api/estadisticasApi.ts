@@ -16,9 +16,9 @@ export { RespuestaRara };
 
 /** El mensaje de un error de las estadísticas que no trae el suyo (para `usePedidoOnline`). */
 export const ERROR_ESTADISTICAS =
-  'No se pudieron traer las estadísticas. Probá de nuevo y, si sigue pasando, avisale al encargado.';
+  'No se pudieron traer las estadísticas. Prueba de nuevo y, si sigue pasando, avísale al encargado.';
 
-const INCOMPLETAS = 'Las estadísticas llegaron incompletas. Probá de nuevo y, si sigue pasando, avisale al encargado.';
+const INCOMPLETAS = 'Las estadísticas llegaron incompletas. Prueba de nuevo y, si sigue pasando, avísale al encargado.';
 import { METODOS_PAGO } from '../../../lib/dominio';
 import { POR_PAGINA_ANCHA } from '../../../lib/tamanoDePagina';
 import type { Parametros } from '../periodo';

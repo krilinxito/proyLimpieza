@@ -353,6 +353,9 @@ SPEC-KRILINXI-052 le dio carácter propio a la app: la marca pasó del azul gen�
 `marca-suave` en los dos temas de `index.css`, con sus pares en `tema.test.ts`), y la tarjeta `destaca` ya no lleva franja a la izquierda, sino el
 borde de la marca completo. El `theme-color` de `index.html` y de `vite.config.ts` es un valor suelto que hay que mantener igual a `--color-marca`. Los
 avisos de información siguen azules, y las series de los gráficos no cambiaron.
+SPEC-KRILINXI-053 pasó **todos los textos de la app al tuteo neutro** ("Elige", "Escribe", "Prueba", "Revisa"), tanto en la pantalla como en los mensajes de
+error de la API, que la pantalla muestra tal cual. Se acabó el voseo: `backend/tests/unit/textosEnTuteo.test.ts` recorre el código fuente de los dos lados y
+falla si encuentra una forma de su lista. Una forma nueva que se cuele se agrega a esa lista.
 SPEC-KRILINXI-041 agregó el **Historial de boletas** (`/boletas`, `features/historial/`), en el menú para todos, y **cada uno
 ve lo que le corresponde** (`useModoDelHistorial`, que sale de `useSucursalDeTrabajo`): quien atiende, su sucursal de
 trabajo de los **últimos 30 días**, de la base local y también sin internet (`listarHistorialLocal`, que reusa
@@ -780,7 +783,7 @@ Requisitos concretos, no buenas intenciones:
   conexión"). Nunca un ícono suelto que haya que interpretar. Solo cuando pide una acción —hay
   registros para corregir— aparece además el aviso grande arriba del contenido, con el enlace.
 - **Los errores dicen qué hacer**, en español y sin códigos: "Ese número de boleta ya
-  está usado en esta sucursal. Revisá el papel y volvé a escribirlo."
+  está usado en esta sucursal. Revisa el papel y vuelve a escribirlo." Siempre en tuteo neutro, sin voseo (SPEC-KRILINXI-053).
 - Pocos campos por pantalla y un solo camino claro para cada tarea.
 - **Ninguna lista larga se muestra de golpe** (SPEC-KRILINXI-041). Toda lista que puede crecer —boletas, ropa,
   cuentas, registros— se pagina, con una barra de páginas en palabras que se ve siempre ("Página 1 de 1" si cabe todo), y cuántas filas entran depende del ancho

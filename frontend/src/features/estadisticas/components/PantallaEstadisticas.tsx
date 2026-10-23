@@ -71,7 +71,7 @@ export function PantallaEstadisticas() {
         <div className="mt-8">
           <Aviso tipo="advertencia">
             <p className="font-semibold">Las estadísticas necesitan conexión.</p>
-            <p className="mt-2">Cuando vuelva internet se cargan solas. También podés probar de nuevo.</p>
+            <p className="mt-2">Cuando vuelva internet se cargan solas. También puedes probar de nuevo.</p>
             <div className="mt-4">
               <Boton onClick={recargar}>Probar de nuevo</Boton>
             </div>

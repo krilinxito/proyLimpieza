@@ -42,7 +42,7 @@ export function MismoCliente({ registro, buscar, usar, alUsar }: Props) {
       alUsar(cliente, boletas);
     } catch (causa) {
       console.error('No se pudo pasar la ropa al cliente que ya existe.', causa);
-      setError('No se pudo guardar. Probá de nuevo y, si sigue pasando, avisale al encargado.');
+      setError('No se pudo guardar. Prueba de nuevo y, si sigue pasando, avísale al encargado.');
       setConfirmando(false);
     }
   }

@@ -9,8 +9,8 @@ import { api, RespuestaRara } from '../../../lib/api';
 import { POR_PAGINA_ANCHA } from '../../../lib/tamanoDePagina';
 import { ACCIONES, TABLAS, type Accion, type PaginaAuditoria, type RegistroAuditoria, type Tabla } from '../types';
 
-export const ERROR_AUDITORIA = 'No se pudo traer quién hizo qué. Probá de nuevo y, si sigue pasando, avisale al encargado.';
-const INCOMPLETA = 'La consulta llegó incompleta. Probá de nuevo y, si sigue pasando, avisale al encargado.';
+export const ERROR_AUDITORIA = 'No se pudo traer quién hizo qué. Prueba de nuevo y, si sigue pasando, avísale al encargado.';
+const INCOMPLETA = 'La consulta llegó incompleta. Prueba de nuevo y, si sigue pasando, avísale al encargado.';
 
 type Objeto = Record<string, unknown>;
 const esObjeto = (v: unknown): v is Objeto => typeof v === 'object' && v !== null && !Array.isArray(v);

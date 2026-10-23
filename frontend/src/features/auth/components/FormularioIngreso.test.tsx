@@ -62,8 +62,8 @@ describe('Ingresar al sistema — SPEC-KRILINXI-003', () => {
   });
 
   it.each([
-    [401, 'NO_AUTENTICADO', 'El usuario o la contraseña no coinciden. Volvé a intentarlo.'],
-    [400, 'VALIDACION', 'Escribí tu usuario y tu contraseña para entrar.'],
+    [401, 'NO_AUTENTICADO', 'El usuario o la contraseña no coinciden. Vuelve a intentarlo.'],
+    [400, 'VALIDACION', 'Escribe tu usuario y tu contraseña para entrar.'],
   ])('ante un %i muestra el mensaje de la API, sin códigos', async (status, codigo, mensaje) => {
     servidorQueResponde({ status, data: cuerpoError(codigo, mensaje) });
     abrirSinSesion();
@@ -94,8 +94,8 @@ describe('Ingresar al sistema — SPEC-KRILINXI-003', () => {
     abrirSinSesion();
     fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
 
-    expect(screen.getByLabelText('Usuario')).toHaveAccessibleDescription('Escribí tu usuario.');
-    expect(screen.getByLabelText('Contraseña')).toHaveAccessibleDescription('Escribí tu contraseña.');
+    expect(screen.getByLabelText('Usuario')).toHaveAccessibleDescription('Escribe tu usuario.');
+    expect(screen.getByLabelText('Contraseña')).toHaveAccessibleDescription('Escribe tu contraseña.');
     expect(servidor.pedidos).toEqual([]);
   });
 
@@ -104,7 +104,7 @@ describe('Ingresar al sistema — SPEC-KRILINXI-003', () => {
     abrirSinSesion();
     entrarComo('   ', 'secreta');
 
-    expect(screen.getByLabelText('Usuario')).toHaveAccessibleDescription('Escribí tu usuario.');
+    expect(screen.getByLabelText('Usuario')).toHaveAccessibleDescription('Escribe tu usuario.');
     expect(screen.getByLabelText('Contraseña')).not.toHaveAccessibleDescription();
     expect(servidor.pedidos).toEqual([]);
   });

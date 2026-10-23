@@ -4,7 +4,7 @@
  * - `fetchCredentials`: "¿con qué token me presento al servicio?". Es el `tokenPowerSync`
  *   de la sesión (SPEC-KRILINXI-003), no el de la API: cada uno lo verifica un servidor
  *   distinto (CLAUDE.md §6). Quién lo da decide si hay que renovarlo antes (SPEC-KRILINXI-010).
- * - `uploadData`: "subí lo que se escribió en el dispositivo" — SPEC-KRILINXI-007. Cada
+ * - `uploadData`: "sube lo que se escribió en el dispositivo" — SPEC-KRILINXI-007. Cada
  *   cambio de la cola va a su endpoint por `lib/api`, que pone el token y traduce los errores.
  */
 import { UpdateType, type CommonPowerSyncDatabase, type CrudEntry, type PowerSyncBackendConnector } from '@powersync/common';
@@ -33,7 +33,7 @@ type Peticion = { metodo: 'post' | 'patch'; ruta: string; cuerpo: Record<string,
 /** Lo que la API no tiene cómo recibir. Se guarda para corregir, nunca se tira. */
 export class OperacionNoAdmitida extends Error {
   constructor() {
-    super('Este cambio no se puede guardar así. Avisale al encargado.');
+    super('Este cambio no se puede guardar así. Avísale al encargado.');
     this.name = 'OperacionNoAdmitida';
   }
 }

@@ -8,7 +8,7 @@ import { ElegirMetodo } from '../../ordenes/components/ElegirMetodo';
 import { prepararCorreccion, type Campo, type ResultadoCorreccion } from '../correccion';
 import type { RegistroParaCorregir } from '../types';
 
-const NO_SE_GUARDO = 'No se pudo guardar la corrección. Probá de nuevo y, si sigue pasando, avisale al encargado.';
+const NO_SE_GUARDO = 'No se pudo guardar la corrección. Prueba de nuevo y, si sigue pasando, avísale al encargado.';
 
 type Props = {
   registro: RegistroParaCorregir;
@@ -145,7 +145,7 @@ export function FormularioCorreccion({ registro, guardar, alGuardar, alVolver, a
     <form onSubmit={enviar} noValidate aria-label="Corregir el registro" className="grid gap-2">
       {encabezado}
       {antesDelFormulario}
-      <p className="mt-2 text-xl text-texto-suave">Corregí lo que está mal y volvé a guardarlo.</p>
+      <p className="mt-2 text-xl text-texto-suave">Corrige lo que está mal y vuelve a guardarlo.</p>
       {correccion.campos.map(campo)}
       {errorGeneral && (
         <div className="mt-4">

@@ -44,7 +44,7 @@ export class ErrorSinConexion extends Error {
  * comprueba la respuesta la lanza, con un mensaje para la pantalla, en vez de mostrarla a medias.
  */
 export class RespuestaRara extends Error {
-  constructor(mensaje = 'La respuesta llegó incompleta. Probá de nuevo y, si sigue pasando, avisale al encargado.') {
+  constructor(mensaje = 'La respuesta llegó incompleta. Prueba de nuevo y, si sigue pasando, avísale al encargado.') {
     super(mensaje);
     this.name = 'RespuestaRara';
   }
@@ -52,7 +52,7 @@ export class RespuestaRara extends Error {
 
 // Para cuando el servidor responde algo que no es nuestro formato de error: un proxy
 // caído que devuelve HTML, por ejemplo.
-const ERROR_DESCONOCIDO = 'El servidor tuvo un problema. Probá de nuevo en un momento.';
+const ERROR_DESCONOCIDO = 'El servidor tuvo un problema. Prueba de nuevo en un momento.';
 
 type ConexionSesion = {
   /** El token de la API, o null si no hay sesión. Se consulta en cada petición. */

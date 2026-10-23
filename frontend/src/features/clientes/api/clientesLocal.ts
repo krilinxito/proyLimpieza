@@ -29,8 +29,8 @@ export const MAXIMO_RESULTADOS = 6;
 // Los mismos textos que responde el backend (SPEC-ALE186-003): el empleado lee lo mismo
 // lo detecte el dispositivo o el servidor. Exportados para la corrección de lo rechazado
 // (SPEC-KRILINXI-013), que valida lo mismo.
-export const FALTA_NOMBRE = 'Escribí el nombre del cliente.';
-export const FALTA_TELEFONO = 'Escribí el número de teléfono del cliente.';
+export const FALTA_NOMBRE = 'Escribe el nombre del cliente.';
+export const FALTA_TELEFONO = 'Escribe el número de teléfono del cliente.';
 
 /**
  * Estrecha una fila de SQLite a `Cliente`. SQLite no garantiza tipos, así que se comprueba
@@ -66,7 +66,7 @@ export async function buscarPorTelefono(base: BaseLocal, telefono: string, exclu
  * Los clientes que coinciden con lo escrito, mientras se escribe — SPEC-KRILINXI-032. Por
  * nombre (sin tildes ni mayúsculas), parte del teléfono o carnet: ver `api/busqueda.ts`.
  *
- * Pide uno más de los que muestra: si llega, hay más resultados y la pantalla lo dice ("escribí
+ * Pide uno más de los que muestra: si llega, hay más resultados y la pantalla lo dice ("escribe
  * un poco más"), sin contar todos. Con menos de 2 letras o 3 dígitos no busca.
  */
 export async function buscarClientes(base: BaseLocal, texto: string): Promise<ResultadosDeBusqueda<Cliente>> {
@@ -93,7 +93,7 @@ export async function obtenerCliente(base: BaseLocal, id: string): Promise<Clien
 }
 
 /** El mensaje cuando el teléfono ya es de otro cliente: dice de quién es y qué hacer. */
-export const telefonoDeOtro = (nombre: string) => `Ese teléfono ya es de ${nombre}. Revisalo y volvé a escribirlo.`;
+export const telefonoDeOtro = (nombre: string) => `Ese teléfono ya es de ${nombre}. Revísalo y vuelve a escribirlo.`;
 
 export type ClienteValidado = {
   errores: ErroresAlta;

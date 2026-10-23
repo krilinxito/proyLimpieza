@@ -137,7 +137,7 @@ describe('POST /api/entregas — SPEC-ALE186-006', () => {
 
     expectApiError(res, { status: 409, codigo: 'ORDEN_ANULADA' });
     expect(res.body.error.mensaje).toContain('001234');
-    expect(res.body.error.mensaje).toContain('avisale al administrador');
+    expect(res.body.error.mensaje).toContain('avísale al administrador');
   });
 
   it('responde 409 ORDEN_YA_ENTREGADA, nombrando la boleta', async () => {

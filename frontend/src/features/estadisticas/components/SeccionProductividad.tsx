@@ -49,7 +49,7 @@ function PorPersona({ productividad }: { productividad: Productividad }) {
       <Grafico
         nombre="Ropa recibida por cada persona"
         vacio={filas.length === 0}
-        pista="Tocá una persona para ver todo lo que hizo."
+        pista="Toca una persona para ver todo lo que hizo."
         tabla={{
           encabezados: ['Persona', 'Sucursal', 'Recibió', 'Cobró', 'Monto cobrado', 'Entregó'],
           filas: ordenadas.map((f) => ({

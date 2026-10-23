@@ -25,7 +25,7 @@ function invalido(mensaje: string): ApiError {
 function leerNombre(valor: unknown): string {
   const nombre = textoHasta(valor, MAX_NOMBRE);
   if (nombre === null) {
-    throw invalido(`Escribí el nombre de la sucursal (hasta ${MAX_NOMBRE} letras).`);
+    throw invalido(`Escribe el nombre de la sucursal (hasta ${MAX_NOMBRE} letras).`);
   }
   return nombre;
 }
@@ -40,18 +40,18 @@ function leerOpcional(valor: unknown, max: number, mensaje: string): string | nu
 }
 
 function leerDireccion(valor: unknown): string | null {
-  return leerOpcional(valor, MAX_DIRECCION, `Revisá la dirección: puede tener hasta ${MAX_DIRECCION} caracteres.`);
+  return leerOpcional(valor, MAX_DIRECCION, `Revisa la dirección: puede tener hasta ${MAX_DIRECCION} caracteres.`);
 }
 
 function leerTelefono(valor: unknown): string | null {
-  return leerOpcional(valor, MAX_TELEFONO, `Revisá el teléfono: puede tener hasta ${MAX_TELEFONO} caracteres.`);
+  return leerOpcional(valor, MAX_TELEFONO, `Revisa el teléfono: puede tener hasta ${MAX_TELEFONO} caracteres.`);
 }
 
 function nombreDuplicado(nombre: string): ApiError {
   return new ApiError(
     409,
     CODIGOS_ERROR.NOMBRE_SUCURSAL_DUPLICADO,
-    `Ya hay una sucursal que se llama "${nombre}". Elegí otro nombre, por ejemplo con la zona o la calle.`,
+    `Ya hay una sucursal que se llama "${nombre}". Elige otro nombre, por ejemplo con la zona o la calle.`,
   );
 }
 
@@ -73,7 +73,7 @@ export async function postSucursal(req: Request, res: Response): Promise<void> {
   const cuerpo = comoObjeto(req.body);
 
   if (!esUuid(cuerpo.id)) {
-    throw invalido('Falta el identificador de la sucursal o no es válido. Volvé a intentarlo.');
+    throw invalido('Falta el identificador de la sucursal o no es válido. Vuelve a intentarlo.');
   }
 
   const datos: sucursales.SucursalNueva = {
@@ -99,7 +99,7 @@ export async function postSucursal(req: Request, res: Response): Promise<void> {
     throw new ApiError(
       409,
       CODIGOS_ERROR.CONFLICTO,
-      'Ya hay otra sucursal guardada con ese identificador. Cerrá el formulario y volvé a cargarla.',
+      'Ya hay otra sucursal guardada con ese identificador. Cierra el formulario y vuelve a cargarla.',
     );
   }
 
@@ -121,7 +121,7 @@ export async function patchSucursal(req: Request, res: Response): Promise<void> 
   if ('direccion' in cuerpo) cambios.direccion = leerDireccion(cuerpo.direccion);
   if ('telefono' in cuerpo) cambios.telefono = leerTelefono(cuerpo.telefono);
   if ('activa' in cuerpo) {
-    if (typeof cuerpo.activa !== 'boolean') throw invalido('Indicá si la sucursal queda abierta o cerrada.');
+    if (typeof cuerpo.activa !== 'boolean') throw invalido('Indica si la sucursal queda abierta o cerrada.');
     cambios.activa = cuerpo.activa;
   }
 

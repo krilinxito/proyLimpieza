@@ -9,7 +9,7 @@ import { MENSAJES_CORRECCION, prepararCorreccion } from '../correccion';
 import { descartarRegistro, guardarCorreccion } from './corregirLocal';
 import { listarParaCorregir, type RegistroParaCorregir } from './paraCorregirLocal';
 
-const BOLETA_REPETIDA = 'Ese número de boleta ya está usado en esta sucursal. Revisá el papel y volvé a escribirlo.';
+const BOLETA_REPETIDA = 'Ese número de boleta ya está usado en esta sucursal. Revisa el papel y vuelve a escribirlo.';
 
 /** Una orden recién registrada en la tablet (en la cola, sin subir), como la escribe registrar ropa. */
 async function registrarOrden(base: Awaited<ReturnType<typeof baseLocalDePrueba>>['control']['base'], cambios = {}) {

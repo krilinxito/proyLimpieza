@@ -71,7 +71,7 @@ describe('Atender en una sucursal: elegir y empezar — SPEC-KRILINXI-029', () =
     fireEvent.click(await screen.findByRole('button', { name: 'Atender en una sucursal' }));
     await screen.findByLabelText('Centro');
     fireEvent.click(screen.getByRole('button', { name: 'Empezar a atender' }));
-    expect(await screen.findByText('Elegí una sucursal de la lista.')).toBeInTheDocument();
+    expect(await screen.findByText('Elige una sucursal de la lista.')).toBeInTheDocument();
     expect(ultimaConexion(conectar)).toBeUndefined();
   });
 
@@ -160,7 +160,7 @@ describe('Atender en una sucursal: el mostrador con la sucursal elegida — SPEC
     await registrarConBoleta('000999');
 
     expect(
-      await screen.findByText('Ese número de boleta ya está usado en esta sucursal. Revisá el papel y volvé a escribirlo.'),
+      await screen.findByText('Ese número de boleta ya está usado en esta sucursal. Revisa el papel y vuelve a escribirlo.'),
     ).toBeInTheDocument();
   });
 
@@ -176,7 +176,7 @@ describe('Atender en una sucursal: el mostrador con la sucursal elegida — SPEC
   it('sin atender, una pantalla del mostrador dice cómo empezar y lleva al Inicio', async () => {
     await abrir({ ruta: '/entregar' });
     const principal = within(screen.getByRole('main'));
-    expect(await principal.findByText(/primero elegí en qué sucursal vas a atender/)).toBeInTheDocument();
+    expect(await principal.findByText(/primero elige en qué sucursal vas a atender/)).toBeInTheDocument();
     expect(principal.getByRole('link', { name: 'Elegir la sucursal' })).toHaveAttribute('href', '/');
     sinJerga();
   });

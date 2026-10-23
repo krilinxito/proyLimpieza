@@ -30,15 +30,15 @@ export const MENSAJES_ENTREGA = {
   noEncontrada: 'No se encontró esa boleta en esta sucursal.',
   anulada: 'Esta ropa fue anulada: no se puede entregar.',
   yaEntregada: 'Esta ropa ya fue entregada.',
-  sinBoletaElegida: 'Elegí si el cliente trae la boleta o no.',
-  sinNombre: 'Si no trae la boleta, escribí el nombre de quien retira la ropa.',
-  sinCarnet: 'Si no trae la boleta, escribí el carnet de quien retira la ropa.',
+  sinBoletaElegida: 'Elige si el cliente trae la boleta o no.',
+  sinNombre: 'Si no trae la boleta, escribe el nombre de quien retira la ropa.',
+  sinCarnet: 'Si no trae la boleta, escribe el carnet de quien retira la ropa.',
   nombreLargo: 'El nombre de quien retira es demasiado largo.',
-  carnetLargo: 'El carnet de quien retira es demasiado largo. Revisalo y volvé a escribirlo.',
-  precioFinal: 'Escribí el precio final con números, por ejemplo 45 o 45,50.',
-  pago: 'Escribí cuánto paga el cliente, con números mayores que cero, por ejemplo 20 o 20,50.',
+  carnetLargo: 'El carnet de quien retira es demasiado largo. Revísalo y vuelve a escribirlo.',
+  precioFinal: 'Escribe el precio final con números, por ejemplo 45 o 45,50.',
+  pago: 'Escribe cuánto paga el cliente, con números mayores que cero, por ejemplo 20 o 20,50.',
   pagoMayor: 'El cobro no puede ser mayor que lo que falta pagar.',
-  sinMetodo: 'Elegí cómo paga: efectivo, QR, tarjeta o transferencia.',
+  sinMetodo: 'Elige cómo paga: efectivo, QR, tarjeta o transferencia.',
 } as const;
 
 function leerMonto(texto: string): Centavos | null {

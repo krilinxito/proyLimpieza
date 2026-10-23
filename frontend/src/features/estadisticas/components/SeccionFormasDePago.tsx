@@ -26,7 +26,7 @@ export function SeccionFormasDePago({ ingresos, periodo }: { ingresos: Ingresos;
       <Grafico
         nombre="Cobrado con cada forma de pago"
         vacio={!hayDatos(totales.map((t) => t.total))}
-        pista="Tocá una forma de pago para ver cuánto se cobró."
+        pista="Toca una forma de pago para ver cuánto se cobró."
         tabla={{
           encabezados: ['Forma de pago', 'Cobrado'],
           filas: totales.map((t) => ({ clave: t.metodo, celdas: [TEXTO_METODO_PAGO[t.metodo], formatearBs(t.total)] })),

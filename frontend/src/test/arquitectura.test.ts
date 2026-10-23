@@ -58,7 +58,7 @@ const ACCESO_A_LA_BASE = [
   { que: 'lib/powersync', patron: /from\s+['"][^'"]*lib\/powersync['"]/ },
   { que: 'useBaseLocal', patron: /\buseBaseLocal\b/ },
   { que: 'SQL (consultar/ejecutar)', patron: /\.(consultar|ejecutar)\(/ },
-  { que: 'una carpeta api/ (pasá por el hook)', patron: /from\s+['"][^'"]*\/api\/[^'"]*['"]/ },
+  { que: 'una carpeta api/ (pasa por el hook)', patron: /from\s+['"][^'"]*\/api\/[^'"]*['"]/ },
 ];
 
 describe('Componentes de features sin acceso a la base local — SPEC-KRILINXI-006', () => {

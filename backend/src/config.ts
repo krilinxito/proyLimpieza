@@ -74,8 +74,8 @@ export function readConfig(env: NodeJS.ProcessEnv): Config {
 
   if (!databaseUrl) {
     throw new Error(
-      'Falta la variable DATABASE_URL. Copiá .env.example a .env en la raíz del ' +
-        'repositorio y completá los datos de conexión a Postgres.',
+      'Falta la variable DATABASE_URL. Copia .env.example a .env en la raíz del ' +
+        'repositorio y completa los datos de conexión a Postgres.',
     );
   }
 
@@ -136,7 +136,7 @@ function duracionEnSegundos(plazo: string, variable: string): number {
     const { exp, iat } = jwt.decode(firmado) as { exp: number; iat: number };
     return exp - iat;
   } catch {
-    throw new Error(`${variable} no es un plazo válido: llegó "${plazo}". Usá por ejemplo 12h o 30m.`);
+    throw new Error(`${variable} no es un plazo válido: llegó "${plazo}". Usa por ejemplo 12h o 30m.`);
   }
 }
 
@@ -148,7 +148,7 @@ function leerExpiraEnPowerSync(env: NodeJS.ProcessEnv): string {
   if (segundos <= 0 || segundos > MAXIMO_POWERSYNC_SEGUNDOS) {
     throw new Error(
       `PS_JWT_EXPIRES_IN vale "${plazo}", y PowerSync no acepta tokens de más de 24 horas: ` +
-        'los rechaza todos y ninguna tablet baja datos. Usá un plazo menor, por ejemplo 12h. ' +
+        'los rechaza todos y ninguna tablet baja datos. Usa un plazo menor, por ejemplo 12h. ' +
         'El que dura días es JWT_EXPIRES_IN, el de la API.',
     );
   }
@@ -173,9 +173,9 @@ export function readAuthConfig(env: NodeJS.ProcessEnv): ConfigAuth {
 
   if (!enBase64) {
     throw new Error(
-      'Falta la variable PS_JWT_SECRET_B64. Generá un secreto con:\n' +
+      'Falta la variable PS_JWT_SECRET_B64. Genera un secreto con:\n' +
         "  openssl rand -base64 32 | tr '+/' '-_' | tr -d '='\n" +
-        'y ponelo en el .env de la raíz del repositorio.',
+        'y ponlo en el .env de la raíz del repositorio.',
     );
   }
 
@@ -185,7 +185,7 @@ export function readAuthConfig(env: NodeJS.ProcessEnv): ConfigAuth {
     throw new Error(
       `PS_JWT_SECRET_B64 decodifica a ${secreto.length} bytes y hacen falta al menos ` +
         `${BYTES_MINIMOS_DEL_SECRETO}. Si todavía tiene el texto de ejemplo del .env.example, ` +
-        "generá uno de verdad: openssl rand -base64 32 | tr '+/' '-_' | tr -d '='",
+        "genera uno de verdad: openssl rand -base64 32 | tr '+/' '-_' | tr -d '='",
     );
   }
 

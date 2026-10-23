@@ -81,9 +81,9 @@ export function emitirCredenciales(sesion: Sesion, cfg: ConfigAuth = authConfig)
 }
 
 const SESION_INVALIDA =
-  'No pudimos validar tu sesión. Volvé a iniciar sesión con tu usuario y contraseña.';
+  'No pudimos validar tu sesión. Vuelve a iniciar sesión con tu usuario y contraseña.';
 
-const SESION_VENCIDA = 'Tu sesión venció. Volvé a iniciar sesión con tu usuario y contraseña.';
+const SESION_VENCIDA = 'Tu sesión venció. Vuelve a iniciar sesión con tu usuario y contraseña.';
 
 function noAutenticado(mensaje: string): ApiError {
   return new ApiError(401, CODIGOS_ERROR.NO_AUTENTICADO, mensaje);

@@ -112,7 +112,7 @@ function Completo({ filtro, alCambiar, alLimpiar }: Pantalla) {
           {estado.tipo === 'sin-conexion' ? (
             <>
               <p className="font-semibold">El historial completo necesita conexión.</p>
-              <p className="mt-2">Cuando vuelva internet se carga solo. También podés probar de nuevo.</p>
+              <p className="mt-2">Cuando vuelva internet se carga solo. También puedes probar de nuevo.</p>
             </>
           ) : (
             <p>{estado.mensaje}</p>

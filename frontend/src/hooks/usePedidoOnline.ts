@@ -8,7 +8,7 @@ export type EstadoPedido<T> =
   | { tipo: 'error'; mensaje: string }
   | { tipo: 'listo'; datos: T };
 
-const ERROR_GENERAL = 'No se pudo traer la información. Probá de nuevo y, si sigue pasando, avisale al encargado.';
+const ERROR_GENERAL = 'No se pudo traer la información. Prueba de nuevo y, si sigue pasando, avísale al encargado.';
 
 function estadoDeError(error: unknown, mensajeGeneral: string): EstadoPedido<never> {
   if (error instanceof ErrorSinConexion) return { tipo: 'sin-conexion' };
@@ -24,7 +24,7 @@ function estadoDeError(error: unknown, mensajeGeneral: string): EstadoPedido<nev
  * auditoría (SPEC-KRILINXI-018) también lee online, y un hook de una feature no se importa
  * desde otra. Es para LEER: las escrituras online del admin (personal, sucursales) no lo usan.
  *
- * `pedir` se vuelve a llamar cada vez que cambia (envolvela en `useCallback` con lo que la
+ * `pedir` se vuelve a llamar cada vez que cambia (envuélvela en `useCallback` con lo que la
  * hace distinta: el filtro, la página), cuando el navegador avisa que volvió internet
  * (`online`) y con `recargar`. Si cambia antes de que llegue la respuesta, la vieja se
  * descarta (→ SPEC-KRILINXI-010, "descartar una respuesta que llega tarde").

@@ -11,8 +11,8 @@ describe('Aviso — SPEC-KRILINXI-022', () => {
     ['informacion', 'status'],
     ['exito', 'status'],
   ])('el de %s usa role="%s" y dice su texto', (tipo, rol) => {
-    render(<Aviso tipo={tipo}>No se pudo guardar. Probá de nuevo.</Aviso>);
-    expect(screen.getByRole(rol)).toHaveTextContent('No se pudo guardar. Probá de nuevo.');
+    render(<Aviso tipo={tipo}>No se pudo guardar. Prueba de nuevo.</Aviso>);
+    expect(screen.getByRole(rol)).toHaveTextContent('No se pudo guardar. Prueba de nuevo.');
   });
 
   it('el ícono es decorativo: lo que se lee es el texto', () => {

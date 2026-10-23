@@ -71,7 +71,7 @@ describe('Pantalla de sucursales — SPEC-KRILINXI-017', () => {
   });
 
   it('un nombre repetido deja el formulario abierto con el mensaje del servidor', async () => {
-    const repetido = 'Ya hay una sucursal que se llama "Sur". Elegí otro nombre, por ejemplo con la zona o la calle.';
+    const repetido = 'Ya hay una sucursal que se llama "Sur". Elige otro nombre, por ejemplo con la zona o la calle.';
     await abrir(() => ({ status: 409, data: cuerpoError('NOMBRE_SUCURSAL_DUPLICADO', repetido) }));
     fireEvent.click(screen.getByRole('button', { name: 'Agregar sucursal' }));
     fireEvent.change(screen.getByLabelText('Nombre'), { target: { value: 'Sur' } });

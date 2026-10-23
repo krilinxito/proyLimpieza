@@ -119,7 +119,7 @@ describe('Subida: sin conexión o con el servidor caído, la cola espera — SPE
 describe('Subida: lo rechazado se guarda para corregir — SPEC-KRILINXI-007', () => {
   const BOLETA_REPETIDA = cuerpoError(
     'BOLETA_DUPLICADA',
-    'Ese número de boleta ya está usado en esta sucursal. Revisá el papel y volvé a escribirlo.',
+    'Ese número de boleta ya está usado en esta sucursal. Revisa el papel y vuelve a escribirlo.',
   );
 
   it.each([400, 404, 409])('un %i se guarda con el mensaje del servidor, y la cola sigue con lo de atrás', async (status) => {
@@ -140,7 +140,7 @@ describe('Subida: lo rechazado se guarda para corregir — SPEC-KRILINXI-007', (
         operacion: 'PUT',
         datos: JSON.stringify({ numero_boleta: '001234', precio_total: '50.00' }),
         codigo: 'BOLETA_DUPLICADA',
-        mensaje: 'Ese número de boleta ya está usado en esta sucursal. Revisá el papel y volvé a escribirlo.',
+        mensaje: 'Ese número de boleta ya está usado en esta sucursal. Revisa el papel y vuelve a escribirlo.',
       },
     ]);
     // Lo de atrás no quedó trabado.

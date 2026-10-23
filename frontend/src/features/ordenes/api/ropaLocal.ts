@@ -25,9 +25,9 @@ export const MENSAJES_ACCION = {
   noEncontrada: 'No se encontró esa boleta en esta sucursal.',
   cerrada: 'Esta ropa ya fue entregada o anulada: no se puede cambiar.',
   avance: 'Esta ropa ya pasó por ese paso.',
-  monto: 'Escribí cuánto paga el cliente, con números mayores que cero, por ejemplo 20 o 20,50.',
+  monto: 'Escribe cuánto paga el cliente, con números mayores que cero, por ejemplo 20 o 20,50.',
   montoMayor: 'El cobro no puede ser mayor que lo que falta pagar.',
-  sinMetodo: 'Elegí cómo paga: efectivo, QR, tarjeta o transferencia.',
+  sinMetodo: 'Elige cómo paga: efectivo, QR, tarjeta o transferencia.',
 } as const;
 
 // La orden con su cliente y su entrega. Los pagos se leen aparte: son varios por orden.

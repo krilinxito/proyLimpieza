@@ -35,7 +35,7 @@ export function FormularioCobro({ saldo, cobrar, alCobrar, alCancelar }: Props) 
       setError(resultado.mensaje);
     } catch (falla) {
       console.error('No se pudo guardar el cobro en la base local.', falla);
-      setError('No se pudo guardar el cobro. Probá de nuevo y, si sigue pasando, avisale al encargado.');
+      setError('No se pudo guardar el cobro. Prueba de nuevo y, si sigue pasando, avísale al encargado.');
     }
     setGuardando(false);
   }

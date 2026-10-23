@@ -27,19 +27,19 @@ function leerMonto(valor: unknown): Centavos {
   // A diferencia de un precio, un pago nunca es cero (CLAUDE.md, sección 3):
   // un cobro de 0 no es un cobro.
   if (monto === null || monto <= 0 || monto > MONTO_MAXIMO) {
-    throw invalido('Escribí cuánto paga el cliente, con números mayores que cero, por ejemplo 20 o 20.50.');
+    throw invalido('Escribe cuánto paga el cliente, con números mayores que cero, por ejemplo 20 o 20.50.');
   }
   return monto;
 }
 
 function leerTipo(valor: unknown): TipoPago {
-  if (!esTipoPago(valor)) throw invalido('Elegí si es un adelanto o el pago final.');
+  if (!esTipoPago(valor)) throw invalido('Elige si es un adelanto o el pago final.');
   return valor;
 }
 
 function leerMetodo(valor: unknown): MetodoPago {
   if (!esMetodoPago(valor)) {
-    throw invalido('Elegí cómo paga el cliente: efectivo, QR, tarjeta o transferencia.');
+    throw invalido('Elige cómo paga el cliente: efectivo, QR, tarjeta o transferencia.');
   }
   return valor;
 }
@@ -65,7 +65,7 @@ function sucursalPermitida(sesion: Sesion): string | null {
     throw new ApiError(
       403,
       CODIGOS_ERROR.SIN_PERMISO,
-      'Tu usuario no tiene una sucursal asignada. Pedile al administrador que lo revise.',
+      'Tu usuario no tiene una sucursal asignada. Pídele al administrador que lo revise.',
     );
   }
   return sesion.sucursalId;
@@ -77,7 +77,7 @@ export async function postPago(req: Request, res: Response): Promise<void> {
   const cuerpo = comoObjeto(req.body);
 
   if (!esUuid(cuerpo.id)) {
-    throw invalido('Falta el identificador del cobro o no es válido. Volvé a intentarlo.');
+    throw invalido('Falta el identificador del cobro o no es válido. Vuelve a intentarlo.');
   }
   if (!esUuid(cuerpo.orden_id)) {
     throw invalido('Falta elegir la orden que se está cobrando.');
@@ -109,13 +109,13 @@ export async function postPago(req: Request, res: Response): Promise<void> {
       // 400 y no 404, igual que un cliente inexistente al registrar una orden:
       // lo que no existe no es el recurso pedido, es un dato del cuerpo. Una
       // orden de otra sucursal responde lo mismo, para no confirmar que existe.
-      throw invalido('Esa orden no existe en esta sucursal. Revisá el número de boleta.');
+      throw invalido('Esa orden no existe en esta sucursal. Revisa el número de boleta.');
     case 'orden-anulada':
       throw new ApiError(
         409,
         CODIGOS_ERROR.ORDEN_ANULADA,
         `La orden ${resultado.orden.numeroBoleta} está anulada y no se le puede cobrar. ` +
-          'Si el cliente ya pagó, avisale al administrador.',
+          'Si el cliente ya pagó, avísale al administrador.',
       );
   }
 }

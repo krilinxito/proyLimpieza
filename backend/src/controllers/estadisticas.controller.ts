@@ -60,7 +60,7 @@ export async function getClientes(req: Request, res: Response): Promise<void> {
   const periodo = leerPeriodo(req.query);
   const { cliente_id: clienteId } = req.query;
   if (clienteId !== undefined && !esUuid(clienteId)) {
-    throw new ApiError(400, CODIGOS_ERROR.VALIDACION, 'El cliente elegido no es válido. Buscalo de nuevo.');
+    throw new ApiError(400, CODIGOS_ERROR.VALIDACION, 'El cliente elegido no es válido. Búscalo de nuevo.');
   }
   const paginacion = leerPaginacion(req.query);
 

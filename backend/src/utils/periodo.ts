@@ -55,7 +55,7 @@ function leerFecha(valor: unknown, nombre: 'desde' | 'hasta'): string | null {
   if (valor === undefined) return null;
   // Repetida (`?desde=…&desde=…`) llega como array y no pasa esta comprobación.
   if (!esFechaCalendario(valor)) {
-    throw invalido(`La fecha "${nombre}" no es válida. Escribila como año-mes-día, por ejemplo 2025-06-30.`);
+    throw invalido(`La fecha "${nombre}" no es válida. Escríbela como año-mes-día, por ejemplo 2025-06-30.`);
   }
   return valor;
 }
@@ -75,7 +75,7 @@ export function leerPeriodo(query: Record<string, unknown>): Periodo {
 
   const { sucursal_id: sucursalId } = query;
   if (sucursalId !== undefined && !esUuid(sucursalId)) {
-    throw invalido('La sucursal elegida no es válida. Volvé a elegirla de la lista.');
+    throw invalido('La sucursal elegida no es válida. Vuelve a elegirla de la lista.');
   }
 
   return { desde, hasta, sucursalId: sucursalId ?? null };

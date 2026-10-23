@@ -33,7 +33,7 @@ export function PantallaAuditoria() {
             {estado.tipo === 'sin-conexion' ? (
               <>
                 <p className="font-semibold">Esta consulta necesita conexión.</p>
-                <p className="mt-2">Cuando vuelva internet se carga sola. También podés probar de nuevo.</p>
+                <p className="mt-2">Cuando vuelva internet se carga sola. También puedes probar de nuevo.</p>
               </>
             ) : (
               <p>{estado.mensaje}</p>

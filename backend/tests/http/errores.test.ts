@@ -44,7 +44,7 @@ describe('Formato de error uniforme — SPEC-ALE186-001', () => {
   });
 
   it('incluye los detalles solo cuando el error los trae', async () => {
-    const conDetalles = new ApiError(400, 'VALIDACION', 'Revisá los datos.', {
+    const conDetalles = new ApiError(400, 'VALIDACION', 'Revisa los datos.', {
       campo: 'telefono',
     });
 

@@ -97,7 +97,7 @@ export function ElegirClienteDeLaRopa({ valor, alCambiar, errores, deshabilitado
             icono: 'clientes',
             alElegir: (escrito) => alCambiar({ tipo: 'nuevo', datos: datosIniciales(escrito) }),
           }}
-          sinResultados="Ningún cliente coincide con eso. Si es la primera vez que viene, tocá «Cliente nuevo»."
+          sinResultados="Ningún cliente coincide con eso. Si es la primera vez que viene, toca «Cliente nuevo»."
           deshabilitado={!clientes.lista || deshabilitado}
         />
         {errores.cliente && <p className="mt-2 text-lg font-semibold text-peligro-texto">{errores.cliente}</p>}

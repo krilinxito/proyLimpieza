@@ -73,7 +73,7 @@ export async function leerMigraciones(carpeta: string): Promise<Migracion[]> {
     if (coincidencia === null) {
       throw new CarpetaInvalidaError(
         `"${nombre}" no sigue el formato NNN_nombre.sql (tres dígitos, guion bajo, minúsculas). ` +
-          'Renombralo antes de migrar.',
+          'Renómbralo antes de migrar.',
       );
     }
     const numero = Number(coincidencia[1]);
@@ -176,6 +176,6 @@ export async function chequeoDeArranque(base: Consultable, carpeta: string): Pro
   const cuantas = faltan.length === 1 ? 'Falta 1 migración' : `Faltan ${faltan.length} migraciones`;
   return (
     `${cuantas} en la base (${faltan.map((m) => m.nombre).join(', ')}). ` +
-    'Aplicalas con `npm run migrar --workspace backend` y volvé a arrancar.'
+    'Aplícalas con `npm run migrar --workspace backend` y vuelve a arrancar.'
   );
 }

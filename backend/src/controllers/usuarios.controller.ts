@@ -38,7 +38,7 @@ function invalido(mensaje: string): ApiError {
 function leerNombre(valor: unknown): string {
   const nombre = textoHasta(valor, MAX_NOMBRE);
   if (nombre === null) {
-    throw invalido(`Escribí el nombre y apellido de la persona (hasta ${MAX_NOMBRE} letras).`);
+    throw invalido(`Escribe el nombre y apellido de la persona (hasta ${MAX_NOMBRE} letras).`);
   }
   return nombre;
 }
@@ -46,7 +46,7 @@ function leerNombre(valor: unknown): string {
 function leerUsername(valor: unknown): string {
   const username = textoHasta(valor, MAX_USERNAME);
   if (username === null) {
-    throw invalido(`Escribí el nombre de usuario con el que va a entrar (hasta ${MAX_USERNAME} letras).`);
+    throw invalido(`Escribe el nombre de usuario con el que va a entrar (hasta ${MAX_USERNAME} letras).`);
   }
   return username;
 }
@@ -56,7 +56,7 @@ function leerContrasena(valor: unknown): string {
   if (contrasena === null) {
     throw invalido(
       `La contraseña tiene que tener al menos ${LARGO_MINIMO_CONTRASENA} caracteres ` +
-        '(y no más de 72). Elegí otra.',
+        '(y no más de 72). Elige otra.',
     );
   }
   return contrasena;
@@ -67,7 +67,7 @@ function leerTelefono(valor: unknown): string | null {
   if (valor === undefined || valor === null) return null;
   if (typeof valor === 'string' && valor.trim() === '') return null;
   const telefono = textoHasta(valor, MAX_TELEFONO);
-  if (telefono === null) throw invalido(`Revisá el teléfono: puede tener hasta ${MAX_TELEFONO} caracteres.`);
+  if (telefono === null) throw invalido(`Revisa el teléfono: puede tener hasta ${MAX_TELEFONO} caracteres.`);
   return telefono;
 }
 
@@ -78,9 +78,9 @@ function leerRol(valor: unknown): Rol {
   throw invalido('El tipo de cuenta tiene que ser de empleado o de administrador.');
 }
 
-const SIN_SUCURSAL = 'Un empleado tiene que tener una sucursal. Elegí en cuál trabaja.';
+const SIN_SUCURSAL = 'Un empleado tiene que tener una sucursal. Elige en cuál trabaja.';
 const ADMIN_CON_SUCURSAL =
-  'El administrador no trabaja en una sucursal fija: dejá la sucursal sin elegir.';
+  'El administrador no trabaja en una sucursal fija: deja la sucursal sin elegir.';
 
 /**
  * La sucursal de un EMPLEADO, comprobada contra la base.
@@ -91,14 +91,14 @@ const ADMIN_CON_SUCURSAL =
  */
 async function leerSucursalDeEmpleado(valor: unknown): Promise<string> {
   if (valor === undefined || valor === null) throw invalido(SIN_SUCURSAL);
-  if (!esUuid(valor)) throw invalido('La sucursal elegida no es válida. Volvé a elegirla.');
+  if (!esUuid(valor)) throw invalido('La sucursal elegida no es válida. Vuelve a elegirla.');
 
   const sucursal = await sucursales.buscarPorId(valor);
   if (sucursal === null || !sucursal.activa) {
     throw new ApiError(
       404,
       CODIGOS_ERROR.NO_ENCONTRADO,
-      'Esa sucursal no existe o está cerrada. Elegí otra de la lista.',
+      'Esa sucursal no existe o está cerrada. Elige otra de la lista.',
     );
   }
   return sucursal.id;
@@ -125,7 +125,7 @@ function usernameDuplicado(): ApiError {
   return new ApiError(
     409,
     CODIGOS_ERROR.USERNAME_DUPLICADO,
-    'Ese nombre de usuario ya lo usa otra persona. Elegí otro, por ejemplo agregándole el apellido.',
+    'Ese nombre de usuario ya lo usa otra persona. Elige otro, por ejemplo agregándole el apellido.',
   );
 }
 
@@ -151,7 +151,7 @@ export async function postUsuario(req: Request, res: Response): Promise<void> {
   const cuerpo = comoObjeto(req.body);
 
   if (!esUuid(cuerpo.id)) {
-    throw invalido('Falta el identificador de la cuenta o no es válido. Volvé a intentarlo.');
+    throw invalido('Falta el identificador de la cuenta o no es válido. Vuelve a intentarlo.');
   }
 
   const rol = leerRol(cuerpo.rol);
@@ -192,7 +192,7 @@ export async function postUsuario(req: Request, res: Response): Promise<void> {
     throw new ApiError(
       409,
       CODIGOS_ERROR.CONFLICTO,
-      'Ya hay otra cuenta guardada con ese identificador. Cerrá el formulario y volvé a cargarla.',
+      'Ya hay otra cuenta guardada con ese identificador. Cierra el formulario y vuelve a cargarla.',
     );
   }
 
@@ -220,7 +220,7 @@ export async function patchUsuario(req: Request, res: Response): Promise<void> {
   if ('telefono' in cuerpo) cambios.telefono = leerTelefono(cuerpo.telefono);
 
   if ('activo' in cuerpo) {
-    if (typeof cuerpo.activo !== 'boolean') throw invalido('Indicá si la cuenta queda activa o no.');
+    if (typeof cuerpo.activo !== 'boolean') throw invalido('Indica si la cuenta queda activa o no.');
     cambios.activo = cuerpo.activo;
   }
 
@@ -238,7 +238,7 @@ export async function patchUsuario(req: Request, res: Response): Promise<void> {
     throw new ApiError(
       409,
       CODIGOS_ERROR.BAJA_PROPIA,
-      'No podés dar de baja tu propia cuenta. Si hace falta, pedíselo a otro administrador.',
+      'No puedes dar de baja tu propia cuenta. Si hace falta, pídeselo a otro administrador.',
     );
   }
 

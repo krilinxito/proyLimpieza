@@ -15,7 +15,7 @@ function avisoDeSalida(pendientes: number): string {
   if (pendientes === 0) return PARA_VOLVER;
   const cuantos = pendientes === 1 ? 'Hay 1 registro que todavía no se guardó' : `Hay ${pendientes} registros que todavía no se guardaron`;
   const perder = pendientes === 1 ? 'se va a perder' : 'se van a perder';
-  return `${cuantos} en el sistema. Si salís ahora, ${perder}. Esperá a tener internet para que se guarden. ${PARA_VOLVER}`;
+  return `${cuantos} en el sistema. Si sales ahora, ${perder}. Espera a tener internet para que se guarden. ${PARA_VOLVER}`;
 }
 
 /**

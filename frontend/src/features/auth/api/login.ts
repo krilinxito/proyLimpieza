@@ -13,7 +13,7 @@ import { esSesion, type Sesion } from '../types';
 export async function login(username: string, password: string): Promise<Sesion> {
   const data = await conHoraDelServidor(async () => (await api.post<unknown>('/auth/login', { username, password })).data);
   if (!esSesion(data)) {
-    throw new Error('El servidor respondió algo que no se entiende. Avisale al encargado.');
+    throw new Error('El servidor respondió algo que no se entiende. Avísale al encargado.');
   }
   return data;
 }

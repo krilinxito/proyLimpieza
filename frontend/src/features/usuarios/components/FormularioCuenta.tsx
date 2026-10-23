@@ -129,14 +129,14 @@ export function FormularioCuenta({ cuenta, sucursales, guardar, alTerminar, alCa
         />
       )}
       <CampoTexto
-        etiqueta={cuenta ? 'Teléfono nuevo (dejalo vacío para no cambiarlo)' : 'Teléfono (si lo tiene)'}
+        etiqueta={cuenta ? 'Teléfono nuevo (déjalo vacío para no cambiarlo)' : 'Teléfono (si lo tiene)'}
         value={datos.telefono}
         onChange={cambiar('telefono')}
         inputMode="tel"
         autoComplete="off"
       />
       <CampoTexto
-        etiqueta={cuenta ? 'Contraseña nueva (dejala vacía para no cambiarla)' : 'Contraseña (al menos 8 letras o números)'}
+        etiqueta={cuenta ? 'Contraseña nueva (déjala vacía para no cambiarla)' : 'Contraseña (al menos 8 letras o números)'}
         type="password"
         value={datos.password}
         onChange={cambiar('password')}

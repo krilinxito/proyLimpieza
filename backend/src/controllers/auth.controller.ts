@@ -14,10 +14,10 @@ import { emitirCredenciales } from '../utils/jwt.js';
 // Un único mensaje para "no existe ese usuario" y para "la contraseña no es
 // esa". Decir cuál de las dos falló convierte el login en un buscador de
 // usuarios válidos: probando nombres, cualquiera arma la lista del personal.
-const CREDENCIALES_INVALIDAS = 'El usuario o la contraseña no coinciden. Volvé a intentarlo.';
+const CREDENCIALES_INVALIDAS = 'El usuario o la contraseña no coinciden. Vuelve a intentarlo.';
 
 const USUARIO_DADO_DE_BAJA =
-  'Tu usuario está desactivado. Pedile al encargado que lo active para poder entrar.';
+  'Tu usuario está desactivado. Pídele al encargado que lo active para poder entrar.';
 
 
 function noAutenticado(mensaje: string): ApiError {
@@ -60,7 +60,7 @@ function leerCredenciales(body: unknown): { username: string; contrasena: string
     throw new ApiError(
       400,
       CODIGOS_ERROR.VALIDACION,
-      'Escribí tu usuario y tu contraseña para entrar.',
+      'Escribe tu usuario y tu contraseña para entrar.',
     );
   }
 
@@ -77,7 +77,7 @@ function demasiadosIntentos(segundos: number): ApiError {
   return new ApiError(
     429,
     CODIGOS_ERROR.DEMASIADOS_INTENTOS,
-    `Hubo demasiados intentos con este usuario. Esperá ${cuanto} y volvé a probar.`,
+    `Hubo demasiados intentos con este usuario. Espera ${cuanto} y vuelve a probar.`,
   );
 }
 

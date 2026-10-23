@@ -65,7 +65,7 @@ describe('Sucursales: los cambios van directo a la API — SPEC-KRILINXI-017', (
   });
 
   it('un nombre repetido muestra el mensaje del servidor, y sin internet lo dice', async () => {
-    const repetido = 'Ya hay una sucursal que se llama "Norte". Elegí otro nombre, por ejemplo con la zona o la calle.';
+    const repetido = 'Ya hay una sucursal que se llama "Norte". Elige otro nombre, por ejemplo con la zona o la calle.';
     simularApi(() => ({ status: 409, data: cuerpoError('NOMBRE_SUCURSAL_DUPLICADO', repetido) }));
     expect(await crearSucursal({ nombre: 'Norte', direccion: '', telefono: '' })).toEqual({ tipo: 'rechazado', mensaje: repetido });
     simularApi(() => 'sin-conexion');

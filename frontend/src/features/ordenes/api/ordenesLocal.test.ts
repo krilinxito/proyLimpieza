@@ -144,7 +144,7 @@ describe('Registrar ropa: lo que no se guarda — SPEC-KRILINXI-006', () => {
 
     expect(await registrarRopa(control.base, QUIEN, datosRopa({ numeroBoleta: '001234' }))).toEqual({
       tipo: 'invalida',
-      errores: { numeroBoleta: 'Ese número de boleta ya está usado en esta sucursal. Revisá el papel y volvé a escribirlo.' },
+      errores: { numeroBoleta: 'Ese número de boleta ya está usado en esta sucursal. Revisa el papel y vuelve a escribirlo.' },
     });
     expect(await cola(db)).toEqual([]);
   });

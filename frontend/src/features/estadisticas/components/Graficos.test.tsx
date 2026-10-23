@@ -36,7 +36,7 @@ describe('La tabla para el lector de pantalla no se ve — SPEC-KRILINXI-036', (
 
   it('el sr-only va en un contenedor alrededor de la tabla, no en la tabla', () => {
     render(
-      <Grafico nombre="Cobrado por sucursal" vacio={false} pista="Tocá una barra" tabla={tabla}>
+      <Grafico nombre="Cobrado por sucursal" vacio={false} pista="Toca una barra" tabla={tabla}>
         {() => null}
       </Grafico>,
     );
@@ -47,7 +47,7 @@ describe('La tabla para el lector de pantalla no se ve — SPEC-KRILINXI-036', (
 
   it('el lector de pantalla sigue leyendo sus números', () => {
     render(
-      <Grafico nombre="Cobrado por sucursal" vacio={false} pista="Tocá una barra" tabla={tabla}>
+      <Grafico nombre="Cobrado por sucursal" vacio={false} pista="Toca una barra" tabla={tabla}>
         {() => null}
       </Grafico>,
     );

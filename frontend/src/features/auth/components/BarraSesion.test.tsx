@@ -27,7 +27,7 @@ describe('Salir con registros sin guardar — SPEC-KRILINXI-010', () => {
 
     const aviso = await pedirSalir();
 
-    expect(within(aviso).getByText(/Hay 3 registros que todavía no se guardaron en el sistema\. Si salís ahora, se van a perder\./)).toBeInTheDocument();
+    expect(within(aviso).getByText(/Hay 3 registros que todavía no se guardaron en el sistema\. Si sales ahora, se van a perder\./)).toBeInTheDocument();
     sinJerga();
   });
 
@@ -36,7 +36,7 @@ describe('Salir con registros sin guardar — SPEC-KRILINXI-010', () => {
 
     const aviso = await pedirSalir();
 
-    expect(within(aviso).getByText(/Hay 1 registro que todavía no se guardó en el sistema\. Si salís ahora, se va a perder\./)).toBeInTheDocument();
+    expect(within(aviso).getByText(/Hay 1 registro que todavía no se guardó en el sistema\. Si sales ahora, se va a perder\./)).toBeInTheDocument();
   });
 
   it('sin nada pendiente, el aviso es el de siempre', async () => {

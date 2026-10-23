@@ -24,15 +24,15 @@ const MONTO_MAXIMO: Centavos = 9_999_999_999; // NUMERIC(10,2)
 
 export const MENSAJES = {
   sinCliente: 'Falta elegir el cliente que deja la ropa.',
-  sinBoleta: 'Escribí el número de la boleta.',
-  boletaLarga: 'Ese número de boleta es demasiado largo. Revisá el papel y volvé a escribirlo.',
-  boletaOcupada: 'Ese número de boleta ya está usado en esta sucursal. Revisá el papel y volvé a escribirlo.',
-  sinDescripcion: 'Escribí qué ropa deja el cliente.',
-  precio: 'Escribí el precio con números, por ejemplo 25 o 25,50.',
+  sinBoleta: 'Escribe el número de la boleta.',
+  boletaLarga: 'Ese número de boleta es demasiado largo. Revisa el papel y vuelve a escribirlo.',
+  boletaOcupada: 'Ese número de boleta ya está usado en esta sucursal. Revisa el papel y vuelve a escribirlo.',
+  sinDescripcion: 'Escribe qué ropa deja el cliente.',
+  precio: 'Escribe el precio con números, por ejemplo 25 o 25,50.',
   fecha: 'La fecha de entrega estimada no es válida.',
-  adelanto: 'Escribí cuánto deja de adelanto, con números mayores que cero, por ejemplo 20 o 20,50.',
+  adelanto: 'Escribe cuánto deja de adelanto, con números mayores que cero, por ejemplo 20 o 20,50.',
   adelantoMayor: 'El adelanto no puede ser mayor que el precio.',
-  sinMetodo: 'Elegí cómo paga el adelanto: efectivo, QR, tarjeta o transferencia.',
+  sinMetodo: 'Elige cómo paga el adelanto: efectivo, QR, tarjeta o transferencia.',
 } as const;
 
 const FECHA = /^(\d{4})-(\d{2})-(\d{2})$/;
