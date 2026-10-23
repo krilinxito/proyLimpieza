@@ -17,15 +17,18 @@ import { MENSAJES_ENTREGA, prepararEntrega, registrarEntrega } from './entregasL
 const ROSA = clienteDePrueba();
 const QUIEN = { usuarioId: randomUUID(), sucursalId: SUCURSAL_DE_PRUEBA };
 
-/** Una entrega con boleta, al precio de la orden y sin cobrar nada; cada test cambia lo suyo. */
+/**
+ * Una entrega con boleta, al precio de la orden y pagando lo que falta (Bs 30: la orden es de 50 y dejó 20 de adelanto);
+ * cada test cambia lo suyo. Desde SPEC-KRILINXI-056 la ropa solo sale con la boleta pagada por completo.
+ */
 function datosEntrega(cambios: Partial<DatosEntrega> = {}): DatosEntrega {
   return {
     traeBoleta: true,
     retiradoPorNombre: '',
     retiradoPorCarnet: '',
     precioFinal: '50.00',
-    pagoFinal: '',
-    metodoPago: null,
+    pagoFinal: '30',
+    metodoPago: 'EFECTIVO',
     ...cambios,
   };
 }
@@ -45,7 +48,7 @@ async function preparar() {
 }
 
 describe('Entregar: lo que se guarda — SPEC-KRILINXI-009', () => {
-  it('guarda la entrega con boleta y el pago final, en ese orden, sin tocar el estado de la orden', async () => {
+  it('guarda el pago final y la entrega con boleta, en ese orden, sin tocar el estado de la orden', async () => {
     const { control, lista, cola } = await preparar();
     const resultado = await registrarEntrega(
       control.base,
@@ -54,8 +57,11 @@ describe('Entregar: lo que se guarda — SPEC-KRILINXI-009', () => {
       datosEntrega({ pagoFinal: '30', metodoPago: 'QR' }),
     );
 
-    expect(resultado).toMatchObject({ tipo: 'lista', entrega: { tipoRetiro: 'CON_BOLETA', pagoFinal: 3000, saldoDespues: 0 } });
+    expect(resultado).toMatchObject({ tipo: 'lista', entrega: { tipoRetiro: 'CON_BOLETA', pagoFinal: 3000 } });
+    // SPEC-KRILINXI-056: primero el pago, después la entrega. La cola los sube en ese orden y el servidor mira lo cobrado
+    // al recibir la entrega.
     expect(await cola()).toEqual([
+      ['PUT', 'pagos', expect.objectContaining({ orden_id: lista.id, monto: '30.00', tipo: 'PAGO_FINAL', metodo: 'QR' })],
       [
         'PUT',
         'entregas',
@@ -68,7 +74,6 @@ describe('Entregar: lo que se guarda — SPEC-KRILINXI-009', () => {
           precio_final: '50.00',
         },
       ],
-      ['PUT', 'pagos', expect.objectContaining({ orden_id: lista.id, monto: '30.00', tipo: 'PAGO_FINAL', metodo: 'QR' })],
     ]);
   });
 
@@ -90,31 +95,66 @@ describe('Entregar: lo que se guarda — SPEC-KRILINXI-009', () => {
       lista.id,
       datosEntrega({ traeBoleta: false, retiradoPorNombre: ' Juan Mamani ', retiradoPorCarnet: ' 445566 ' }),
     );
-    expect((await cola())[0]?.[2]).toMatchObject({
+    expect((await cola()).find(([, tabla]) => tabla === 'entregas')?.[2]).toMatchObject({
       tipo_retiro: 'SIN_BOLETA',
       retirado_por_nombre: 'Juan Mamani',
       retirado_por_carnet: '445566',
     });
   });
 
-  it('el precio final puede cambiar (recargo), y el saldo se calcula con él', async () => {
+  it('el precio final puede cambiar (recargo), pero hay que cobrarlo en el mismo acto', async () => {
     const { control, lista } = await preparar();
-    const resultado = await prepararEntrega(control.base, SUCURSAL_DE_PRUEBA, lista.id, datosEntrega({ precioFinal: '65,50' }));
-    expect(resultado).toMatchObject({ tipo: 'lista', entrega: { precioFinal: 6550, saldoDespues: 4550 } });
+    // Con el recargo la boleta sube a 65,50: lo cobrado (20) más lo que se paga ahora (45,50) la deja pagada.
+    const resultado = await prepararEntrega(
+      control.base,
+      SUCURSAL_DE_PRUEBA,
+      lista.id,
+      datosEntrega({ precioFinal: '65,50', pagoFinal: '45,50' }),
+    );
+    expect(resultado).toMatchObject({ tipo: 'lista', entrega: { precioFinal: 6550, pagoFinal: 4550 } });
+    // Cobrando solo los 30 de antes, faltan 15,50 del recargo.
+    expect(await prepararEntrega(control.base, SUCURSAL_DE_PRUEBA, lista.id, datosEntrega({ precioFinal: '65,50' }))).toEqual({
+      tipo: 'invalida',
+      errores: { pagoFinal: MENSAJES_ENTREGA.faltaCobrar(1550) },
+    });
   });
 
   it('un precio final de cero también vale (se perdonó el cobro)', async () => {
     const { control, lista } = await preparar();
     expect(
-      await prepararEntrega(control.base, SUCURSAL_DE_PRUEBA, lista.id, datosEntrega({ precioFinal: '0' })),
-    ).toMatchObject({ tipo: 'lista', entrega: { precioFinal: 0, saldoDespues: -2000 } });
+      await prepararEntrega(control.base, SUCURSAL_DE_PRUEBA, lista.id, datosEntrega({ precioFinal: '0', pagoFinal: '', metodoPago: null })),
+    ).toMatchObject({ tipo: 'lista', entrega: { precioFinal: 0, pagoFinal: 0 } });
   });
 
-  it('se puede entregar con saldo pendiente: preparar dice cuánto queda debiendo', async () => {
-    const { control, lista } = await preparar();
-    expect(
-      await prepararEntrega(control.base, SUCURSAL_DE_PRUEBA, lista.id, datosEntrega({ pagoFinal: '15', metodoPago: 'EFECTIVO' })),
-    ).toMatchObject({ tipo: 'lista', entrega: { saldoDespues: 1500 } });
+  it('no se entrega con saldo pendiente: dice cuánto falta cobrar y no escribe nada — SPEC-KRILINXI-056', async () => {
+    const { control, lista, cola } = await preparar();
+
+    // Pagando solo 15 de los 30 que faltan.
+    expect(await registrarEntrega(control.base, QUIEN, lista.id, datosEntrega({ pagoFinal: '15' }))).toEqual({
+      tipo: 'invalida',
+      errores: { pagoFinal: MENSAJES_ENTREGA.faltaCobrar(1500) },
+    });
+    // Sin pagar nada.
+    expect(await registrarEntrega(control.base, QUIEN, lista.id, datosEntrega({ pagoFinal: '', metodoPago: null }))).toEqual({
+      tipo: 'invalida',
+      errores: { pagoFinal: MENSAJES_ENTREGA.faltaCobrar(3000) },
+    });
+    expect(await cola()).toEqual([]);
+    expect(MENSAJES_ENTREGA.faltaCobrar(1500)).toBe('Falta cobrar Bs 15,00. Escribe cuánto paga ahora para dejar la boleta pagada.');
+  });
+
+  it('una boleta ya pagada se entrega sin cobrar nada — SPEC-KRILINXI-056', async () => {
+    const { control, lista, cola } = await preparar();
+    await control.base.ejecutar(
+      "INSERT INTO pagos (id, orden_id, sucursal_id, monto, tipo, metodo, usuario_id, fecha_pago) VALUES (?, ?, ?, '30.00', 'PAGO_FINAL', 'EFECTIVO', ?, ?)",
+      [randomUUID(), lista.id, SUCURSAL_DE_PRUEBA, QUIEN.usuarioId, HORA_DEL_SERVIDOR_ISO],
+    );
+    const antes = (await cola()).length;
+
+    const resultado = await registrarEntrega(control.base, QUIEN, lista.id, datosEntrega({ pagoFinal: '', metodoPago: null }));
+
+    expect(resultado).toMatchObject({ tipo: 'lista', entrega: { pagoFinal: 0 } });
+    expect((await cola()).slice(antes).map(([op, tabla]) => [op, tabla])).toEqual([['PUT', 'entregas']]);
   });
 
   it('preparar no escribe nada', async () => {
@@ -146,7 +186,7 @@ describe('Entregar: lo que no se guarda — SPEC-KRILINXI-009', () => {
     ['con un precio final negativo', { precioFinal: '-1' }, { precioFinal: MENSAJES_ENTREGA.precioFinal }],
     ['con un pago de cero', { pagoFinal: '0', metodoPago: 'EFECTIVO' }, { pagoFinal: MENSAJES_ENTREGA.pago }],
     ['con un pago mayor que lo que falta', { pagoFinal: '30,01', metodoPago: 'EFECTIVO' }, { pagoFinal: MENSAJES_ENTREGA.pagoMayor }],
-    ['con un pago sin método', { pagoFinal: '10' }, { metodoPago: MENSAJES_ENTREGA.sinMetodo }],
+    ['con un pago sin método', { pagoFinal: '30', metodoPago: null }, { metodoPago: MENSAJES_ENTREGA.sinMetodo }],
   ])('%s', async (_caso, cambios, errores) => {
     const { control, lista, cola } = await preparar();
     expect(await registrarEntrega(control.base, QUIEN, lista.id, datosEntrega(cambios))).toEqual({ tipo: 'invalida', errores });
@@ -200,7 +240,7 @@ describe('Entregar sin conexión — SPEC-KRILINXI-009', () => {
   it('no hace ninguna petición a la API', async () => {
     const servidor = simularApi(() => 'sin-conexion');
     const { control, lista } = await preparar();
-    await registrarEntrega(control.base, QUIEN, lista.id, datosEntrega({ pagoFinal: '10', metodoPago: 'EFECTIVO' }));
+    await registrarEntrega(control.base, QUIEN, lista.id, datosEntrega({ pagoFinal: '30', metodoPago: 'EFECTIVO' }));
     expect(servidor.pedidos).toEqual([]);
   });
 });

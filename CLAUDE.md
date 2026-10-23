@@ -141,8 +141,7 @@ sale de `features/ordenes/estado.ts` (`estadoEfectivo`: si la orden tiene entreg
 local, figura ENTREGADO aunque no haya sincronizado), y los avances permitidos repiten la tabla
 del backend con un test que la compara. SPEC-KRILINXI-009 añadió `/entregar`: la misma
 pantalla con "Entregar la ropa" en el detalle (`accionesExtra`; hoy `entregas/components/AccionEntregar`), con o sin boleta, precio final
-y pago final. Se puede entregar con saldo pendiente: la confirmación dice cuánto queda
-debiendo. **El frontend nunca escribe `ordenes.estado = 'ENTREGADO'`**: lo hace el servidor, y
+y pago final (desde SPEC-KRILINXI-056 ya no se entrega con saldo pendiente). **El frontend nunca escribe `ordenes.estado = 'ENTREGADO'`**: lo hace el servidor, y
 en la tablet se ve por `estadoEfectivo`. Con eso, el flujo del mostrador está completo
 (registrar → avanzar → cobrar → entregar). Las pantallas del mostrador piden una sucursal de
 trabajo: la del EMPLEADO, o la que eligió el ADMIN (SPEC-KRILINXI-029).
@@ -364,6 +363,12 @@ SPEC-KRILINXI-055 **quitó la transferencia como forma de pago**: `metodo_pago` 
 transferencia nueva. Las series de los gráficos son tres. Como la línea base de `context/lavanderia_schema.sql` no se edita y sigue diciendo cuatro, los
 tests de dominio (`dominio.test.ts`, de los dos lados) leen la línea base **más** las migraciones: un `CREATE TYPE` posterior pisa al anterior.
 **Después del pull, `npm run migrar --workspace backend`.**
+SPEC-KRILINXI-056 hizo que **la ropa solo se entregue con la boleta pagada por completo**: `POST /api/entregas` responde 409 `SALDO_PENDIENTE` (con la boleta y lo que falta) si lo
+cobrado no cubre el precio final, y lo comprueba **dentro del mismo `UPDATE`** que marca ENTREGADO (`models/entregas.model.ts`), así que un rechazo no escribe nada. Como el pago final
+y la entrega suben como dos pedidos, la tablet los escribe en una sola transacción con **el pago primero** (`registrarEntrega`): la cola los sube en ese orden y el servidor cuenta
+el pago al recibir la entrega. En la pantalla, `Entregar` se apaga hasta que lo que se paga ahora cubre lo que falta, y el resumen ya no tiene "Queda debiendo". Un recargo al entregar
+se cobra en el mismo acto. Riesgo conocido: una entrega sin internet cuyo pago el servidor rechaza (o una escrita por una versión anterior, entrega antes que pago) vuelve como 409 y
+va a **Para corregir**.
 SPEC-KRILINXI-041 agregó el **Historial de boletas** (`/boletas`, `features/historial/`), en el menú para todos, y **cada uno
 ve lo que le corresponde** (`useModoDelHistorial`, que sale de `useSucursalDeTrabajo`): quien atiende, su sucursal de
 trabajo de los **últimos 30 días**, de la base local y también sin internet (`listarHistorialLocal`, que reusa
@@ -427,7 +432,7 @@ El cliente vuelve a recoger, a la misma sucursal donde dejó la ropa
        · CON_BOLETA: trae el papel
        · SIN_BOLETA: no lo trae → nombre y carnet de quien retira son OBLIGATORIOS
        · precio_final puede diferir del precio_total (recargo por almacenamiento, etc.)
-  └─ PAGO de tipo PAGO_FINAL
+  └─ PAGO de tipo PAGO_FINAL, cobrado ANTES de entregar: la ropa solo sale con la boleta pagada por completo
 
 Saldo de una orden = (precio_final o, si aún no hay entrega, precio_total) − suma de pagos
 ```

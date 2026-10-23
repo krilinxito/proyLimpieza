@@ -15,6 +15,8 @@
 //                           Un cobro o un retiro con la fecha que el test elija
 //                           (ISO con zona, como la manda el dispositivo) —
 //                           SPEC-ALE186-008, para las estadísticas.
+//   pagarOrden(orden, esc, monto?) Cobra la orden por completo (o por `monto`): desde SPEC-KRILINXI-056 la ropa solo se entrega con la
+//                           boleta pagada, así que un test que entrega por el model paga antes.
 //   crearSucursal() / crearUsuario() / crearCliente()
 //                           Las piezas sueltas, para armar casos con dos
 //                           sucursales o un ADMIN.
@@ -152,6 +154,16 @@ export async function crearPago(
       esc.usuarioId,
       campos.fechaPago ?? null,
     ],
+  );
+}
+
+/** Cobra la orden por completo (su precio_total) o por `monto`, como pago final en efectivo — SPEC-KRILINXI-056. */
+export async function pagarOrden(orden: OrdenCreada, esc: Escenario, monto?: string): Promise<void> {
+  await pool.query(
+    `INSERT INTO pagos (id, orden_id, sucursal_id, monto, tipo, metodo, usuario_id)
+     SELECT $1, o.id, o.sucursal_id, COALESCE($3::numeric, o.precio_total), 'PAGO_FINAL', 'EFECTIVO', $4
+       FROM ordenes o WHERE o.id = $2`,
+    [randomUUID(), orden.id, monto ?? null, esc.usuarioId],
   );
 }
 

@@ -3,22 +3,24 @@
  *
  * Mismo patrón que `features/ordenes/api/ordenesLocal.ts`: la base llega como argumento,
  * todo es SQL sobre SQLite y nada habla con la API. Se escribe la entrega y, si se cobra
- * algo, después el pago final. La cola los sube en ese orden: `POST /api/entregas` y
- * `POST /api/pagos` (SPEC-ALE186-006 y 005).
+ * algo, el pago final **antes** que la entrega, y las dos cosas en una sola transacción: la cola
+ * los sube en ese orden, `POST /api/pagos` y después `POST /api/entregas` (SPEC-ALE186-005 y 006).
+ * Desde SPEC-KRILINXI-056 el servidor rechaza una entrega cuya boleta no quedó pagada por completo
+ * (409 `SALDO_PENDIENTE`), y el pago tiene que haber llegado antes para que cuente.
  *
  * **Nunca toca `ordenes.estado`.** El paso a ENTREGADO lo hace el servidor en la misma
  * sentencia que inserta la entrega, y el PATCH a ENTREGADO está prohibido (responde 409).
  * En la tablet la orden se ve entregada igual, por `estadoEfectivo` (SPEC-KRILINXI-008).
  *
- * Va en dos pasos para que la confirmación pueda decir cuánto queda debiendo:
- * `prepararEntrega` valida sin escribir, y `registrarEntrega` vuelve a validar y escribe.
+ * Va en dos pasos: `prepararEntrega` valida sin escribir (y pide cobrar todo lo que falta, SPEC-KRILINXI-056),
+ * y `registrarEntrega` vuelve a validar y escribe.
  */
-import type { BaseLocal } from '../../../lib/powersync';
-import { aDecimal, parsearMonto, sumar, type Centavos } from '../../../lib/money';
+import type { BaseLocal, Sentencia } from '../../../lib/powersync';
+import { aDecimal, formatearBs, parsearMonto, sumar, type Centavos } from '../../../lib/money';
 import { horaOficial } from '../../../lib/reloj';
 import { obtenerOrden } from '../../ordenes/api/ropaLocal';
 import type { QuienRegistra } from '../../ordenes/types';
-import { insertarPago } from '../../pagos/api/pagosLocal';
+import { sentenciaPago } from '../../pagos/api/pagosLocal';
 import { calcularSaldo } from '../../pagos/saldo';
 import type { DatosEntrega, EntregaLista, ErroresEntrega, ResultadoEntrega } from '../types';
 
@@ -38,6 +40,8 @@ export const MENSAJES_ENTREGA = {
   precioFinal: 'Escribe el precio final con números, por ejemplo 45 o 45,50.',
   pago: 'Escribe cuánto paga el cliente, con números mayores que cero, por ejemplo 20 o 20,50.',
   pagoMayor: 'El cobro no puede ser mayor que lo que falta pagar.',
+  /** Falta cobrar: la ropa no sale hasta que la boleta esté pagada por completo (SPEC-KRILINXI-056). */
+  faltaCobrar: (falta: Centavos) => `Falta cobrar ${formatearBs(falta)}. Escribe cuánto paga ahora para dejar la boleta pagada.`,
   sinMetodo: 'Elige cómo paga: efectivo, QR o tarjeta.',
 } as const;
 
@@ -87,11 +91,17 @@ export async function prepararEntrega(
     if (!datos.metodoPago) errores.metodoPago = MENSAJES_ENTREGA.sinMetodo;
   }
 
+  // La ropa solo sale con la boleta pagada por completo (SPEC-KRILINXI-056). Si ya hay otro error en el cobro, ese va primero.
+  const montos = orden.pagos.map((p) => p.monto);
+  if (precioFinal !== null && pagoFinal !== null && !errores.pagoFinal) {
+    const falta = calcularSaldo({ precioTotal: orden.precioTotal, precioFinal, pagos: [...montos, pagoFinal] });
+    if (falta > 0) errores.pagoFinal = MENSAJES_ENTREGA.faltaCobrar(falta);
+  }
+
   if (Object.keys(errores).length > 0 || datos.traeBoleta === null || precioFinal === null || pagoFinal === null) {
     return { tipo: 'invalida', errores };
   }
 
-  const montos = orden.pagos.map((p) => p.monto);
   return {
     tipo: 'lista',
     entrega: {
@@ -104,14 +114,14 @@ export async function prepararEntrega(
       precioFinal,
       pagoFinal,
       metodoPago: hayPago ? datos.metodoPago : null,
-      saldoDespues: calcularSaldo({ precioTotal: orden.precioTotal, precioFinal, pagos: [...montos, pagoFinal] }),
     },
   };
 }
 
 /**
- * Vuelve a validar (pudo cambiar algo entre la confirmación y el toque) y escribe: primero
- * la entrega, después el pago final. Si algo no valida, no escribe nada.
+ * Vuelve a validar (pudo cambiar algo entre la confirmación y el toque) y escribe, en una sola
+ * transacción: primero el pago final, después la entrega. Ese orden es el que sube la cola, y el
+ * servidor mira lo cobrado al recibir la entrega (SPEC-KRILINXI-056). Si algo no valida, no escribe nada.
  */
 export async function registrarEntrega(
   base: BaseLocal,
@@ -126,11 +136,26 @@ export async function registrarEntrega(
   // que exige el backend (SPEC-KRILINXI-012).
   const ahora = horaOficial();
 
-  await base.ejecutar(
-    `INSERT INTO entregas (id, orden_id, sucursal_id, fecha_entrega, tipo_retiro,
-                           retirado_por_nombre, retirado_por_carnet, usuario_entrega_id, precio_final)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
+  const sentencias: Sentencia[] = [];
+  // Primero el pago: la cola sube en este orden, y el servidor cuenta lo ya cobrado al recibir la entrega.
+  if (entrega.pagoFinal > 0 && entrega.metodoPago) {
+    sentencias.push(
+      sentenciaPago(crypto.randomUUID(), {
+        ordenId,
+        sucursalId: quien.sucursalId,
+        usuarioId: quien.usuarioId,
+        monto: entrega.pagoFinal,
+        tipo: 'PAGO_FINAL',
+        metodo: entrega.metodoPago,
+        fechaPago: ahora,
+      }),
+    );
+  }
+  sentencias.push({
+    sql: `INSERT INTO entregas (id, orden_id, sucursal_id, fecha_entrega, tipo_retiro,
+                               retirado_por_nombre, retirado_por_carnet, usuario_entrega_id, precio_final)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    parametros: [
       crypto.randomUUID(),
       ordenId,
       // La sucursal de la orden, que es la del empleado: `obtenerOrden` solo encuentra
@@ -143,19 +168,8 @@ export async function registrarEntrega(
       quien.usuarioId,
       aDecimal(entrega.precioFinal),
     ],
-  );
-
-  if (entrega.pagoFinal > 0 && entrega.metodoPago) {
-    await insertarPago(base, {
-      ordenId,
-      sucursalId: quien.sucursalId,
-      usuarioId: quien.usuarioId,
-      monto: entrega.pagoFinal,
-      tipo: 'PAGO_FINAL',
-      metodo: entrega.metodoPago,
-      fechaPago: ahora,
-    });
-  }
+  });
+  await base.ejecutarJuntas(sentencias);
 
   return resultado;
 }

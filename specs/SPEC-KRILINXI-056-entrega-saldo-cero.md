@@ -23,7 +23,7 @@ Hoy se puede entregar la ropa con saldo pendiente y queda una deuda. El negocio 
 
 ## Criterios de aceptación
 
-- [ ] POST /api/entregas responde 409 con un código propio y un mensaje en palabras cuando, tras sumar el pago final que viene en el mismo pedido, el saldo de la orden sería mayor que cero; la entrega y el paso a ENTREGADO no se escriben.
+- [ ] POST /api/entregas responde 409 con un código propio y un mensaje en palabras cuando, con los cobros que la orden ya tiene registrados, el saldo sería mayor que cero (el pago final y la entrega son dos pedidos: la tablet sube primero el pago y después la entrega); la entrega y el paso a ENTREGADO no se escriben.
 - [ ] Esa comprobación va dentro de la misma sentencia que escribe, sin condición de carrera con un pago concurrente, y hay un test contra la base real (test:db).
 - [ ] El formulario de entrega ya no ofrece entregar con saldo pendiente: el pago final es por el saldo completo y el botón se habilita solo cuando queda en cero.
 - [ ] Con la boleta ya pagada el formulario sigue sin pedir montos (SPEC-KRILINXI-046), y se puede cargar un precio final mayor si se cobra la diferencia en el mismo acto.

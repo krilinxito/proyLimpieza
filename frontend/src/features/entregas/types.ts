@@ -27,8 +27,6 @@ export type EntregaLista = {
   /** 0 si no cobra nada al entregar. */
   pagoFinal: Centavos;
   metodoPago: MetodoPago | null;
-  /** Lo que queda debiendo el cliente después de entregar. */
-  saldoDespues: Centavos;
 };
 
 export type ResultadoEntrega =

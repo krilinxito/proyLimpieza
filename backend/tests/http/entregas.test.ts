@@ -149,6 +149,16 @@ describe('POST /api/entregas — SPEC-ALE186-006', () => {
     expect(res.body.error.mensaje).toContain('001234');
   });
 
+  // SPEC-KRILINXI-056
+  it('responde 409 SALDO_PENDIENTE, nombrando la boleta y lo que falta cobrar', async () => {
+    crear.mockResolvedValue({ tipo: 'saldo-pendiente', orden: ordenDePrueba(), saldo: '25.50' });
+
+    const res = await retiro(cuerpoDeEntrega());
+
+    expectApiError(res, { status: 409, codigo: 'SALDO_PENDIENTE' });
+    expect(res.body.error.mensaje).toBe('La boleta 001234 todavía tiene Bs 25.50 sin cobrar. Cobra todo antes de entregar la ropa.');
+  });
+
   it.each([
     ['sin tipo de retiro', { tipo_retiro: undefined }],
     ['con un tipo de retiro que no existe', { tipo_retiro: 'CON_FOTO' }],
