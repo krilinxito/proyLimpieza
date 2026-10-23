@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-053
 name: Textos en tuteo neutro, sin voseo
 slug: textos-tuteo
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-23
 scope:
