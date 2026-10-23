@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-054
 name: 'Componentes compactos: ver contraseña, paginación y cabecera chica'
 slug: componentes-compactos
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-23
 scope:
@@ -11,7 +11,12 @@ scope:
   - frontend/src/features/auth/**
 priority: medium
 depends_on: []
-tests: []
+tests:
+  - frontend\src\components\piezas.test.tsx
+  - frontend\src\features\auth\components\FormularioIngreso.test.tsx
+  - frontend\src\features\estadisticas\components\PantallaEstadisticas.test.tsx
+  - frontend\src\pages\Marco.test.tsx
+  - frontend\src\test\arquitectura.test.ts
 ---
 
 ## Descripción
