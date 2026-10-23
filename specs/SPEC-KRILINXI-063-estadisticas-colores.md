@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-063
 name: Estadísticas con más color y gráficos interactivos
 slug: estadisticas-colores
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-23
 scope:
