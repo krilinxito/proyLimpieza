@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-052
 name: Carácter visual propio sin romper contraste ni tema oscuro
 slug: caracter-visual
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-22
 scope:
