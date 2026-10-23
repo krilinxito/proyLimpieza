@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-056
 name: Entregar solo con la boleta pagada por completo
 slug: entrega-saldo-cero
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-23
 scope:
