@@ -163,7 +163,7 @@ describe('Estadísticas: la forma de las respuestas — SPEC-ALE186-008', () => 
         sucursalId: IDS.sucursal,
         sucursal: 'Centro',
         total: '20.00',
-        porMetodo: { EFECTIVO: '14.50', QR: '5.50', TARJETA: '0.00', TRANSFERENCIA: '0.00' },
+        porMetodo: { EFECTIVO: '14.50', QR: '5.50', TARJETA: '0.00' },
       },
     ];
     ingresos.mockResolvedValue({ total: '20.00', porSucursal });
@@ -305,7 +305,7 @@ describe('GET /api/estadisticas/ingresos-por-dia — SPEC-KRILINXI-043', () => {
   const DIA = (fecha: string, total: string, porMetodo: Partial<Record<string, string>> = {}) => ({
     fecha,
     total,
-    porMetodo: { EFECTIVO: '0.00', QR: '0.00', TARJETA: '0.00', TRANSFERENCIA: '0.00', ...porMetodo },
+    porMetodo: { EFECTIVO: '0.00', QR: '0.00', TARJETA: '0.00', ...porMetodo },
   });
 
   it('responde el período, el total y un registro por día con su desglose, tal como lo manda el model', async () => {

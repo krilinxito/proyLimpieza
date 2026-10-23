@@ -30,7 +30,6 @@ colors:
   serie-efectivo: "#3a83fc"
   serie-qr: "#e55108"
   serie-tarjeta: "#0f9958"
-  serie-transferencia: "#d14ead"
   antiguedad-reciente: "#3987e5"
   antiguedad-media: "#1c5cab"
   antiguedad-vieja: "#0d366b"
@@ -199,7 +198,7 @@ Un solo turquesa de agua limpia como marca sobre un fondo frío y neutro, con cu
 - **Rojo de no-hay-vuelta-atrás** (#b91c1c, hover #991b1b): el botón de lo irreversible (anular).
 
 ### Gráficos
-- **Una serie por forma de pago**, siempre en el mismo orden: efectivo #3a83fc (azul), QR #e55108 (naranja), tarjeta #0f9958 (verde), transferencia #d14ead (rosa). Validadas para daltonismo con todas sus parejas.
+- **Una serie por forma de pago**, siempre en el mismo orden: efectivo #3a83fc (azul), QR #e55108 (naranja), tarjeta #0f9958 (verde). Validadas para daltonismo con todas sus parejas.
 - **Antigüedad**, un solo tono que se oscurece con los días: #3987e5, #1c5cab, #0d366b.
 
 ### Tema oscuro
@@ -219,7 +218,7 @@ Los mismos tokens con otro valor (`:root[data-tema='oscuro']`); ningún componen
 | Botón de peligro / su hover | #f87171 / #fca5a5 |
 | Antigüedad (reciente, media, vieja) | #3b82f6, #7fb0f7, #c3dafe |
 
-Las cuatro series de los gráficos no cambian en oscuro.
+Las tres series de los gráficos no cambian en oscuro.
 
 ### Named Rules
 **La regla de solo tokens.** Ningún componente usa un color suelto ni la paleta cruda de Tailwind (`sky-700`, `bg-white`): se pinta con el nombre del tema (`bg-marca`, `text-peligro-texto`). Un color nuevo se agrega a `index.css` **en los dos bloques**, claro y oscuro, con su par de contraste medido en `test/tema.test.ts`.

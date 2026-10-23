@@ -108,12 +108,11 @@ describe('Panel de estadísticas — SPEC-KRILINXI-015', () => {
     const cobrado = seccion('Cobrado por sucursal');
     expect(within(cobrado).getAllByText('Bs 125,50')).not.toHaveLength(0);
     expect(within(cobrado).getByText('Centro: Bs 125,50')).toBeInTheDocument();
-    // Sucursal, Efectivo, Pago con QR, Tarjeta, Transferencia y Total (SPEC-KRILINXI-026: la tabla del gráfico).
+    // Sucursal, Efectivo, Pago con QR, Tarjeta y Total (SPEC-KRILINXI-026: la tabla del gráfico).
     expect(fila(cobrado, 'Cobrado por sucursal y forma de pago', 'Centro')).toEqual([
       'Centro',
       'Bs 100,00',
       'Bs 25,50',
-      'Bs 0,00',
       'Bs 0,00',
       'Bs 125,50',
     ]);
@@ -384,7 +383,7 @@ describe('El panel como tablero — SPEC-KRILINXI-026', () => {
               sucursalId: SUCURSAL_NORTE,
               sucursal: 'Norte',
               total: '24.50',
-              porMetodo: { EFECTIVO: '0.00', QR: '0.00', TARJETA: '0.00', TRANSFERENCIA: '24.50' },
+              porMetodo: { EFECTIVO: '0.00', QR: '0.00', TARJETA: '24.50' },
             },
           ],
         }),
@@ -394,9 +393,9 @@ describe('El panel como tablero — SPEC-KRILINXI-026', () => {
     await screen.findByRole('heading', { name: '¿Cuánto se cobró en cada sucursal?' });
     const cobrado = grafico('Cobrado por sucursal y forma de pago');
 
-    // La leyenda, con los cuatro métodos en su orden fijo.
+    // La leyenda, con los tres métodos en su orden fijo (SPEC-KRILINXI-055: la transferencia ya no existe).
     const leyenda = within(cobrado).getByRole('list', { name: 'Formas de pago' });
-    expect(within(leyenda).getAllByRole('listitem').map((m) => m.textContent)).toEqual(['Efectivo', 'Pago con QR', 'Tarjeta', 'Transferencia']);
+    expect(within(leyenda).getAllByRole('listitem').map((m) => m.textContent)).toEqual(['Efectivo', 'Pago con QR', 'Tarjeta']);
 
     // Centro: efectivo y QR. La tarjeta, en cero, no ocupa lugar ni se rotula.
     const centro = within(cobrado).getByRole('button', { name: /^Centro:/ });
@@ -408,9 +407,9 @@ describe('El panel como tablero — SPEC-KRILINXI-026', () => {
     expect(within(centro).getByText('Pago con QR Bs 25,50')).toBeInTheDocument();
     expect(within(centro).queryByText(/Tarjeta/)).not.toBeInTheDocument();
 
-    // El color sigue al método, no a su lugar: la transferencia del Norte es la serie 4 aunque vaya sola.
+    // El color sigue al método, no a su lugar: la tarjeta del Norte es la serie 3 aunque vaya sola.
     const norte = within(cobrado).getByRole('button', { name: /^Norte:/ });
-    expect(norte.querySelector('rect')).toHaveClass('fill-serie-4');
+    expect(norte.querySelector('rect')).toHaveClass('fill-serie-3');
     // La barra más larga llega a todo el ancho, y las demás se miden con la misma escala.
     expect(centro.querySelector('rect')).toHaveAttribute('width', '79.68%');
     expect(norte.querySelector('[data-barra]')).toHaveAttribute('width', '19.52%');
@@ -635,7 +634,7 @@ describe('El panel como dashboard — SPEC-KRILINXI-042', () => {
     expect(within(seccion('Ropa recibida')).getByText('De los últimos 30 días')).toBeInTheDocument();
   });
 
-  it('el gráfico de forma de pago suma lo de todas las sucursales, con el color de cada forma y las cuatro en su orden', async () => {
+  it('el gráfico de forma de pago suma lo de todas las sucursales, con el color de cada forma y las tres en su orden', async () => {
     simularEstadisticas({
       ingresos: {
         status: 200,
@@ -647,7 +646,7 @@ describe('El panel como dashboard — SPEC-KRILINXI-042', () => {
               sucursalId: SUCURSAL_NORTE,
               sucursal: 'Norte',
               total: '34.50',
-              porMetodo: { EFECTIVO: '10.00', QR: '0.00', TARJETA: '0.00', TRANSFERENCIA: '24.50' },
+              porMetodo: { EFECTIVO: '10.00', QR: '24.50', TARJETA: '0.00' },
             },
           ],
         }),
@@ -658,20 +657,18 @@ describe('El panel como dashboard — SPEC-KRILINXI-042', () => {
     const figura = within(tarjeta).getByRole('figure', { name: 'Cobrado con cada forma de pago' });
 
     const barras = within(figura).getAllByRole('button');
-    expect(barras.map((b) => b.querySelector('span > span')?.textContent)).toEqual(['Efectivo', 'Pago con QR', 'Tarjeta', 'Transferencia']);
-    // Efectivo: 100 del Centro + 10 del Norte. QR: solo el Centro. Tarjeta, nada. Transferencia: solo el Norte.
+    expect(barras.map((b) => b.querySelector('span > span')?.textContent)).toEqual(['Efectivo', 'Pago con QR', 'Tarjeta']);
+    // Efectivo: 100 del Centro + 10 del Norte. QR: 25,50 del Centro + 24,50 del Norte. Tarjeta, nada.
     expect(within(figura).getByRole('button', { name: 'Efectivo: Bs 110,00 cobrado.' })).toBeInTheDocument();
-    expect(within(figura).getByRole('button', { name: 'Pago con QR: Bs 25,50 cobrado.' })).toBeInTheDocument();
+    expect(within(figura).getByRole('button', { name: 'Pago con QR: Bs 50,00 cobrado.' })).toBeInTheDocument();
     expect(within(figura).getByRole('button', { name: 'Tarjeta: Bs 0,00 cobrado.' })).toBeInTheDocument();
-    expect(within(figura).getByRole('button', { name: 'Transferencia: Bs 24,50 cobrado.' })).toBeInTheDocument();
     // El color sigue a la forma de pago, como en todo el panel; la que está en cero no tiene barra.
     expect(barras[0]?.querySelector('rect')).toHaveClass('fill-serie-1');
     expect(barras[1]?.querySelector('rect')).toHaveClass('fill-serie-2');
     expect(barras[2]?.querySelector('rect')).toBeNull();
-    expect(barras[3]?.querySelector('rect')).toHaveClass('fill-serie-4');
     // La más larga llega a todo el ancho, y las demás se miden con su escala.
     expect(barras[0]?.querySelector('[data-barra]')).toHaveAttribute('width', '100%');
-    expect(barras[1]?.querySelector('[data-barra]')).toHaveAttribute('width', '23.18%');
+    expect(barras[1]?.querySelector('[data-barra]')).toHaveAttribute('width', '45.45%');
     // El total general, tal como lo manda el servidor; y la tabla para el lector de pantalla.
     expect(within(tarjeta).getByText('Bs 160,00')).toBeInTheDocument();
     expect(fila(tarjeta, 'Cobrado con cada forma de pago', 'Efectivo')).toEqual(['Efectivo', 'Bs 110,00']);
@@ -846,15 +843,15 @@ describe('La tendencia de lo cobrado — SPEC-KRILINXI-044', () => {
     fireEvent.click(within(await tarjeta()).getByRole('radio', { name: 'Por forma de pago' }));
 
     const formas = await within(await tarjeta()).findByRole('figure', { name: 'Cobrado por día' });
-    expect(formas.querySelectorAll('[data-serie]')).toHaveLength(4);
-    for (const [metodo, n] of [['EFECTIVO', 1], ['QR', 2], ['TARJETA', 3], ['TRANSFERENCIA', 4]] as const) {
+    expect(formas.querySelectorAll('[data-serie]')).toHaveLength(3);
+    for (const [metodo, n] of [['EFECTIVO', 1], ['QR', 2], ['TARJETA', 3]] as const) {
       const { lineas, puntos } = serie(formas, metodo);
       expect(lineas[0]).toHaveClass(`stroke-serie-${n}`);
       expect(puntos[0]).toHaveClass(`fill-serie-${n}`);
       expect(puntos).toHaveLength(3);
     }
     const leyenda = within(formas).getByRole('list', { name: 'Formas de pago' });
-    expect(within(leyenda).getAllByRole('listitem').map((m) => m.textContent)).toEqual(['Efectivo', 'Pago con QR', 'Tarjeta', 'Transferencia']);
+    expect(within(leyenda).getAllByRole('listitem').map((m) => m.textContent)).toEqual(['Efectivo', 'Pago con QR', 'Tarjeta']);
     // El QR solo cobró el 15: su línea sube ese día y baja a cero los otros. Se mide contra el máximo de las formas (100).
     expect(serie(formas, 'QR').puntos.map((p) => p.getAttribute('cy'))).toEqual(['100%', '79.09%', '100%']);
     expect(serie(formas, 'EFECTIVO').puntos.map((p) => p.getAttribute('cy'))).toEqual(['67.2%', '18%', '100%']);
@@ -895,9 +892,9 @@ describe('La tendencia de lo cobrado — SPEC-KRILINXI-044', () => {
 
     const tabla = within(dibujo).getByRole('table', { name: 'Cobrado por día' });
     expect(tabla.parentElement).toHaveClass('sr-only');
-    expect(fila(await tarjeta(), 'Cobrado por día', '15/10/2026')).toEqual(['15/10/2026', 'Bs 125,50', 'Bs 100,00', 'Bs 25,50', 'Bs 0,00', 'Bs 0,00']);
+    expect(fila(await tarjeta(), 'Cobrado por día', '15/10/2026')).toEqual(['15/10/2026', 'Bs 125,50', 'Bs 100,00', 'Bs 25,50', 'Bs 0,00']);
     // El día sin cobros también está en la tabla, en cero.
-    expect(fila(await tarjeta(), 'Cobrado por día', '16/10/2026')).toEqual(['16/10/2026', 'Bs 0,00', 'Bs 0,00', 'Bs 0,00', 'Bs 0,00', 'Bs 0,00']);
+    expect(fila(await tarjeta(), 'Cobrado por día', '16/10/2026')).toEqual(['16/10/2026', 'Bs 0,00', 'Bs 0,00', 'Bs 0,00', 'Bs 0,00']);
   });
 
   it('el total de arriba es el que manda el servidor: el panel no suma los días', async () => {
@@ -994,7 +991,7 @@ describe('El tablero con una pregunta principal y el resto a pedido — SPEC-KRI
     await abrirPanel({ desplegar: false });
     await desplegarMas();
     for (const region of PLEGADAS_) expect(await screen.findByRole('region', { name: region })).toBeInTheDocument();
-    expect(fila(seccion('Cobrado por sucursal'), 'Cobrado por sucursal y forma de pago', 'Centro')[5]).toBe('Bs 125,50');
+    expect(fila(seccion('Cobrado por sucursal'), 'Cobrado por sucursal y forma de pago', 'Centro')[4]).toBe('Bs 125,50');
 
     fireEvent.click(screen.getByText('Ver más estadísticas'));
     await waitFor(() => expect(screen.queryByRole('region', { name: 'Cobrado por sucursal' })).not.toBeInTheDocument());

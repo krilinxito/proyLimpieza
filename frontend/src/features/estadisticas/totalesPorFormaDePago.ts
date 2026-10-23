@@ -15,7 +15,7 @@ import { METODOS_PAGO, type MetodoPago } from '../../lib/dominio';
 import { desdeDecimal, sumar, type Centavos } from '../../lib/money';
 import type { Ingresos } from './types';
 
-/** Una forma de pago con lo cobrado en total, siempre las cuatro y en su orden fijo (`METODOS_PAGO`). */
+/** Una forma de pago con lo cobrado en total, siempre las tres y en su orden fijo (`METODOS_PAGO`). */
 export function totalesPorFormaDePago(ingresos: Ingresos): { metodo: MetodoPago; total: Centavos }[] {
   return METODOS_PAGO.map((metodo) => ({
     metodo,

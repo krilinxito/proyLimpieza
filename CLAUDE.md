@@ -244,7 +244,7 @@ librería** (`features/estadisticas/components/graficos/`, lo vigila un test de 
 pantalla y el texto queda de su tamaño. Las cuentas viven en `escalas.ts`, puras y con su test. Ningún
 dato depende del mouse: cada barra es un botón que, al tocarlo o enfocarlo, escribe su detalle, y cada
 gráfico (`Grafico`) tiene nombre y una tabla `sr-only` con los mismos números, que es donde los tests
-leen los valores. Los colores son `serie-1`…`serie-4` (uno por forma de pago, validados con todas sus
+leen los valores. Los colores son `serie-1`…`serie-3` desde SPEC-KRILINXI-055 (antes eran cuatro; uno por forma de pago, validados con todas sus
 parejas para daltonismo, ver la bitácora) y `antiguedad-1`…`3` en el tema.
 SPEC-KRILINXI-042 hizo de `/estadisticas` un **dashboard**: debajo de los indicadores, una grilla de siete tarjetas
 (`SeccionPanel`: dos por fila desde 1024px, una en angosta; la de ropa recibida ocupa la fila entera), cada una con
@@ -256,8 +256,8 @@ debajo. El detalle en listas (cada boleta, persona o cliente) va plegado en "Ver
 de dinero del frontend, y su test la compara con el total que suma Postgres. Cuando la API lo traiga, se borra.
 SPEC-KRILINXI-044 sumó al dashboard la tarjeta "¿Cómo vino la caja día a día?" (`SeccionTendencia`): un **gráfico de
 líneas del proyecto** (`graficos/Lineas.tsx`, SVG sin `viewBox` y sin librería, con un `<line>` entre cada par de días
-porque una `<polyline>` no admite porcentajes) con lo cobrado cada día, y a elección una línea por forma de pago (cuatro
-como mucho, con los `serie-1…4` y la leyenda de siempre). Pide `GET /api/estadisticas/ingresos-por-dia` (SPEC-KRILINXI-043)
+porque una `<polyline>` no admite porcentajes) con lo cobrado cada día, y a elección una línea por forma de pago (tres
+como mucho desde SPEC-KRILINXI-055, con los `serie-1…3` y la leyenda de siempre). Pide `GET /api/estadisticas/ingresos-por-dia` (SPEC-KRILINXI-043)
 **aparte del panel** (`useIngresosPorDia`, por defecto los últimos 30 días): así el Inicio del admin, que reusa
 `usePanel`, no pide de más. Cada día es un botón sobre el dibujo (tocar o enfocar escribe su detalle), los días sin cobros
 se dibujan en cero sin cortar la línea, y no se suma nada en el frontend. Para los tests, `ingresosPorDiaDePrueba` e
@@ -359,6 +359,11 @@ falla si encuentra una forma de su lista. Una forma nueva que se cuele se agrega
 SPEC-KRILINXI-054 pulió tres piezas compartidas: el ingreso tiene un botón **"Mostrar contraseña"** (solo cambia el `type` del campo; nunca se guarda), la `Paginas` de
 todas las listas es **un solo bloque chico** (botones compactos y letra de renglón), y la **cabecera del marco se acomoda en pantalla chica** (<640px) en dos
 filas, con `order` y un corte de renglón que solo existe en angosto, sin cambiar el orden del DOM. Un test de arquitectura vigila que nadie arme su propia barra de páginas.
+SPEC-KRILINXI-055 **quitó la transferencia como forma de pago**: `metodo_pago` tiene tres valores (EFECTIVO, QR y TARJETA), por la migración
+`005_quitar_transferencia.sql` (recrea el tipo; los cobros que ya eran transferencia pasaron a EFECTIVO con el mismo monto). La API rechaza con 400 una
+transferencia nueva. Las series de los gráficos son tres. Como la línea base de `context/lavanderia_schema.sql` no se edita y sigue diciendo cuatro, los
+tests de dominio (`dominio.test.ts`, de los dos lados) leen la línea base **más** las migraciones: un `CREATE TYPE` posterior pisa al anterior.
+**Después del pull, `npm run migrar --workspace backend`.**
 SPEC-KRILINXI-041 agregó el **Historial de boletas** (`/boletas`, `features/historial/`), en el menú para todos, y **cada uno
 ve lo que le corresponde** (`useModoDelHistorial`, que sale de `useSucursalDeTrabajo`): quien atiende, su sucursal de
 trabajo de los **últimos 30 días**, de la base local y también sin internet (`listarHistorialLocal`, que reusa

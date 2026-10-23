@@ -27,7 +27,7 @@ export const MENSAJES_ACCION = {
   avance: 'Esta ropa ya pasó por ese paso.',
   monto: 'Escribe cuánto paga el cliente, con números mayores que cero, por ejemplo 20 o 20,50.',
   montoMayor: 'El cobro no puede ser mayor que lo que falta pagar.',
-  sinMetodo: 'Elige cómo paga: efectivo, QR, tarjeta o transferencia.',
+  sinMetodo: 'Elige cómo paga: efectivo, QR o tarjeta.',
 } as const;
 
 // La orden con su cliente y su entrega. Los pagos se leen aparte: son varios por orden.

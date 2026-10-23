@@ -156,8 +156,8 @@ describe('Estadísticas model: ingresos por día — SPEC-KRILINXI-043', () => {
     expect(resultado).toEqual({
       total: '15.50',
       porDia: [
-        { fecha: '2025-05-01', total: '15.50', porMetodo: { EFECTIVO: '10.00', QR: '5.50', TARJETA: '0.00', TRANSFERENCIA: '0.00' } },
-        { fecha: '2025-05-02', total: '0.00', porMetodo: { EFECTIVO: '0.00', QR: '0.00', TARJETA: '0.00', TRANSFERENCIA: '0.00' } },
+        { fecha: '2025-05-01', total: '15.50', porMetodo: { EFECTIVO: '10.00', QR: '5.50', TARJETA: '0.00' } },
+        { fecha: '2025-05-02', total: '0.00', porMetodo: { EFECTIVO: '0.00', QR: '0.00', TARJETA: '0.00' } },
       ],
     });
   });

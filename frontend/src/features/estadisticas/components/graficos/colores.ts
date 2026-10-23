@@ -20,7 +20,6 @@ export const COLOR_METODO: Record<MetodoPago, Color> = {
   EFECTIVO: { marca: 'fill-serie-1', muestra: 'bg-serie-1' },
   QR: { marca: 'fill-serie-2', muestra: 'bg-serie-2' },
   TARJETA: { marca: 'fill-serie-3', muestra: 'bg-serie-3' },
-  TRANSFERENCIA: { marca: 'fill-serie-4', muestra: 'bg-serie-4' },
 };
 
 /**
@@ -32,7 +31,6 @@ export const TRAZO_METODO: Record<MetodoPago, string> = {
   EFECTIVO: 'stroke-serie-1',
   QR: 'stroke-serie-2',
   TARJETA: 'stroke-serie-3',
-  TRANSFERENCIA: 'stroke-serie-4',
 };
 
 /** Las barras de una sola serie (la ropa de cada día, lo que recibió cada persona): un solo color. */

@@ -104,7 +104,7 @@ const CONTROLES: [control: string, fondo: string][] = [
  * superficie donde se dibuja. Que las series se distingan entre sí con daltonismo no se mide acá:
  * lo mide el validador de la guía de visualización, y su resultado está en la bitácora.
  */
-const MARCAS = ['serie-1', 'serie-2', 'serie-3', 'serie-4', 'antiguedad-1', 'antiguedad-2', 'antiguedad-3'];
+const MARCAS = ['serie-1', 'serie-2', 'serie-3', 'antiguedad-1', 'antiguedad-2', 'antiguedad-3'];
 
 describe('El tema se lee — SPEC-KRILINXI-022', () => {
   it('la fórmula da lo que dice WCAG en los extremos', () => {

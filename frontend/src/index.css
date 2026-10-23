@@ -87,7 +87,6 @@
   --color-serie-1: #3a83fc;
   --color-serie-2: #e55108;
   --color-serie-3: #0f9958;
-  --color-serie-4: #d14ead;
 
   /* La antigüedad: un solo tono, más oscuro cuanto más vieja la deuda o la ropa. */
   --color-antiguedad-1: #3987e5;
@@ -105,7 +104,7 @@
  *  - `marca` y `peligro` son claros, para leerse como texto sobre la superficie oscura; por eso
  *    `sobre-marca` (el texto encima de un botón) pasa a ser oscuro.
  *  - La antigüedad se aclara al envejecer: sobre fondo oscuro, lo que más resalta es lo más claro.
- *    Las series de los gráficos no cambian: las cuatro pasan el validador de daltonismo también
+ *    Las series de los gráficos no cambian: las tres pasan el validador de daltonismo también
  *    contra esta superficie (ver la bitácora).
  */
 :root[data-tema='oscuro'] {
@@ -146,7 +145,6 @@
   --color-serie-1: #3a83fc;
   --color-serie-2: #e55108;
   --color-serie-3: #0f9958;
-  --color-serie-4: #d14ead;
 
   --color-antiguedad-1: #3b82f6;
   --color-antiguedad-2: #7fb0f7;

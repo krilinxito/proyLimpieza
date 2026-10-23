@@ -1,6 +1,6 @@
 // Los valores válidos del negocio, del lado del servidor — creado en SPEC-ALE186-004.
 //
-// En Postgres son ENUM (`context/lavanderia_schema.sql`). Al dispositivo llegan
+// En Postgres son ENUM (`context/lavanderia_schema.sql` y, desde SPEC-ALE186-019, sus migraciones). Al dispositivo llegan
 // como texto, porque SQLite no tiene ENUM, y de vuelta suben como texto. El
 // frontend los valida en `lib/dominio` para que el empleado se entere al momento;
 // eso es cortesía. La garantía es esta: el backend vuelve a validar al recibir
@@ -16,7 +16,7 @@
 export const ESTADOS_ORDEN = ['RECIBIDO', 'EN_PROCESO', 'LISTO', 'ENTREGADO', 'ANULADO'] as const;
 export const TIPOS_RETIRO = ['CON_BOLETA', 'SIN_BOLETA'] as const;
 export const TIPOS_PAGO = ['ADELANTO', 'PAGO_FINAL'] as const;
-export const METODOS_PAGO = ['EFECTIVO', 'QR', 'TARJETA', 'TRANSFERENCIA'] as const;
+export const METODOS_PAGO = ['EFECTIVO', 'QR', 'TARJETA'] as const;
 
 export type EstadoOrden = (typeof ESTADOS_ORDEN)[number];
 export type TipoRetiro = (typeof TIPOS_RETIRO)[number];

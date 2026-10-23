@@ -132,6 +132,7 @@ describe('Las migraciones llevan los datos de antes — SPEC-ALE186-020', () => 
     expect(await migrar(conexion, CARPETA_DE_MIGRACIONES)).toEqual([
       '003_sucursales_nombre_unico.sql',
       '004_auditoria_registro_id.sql',
+      '005_quitar_transferencia.sql',
     ]);
   });
 
