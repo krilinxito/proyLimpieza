@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-058
 name: Indicador visual de campo correcto en Registrar ropa
 slug: validacion-visual-campos
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-23
 scope:
@@ -16,7 +16,19 @@ scope:
 priority: medium
 depends_on:
   - SPEC-KRILINXI-057
-tests: []
+tests:
+  - backend\tests\http\clientes.test.ts
+  - backend\tests\http\ordenes.test.ts
+  - backend\tests\unit\formatos.test.ts
+  - frontend\src\components\CampoTexto.test.tsx
+  - frontend\src\components\piezas.test.tsx
+  - frontend\src\features\clientes\api\clientesLocal.test.ts
+  - frontend\src\features\mostrador\components\PantallaMostrador.test.tsx
+  - frontend\src\features\mostrador\components\RegistrarEnMostrador.test.tsx
+  - frontend\src\features\ordenes\api\ordenesLocal.test.ts
+  - frontend\src\features\pendientes\components\PantallaParaCorregir.test.tsx
+  - frontend\src\lib\formatos.test.ts
+  - frontend\src\test\tema.test.ts
 ---
 
 ## Descripción
