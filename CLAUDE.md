@@ -373,7 +373,7 @@ SPEC-KRILINXI-057 ordenó **Registrar ropa en dos pasos dentro del mismo `Formul
 mismo, la boleta, con un único "Guardar" al final. El botón de la tarjeta de cliente nuevo dice **"Atrás"**, y volver a elegir cliente no pierde lo escrito de la boleta (su estado vive en el formulario, no en los
 pasos). Dentro del detalle de una boleta del Mostrador hay un botón secundario **"Nueva boleta de este cliente"** (fuera de la fila de acciones, que sigue en cuatro como mucho) que abre Registrar ropa con ese cliente ya elegido.
 Con **una boleta abierta** el Mostrador deja de mostrar "Registrar ropa" y el buscador (las boletas no son rutas aparte: cargan en la misma pantalla, pero ahí ya no se está "en el mostrador"); vuelven al volver a la ficha. Volver a tocar "Mostrador" en el menú **vuelve al principio del mostrador** (`MenuPrincipal` deja una marca en el estado de la dirección y la pantalla la lee con `useReinicioDeRuta`; con algo escrito en Registrar ropa, pregunta antes). Volver al mostrador
-es una **flechita arriba a la izquierda** (`components/BotonAtras`, la segunda excepción a "un ícono nunca va solo"), no un botón al final de la página. No se
+es una **flechita arriba a la izquierda** (`components/BotonAtras`, la segunda excepción a "un ícono nunca va solo"), no un botón al final de la página. Desde 1200px sale al hueco izquierdo del contenido, junto al título; en angosta queda arriba, en su renglón. No se
 creó ruta nueva por boleta: siguen `/registrar-ropa` y `/mostrador?registrar`.
 SPEC-KRILINXI-041 agregó el **Historial de boletas** (`/boletas`, `features/historial/`), en el menú para todos, y **cada uno
 ve lo que le corresponde** (`useModoDelHistorial`, que sale de `useSucursalDeTrabajo`): quien atiende, su sucursal de

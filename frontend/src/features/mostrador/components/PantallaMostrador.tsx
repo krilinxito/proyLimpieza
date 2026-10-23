@@ -168,9 +168,7 @@ export function PantallaMostrador() {
       <div className="mt-6">
         {/* Una flechita arriba, a la izquierda: no hay que bajar hasta el final del formulario para volver (SPEC-KRILINXI-057).
             Con algo escrito, volver lo descartaría: se pregunta antes (SPEC-KRILINXI-048). */}
-        <div className="mb-2">
-          <BotonAtras nombre="Volver al mostrador sin guardar" alTocar={() => (hayEscrito ? setSaliendo(true) : volver())} />
-        </div>
+        <BotonAtras nombre="Volver al mostrador sin guardar" alTocar={() => (hayEscrito ? setSaliendo(true) : volver())} />
         <RegistrarEnMostrador
           clienteId={vista.clienteId}
           alRegistrar={(ropa) => ir({ tipo: 'registrada', ropa })}
@@ -210,11 +208,7 @@ export function PantallaMostrador() {
     <div className="mt-6">
       {/* Con un cliente o una boleta abiertos, una flechita arriba, a la izquierda, vuelve al mostrador (SPEC-KRILINXI-057):
           antes era un botón al final de la página y había que bajar hasta ahí. */}
-      {vista.tipo === 'ficha' && (
-        <div className="mb-4">
-          <BotonAtras nombre="Volver al mostrador" alTocar={() => ir({ tipo: 'inicio' })} />
-        </div>
-      )}
+      {vista.tipo === 'ficha' && <BotonAtras nombre="Volver al mostrador" alTocar={() => ir({ tipo: 'inicio' })} />}
       {!dentroDeUnaBoleta && (
         <>
           {/* A mano en el inicio y en la ficha de un cliente: ahí lo trae elegido. Es la acción principal (SPEC-KRILINXI-037). */}

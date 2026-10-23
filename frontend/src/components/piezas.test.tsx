@@ -181,6 +181,15 @@ describe('BotonAtras: la flechita de volver — SPEC-KRILINXI-057', () => {
     expect(boton.className).toContain('focus-visible:outline-foco');
   });
 
+  it('en pantalla ancha sale al hueco de la izquierda del contenido, a la altura del título; en angosta, arriba, en su renglón', () => {
+    render(<BotonAtras nombre="Volver" alTocar={() => undefined} />);
+    const lugar = screen.getByRole('button', { name: 'Volver' }).parentElement;
+
+    // jsdom no mide: se comprueba con qué clases se armó. Sin ellas (angosta) queda en el flujo, con aire debajo.
+    expect(lugar).toHaveClass('mb-4');
+    expect(lugar).toHaveClass('min-[1200px]:absolute', 'min-[1200px]:top-6', 'min-[1200px]:-left-16', 'min-[1200px]:mb-0');
+  });
+
   it('al tocarlo avisa', () => {
     let veces = 0;
     render(<BotonAtras nombre="Volver" alTocar={() => (veces += 1)} />);

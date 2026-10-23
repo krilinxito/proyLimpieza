@@ -30,7 +30,7 @@ botón «Registrar ropa» de arriba ni el buscador: ahí ya no se está «en el 
 
 Caso 5: volver sin bajar la página. (a) `MenuPrincipal.tsx`: si se toca el destino en el que ya se está, en vez de no hacer nada deja una marca nueva (`state.reinicio`) en la dirección; el hook `useReinicioDeRuta` la lee y
 `PantallaMostrador` vuelve a su inicio (si estaba registrando con algo escrito, abre el aviso de «¿Salir sin guardar?»). Solo reacciona a las marcas que llegan después de montarse: recargar conserva el estado del historial y no debe reiniciar.
-(b) `components/BotonAtras.tsx` es la flechita: reemplaza al botón de texto «Ver toda la ropa en el local» (que estaba al final) y a «Volver al mostrador sin guardar» de Registrar ropa. «Ver toda la ropa de [cliente]» no se movió.
+(b) `components/BotonAtras.tsx` es la flechita, que en pantalla ancha (desde 1200px) sale al hueco vacío a la izquierda del contenido, a la altura del título (`Pantalla` es `relative` y la flechita se posiciona contra esa columna), y en angosta queda arriba, en su renglón: reemplaza al botón de texto «Ver toda la ropa en el local» (que estaba al final) y a «Volver al mostrador sin guardar» de Registrar ropa. «Ver toda la ropa de [cliente]» no se movió.
 
 ## Dónde encaja en la arquitectura
 
