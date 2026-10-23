@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-059
 name: PWA mejor instalable en el celular
 slug: pwa-instalable
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-23
 scope:
