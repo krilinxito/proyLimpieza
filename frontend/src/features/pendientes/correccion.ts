@@ -37,7 +37,7 @@ export const MENSAJES_CORRECCION = {
 export const CAMPOS: Record<string, readonly Campo[]> = {
   ordenes: [
     { clave: 'numero_boleta', etiqueta: 'Número de la boleta', tipo: 'texto' },
-    { clave: 'descripcion', etiqueta: 'Qué ropa deja', tipo: 'texto' },
+    { clave: 'descripcion', etiqueta: 'Qué deja', tipo: 'texto' },
     { clave: 'precio_total', etiqueta: 'Precio (Bs)', tipo: 'monto' },
     { clave: 'fecha_estimada_salida', etiqueta: 'Para cuándo estará lista (si se sabe)', tipo: 'fecha' },
   ],

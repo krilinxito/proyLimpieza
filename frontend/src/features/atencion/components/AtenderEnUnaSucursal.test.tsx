@@ -133,7 +133,7 @@ describe('Atender en una sucursal: el mostrador con la sucursal elegida — SPEC
     await elegirEnBuscador('70123456', /Rosa Quispe/);
     await screen.findByRole('form', { name: 'Datos de la ropa' });
     escribir('Número de la boleta', boleta);
-    escribir('Qué ropa deja', '1 saco');
+    escribir('Qué deja', '1 saco');
     escribir('Precio (Bs)', '30');
     fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
   }

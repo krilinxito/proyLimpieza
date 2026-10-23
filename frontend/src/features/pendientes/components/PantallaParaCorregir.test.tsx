@@ -98,7 +98,7 @@ describe('Corregir lo que no se pudo guardar — SPEC-KRILINXI-013', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Corregir' }));
     const boleta = screen.getByLabelText('Número de la boleta');
     expect(boleta).toHaveValue('001234');
-    expect(screen.getByLabelText('Qué ropa deja')).toHaveValue('2 pantalones');
+    expect(screen.getByLabelText('Qué deja')).toHaveValue('2 pantalones');
     expect(screen.getByLabelText('Precio (Bs)')).toHaveValue('50,00');
     sinJerga();
 
