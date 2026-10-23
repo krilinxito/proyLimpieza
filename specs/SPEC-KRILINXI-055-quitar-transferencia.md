@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-055
 name: Quitar la transferencia como forma de pago
 slug: quitar-transferencia
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-23
 scope:
@@ -16,7 +16,12 @@ scope:
   - docker/powersync/**
 priority: medium
 depends_on: []
-tests: []
+tests:
+  - backend\tests\db\quitarTransferencia.db.test.ts
+  - backend\tests\http\pagos.test.ts
+  - backend\tests\unit\dominio.test.ts
+  - frontend\src\features\estadisticas\components\PantallaEstadisticas.test.tsx
+  - frontend\src\lib\dominio.test.ts
 ---
 
 ## Descripción
