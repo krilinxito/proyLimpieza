@@ -81,6 +81,8 @@ const TEXTOS: [texto: string, fondo: string][] = [
   // tarjeta; y la tarjeta que destaca un número lleva sus rótulos en `texto-suave` sobre `marca-suave`.
   ['marca', 'fondo'],
   ['texto-suave', 'marca-suave'],
+  // SPEC-KRILINXI-052: la marca como texto sobre su fondo suave (opción elegida, pantalla activa).
+  ['marca', 'marca-suave'],
 ];
 
 /**
@@ -93,6 +95,8 @@ const CONTROLES: [control: string, fondo: string][] = [
   ['foco', 'superficie'],
   ['foco', 'fondo'],
   ['peligro', 'superficie'],
+  // SPEC-KRILINXI-052: el borde de la tarjeta que destaca, sobre su propio fondo.
+  ['marca', 'marca-suave'],
 ];
 
 /**

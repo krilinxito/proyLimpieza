@@ -349,6 +349,10 @@ SPEC-KRILINXI-051 le dio a una cuenta dada de baja el botón **"Volver a dar de 
 la API con `enviar()`, con su confirmación). Las tarjetas de Personal ya no marcan "Activa": la insignia es solo para la excepción, "Dada de
 baja", y usuario, rol y sucursal van como pares `<dt>`/`<dd>`. En la misma spec, la etiqueta "Qué ropa deja" pasó a **"Qué deja"** (formulario de
 Registrar ropa y `pendientes/correccion.ts`, que tienen que decir lo mismo).
+SPEC-KRILINXI-052 le dio carácter propio a la app: la marca pasó del azul genérico a un **turquesa de agua limpia** (`marca`, `marca-fuerte`,
+`marca-suave` en los dos temas de `index.css`, con sus pares en `tema.test.ts`), y la tarjeta `destaca` ya no lleva franja a la izquierda, sino el
+borde de la marca completo. El `theme-color` de `index.html` y de `vite.config.ts` es un valor suelto que hay que mantener igual a `--color-marca`. Los
+avisos de información siguen azules, y las series de los gráficos no cambiaron.
 SPEC-KRILINXI-041 agregó el **Historial de boletas** (`/boletas`, `features/historial/`), en el menú para todos, y **cada uno
 ve lo que le corresponde** (`useModoDelHistorial`, que sale de `useSucursalDeTrabajo`): quien atiende, su sucursal de
 trabajo de los **últimos 30 días**, de la base local y también sin internet (`listarHistorialLocal`, que reusa

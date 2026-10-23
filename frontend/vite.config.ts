@@ -46,7 +46,7 @@ export default defineConfig({
         display: 'standalone',
         orientation: 'any',
         background_color: '#ffffff',
-        theme_color: '#1e40af',
+        theme_color: '#0f766e',
         icons: [
           { src: 'icono-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icono-512.png', sizes: '512x512', type: 'image/png' },

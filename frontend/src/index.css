@@ -36,10 +36,10 @@
 @theme {
   --font-sans: 'Atkinson Hyperlegible', ui-sans-serif, system-ui, sans-serif;
 
-  /* La marca: botones principales, la pantalla activa del menú. */
-  --color-marca: #1e40af;
-  --color-marca-fuerte: #1e3a8a;
-  --color-marca-suave: #dbeafe;
+  /* La marca — SPEC-KRILINXI-052: turquesa de agua limpia. Botones principales, la pantalla activa del menú. */
+  --color-marca: #0f766e;
+  --color-marca-fuerte: #115e59;
+  --color-marca-suave: #ccfbf1;
   --color-sobre-marca: #ffffff;
 
   /* La página y lo que se apoya sobre ella. */
@@ -111,9 +111,9 @@
 :root[data-tema='oscuro'] {
   color-scheme: dark;
 
-  --color-marca: #93c5fd;
-  --color-marca-fuerte: #bfdbfe;
-  --color-marca-suave: #1e3a8a;
+  --color-marca: #5eead4;
+  --color-marca-fuerte: #99f6e4;
+  --color-marca-suave: #134e4a;
   --color-sobre-marca: #0f172a;
 
   --color-fondo: #0f172a;

@@ -47,7 +47,7 @@ otra pantalla es un enlace; si cambia lo que muestra la misma pantalla, es un `B
 | Tipo de `Tarjeta` | Cómo se ve | Cuándo |
 |---|---|---|
 | `informa` (por defecto) | Liviana: borde suave, sin sombra | Agrupar datos: la ropa, los pagos, un cliente. |
-| `destaca` | Fondo suave de la marca, franja gruesa a la izquierda | El número que importa: "Cobrado hoy". |
+| `destaca` | Fondo suave de la marca y borde de la marca completo | El número que importa: "Cobrado hoy". |
 | `toca` | Borde firme, sombra y una flecha a la derecha | Entera tocable, lleva a algo: una boleta en una lista. Es un `<button>` o un `<Link>` con `ESTILO_TARJETA.toca` y `<SenalTocable />`, porque una `<section>` no puede ir dentro de un botón. |
 
 **Menos letra:** un texto de ayuda que repite lo que ya dice la etiqueta o el título se quita. Los
