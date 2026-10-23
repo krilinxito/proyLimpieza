@@ -15,9 +15,6 @@
 /** Hasta dónde llega la barra más larga, en % del ancho: el valor va arriba, no en la punta. */
 export const TOPE_BARRA = 100;
 
-/** Hasta dónde llega la columna más alta, en % del alto: arriba va su rótulo. */
-export const TOPE_COLUMNA = 82;
-
 /** Lo mínimo que mide algo que no es cero, para que no desaparezca al lado de uno muy grande. */
 const MINIMO_VISIBLE = 1;
 
@@ -62,25 +59,6 @@ export function rotulosDelEje(cantidad: number, maximo = 6): Set<number> {
   if (cantidad - 1 - anterior <= paso / 2) elegidos.delete(anterior);
   elegidos.add(cantidad - 1);
   return elegidos;
-}
-
-/**
- * Dónde cae el día `indice` de `cantidad` en un gráfico de líneas, en % del ancho: en el centro de su
- * lugar, el mismo donde está su botón (`Lineas`, SPEC-KRILINXI-044). Así el punto y lo que se toca para
- * leerlo son siempre lo mismo.
- */
-export function posicionX(indice: number, cantidad: number): number {
-  if (cantidad <= 0) return 0;
-  return redondear(((indice + 0.5) / cantidad) * 100);
-}
-
-/**
- * Dónde cae un valor en un gráfico de líneas, en % del alto **contando desde arriba** (así mide el SVG): el
- * máximo llega a `TOPE_COLUMNA` de alto, con lugar arriba para respirar, y cero cae sobre la línea de base
- * (100). Un día sin cobros se dibuja en cero: la línea baja, no se corta.
- */
-export function posicionY(valor: number, maximo: number): number {
-  return redondear(100 - largo(valor, maximo, TOPE_COLUMNA));
 }
 
 /** El índice del valor más alto (el primero, si hay empate), o -1 si todo es cero. */

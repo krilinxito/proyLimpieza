@@ -4,7 +4,7 @@ import { useProductividad } from '../hooks/useProductividad';
 import type { Filtro } from '../periodo';
 import type { Productividad } from '../types';
 import { BarrasHorizontales } from './graficos/BarrasHorizontales';
-import { COLOR_UNICO } from './graficos/colores';
+import { COLOR_TARJETA } from './graficos/colores';
 import { masRecibidasPrimero } from './graficos/escalas';
 import { Grafico } from './graficos/Grafico';
 import { Detalle } from './Detalle';
@@ -58,15 +58,16 @@ function PorPersona({ productividad }: { productividad: Productividad }) {
           })),
         }}
       >
-        {(elegir) => (
+        {(elegir, seleccionado) => (
           <BarrasHorizontales
+            seleccionado={seleccionado}
             maximo={Math.max(0, ...filas.map((f) => f.ordenesRecibidas))}
             elegir={elegir}
             barras={ordenadas.map((f) => ({
               clave: clave(f),
               etiqueta: `${f.usuario.nombreCompleto} (${f.sucursal.nombre})`,
               rotulo: `Recibió ${f.ordenesRecibidas}`,
-              tramos: [{ clave: 'recibidas', valor: f.ordenesRecibidas, clase: COLOR_UNICO.marca }],
+              tramos: [{ clave: 'recibidas', valor: f.ordenesRecibidas, clase: COLOR_TARJETA.personas.marca }],
               detalle: `${quien(f)}: ${resumen(f)}`,
             }))}
           />

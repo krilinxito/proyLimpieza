@@ -340,17 +340,21 @@ describe('Panel de estadísticas: volumen, productividad y clientes — SPEC-KRI
 describe('Las barras del volumen sin estilos en línea — SPEC-KRILINXI-020', () => {
   // Desde SPEC-KRILINXI-026 las barras son columnas de un SVG: el alto va en un atributo, no en un
   // `style` ni en una clase. Desde SPEC-KRILINXI-036, en el `<svg data-barra>` que recorta la columna.
-  it('el alto va en un atributo del SVG: la del día con más ropa es la más alta, y un día sin ropa no tiene columna', async () => {
+  it('la columna del día con más ropa es la más alta, y un día sin ropa no tiene columna — SPEC-KRILINXI-063', async () => {
     simularEstadisticas();
     await abrirPanel();
     const volumen = await screen.findByRole('region', { name: 'Ropa recibida' });
-    const columna = (nombre: string) => within(volumen).getByRole('button', { name: nombre }).querySelector('[data-barra]');
+    const columnas = [...volumen.querySelectorAll('.recharts-bar-rectangle path')];
+    const alto = (c: Element | undefined) => Number(c?.getAttribute('height'));
 
-    expect(columna('15/10/2026: 4 boletas (1 anulada)')).toHaveAttribute('height', '82%');
-    expect(columna('14/10/2026: 2 boletas')).toHaveAttribute('height', '41%');
-    expect(columna('16/10/2026: 0 boletas')).toBeNull();
-    expect(volumen.querySelector('[style]')).toBeNull();
+    // 14/10: 2 boletas, 15/10: 4, 16/10: 0. El día en cero no dibuja nada: es un hueco sobre la línea de base.
+    expect(columnas).toHaveLength(2);
+    expect(alto(columnas[1])).toBeCloseTo(alto(columnas[0]) * 2, 0);
+    // El color sale de una clase del tema, no de un atributo escrito acá.
+    expect(volumen.querySelector('.text-ropa')).not.toBeNull();
+    expect(columnas.every((c) => c.getAttribute('fill') === 'currentColor')).toBe(true);
   });
+
 });
 
 describe('El panel como tablero — SPEC-KRILINXI-026', () => {
@@ -421,13 +425,13 @@ describe('El panel como tablero — SPEC-KRILINXI-026', () => {
     const volumen = await screen.findByRole('region', { name: 'Ropa recibida' });
     const porDia = within(volumen).getByRole('figure', { name: 'Ropa recibida por día' });
 
-    // Treinta columnas, también las de los días en cero (i % 4 = 0, el primero de cada cuatro):
-    // 0+1+2+3 siete veces, y 0+1 los dos últimos días, son 43.
-    expect(within(porDia).getAllByRole('button')).toHaveLength(30);
-    expect(within(porDia).getByRole('button', { name: '17/09/2026: 0 boletas' }).querySelector('rect')).toBeNull();
+    // Treinta días en la tabla del lector de pantalla, también los que están en cero (i % 4 = 0, el primero de cada
+    // cuatro), pero solo las columnas con ropa: 0+1+2+3 siete veces, y 0+1 los dos últimos días, son 43 boletas.
+    expect(within(porDia).getAllByRole('row')).toHaveLength(31);
+    expect(porDia.querySelectorAll('.recharts-bar-rectangle path')).toHaveLength(22);
     // El total va arriba del gráfico, y solo seis fechas escritas en el eje: con treinta no entrarían.
     expect(within(volumen).getByText('43 boletas').compareDocumentPosition(porDia)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-    const eje = [...porDia.querySelectorAll('[aria-hidden="true"] > span')].map((s) => s.textContent).filter(Boolean);
+    const eje = [...porDia.querySelectorAll('.recharts-cartesian-axis-tick-value')].map((t) => t.textContent).filter(Boolean);
     expect(eje).toEqual(['17/09', '23/09', '29/09', '05/10', '11/10', '16/10']);
   });
 
@@ -451,9 +455,10 @@ describe('El panel como tablero — SPEC-KRILINXI-026', () => {
 
     const saldos = grafico('Falta cobrar según los días');
     const tramo = (nombre: RegExp) => within(saldos).getByRole('button', { name: nombre });
-    expect(tramo(/^Hasta 7 días/).querySelector('rect')).toHaveClass('fill-antiguedad-1');
-    expect(tramo(/^De 8 a 30 días/).querySelector('rect')).toHaveClass('fill-antiguedad-2');
-    expect(tramo(/^Más de 30 días/).querySelector('rect')).toHaveClass('fill-antiguedad-3');
+    // Lo que se debe lleva su propia rampa, de rosa (SPEC-KRILINXI-063); la ropa sin recoger, la azul de siempre.
+    expect(tramo(/^Hasta 7 días/).querySelector('rect')).toHaveClass('fill-deuda-1');
+    expect(tramo(/^De 8 a 30 días/).querySelector('rect')).toHaveClass('fill-deuda-2');
+    expect(tramo(/^Más de 30 días/).querySelector('rect')).toHaveClass('fill-deuda-3');
     // La cantidad y el monto, rotulados en cada barra; y la barra mide la plata, no las boletas.
     expect(within(tramo(/^De 8 a 30 días/)).getByText('1 boleta — Bs 40,00')).toBeInTheDocument();
     expect(tramo(/^De 8 a 30 días/).querySelector('[data-barra]')).toHaveAttribute('width', '100%');
@@ -487,12 +492,14 @@ describe('El panel como tablero — SPEC-KRILINXI-026', () => {
     const porDia = grafico('Ropa recibida por día');
     expect(within(porDia).getByText('Toca un día para ver cuánta ropa entró.')).toBeInTheDocument();
 
-    // Con el dedo.
-    fireEvent.click(within(porDia).getByRole('button', { name: '15/10/2026: 4 boletas (1 anulada)' }));
+    // Las columnas se recorren con el teclado (SPEC-KRILINXI-063): el gráfico se enfoca con Tab y las flechas pasan de un día a otro.
+    // `focus()` a mano va dentro de `act`, para que React dibuje el detalle antes de mirarlo.
+    const columnas = porDia.querySelector('svg[role="application"]') as SVGElement;
+    act(() => columnas.focus());
+    fireEvent.keyDown(columnas, { key: 'ArrowRight' });
     expect(within(porDia).getByText('15/10/2026: 4 boletas (1 anulada)', { selector: '[aria-live]' })).toBeInTheDocument();
 
-    // Con el teclado: es un botón, se llega con Tab. `focus()` a mano va dentro de `act`, para que
-    // React dibuje el detalle antes de mirarlo (fireEvent lo hace solo; un focus() suelto, no).
+    // Las barras de las demás tarjetas siguen siendo un botón cada una: se llega con Tab.
     const centro = within(grafico('Cobrado por sucursal y forma de pago')).getByRole('button', { name: /^Centro:/ });
     act(() => centro.focus());
     expect(centro).toHaveFocus();
@@ -557,12 +564,17 @@ describe('El panel como tablero — SPEC-KRILINXI-026', () => {
     expect(screen.queryByRole('figure')).not.toBeInTheDocument();
   });
 
-  it('el tablero no tiene ningún estilo en línea', async () => {
+  it('el tablero no tiene ningún estilo en línea, salvo los que Recharts le pone a su contenedor — SPEC-KRILINXI-063', async () => {
     simularEstadisticas();
     await abrirPanel();
     await screen.findByRole('region', { name: 'Resumen' });
-    expect(screen.getByRole('main').querySelector('[style]')).toBeNull();
+    // Recharts mide su contenedor y le pone el tamaño con JavaScript (`element.style`), que la política de seguridad deja pasar;
+    // un `style="…"` escrito en el HTML, no. Se comprobó en el navegador, con la app compilada y su política (ver la bitácora).
+    // Lo que escribe el proyecto, en cambio, sigue sin llevar ninguno.
+    const propios = [...screen.getByRole('main').querySelectorAll('[style]')].filter((e) => !e.closest('.recharts-responsive-container'));
+    expect(propios).toEqual([]);
   });
+
 });
 
 describe('El panel como dashboard — SPEC-KRILINXI-042', () => {
@@ -711,7 +723,7 @@ describe('El panel como dashboard — SPEC-KRILINXI-042', () => {
 
     const barra = within(figura).getByRole('button', { name: /^Rosa Quispe \(70123456\): Vino 3 veces · Pagó Bs 150,00/ });
     expect(within(barra).getByText('Vino 3 veces')).toBeInTheDocument();
-    expect(barra.querySelector('rect')).toHaveClass('fill-serie-1');
+    expect(barra.querySelector('rect')).toHaveClass('fill-clientes');
     expect(fila(tarjeta, 'Veces que vino cada cliente', 'Rosa Quispe (70123456)')).toEqual([
       'Rosa Quispe (70123456)',
       '3 veces',
@@ -758,11 +770,12 @@ describe('El panel como dashboard — SPEC-KRILINXI-042', () => {
 describe('La tendencia de lo cobrado — SPEC-KRILINXI-044', () => {
   const tarjeta = async () => screen.findByRole('region', { name: 'Cobrado por día' });
   const figura = async () => within(await tarjeta()).findByRole('figure', { name: 'Cobrado por día' });
-  /** Las líneas de una serie (los segmentos) y sus puntos, tal como las dibuja el SVG. */
-  const serie = (dibujo: HTMLElement, clave: string) => {
-    const grupo = dibujo.querySelector(`[data-serie="${clave}"]`);
-    return { lineas: [...(grupo?.querySelectorAll('line') ?? [])], puntos: [...(grupo?.querySelectorAll('circle') ?? [])] };
-  };
+  /** Los puntos de una línea (por la clase del color de su relleno), de izquierda a derecha, y su camino. */
+  const serie = (dibujo: HTMLElement, relleno: string) => ({
+    puntos: [...dibujo.querySelectorAll(`circle.recharts-line-dot.${relleno}`)],
+    lineas: [...dibujo.querySelectorAll('.recharts-line')],
+  });
+  const alturaDe = (punto: Element | undefined) => Number(punto?.getAttribute('cy'));
 
   it('pide a la API lo cobrado día por día: los últimos 30 días si no se eligió nada', async () => {
     const servidor = simularEstadisticas();
@@ -793,33 +806,31 @@ describe('La tendencia de lo cobrado — SPEC-KRILINXI-044', () => {
     );
   });
 
-  it('dibuja una línea con el total de cada día: un punto por día y un tramo entre cada par', async () => {
+  it('dibuja una línea con el total de cada día: un punto por día, el más alto arriba', async () => {
     simularEstadisticas();
     await abrirPanel();
     const dibujo = await figura();
 
-    const { lineas, puntos } = serie(dibujo, 'total');
+    const { lineas, puntos } = serie(dibujo, 'fill-caja');
     expect(puntos).toHaveLength(3);
-    expect(lineas).toHaveLength(2);
-    // Cada día en el centro de su lugar: 1/6, 3/6 y 5/6 del ancho. El día más alto (Bs 125,50) llega arriba.
-    expect(puntos.map((p) => p.getAttribute('cx'))).toEqual(['16.67%', '50%', '83.33%']);
-    expect(puntos.map((p) => p.getAttribute('cy'))).toEqual(['73.86%', '18%', '100%']);
-    expect(puntos[0]).toHaveClass('fill-serie-1');
-    expect(lineas[0]).toHaveClass('stroke-serie-1');
+    expect(lineas).toHaveLength(1);
+    // El día más alto (Bs 125,50, el del medio) llega más arriba que el de Bs 12,00 y que el de cero (cy crece hacia abajo).
+    expect(alturaDe(puntos[1])).toBeLessThan(alturaDe(puntos[0]));
+    expect(alturaDe(puntos[0])).toBeLessThan(alturaDe(puntos[2]));
+    // El color de la tarjeta: el matiz de la caja, desde una clase del tema.
+    expect(lineas[0]).toHaveClass('text-caja');
   });
 
   it('un día sin cobros se dibuja en cero y la línea sigue hasta ahí, sin cortarse', async () => {
     simularEstadisticas();
     await abrirPanel();
-    const { lineas, puntos } = serie(await figura(), 'total');
+    const dibujo = await figura();
+    const { puntos } = serie(dibujo, 'fill-caja');
 
-    // El 16/10 no cobró nada: su punto está sobre la línea de base, y el tramo que llega a él existe.
-    expect(puntos[2]?.getAttribute('cy')).toBe('100%');
-    expect(lineas[1]).toHaveAttribute('x2', '83.33%');
-    expect(lineas[1]).toHaveAttribute('y2', '100%');
-    // Y el tramo empieza donde terminó el anterior: sin saltos.
-    expect(lineas[1]?.getAttribute('x1')).toBe(lineas[0]?.getAttribute('x2'));
-    expect(lineas[1]?.getAttribute('y1')).toBe(lineas[0]?.getAttribute('y2'));
+    // El 16/10 no cobró nada: su punto existe, sobre la línea de base (el más bajo), y el camino llega hasta ahí.
+    expect(puntos).toHaveLength(3);
+    expect(Math.max(...puntos.map(alturaDe))).toBe(alturaDe(puntos[2]));
+    expect(dibujo.querySelectorAll('.recharts-line-curve')).toHaveLength(1);
   });
 
   it('con treinta días dibuja treinta puntos, también los que están en cero, y el eje con unas pocas fechas', async () => {
@@ -827,9 +838,9 @@ describe('La tendencia de lo cobrado — SPEC-KRILINXI-044', () => {
     await abrirPanel();
     const dibujo = await figura();
 
-    expect(serie(dibujo, 'total').puntos).toHaveLength(30);
-    expect(within(dibujo).getAllByRole('button')).toHaveLength(30);
-    const eje = [...dibujo.querySelectorAll('[aria-hidden="true"] > span')].map((s) => s.textContent).filter(Boolean);
+    expect(serie(dibujo, 'fill-caja').puntos).toHaveLength(30);
+    expect(within(dibujo).getAllByRole('row')).toHaveLength(31);
+    const eje = [...dibujo.querySelectorAll('.recharts-cartesian-axis-tick-value')].map((t) => t.textContent).filter(Boolean);
     expect(eje).toEqual(['17/09', '23/09', '29/09', '05/10', '11/10', '16/10']);
   });
 
@@ -843,18 +854,22 @@ describe('La tendencia de lo cobrado — SPEC-KRILINXI-044', () => {
     fireEvent.click(within(await tarjeta()).getByRole('radio', { name: 'Por forma de pago' }));
 
     const formas = await within(await tarjeta()).findByRole('figure', { name: 'Cobrado por día' });
-    expect(formas.querySelectorAll('[data-serie]')).toHaveLength(3);
-    for (const [metodo, n] of [['EFECTIVO', 1], ['QR', 2], ['TARJETA', 3]] as const) {
-      const { lineas, puntos } = serie(formas, metodo);
-      expect(lineas[0]).toHaveClass(`stroke-serie-${n}`);
-      expect(puntos[0]).toHaveClass(`fill-serie-${n}`);
-      expect(puntos).toHaveLength(3);
-    }
+    expect(formas.querySelectorAll('.recharts-line')).toHaveLength(3);
+    // Cada forma de pago, con el color de siempre (efectivo azul, QR naranja, tarjeta verde).
+    expect([...formas.querySelectorAll('.recharts-line')].map((l) => [...l.classList].find((c) => c.startsWith('text-')))).toEqual([
+      'text-serie-1',
+      'text-serie-2',
+      'text-serie-3',
+    ]);
+    for (const n of [1, 2, 3]) expect(serie(formas, `fill-serie-${n}`).puntos).toHaveLength(3);
     const leyenda = within(formas).getByRole('list', { name: 'Formas de pago' });
     expect(within(leyenda).getAllByRole('listitem').map((m) => m.textContent)).toEqual(['Efectivo', 'Pago con QR', 'Tarjeta']);
     // El QR solo cobró el 15: su línea sube ese día y baja a cero los otros. Se mide contra el máximo de las formas (100).
-    expect(serie(formas, 'QR').puntos.map((p) => p.getAttribute('cy'))).toEqual(['100%', '79.09%', '100%']);
-    expect(serie(formas, 'EFECTIVO').puntos.map((p) => p.getAttribute('cy'))).toEqual(['67.2%', '18%', '100%']);
+    const qr = serie(formas, 'fill-serie-2').puntos.map(alturaDe);
+    expect(qr[1]).toBeLessThan(qr[0] ?? 0);
+    expect(qr[0]).toBe(qr[2]);
+    // El efectivo (Bs 100,00) llega más arriba que el QR (Bs 25,50).
+    expect(alturaDe(serie(formas, 'fill-serie-1').puntos[1])).toBeLessThan(qr[1] ?? 0);
   });
 
   it('volver a "El total" deja una sola línea', async () => {
@@ -864,23 +879,22 @@ describe('La tendencia de lo cobrado — SPEC-KRILINXI-044', () => {
     fireEvent.click(within(await tarjeta()).getByRole('radio', { name: 'Por forma de pago' }));
     fireEvent.click(within(await tarjeta()).getByRole('radio', { name: 'El total' }));
 
-    expect((await figura()).querySelectorAll('[data-serie]')).toHaveLength(1);
+    await waitFor(async () => expect((await figura()).querySelectorAll('.recharts-line')).toHaveLength(1));
   });
 
-  it('nada se ve solo con el mouse: tocar o enfocar un día escribe su detalle en palabras', async () => {
+  it('nada se ve solo con el mouse: recorrer los días con el teclado escribe su detalle en palabras — SPEC-KRILINXI-063', async () => {
     simularEstadisticas();
     await abrirPanel();
     const dibujo = await figura();
     expect(within(dibujo).getByText('Toca un día para ver cuánto se cobró y con qué.')).toBeInTheDocument();
 
-    // Con el dedo.
-    fireEvent.click(within(dibujo).getByRole('button', { name: '15/10/2026: Bs 125,50. Efectivo Bs 100,00, Pago con QR Bs 25,50.' }));
+    // Con el teclado: el gráfico se enfoca con Tab y las flechas pasan de un día a otro. Un día sin cobros también se puede leer.
+    const superficie = dibujo.querySelector('svg[role="application"]') as SVGElement;
+    expect(superficie).toHaveAttribute('tabindex', '0');
+    act(() => superficie.focus());
+    fireEvent.keyDown(superficie, { key: 'ArrowRight' });
     expect(within(dibujo).getByText('15/10/2026: Bs 125,50. Efectivo Bs 100,00, Pago con QR Bs 25,50.', { selector: '[aria-live]' })).toBeInTheDocument();
-
-    // Con el teclado: es un botón, se llega con Tab. Un día sin cobros también se puede leer.
-    const vacio = within(dibujo).getByRole('button', { name: '16/10/2026: Bs 0,00.' });
-    act(() => vacio.focus());
-    expect(vacio).toHaveFocus();
+    fireEvent.keyDown(superficie, { key: 'ArrowRight' });
     expect(within(dibujo).getByText('16/10/2026: Bs 0,00.', { selector: '[aria-live]' })).toBeInTheDocument();
     sinJerga();
   });
@@ -935,11 +949,12 @@ describe('La tendencia de lo cobrado — SPEC-KRILINXI-044', () => {
     expect(await within(await tarjeta()).findByText('Las estadísticas necesitan conexión.')).toBeInTheDocument();
   });
 
-  it('el gráfico no tiene estilos en línea', async () => {
+  it('el gráfico no escribe estilos en línea, salvo los que Recharts le pone a su contenedor — SPEC-KRILINXI-063', async () => {
     simularEstadisticas();
     await abrirPanel();
 
-    expect((await figura()).querySelector('[style]')).toBeNull();
+    const propios = [...(await figura()).querySelectorAll('[style]')].filter((e) => !e.closest('.recharts-responsive-container'));
+    expect(propios).toEqual([]);
   });
 });
 

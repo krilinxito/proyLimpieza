@@ -4,7 +4,7 @@ import { desdeDecimal } from '../../../lib/money';
 import { useIngresosPorDia } from '../hooks/useIngresosPorDia';
 import { fechaParaLeer, type Filtro } from '../periodo';
 import type { IngresoDia } from '../types';
-import { COLOR_METODO, COLOR_UNICO, TRAZO_METODO } from './graficos/colores';
+import { COLOR_METODO, COLOR_TARJETA } from './graficos/colores';
 import { hayDatos } from './graficos/escalas';
 import { Grafico } from './graficos/Grafico';
 import { Leyenda } from './graficos/Leyenda';
@@ -102,8 +102,8 @@ function Tendencia({ dias, total, vista, alCambiar }: { dias: IngresoDia[]; tota
               }))}
               series={
                 vista === 'total'
-                  ? [{ clave: 'total', trazo: TRAZO_METODO.EFECTIVO, relleno: COLOR_UNICO.marca, valores: totales }]
-                  : porForma.map((f) => ({ clave: f.metodo, trazo: TRAZO_METODO[f.metodo], relleno: COLOR_METODO[f.metodo].marca, valores: f.valores }))
+                  ? [{ clave: 'total', trazo: COLOR_TARJETA.caja.trazo, relleno: COLOR_TARJETA.caja.marca, valores: totales }]
+                  : porForma.map((f) => ({ clave: f.metodo, trazo: COLOR_METODO[f.metodo].trazo, relleno: COLOR_METODO[f.metodo].marca, valores: f.valores }))
               }
             />
           </>

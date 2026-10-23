@@ -22,6 +22,8 @@ type Props = {
   /** El valor de la barra más larga: todas se miden con la misma escala. */
   maximo: number;
   elegir: (detalle: string) => void;
+  /** El detalle de la barra elegida (SPEC-KRILINXI-063): esa se ve entera y las demás, más suaves. */
+  seleccionado?: string | null;
 };
 
 /** El alto de la barra en px, por debajo del tope de 24 de la guía: la barra no llena su lugar. */
@@ -40,7 +42,7 @@ const ALTO = 24;
  * pieza (`PuntaRedondeada`); en una apilada, solo el corte entre un tramo y el siguiente lleva una
  * línea del color de la superficie, que se ve como un espacio entre uno y otro (SPEC-KRILINXI-036).
  */
-export function BarrasHorizontales({ barras, maximo, elegir }: Props) {
+export function BarrasHorizontales({ barras, maximo, elegir, seleccionado = null }: Props) {
   return (
     <ul className="grid gap-2">
       {barras.map((barra) => {
@@ -52,7 +54,9 @@ export function BarrasHorizontales({ barras, maximo, elegir }: Props) {
               type="button"
               aria-label={barra.detalle}
               {...alUsar(elegir, barra.detalle)}
-              className={`grid w-full gap-1 p-2 text-left ${CLASES_MARCA_TOCABLE}`}
+              className={`grid w-full gap-1 p-2 text-left transition-opacity ${CLASES_MARCA_TOCABLE} ${
+                seleccionado !== null && seleccionado !== barra.detalle ? 'opacity-60' : ''
+              }`}
             >
               <span className="flex flex-wrap items-baseline justify-between gap-x-4">
                 <span className="text-xl font-semibold text-texto">{barra.etiqueta}</span>

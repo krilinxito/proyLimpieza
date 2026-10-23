@@ -1,7 +1,8 @@
-import { indiceDelMayor, largo, porciento, rotulosDelEje, TOPE_COLUMNA } from './escalas';
-import { alUsar, CLASES_MARCA_TOCABLE } from './Grafico';
-import { COLOR_UNICO } from './colores';
-import { PuntaRedondeada } from './PuntaRedondeada';
+import { Bar, BarChart, Cell, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { animar } from './animacion';
+import type { Color } from './colores';
+import { DetalleFlotante } from './DetalleFlotante';
+import { indiceDelMayor, rotulosDelEje } from './escalas';
 
 export type Columna = {
   clave: string;
@@ -12,62 +13,78 @@ export type Columna = {
   detalle: string;
 };
 
-type Props = { columnas: readonly Columna[]; elegir: (detalle: string) => void };
+type Props = {
+  columnas: readonly Columna[];
+  elegir: (detalle: string) => void;
+  /** El detalle del dato elegido: ese se ve entero y los demás, más suaves. */
+  seleccionado?: string | null;
+  /** El matiz de la tarjeta (`COLOR_TARJETA`). */
+  color: Color;
+};
+
+const ALTO = 192;
 
 /**
- * Columnas a lo largo del tiempo — SPEC-KRILINXI-026: una por día, también los que quedan en cero,
- * que se ven como un hueco sobre la línea de base (un día sin ropa es un dato).
+ * Columnas a lo largo del tiempo — SPEC-KRILINXI-026, dibujadas con Recharts desde SPEC-KRILINXI-063: una por día,
+ * también los que quedan en cero, que se ven como un hueco sobre la línea de base (un día sin ropa es un dato).
  *
- * Cada columna es un `<button>` que reparte el ancho con las demás (`flex-1`), así no hace falta
- * calcular anchos ni escribirlos en un `style`. Solo la más alta lleva su número arriba: un número
- * en cada columna no lo lee nadie. Las demás se leen tocándolas, y en la tabla del gráfico.
+ * La interacción es la de Recharts, que no depende del mouse: se enfoca con Tab y las flechas recorren los días, tocar
+ * una columna la elige, y el detalle del día elegido se escribe debajo (`DetalleFlotante`) y se resalta en el dibujo.
+ * Solo la columna más alta lleva su número arriba: un número en cada columna no lo lee nadie.
+ *
+ * El color es una clase del tema (`text-ropa`) en el contenedor, y cada columna pinta con `currentColor`: así sigue al
+ * tema claro y al oscuro sin escribir ningún color acá, y una columna apagada (la que no está elegida) solo cambia su
+ * `fillOpacity`.
  */
-export function Columnas({ columnas, elegir }: Props) {
-  const maximo = Math.max(0, ...columnas.map((c) => c.valor));
+export function Columnas({ columnas, elegir, seleccionado = null, color }: Props) {
   const mayor = indiceDelMayor(columnas.map((c) => c.valor));
   const rotulos = rotulosDelEje(columnas.length);
+  const animada = animar();
 
   return (
-    <div>
-      <div className="flex h-48 items-end gap-0.5 border-b-2 border-borde pt-8">
-        {columnas.map((columna, i) => {
-          const alto = largo(columna.valor, maximo, TOPE_COLUMNA);
-          return (
-            <button
-              key={columna.clave}
-              type="button"
-              aria-label={columna.detalle}
-              {...alUsar(elegir, columna.detalle)}
-              className={`flex h-full min-w-0 flex-1 justify-center ${CLASES_MARCA_TOCABLE}`}
-            >
-              <svg aria-hidden="true" width="100%" height="100%" className="block max-w-6 overflow-visible">
-                {alto > 0 && (
-                  <PuntaRedondeada
-                    x="0"
-                    y={porciento(100 - alto)}
-                    width="100%"
-                    height={porciento(alto)}
-                    hacia="arriba"
-                    clase={COLOR_UNICO.marca}
-                  />
-                )}
-                {i === mayor && (
-                  <text x="50%" y={porciento(100 - alto)} dy="-8" textAnchor="middle" className="fill-texto text-lg font-semibold">
-                    {columna.valor}
+    <div className={`mt-4 ${color.trazo}`}>
+      <ResponsiveContainer width="100%" height={ALTO} initialDimension={{ width: 640, height: ALTO }}>
+        <BarChart
+          data={[...columnas]}
+          margin={{ top: 28, right: 24, bottom: 0, left: 24 }}
+          barCategoryGap="12%"
+          // Tocar una columna la elige también donde el toque no mueve ningún puntero (una tablet).
+          onClick={(estado) => {
+            const elegida = columnas[Number(estado.activeTooltipIndex)];
+            if (elegida) elegir(elegida.detalle);
+          }}
+        >
+          <XAxis
+            dataKey="eje"
+            interval={0}
+            tickLine={false}
+            tickFormatter={(eje: string, i: number) => (rotulos.has(i) ? eje : '')}
+            axisLine={{ className: 'stroke-borde', strokeWidth: 2 }}
+            tick={{ className: 'fill-texto-suave', fontSize: 16 }}
+          />
+          <YAxis hide domain={[0, 'dataMax']} />
+          <Tooltip
+            isAnimationActive={false}
+            cursor={{ className: 'fill-fondo' }}
+            content={(p) => <DetalleFlotante active={p.active} payload={p.payload} detalleDe={(c: Columna) => c.detalle} elegir={elegir} />}
+          />
+          <Bar dataKey="valor" radius={[4, 4, 0, 0]} maxBarSize={24} isAnimationActive={animada}>
+            {columnas.map((columna) => (
+              <Cell key={columna.clave} fill="currentColor" fillOpacity={seleccionado !== null && seleccionado !== columna.detalle ? 0.35 : 1} />
+            ))}
+            <LabelList
+              dataKey="valor"
+              content={({ x, y, width, index, value }) =>
+                index === mayor ? (
+                  <text x={Number(x) + Number(width) / 2} y={Number(y) - 8} textAnchor="middle" className="fill-texto text-lg font-semibold">
+                    {String(value)}
                   </text>
-                )}
-              </svg>
-            </button>
-          );
-        })}
-      </div>
-      <div aria-hidden="true" className="mt-1 flex gap-0.5">
-        {columnas.map((columna, i) => (
-          <span key={columna.clave} className="flex min-w-0 flex-1 justify-center text-base whitespace-nowrap text-texto-suave">
-            {rotulos.has(i) ? columna.eje : ''}
-          </span>
-        ))}
-      </div>
+                ) : null
+              }
+            />
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
     </div>
   );
 }

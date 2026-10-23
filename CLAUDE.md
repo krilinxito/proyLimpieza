@@ -240,8 +240,8 @@ de cada orden es una `Insignia` con el tono de `TONO_ESTADO` (`features/ordenes/
 `estadoEfectivo`), el detalle agrupa en `Tarjeta` (con `nivel={3}` dentro de una sección que ya tiene
 su `h2`) y los mensajes son `Aviso`. Cada dato del detalle sigue siendo un par `<dt>`/`<dd>`.
 SPEC-KRILINXI-026 hizo de `/estadisticas` un **tablero**: arriba cuatro indicadores (`Indicadores`), y
-cada sección con su gráfico y, debajo, el detalle de siempre. Los gráficos son **SVG del proyecto, sin
-librería** (`features/estadisticas/components/graficos/`, lo vigila un test de arquitectura): sin
+cada sección con su gráfico y, debajo, el detalle de siempre. Los gráficos eran **SVG del proyecto, sin
+librería** (desde SPEC-KRILINXI-063, solo las columnas y las líneas pasaron a Recharts; las barras siguen siendo así; lo vigila un test de arquitectura): sin
 `viewBox` y con las posiciones en porcentajes como atributos (no son `style`), así se estiran con la
 pantalla y el texto queda de su tamaño. Las cuentas viven en `escalas.ts`, puras y con su test. Ningún
 dato depende del mouse: cada barra es un botón que, al tocarlo o enfocarlo, escribe su detalle, y cada
@@ -257,13 +257,25 @@ debajo. El detalle en listas (cada boleta, persona o cliente) va plegado en "Ver
 (`features/estadisticas/totalesPorFormaDePago.ts`), porque `/ingresos` solo lo trae por sucursal; es la única suma
 de dinero del frontend, y su test la compara con el total que suma Postgres. Cuando la API lo traiga, se borra.
 SPEC-KRILINXI-044 sumó al dashboard la tarjeta "¿Cómo vino la caja día a día?" (`SeccionTendencia`): un **gráfico de
-líneas del proyecto** (`graficos/Lineas.tsx`, SVG sin `viewBox` y sin librería, con un `<line>` entre cada par de días
-porque una `<polyline>` no admite porcentajes) con lo cobrado cada día, y a elección una línea por forma de pago (tres
+líneas del proyecto** (`graficos/Lineas.tsx`; desde SPEC-KRILINXI-063 se dibuja con Recharts, ver abajo) con lo cobrado cada día, y a elección una línea por forma de pago (tres
 como mucho desde SPEC-KRILINXI-055, con los `serie-1…3` y la leyenda de siempre). Pide `GET /api/estadisticas/ingresos-por-dia` (SPEC-KRILINXI-043)
 **aparte del panel** (`useIngresosPorDia`, por defecto los últimos 30 días): así el Inicio del admin, que reusa
 `usePanel`, no pide de más. Cada día es un botón sobre el dibujo (tocar o enfocar escribe su detalle), los días sin cobros
 se dibujan en cero sin cortar la línea, y no se suma nada en el frontend. Para los tests, `ingresosPorDiaDePrueba` e
 `ingresosPorDiaDeDias` en `test/estadisticasDePrueba.ts`.
+SPEC-KRILINXI-063 hizo el tablero **más vistoso e interactivo**, y con la persona a cargo se decidió **adoptar Recharts** (3.10) para los gráficos del tiempo.
+La librería vive **solo en `features/estadisticas/components/graficos/`** (`Columnas` para la ropa recibida por día, `Lineas` para la caja día a día) y un test
+de arquitectura lo vigila: ninguna otra pieza la importa, ni se admite otra librería. Las barras horizontales (sucursal, forma de pago, antigüedad, personas y
+clientes) siguen siendo SVG propios, porque llevan texto y montos por fila. Lo que pesa: el `index` del build pasó de 482 a 857 kB (de 146 a 254 kB comprimido) y el
+precache, de 8,08 a 8,44 MiB, sin archivos nuevos y lejos del tope de 5 MB por archivo. **La política de seguridad no cambió**: Recharts no escribe `style="…"` en el
+HTML; mide su contenedor y le pone el tamaño con JavaScript (`element.style`), que la política deja pasar. Se comprobó en el navegador (Edge, la app compilada y su
+meta de CSP): cero violaciones. El test de "nada de estilos en línea" ahora deja pasar solo lo que cuelga de `.recharts-responsive-container`. La interacción es la de
+Recharts y no depende del mouse: el gráfico se enfoca con Tab, las flechas recorren los días, tocar un día lo elige, y su detalle va a la región `aria-live` de siempre
+(`DetalleFlotante`) además de flotar junto al dato; cada gráfico conserva su tabla `sr-only`. El color sale de una clase del tema (`text-ropa`) y el dibujo pinta con
+`currentColor`. **Una paleta propia por tarjeta**: `caja`, `ropa`, `personas` y `clientes` (un matiz cada una) y la rampa `deuda-1…3` (rosa) para lo que se debe; las
+tarjetas de formas de pago siguen con `serie-1…3`, y la ropa sin recoger, con `antiguedad-1…3`. Van en los dos bloques de `index.css`, con su par de contraste en `tema.test.ts`
+y en el DESIGN.md; los matices de tarjetas vecinas se validaron para daltonismo (ver la bitácora). Un gráfico nuevo con Recharts va en `graficos/`, y animar solo si
+`animar()` lo dice (no con `prefers-reduced-motion`, ni en los tests).
 SPEC-KRILINXI-050 puso orden en el tablero: a la vista, los cuatro indicadores y **tres tarjetas** (la caja día a día, con qué se pagó y lo
 que falta cobrar); las otras cinco (por sucursal, ropa recibida, sin recoger, productividad y clientes) están bajo **"Ver más estadísticas"**
 (`VerMas`, un `<details>` controlado que no monta sus hijos cerrado). La productividad salió de `usePanel` a `useProductividad`: como los clientes, no se
@@ -503,7 +515,7 @@ en `npm run dev`.
 
 **Frontend** — React + Vite + TypeScript + Tailwind + axios, empaquetado como **PWA**
 (`vite-plugin-pwa`, SPEC-KRILINXI-011: manifest para instalarla en la tablet y un service
-worker propio en `src/pwa/`), con el SDK web de PowerSync para la base local. Los WASM de
+worker propio en `src/pwa/`), con el SDK web de PowerSync para la base local y **Recharts** para los gráficos del tiempo (SPEC-KRILINXI-063, solo en `estadisticas/components/graficos/`). Los WASM de
 PowerSync pesan hasta 2,5 MB: el tope del precache está en 5 MB por archivo en
 `vite.config.ts`, y el test del build (`src/pwa/build.test.ts`) falla si alguno queda afuera.
 

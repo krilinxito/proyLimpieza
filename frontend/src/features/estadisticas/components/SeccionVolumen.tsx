@@ -1,5 +1,6 @@
 import { fechaParaLeer } from '../periodo';
 import type { Volumen } from '../types';
+import { COLOR_TARJETA } from './graficos/colores';
 import { Columnas } from './graficos/Columnas';
 import { hayDatos } from './graficos/escalas';
 import { Grafico } from './graficos/Grafico';
@@ -31,9 +32,11 @@ export function SeccionVolumen({ volumen, periodo }: { volumen: Volumen; periodo
           filas: volumen.porDia.map((dia) => ({ clave: dia.fecha, celdas: [fechaParaLeer(dia.fecha), delDia(dia)] })),
         }}
       >
-        {(elegir) => (
+        {(elegir, seleccionado) => (
           <Columnas
+            color={COLOR_TARJETA.ropa}
             elegir={elegir}
+            seleccionado={seleccionado}
             columnas={volumen.porDia.map((dia) => ({
               clave: dia.fecha,
               valor: dia.ordenes,

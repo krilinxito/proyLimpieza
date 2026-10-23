@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { apilar, hayDatos, indiceDelMayor, largo, masRecibidasPrimero, porciento, posicionX, posicionY, rotulosDelEje, TOPE_BARRA, TOPE_COLUMNA } from './escalas';
+import { apilar, hayDatos, indiceDelMayor, largo, masRecibidasPrimero, porciento, rotulosDelEje, TOPE_BARRA } from './escalas';
 
 describe('Las cuentas de los gráficos — SPEC-KRILINXI-026', () => {
   describe('largo', () => {
@@ -96,43 +96,5 @@ describe('Las cuentas de los gráficos — SPEC-KRILINXI-026', () => {
   it('porciento escribe el atributo del SVG con dos decimales como mucho', () => {
     expect(porciento(100 / 3)).toBe('33.33%');
     expect(porciento(50)).toBe('50%');
-  });
-});
-
-describe('Las cuentas de un gráfico de líneas — SPEC-KRILINXI-044', () => {
-  describe('posicionX', () => {
-    it('cada día en el centro de su lugar, repartidos parejo por todo el ancho', () => {
-      expect([0, 1, 2].map((i) => posicionX(i, 3))).toEqual([16.67, 50, 83.33]);
-    });
-
-    it('un solo día cae en el medio, y sin días no divide por cero', () => {
-      expect(posicionX(0, 1)).toBe(50);
-      expect(posicionX(0, 0)).toBe(0);
-    });
-
-    it('coincide con el centro de la columna de un gráfico que reparte el ancho en partes iguales', () => {
-      // Con treinta días, el primero está a medio lugar del borde: (1/30)/2 del ancho.
-      expect(posicionX(0, 30)).toBe(1.67);
-      expect(posicionX(29, 30)).toBe(98.33);
-    });
-  });
-
-  describe('posicionY', () => {
-    it('el máximo llega arriba (a TOPE_COLUMNA de alto), y se mide desde arriba como el SVG', () => {
-      expect(posicionY(400, 400)).toBe(100 - TOPE_COLUMNA);
-    });
-
-    it('cero cae sobre la línea de base, y un máximo en cero no divide por cero', () => {
-      expect(posicionY(0, 400)).toBe(100);
-      expect(posicionY(0, 0)).toBe(100);
-    });
-
-    it('lo que vale la mitad queda a mitad de camino entre la base y el máximo', () => {
-      expect(posicionY(200, 400)).toBe(100 - TOPE_COLUMNA / 2);
-    });
-
-    it('algo chiquito al lado de algo enorme igual se despega de la base', () => {
-      expect(posicionY(1, 1_000_000)).toBeLessThan(100);
-    });
   });
 });

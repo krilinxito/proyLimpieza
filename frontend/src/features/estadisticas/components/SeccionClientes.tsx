@@ -4,7 +4,7 @@ import { fechaParaLeer, type Filtro } from '../periodo';
 import type { Atenciones } from '../types';
 import { Detalle } from './Detalle';
 import { BarrasHorizontales } from './graficos/BarrasHorizontales';
-import { COLOR_UNICO } from './graficos/colores';
+import { COLOR_TARJETA } from './graficos/colores';
 import { hayDatos } from './graficos/escalas';
 import { Grafico } from './graficos/Grafico';
 import { AvisoDeTarjeta, Esqueleto } from './Esqueleto';
@@ -54,15 +54,16 @@ export function SeccionClientes({ filtro, periodo }: { filtro: Filtro; periodo: 
               })),
             }}
           >
-            {(elegir) => (
+            {(elegir, seleccionado) => (
               <BarrasHorizontales
+                seleccionado={seleccionado}
                 maximo={Math.max(0, ...estado.datos.clientes.map((c) => c.ordenes))}
                 elegir={elegir}
                 barras={estado.datos.clientes.map((c) => ({
                   clave: c.cliente.id,
                   etiqueta: c.cliente.nombre,
                   rotulo: `Vino ${veces(c.ordenes)}`,
-                  tramos: [{ clave: 'veces', valor: c.ordenes, clase: COLOR_UNICO.marca }],
+                  tramos: [{ clave: 'veces', valor: c.ordenes, clase: COLOR_TARJETA.clientes.marca }],
                   detalle: `${c.cliente.nombre} (${c.cliente.telefono}): ${resumen(c)}`,
                 }))}
               />
