@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { Aviso, type TipoAviso } from './Aviso';
 import { Insignia, type TonoInsignia } from './Insignia';
+import { Paginas } from './Paginas';
 import { ESTILO_TARJETA, SenalTocable, Tarjeta } from './Tarjeta';
 
 describe('Aviso — SPEC-KRILINXI-022', () => {
@@ -115,5 +116,46 @@ describe('Tarjeta: la que informa, la que destaca y la que se toca — SPEC-KRIL
     );
     const boton = screen.getByRole('button', { name: 'Boleta 001234' });
     expect(boton.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+  });
+});
+
+describe('Paginas en un solo bloque — SPEC-KRILINXI-054', () => {
+  it('los dos botones y el texto van juntos en un solo recuadro, dentro de una sola barra', () => {
+    render(<Paginas pagina={2} total={25} porPagina={10} irAPagina={() => undefined} nombre="Páginas de prueba" />);
+    const barra = screen.getByRole('navigation', { name: 'Páginas de prueba' });
+
+    // Un solo nav, y un solo recuadro adentro con todo: nada suelto al lado.
+    expect(screen.getAllByRole('navigation')).toHaveLength(1);
+    expect(barra.children).toHaveLength(1);
+    const bloque = within(barra.firstElementChild as HTMLElement);
+    expect(bloque.getByRole('button', { name: 'Anteriores' })).toBeInTheDocument();
+    expect(bloque.getByText('Página 2 de 3')).toBeInTheDocument();
+    expect(bloque.getByRole('button', { name: 'Siguientes' })).toBeInTheDocument();
+  });
+
+  it('es más chico que antes: botones compactos (48px, de dedo) y letra de renglón', () => {
+    render(<Paginas pagina={1} total={25} porPagina={10} irAPagina={() => undefined} nombre="Páginas de prueba" />);
+    for (const nombre of ['Anteriores', 'Siguientes']) {
+      expect(screen.getByRole('button', { name: nombre })).toHaveClass('min-h-12', 'text-lg');
+    }
+    expect(screen.getByText('Página 1 de 3')).toHaveClass('text-lg');
+  });
+
+  it('con todo en una página sigue diciendo "Página 1 de 1", con los dos botones apagados', () => {
+    render(<Paginas pagina={1} total={3} porPagina={10} irAPagina={() => undefined} nombre="Páginas de prueba" />);
+    expect(screen.getByText('Página 1 de 1')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Anteriores' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Siguientes' })).toBeDisabled();
+  });
+
+  it('con la lista vacía no se dibuja, y los botones llaman a irAPagina con la página vecina', () => {
+    const { container } = render(<Paginas pagina={1} total={0} porPagina={10} irAPagina={() => undefined} nombre="Vacía" />);
+    expect(container).toBeEmptyDOMElement();
+
+    const visitadas: number[] = [];
+    render(<Paginas pagina={2} total={25} porPagina={10} irAPagina={(p) => visitadas.push(p)} nombre="Con páginas" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Anteriores' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Siguientes' }));
+    expect(visitadas).toEqual([1, 3]);
   });
 });

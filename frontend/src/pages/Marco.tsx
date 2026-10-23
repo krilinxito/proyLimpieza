@@ -77,7 +77,9 @@ export function Marco() {
         acciones={
           usuario && (
             <>
-              <DejarDeAtender />
+              <div className="order-6 sm:order-none">
+                <DejarDeAtender />
+              </div>
               <BarraSesion />
             </>
           )

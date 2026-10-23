@@ -383,3 +383,13 @@ describe('Las listas largas se paginan — SPEC-KRILINXI-041', () => {
     expect(culpables).toEqual([]);
   });
 });
+
+describe('La barra de páginas se dibuja en un solo lugar — SPEC-KRILINXI-054', () => {
+  it('ningún archivo fuera de components/Paginas.tsx arma su propia barra "Anteriores · Página X de Y · Siguientes"', () => {
+    const culpables = archivosFuente('features', 'pages', 'hooks', 'components')
+      .filter(({ ruta }) => ruta !== 'components/Paginas.tsx')
+      .filter(({ fuente }) => /\bAnteriores\b|\bSiguientes\b|Página \{/.test(sinComentarios(fuente)))
+      .map(({ ruta }) => ruta);
+    expect(culpables).toEqual([]);
+  });
+});
