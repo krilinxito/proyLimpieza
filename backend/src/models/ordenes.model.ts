@@ -156,8 +156,17 @@ export interface BoletaDelHistorial {
   precioTotal: string;
   /** `null` mientras no se entregó. */
   precioFinal: string | null;
+  /** Quién se llevó la ropa — SPEC-KRILINXI-060. `null` mientras no se entregó. */
+  retiro: Retiro | null;
   pagado: string;
   saldo: string;
+}
+
+/** Cómo se retiró la ropa. Nombre y carnet solo vienen si fue SIN_BOLETA (el schema los exige). */
+export interface Retiro {
+  tipo: 'CON_BOLETA' | 'SIN_BOLETA';
+  nombre: string | null;
+  carnet: string | null;
 }
 
 interface FilaHistorial {
@@ -174,6 +183,9 @@ interface FilaHistorial {
   fecha_estimada_salida: string | null;
   precio_total: string;
   precio_final: string | null;
+  tipo_retiro: 'CON_BOLETA' | 'SIN_BOLETA' | null;
+  retirado_por_nombre: string | null;
+  retirado_por_carnet: string | null;
   pagado: string;
   saldo: string;
 }
@@ -196,6 +208,7 @@ const HISTORIAL = `
            o.cliente_id, c.nombre AS cliente_nombre, c.telefono AS cliente_telefono,
            o.descripcion, o.estado, o.fecha_entrada, o.fecha_estimada_salida,
            o.precio_total, e.precio_final,
+           e.tipo_retiro, e.retirado_por_nombre, e.retirado_por_carnet,
            v.total_pagado::numeric(14,2)    AS pagado,
            v.saldo_pendiente::numeric(14,2) AS saldo
       FROM vw_saldos v
@@ -260,7 +273,7 @@ export async function listar(
             descripcion, estado,
             to_char(${horaDelNegocio('fecha_entrada', '$3')}, 'YYYY-MM-DD HH24:MI:SS') AS fecha_entrada,
             to_char(fecha_estimada_salida, 'YYYY-MM-DD') AS fecha_estimada_salida,
-            precio_total, precio_final, pagado, saldo
+            precio_total, precio_final, tipo_retiro, retirado_por_nombre, retirado_por_carnet, pagado, saldo
        FROM historial
       ORDER BY historial.fecha_entrada DESC, id DESC
       LIMIT $9 OFFSET $10`,
@@ -280,6 +293,10 @@ export async function listar(
       fechaEstimadaSalida: fila.fecha_estimada_salida,
       precioTotal: fila.precio_total,
       precioFinal: fila.precio_final,
+      retiro:
+        fila.tipo_retiro === null
+          ? null
+          : { tipo: fila.tipo_retiro, nombre: fila.retirado_por_nombre, carnet: fila.retirado_por_carnet },
       pagado: fila.pagado,
       saldo: fila.saldo,
     })),

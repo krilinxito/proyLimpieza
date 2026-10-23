@@ -30,6 +30,7 @@ interface Pagina {
     fechaEntrada: string;
     precioTotal: string;
     precioFinal: string | null;
+    retiro: { tipo: string; nombre: string | null; carnet: string | null } | null;
     pagado: string;
     saldo: string;
     sucursal: { id: string; nombre: string };
@@ -105,6 +106,38 @@ describe('Historial de boletas: el saldo se calcula en Postgres — SPEC-KRILINX
 
     expect(boletas[0]?.sucursal).toEqual({ id: esc.sucursalId, nombre: expect.any(String) });
     expect(boletas[0]?.cliente).toEqual({ id: clienteId, nombre: 'Rosa Quispe', telefono: '70123456' });
+  });
+});
+
+describe('Historial de boletas: quién retiró la ropa — SPEC-KRILINXI-060', () => {
+  it('una boleta entregada sin boleta trae el nombre y el carnet de quien retiró', async () => {
+    const esc = await escenario();
+    const orden = await crearOrden(esc, { estado: 'LISTO', precioTotal: '20.00' });
+    await crearPago(orden, esc, { monto: '20.00' });
+    await crearEntrega(orden, esc, { precioFinal: '20.00', sinBoleta: { nombre: 'Luis Mamani', carnet: '1234567 LP' } });
+
+    const { boletas } = await historial(esc);
+
+    expect(boletas[0]?.retiro).toEqual({ tipo: 'SIN_BOLETA', nombre: 'Luis Mamani', carnet: '1234567 LP' });
+  });
+
+  it('una entregada con boleta dice solo el tipo', async () => {
+    const esc = await escenario();
+    const orden = await crearOrden(esc, { estado: 'LISTO', precioTotal: '20.00' });
+    await crearEntrega(orden, esc, { precioFinal: '20.00' });
+
+    const { boletas } = await historial(esc);
+
+    expect(boletas[0]?.retiro).toEqual({ tipo: 'CON_BOLETA', nombre: null, carnet: null });
+  });
+
+  it('una boleta sin entregar no trae retiro', async () => {
+    const esc = await escenario();
+    await crearOrden(esc, { estado: 'LISTO' });
+
+    const { boletas } = await historial(esc);
+
+    expect(boletas[0]?.retiro).toBeNull();
   });
 });
 

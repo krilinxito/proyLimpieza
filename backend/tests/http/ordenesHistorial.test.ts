@@ -25,6 +25,7 @@ const BOLETA = {
   fechaEstimadaSalida: '2026-10-03',
   precioTotal: '45.50',
   precioFinal: '50.00',
+  retiro: { tipo: 'SIN_BOLETA' as const, nombre: 'Luis Mamani', carnet: '1234567 LP' },
   pagado: '20.00',
   saldo: '30.00',
 };

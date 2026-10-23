@@ -12,6 +12,7 @@
 //   crearOrden(esc, {...})  Una orden de ese escenario (por defecto LISTO, de
 //                           Bs 45,50). Se retoca solo lo que el test necesita.
 //   crearPago(orden, esc, {...}) / crearEntrega(orden, esc, {...})
+//                           (`sinBoleta: {nombre, carnet}` en el retiro: SPEC-KRILINXI-060)
 //                           Un cobro o un retiro con la fecha que el test elija
 //                           (ISO con zona, como la manda el dispositivo) —
 //                           SPEC-ALE186-008, para las estadísticas.
@@ -171,13 +172,24 @@ export async function pagarOrden(orden: OrdenCreada, esc: Escenario, monto?: str
 export async function crearEntrega(
   orden: OrdenCreada,
   esc: Escenario,
-  campos: { precioFinal: string },
+  campos: { precioFinal: string; sinBoleta?: { nombre: string; carnet: string } },
 ): Promise<void> {
+  // SPEC-KRILINXI-060: `sinBoleta` registra el retiro SIN_BOLETA con quien lo hizo.
+  const { sinBoleta } = campos;
   await pool.query(
     `WITH o AS (UPDATE ordenes SET estado = 'ENTREGADO' WHERE id = $2 RETURNING id, sucursal_id)
-     INSERT INTO entregas (id, orden_id, sucursal_id, tipo_retiro, usuario_entrega_id, precio_final)
-     SELECT $1, o.id, o.sucursal_id, 'CON_BOLETA', $3, $4 FROM o`,
-    [randomUUID(), orden.id, esc.usuarioId, campos.precioFinal],
+     INSERT INTO entregas (id, orden_id, sucursal_id, tipo_retiro, retirado_por_nombre, retirado_por_carnet,
+                           usuario_entrega_id, precio_final)
+     SELECT $1, o.id, o.sucursal_id, $5::tipo_retiro, $6, $7, $3, $4 FROM o`,
+    [
+      randomUUID(),
+      orden.id,
+      esc.usuarioId,
+      campos.precioFinal,
+      sinBoleta ? 'SIN_BOLETA' : 'CON_BOLETA',
+      sinBoleta?.nombre ?? null,
+      sinBoleta?.carnet ?? null,
+    ],
   );
 }
 
