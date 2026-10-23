@@ -2,9 +2,9 @@
 name: Lavandería
 description: Un mostrador sin sorpresas — letra grande, botones de dedo, un solo camino por pantalla y nada que obligue a leer de más.
 colors:
-  azul-del-mostrador: "#1e40af"
-  azul-del-mostrador-fuerte: "#1e3a8a"
-  azul-suave: "#dbeafe"
+  turquesa-de-agua: "#0f766e"
+  turquesa-de-agua-fuerte: "#115e59"
+  turquesa-suave: "#ccfbf1"
   blanco-sobre-marca: "#ffffff"
   papel-frio: "#f1f5f9"
   superficie-blanca: "#ffffff"
@@ -73,14 +73,14 @@ spacing:
   2xl: "24px"
 components:
   button-primary:
-    backgroundColor: "{colors.azul-del-mostrador}"
+    backgroundColor: "{colors.turquesa-de-agua}"
     textColor: "{colors.blanco-sobre-marca}"
     typography: "{typography.label}"
     rounded: "{rounded.xl}"
     padding: "12px 24px"
     height: "56px"
   button-primary-hover:
-    backgroundColor: "{colors.azul-del-mostrador-fuerte}"
+    backgroundColor: "{colors.turquesa-de-agua-fuerte}"
   button-secondary:
     backgroundColor: "{colors.superficie-blanca}"
     textColor: "{colors.tinta-de-pizarra}"
@@ -100,7 +100,7 @@ components:
   button-peligro-hover:
     backgroundColor: "{colors.rojo-sin-vuelta-atras-fuerte}"
   button-navegacion:
-    textColor: "{colors.azul-del-mostrador}"
+    textColor: "{colors.turquesa-de-agua}"
     typography: "{typography.label}"
     rounded: "{rounded.xl}"
     height: "56px"
@@ -110,7 +110,7 @@ components:
     rounded: "{rounded.2xl}"
     padding: "20px"
   card-destaca:
-    backgroundColor: "{colors.azul-suave}"
+    backgroundColor: "{colors.turquesa-suave}"
     textColor: "{colors.tinta-de-pizarra}"
     rounded: "{rounded.2xl}"
     padding: "20px"
@@ -163,7 +163,7 @@ components:
 
 **Creative North Star: "El mostrador sin sorpresas"**
 
-Un sistema visual hecho para quien atiende de pie, con prisa y muchas veces sin anteojos: cada cosa está donde se espera, se llama como en el negocio y nada se mueve ni se esconde. Es **plano y claro**: superficies lisas separadas por bordes, letra grande, un solo azul para lo que hay que hacer ahora y rojo solo para lo que no tiene vuelta atrás. La personalidad no está en el adorno sino en la **previsibilidad**: una pantalla nueva se entiende porque se parece a las que ya se conocen.
+Un sistema visual hecho para quien atiende de pie, con prisa y muchas veces sin anteojos: cada cosa está donde se espera, se llama como en el negocio y nada se mueve ni se esconde. Es **plano y claro**: superficies lisas separadas por bordes, letra grande, un solo turquesa para lo que hay que hacer ahora y rojo solo para lo que no tiene vuelta atrás. La personalidad no está en el adorno sino en la **previsibilidad**: una pantalla nueva se entiende porque se parece a las que ya se conocen.
 
 El sistema rechaza explícitamente **una app de oficina sobrecargada de datos**: columnas, tablas densas y letra chica son lo contrario del mostrador. Lo que no cabe en una tarjeta se pagina o se pliega, no se aprieta.
 
@@ -176,11 +176,11 @@ El sistema rechaza explícitamente **una app de oficina sobrecargada de datos**:
 
 ## Colors
 
-Un solo azul de marca sobre un fondo frío y neutro, con cuatro tonos de aviso y una paleta aparte, validada para daltonismo, que solo usan los gráficos. Todos los valores salen de `src/index.css` (`@theme`); este documento los describe, no los reemplaza.
+Un solo turquesa de agua limpia como marca sobre un fondo frío y neutro, con cuatro tonos de aviso y una paleta aparte, validada para daltonismo, que solo usan los gráficos. Todos los valores salen de `src/index.css` (`@theme`); este documento los describe, no los reemplaza.
 
 ### Primary
-- **Azul del mostrador** (#1e40af): la marca. El botón principal, la pantalla activa del menú, el nombre del negocio. Con el hover pasa al **Azul del mostrador fuerte** (#1e3a8a). Su texto es **Blanco sobre marca** (#ffffff).
-- **Azul suave** (#dbeafe): el fondo de lo elegido (una opción marcada, la pantalla activa del menú, una tarjeta que destaca un número).
+- **Turquesa de agua** (#0f766e): la marca. El botón principal, la pantalla activa del menú, el nombre del negocio. Con el hover pasa al **Turquesa de agua fuerte** (#115e59). Su texto es **Blanco sobre marca** (#ffffff).
+- **Turquesa suave** (#ccfbf1): el fondo de lo elegido (una opción marcada, la pantalla activa del menú, una tarjeta que destaca un número).
 
 ### Neutral
 - **Papel frío** (#f1f5f9): el fondo de la página y el de un botón secundario al pasar por encima.
@@ -189,7 +189,7 @@ Un solo azul de marca sobre un fondo frío y neutro, con cuatro tonos de aviso y
 - **Tinta suave** (#475569): el texto secundario (períodos, ayudas, valores de segundo orden).
 - **Borde firme** (#64748b): el borde de lo que se toca (campos, botón secundario). Llega a 3:1 contra el blanco, como pide WCAG.
 - **Borde suave** (#e2e8f0): el de lo que solo agrupa (tarjetas, cabecera, separadores). Decorativo.
-- **Naranja de foco** (#c2410c): el anillo del teclado, para que se vea sobre el blanco y sobre el azul.
+- **Naranja de foco** (#c2410c): el anillo del teclado, para que se vea sobre el blanco y sobre el turquesa.
 
 ### Avisos (cada uno con fondo, texto y borde)
 - **Información:** fondo #eff6ff, texto #1e3a8a, borde #93c5fd.
@@ -207,7 +207,7 @@ Los mismos tokens con otro valor (`:root[data-tema='oscuro']`); ningún componen
 
 | Para qué | Valor en oscuro |
 |---|---|
-| Marca / su hover / su fondo suave / texto sobre marca | #93c5fd / #bfdbfe / #1e3a8a / #0f172a |
+| Marca / su hover / su fondo suave / texto sobre marca | #5eead4 / #99f6e4 / #134e4a / #0f172a |
 | Fondo / superficie | #0f172a / #1e293b |
 | Texto / texto suave | #f1f5f9 / #cbd5e1 |
 | Borde firme / borde suave | #94a3b8 / #334155 |
@@ -276,7 +276,7 @@ Grandes, firmes y obvios. Todos pintan solo con tokens del tema y llevan el anil
 
 ### Buttons
 - **Shape:** 12px, borde de 2px, 56px de alto como mínimo (48px el `compacto`, para una fila de acciones).
-- **Primario:** lleno de azul del mostrador, texto blanco, sombra sutil, a todo el ancho. **Uno solo por pantalla**: lo que hay que hacer ahora ("Registrar ropa", "Entregar").
+- **Primario:** lleno de turquesa de agua, texto blanco, sombra sutil, a todo el ancho. **Uno solo por pantalla**: lo que hay que hacer ahora ("Registrar ropa", "Entregar").
 - **Secundario:** con borde firme sobre la superficie. Otra acción posible ("Cancelar", "Cobrar").
 - **Peligro:** lleno de rojo y **siempre con el ícono de alerta**. Lo que no tiene vuelta atrás ("Anular").
 - **Navegación:** sin caja, subrayado, como un enlace, con la flecha de volver. No hace nada: lleva a otro lado ("Volver a la lista"). Un enlace que lleva a otra pantalla es `EnlaceBoton`; si cambia lo que muestra la misma pantalla, es `Boton`.
@@ -284,14 +284,14 @@ Grandes, firmes y obvios. Todos pintan solo con tokens del tema y llevan el anil
 
 ### Cards / Containers
 - **Informa** (por defecto): superficie blanca, borde suave de 1px, 16px de esquina, 20px por dentro. Agrupa datos.
-- **Destaca:** fondo azul suave y una franja gruesa a la izquierda. Un número que importa ("Cobrado hoy").
+- **Destaca:** fondo turquesa suave y borde turquesa completo (sin franja de un solo lado). Un número que importa ("Cobrado hoy").
 - **Toca:** borde firme de 2px, sombra media y una flecha a la derecha. Entera tocable: una boleta en una lista.
 
 ### Inputs / Fields
 - **Style:** etiqueta siempre visible encima (nunca un placeholder en su lugar), campo de 56px, borde de 2px, esquina de 12px.
 - **Focus:** el anillo naranja del tema.
 - **Error:** borde rojo, ícono y un mensaje que dice qué hacer, en español y sin códigos.
-- **Opciones elegibles** (cómo paga, sucursal, estado): casillas de 56px con borde; la elegida se marca con borde azul y fondo azul suave **y** texto en negrita.
+- **Opciones elegibles** (cómo paga, sucursal, estado): casillas de 56px con borde; la elegida se marca con borde turquesa y fondo turquesa suave **y** texto en negrita.
 
 ### Insignias y avisos
 - **Insignia:** píldora con la palabra del estado ("Listo para retirar") y un tono: neutro, información, éxito, advertencia o peligro. Qué tono lleva cada estado lo decide cada pantalla.
@@ -301,7 +301,7 @@ Grandes, firmes y obvios. Todos pintan solo con tokens del tema y llevan el anil
 Cuadro de 16px sobre un velo oscuro. Dice **qué va a pasar** ("Esta acción no se puede deshacer") y el verbo de la acción ("Sí, anular"), no "Aceptar". El foco empieza en "Cancelar": un Enter apurado no puede anular nada.
 
 ### Navigation
-- **Menú:** barra lateral (desde 1024px) o cajón. Cada destino mide 56px y lleva ícono y palabra; el actual se distingue por **negrita, una barra de 4px a la izquierda y fondo azul suave**, colgados de `aria-current="page"`.
+- **Menú:** barra lateral (desde 1024px) o cajón. Cada destino mide 56px y lleva ícono y palabra; el actual se distingue por **negrita, una barra de 4px a la izquierda y fondo turquesa suave**, colgados de `aria-current="page"`.
 - **Conexión:** una píldora en la cabecera, corta y en palabras ("Con internet", "Sin internet · 3 por guardar"); al tocarla, la frase completa.
 
 ### Gráficos

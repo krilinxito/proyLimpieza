@@ -5,8 +5,8 @@ import { Icono } from './iconos';
  * Los tres tipos de tarjeta — SPEC-KRILINXI-037. Antes eran todas el mismo recuadro blanco, y no
  * se veía qué se podía tocar:
  *  - `informa` (la de siempre): agrupa datos. Liviana, sin sombra, con el borde apenas marcado.
- *  - `destaca`: un número que importa ("Cobrado hoy"). Sobre el color suave de la marca, con una
- *    franja gruesa a la izquierda.
+ *  - `destaca`: un número que importa ("Cobrado hoy"). Sobre el color suave de la marca, con el
+ *    borde de la marca completo (SPEC-KRILINXI-052: antes una franja gruesa a la izquierda).
  *  - `toca`: entera tocable, lleva a algo. Borde firme (el de los campos), sombra, y la flecha de
  *    `SenalTocable` a la derecha. No la arma este componente: un botón o un enlace no pueden llevar
  *    una `<section>` adentro, así que usan `ESTILO_TARJETA.toca` (`TarjetaOrden`, `FilaBoleta`).
@@ -15,7 +15,7 @@ export type TipoTarjeta = 'informa' | 'destaca' | 'toca';
 
 export const ESTILO_TARJETA: Record<TipoTarjeta, string> = {
   informa: 'rounded-2xl border border-borde-suave bg-superficie p-5',
-  destaca: 'rounded-2xl border border-l-8 border-marca bg-marca-suave p-5',
+  destaca: 'rounded-2xl border-2 border-marca bg-marca-suave p-5',
   toca:
     'rounded-2xl border-2 border-borde bg-superficie p-4 shadow-md transition-colors hover:border-marca ' +
     'focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-foco',

@@ -88,13 +88,15 @@ describe('Tarjeta: la que informa, la que destaca y la que se toca — SPEC-KRIL
     expect(tarjeta.className).not.toMatch(/shadow/);
   });
 
-  it('la que destaca un número va sobre el color suave de la marca, con una franja', () => {
+  it('la que destaca un número va sobre el color suave de la marca, con su borde completo (SPEC-KRILINXI-052)', () => {
     render(
       <Tarjeta titulo="Cobrado hoy" tipo="destaca">
         Bs 120,00
       </Tarjeta>,
     );
-    expect(screen.getByRole('region', { name: 'Cobrado hoy' })).toHaveClass('bg-marca-suave', 'border-l-8');
+    expect(screen.getByRole('region', { name: 'Cobrado hoy' })).toHaveClass('bg-marca-suave', 'border-2', 'border-marca');
+    // Sin franja de un solo lado: se distingue por el fondo y el borde entero.
+    expect(screen.getByRole('region', { name: 'Cobrado hoy' }).className).not.toMatch(/border-l-/);
   });
 
   it('las tres se distinguen por su forma, no solo por el color', () => {

@@ -4,7 +4,7 @@
   "title": "Design System: Lavandería",
   "extensions": {
     "colorMeta": {
-      "azul-del-mostrador": { "role": "primary", "displayName": "Azul del mostrador", "canonical": "#1e40af", "tonalRamp": ["#dbeafe", "#1e40af", "#1e3a8a"] },
+      "turquesa-de-agua": { "role": "primary", "displayName": "Turquesa de agua", "canonical": "#0f766e", "tonalRamp": ["#ccfbf1", "#0f766e", "#115e59"] },
       "papel-frio": { "role": "neutral", "displayName": "Papel frío", "canonical": "#f1f5f9" },
       "tinta-de-pizarra": { "role": "neutral", "displayName": "Tinta de pizarra", "canonical": "#0f172a" },
       "naranja-de-foco": { "role": "accent", "displayName": "Naranja de foco", "canonical": "#c2410c" },
@@ -41,7 +41,7 @@
       "refersTo": "button-primary",
       "description": "Lo que hay que hacer ahora. Uno solo por pantalla.",
       "html": "<button class=\"ds-btn-primario\">Registrar ropa</button>",
-      "css": ".ds-btn-primario { display: inline-flex; align-items: center; justify-content: center; gap: 12px; width: 100%; min-height: 56px; padding: 12px 24px; font: 700 1.25rem/1.4 'Atkinson Hyperlegible', system-ui, sans-serif; color: #ffffff; background: #1e40af; border: 2px solid #1e40af; border-radius: 12px; box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1); transition: background-color 150ms, border-color 150ms; cursor: pointer; } .ds-btn-primario:hover { background: #1e3a8a; border-color: #1e3a8a; }"
+      "css": ".ds-btn-primario { display: inline-flex; align-items: center; justify-content: center; gap: 12px; width: 100%; min-height: 56px; padding: 12px 24px; font: 700 1.25rem/1.4 'Atkinson Hyperlegible', system-ui, sans-serif; color: #ffffff; background: #0f766e; border: 2px solid #0f766e; border-radius: 12px; box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1); transition: background-color 150ms, border-color 150ms; cursor: pointer; } .ds-btn-primario:hover { background: #115e59; border-color: #115e59; }"
     },
     {
       "name": "Botón secundario",
@@ -65,7 +65,7 @@
       "refersTo": "button-navegacion",
       "description": "Sin caja y subrayado: no hace nada, lleva a otro lado.",
       "html": "<button class=\"ds-btn-navegacion\">Volver a la lista</button>",
-      "css": ".ds-btn-navegacion { display: inline-flex; align-items: center; gap: 12px; min-height: 56px; padding: 12px 4px; font: 700 1.25rem/1.4 'Atkinson Hyperlegible', system-ui, sans-serif; color: #1e40af; background: transparent; border: 2px solid transparent; border-radius: 12px; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; cursor: pointer; } .ds-btn-navegacion:hover { text-decoration-thickness: 4px; }"
+      "css": ".ds-btn-navegacion { display: inline-flex; align-items: center; gap: 12px; min-height: 56px; padding: 12px 4px; font: 700 1.25rem/1.4 'Atkinson Hyperlegible', system-ui, sans-serif; color: #0f766e; background: transparent; border: 2px solid transparent; border-radius: 12px; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; cursor: pointer; } .ds-btn-navegacion:hover { text-decoration-thickness: 4px; }"
     },
     {
       "name": "Tarjeta que informa",
@@ -81,7 +81,7 @@
       "refersTo": "card-toca",
       "description": "Entera tocable: borde firme, sombra media y una flecha a la derecha.",
       "html": "<button class=\"ds-tarjeta-toca\"><span><strong>Boleta 001234</strong><br>Rosa Quispe</span><span aria-hidden=\"true\">›</span></button>",
-      "css": ".ds-tarjeta-toca { display: flex; width: 100%; align-items: center; gap: 12px; justify-content: space-between; padding: 16px; text-align: left; color: #0f172a; background: #ffffff; border: 2px solid #64748b; border-radius: 16px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); font: 400 1.25rem/1.4 'Atkinson Hyperlegible', system-ui, sans-serif; transition: border-color 150ms; cursor: pointer; } .ds-tarjeta-toca:hover { border-color: #1e40af; } .ds-tarjeta-toca span:last-child { color: #1e40af; font-size: 2rem; }"
+      "css": ".ds-tarjeta-toca { display: flex; width: 100%; align-items: center; gap: 12px; justify-content: space-between; padding: 16px; text-align: left; color: #0f172a; background: #ffffff; border: 2px solid #64748b; border-radius: 16px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); font: 400 1.25rem/1.4 'Atkinson Hyperlegible', system-ui, sans-serif; transition: border-color 150ms; cursor: pointer; } .ds-tarjeta-toca:hover { border-color: #0f766e; } .ds-tarjeta-toca span:last-child { color: #0f766e; font-size: 2rem; }"
     },
     {
       "name": "Insignia de estado",
@@ -110,7 +110,7 @@
   ],
   "narrative": {
     "northStar": "El mostrador sin sorpresas",
-    "overview": "Un sistema visual hecho para quien atiende de pie, con prisa y muchas veces sin anteojos: cada cosa está donde se espera, se llama como en el negocio y nada se mueve ni se esconde. Es plano y claro: superficies lisas separadas por bordes, letra grande, un solo azul para lo que hay que hacer ahora y rojo solo para lo que no tiene vuelta atrás. Rechaza explícitamente una app de oficina sobrecargada de datos.",
+    "overview": "Un sistema visual hecho para quien atiende de pie, con prisa y muchas veces sin anteojos: cada cosa está donde se espera, se llama como en el negocio y nada se mueve ni se esconde. Es plano y claro: superficies lisas separadas por bordes, letra grande, un solo turquesa para lo que hay que hacer ahora y rojo solo para lo que no tiene vuelta atrás. Rechaza explícitamente una app de oficina sobrecargada de datos.",
     "keyCharacteristics": [
       "Letra de 18px de base y botones de al menos 56px de alto.",
       "Una sola acción principal a la vista por pantalla.",

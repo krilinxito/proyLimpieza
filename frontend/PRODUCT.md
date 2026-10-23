@@ -43,7 +43,7 @@ Un sistema hecho a la medida de este negocio y de las personas que lo usan: **en
 
 ## Brand Commitments
 
-Ninguna identidad de marca está fijada: el nombre es solo "Lavandería", no hay logo ni paleta obligatoria. El tema azul actual puede evolucionar. (Confirmado por el usuario.)
+Ninguna identidad de marca está fijada: el nombre es solo "Lavandería", no hay logo ni paleta obligatoria. La marca es hoy un turquesa de agua limpia (SPEC-KRILINXI-052) y puede seguir evolucionando. (Confirmado por el usuario.)
 
 ## Evidence on Hand
 
