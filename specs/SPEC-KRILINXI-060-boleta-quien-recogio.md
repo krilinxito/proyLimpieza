@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-060
 name: Mostrar quién retiró la ropa cuando fue sin boleta
 slug: boleta-quien-recogio
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-23
 scope:
