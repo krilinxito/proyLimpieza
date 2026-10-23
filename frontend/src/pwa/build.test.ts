@@ -10,6 +10,7 @@
  * el patrón de archivos, los WASM de PowerSync dejan de guardarse y nada falla… hasta que una
  * sucursal se queda sin internet y la base local no abre. Este test lo dice antes.
  */
+import { readFileSync } from 'node:fs';
 import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -131,5 +132,65 @@ describe('PWA: la política de seguridad del contenido — SPEC-KRILINXI-020', (
     const html = await readFile(join(salida, 'index.html'), 'utf8');
     expect(html).not.toMatch(/<script(?![^>]*\bsrc=)[^>]*>/);
     expect(html).not.toMatch(/<style\b|\sstyle="/);
+  });
+});
+
+describe('PWA: la app instalada en el celular — SPEC-KRILINXI-059', () => {
+  /** El turquesa de la marca, de index.css: el manifest y el index.html tienen que decir lo mismo. */
+  const marca = () => /--color-marca:\s*(#[0-9a-fA-F]{6})/.exec(readFileSync(join(RAIZ, 'src/index.css'), 'utf8'))?.[1]?.toLowerCase();
+
+  type Manifest = {
+    id: string;
+    name: string;
+    short_name: string;
+    theme_color: string;
+    background_color: string;
+    display: string;
+    start_url: string;
+    scope: string;
+    icons: { src: string; sizes: string; purpose?: string }[];
+  };
+
+  it('tiene nombre y nombre corto (que entra debajo del ícono), una identidad fija y abre a pantalla completa en "/"', async () => {
+    const manifest = (await leerJson('manifest.webmanifest')) as Manifest;
+    expect(manifest.name).toBe('Lavandería');
+    // Debajo del ícono caben unas 12 letras: más largo se corta.
+    expect(manifest.short_name.length).toBeLessThanOrEqual(12);
+    expect(manifest).toMatchObject({ id: '/', display: 'standalone', start_url: '/', scope: '/' });
+  });
+
+  it('la barra del sistema y la pantalla de arranque son del turquesa de la marca (los dos, y los de index.css)', async () => {
+    const manifest = (await leerJson('manifest.webmanifest')) as Manifest;
+    expect(marca()).toMatch(/^#[0-9a-f]{6}$/);
+    expect(manifest.theme_color.toLowerCase()).toBe(marca());
+    expect(manifest.background_color.toLowerCase()).toBe(marca());
+    // El index.html (la barra del navegador, antes de que cargue el manifest) dice lo mismo.
+    expect((await readFile(join(salida, 'index.html'), 'utf8')).toLowerCase()).toContain(`<meta name="theme-color" content="${marca()}"`);
+  });
+
+  it('trae el ícono de 192, el de 512 y el "maskable" de 512, que Android recorta con la forma que prefiera', async () => {
+    const { icons } = (await leerJson('manifest.webmanifest')) as Manifest;
+    const comunes = icons.filter((i) => i.purpose === undefined || i.purpose === 'any');
+    expect(comunes.map((i) => i.sizes).sort()).toEqual(['192x192', '512x512']);
+    expect(icons.filter((i) => i.purpose === 'maskable').map((i) => i.sizes)).toEqual(['512x512']);
+    // Y los tres archivos están en el build.
+    for (const icono of icons) expect(await readdir(salida)).toContain(icono.src);
+  });
+
+  it('el iPhone sabe cómo llamar a la app cuando se agrega a la pantalla de inicio', async () => {
+    expect(await readFile(join(salida, 'index.html'), 'utf8')).toContain('name="apple-mobile-web-app-title" content="Lavandería"');
+  });
+
+  it('abre sin internet en cualquier pantalla: el manifest y los íconos también quedan guardados, y la API y PowerSync, no', async () => {
+    const sw = await readFile(join(salida, 'sw.js'), 'utf8');
+    for (const archivo of ['manifest.webmanifest', 'icono-192.png', 'icono-512.png', 'icono-maskable-512.png']) {
+      expect(sw, `falta guardar ${archivo}`).toContain(archivo);
+    }
+    // Lo que se guarda son archivos del propio sitio: cada entrada del precache es una ruta relativa, ninguna dirección de la API ni
+    // de PowerSync. (El service worker sí trae las direcciones de los servicios y la palabra "/api" en su código: son las reglas que
+    // dicen que eso nunca se guarda, y las prueban `navegacion.test.ts` y `sw.ts`.)
+    const guardados = [...sw.matchAll(/"url":"([^"]+)"/g)].map((m) => m[1] ?? '');
+    expect(guardados.length).toBeGreaterThan(10);
+    expect(guardados.filter((url) => /^[a-z]+:/i.test(url) || url.startsWith('/') || /(^|\/)api(\/|$)/.test(url))).toEqual([]);
   });
 });

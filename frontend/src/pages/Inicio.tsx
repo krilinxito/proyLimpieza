@@ -1,3 +1,4 @@
+import { AvisoInstalar } from '../components/AvisoInstalar';
 import { AtenderEnUnaSucursal } from '../features/atencion/components/AtenderEnUnaSucursal';
 import { useSucursalDeTrabajo } from '../features/atencion/hooks/useSucursalDeTrabajo';
 import { ResumenDelInicio } from '../features/estadisticas/components/ResumenDelInicio';
@@ -22,6 +23,8 @@ export function Inicio() {
   return (
     <Pantalla titulo="Lavandería">
       {usuario && <p className="mt-2 text-2xl text-texto-suave">Hola, {usuario.nombreCompleto}</p>}
+      {/* Solo si hay algo que ofrecer: instalar la app en el celular (SPEC-KRILINXI-059). */}
+      <AvisoInstalar />
       {conSucursal ? (
         <HoyEnLaSucursal />
       ) : (

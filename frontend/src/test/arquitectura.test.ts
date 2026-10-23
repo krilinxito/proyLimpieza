@@ -354,6 +354,7 @@ const CORTAS: Record<string, string> = {
   'features/auditoria/components/TarjetaRegistro.tsx': 'lo que cambió en UN registro: un puñado de campos',
   'features/estadisticas/components/graficos/BarrasHorizontales.tsx': 'las barras de un gráfico, con su propia tabla',
   'features/estadisticas/components/graficos/Leyenda.tsx': 'la leyenda de un gráfico: tres o cuatro series',
+  'components/AvisoInstalar.tsx': 'los dos pasos fijos de instalar en iPhone, escritos en el código (SPEC-KRILINXI-059)',
 };
 
 describe('Las listas largas se paginan — SPEC-KRILINXI-041', () => {

@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-059
 name: PWA mejor instalable en el celular
 slug: pwa-instalable
-status: draft
+status: finished
 owner: krilinxito
 created: 2026-10-23
 scope:
@@ -13,7 +13,13 @@ scope:
   - frontend/src/components/marco/**
 priority: medium
 depends_on: []
-tests: []
+tests:
+  - frontend\src\components\AvisoInstalar.test.tsx
+  - frontend\src\pwa\build.test.ts
+  - frontend\src\pwa\csp.test.ts
+  - frontend\src\pwa\iconos.test.ts
+  - frontend\src\pwa\instalacion.test.ts
+  - frontend\src\test\arquitectura.test.ts
 ---
 
 ## Descripción

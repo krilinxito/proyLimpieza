@@ -37,6 +37,8 @@ export default defineConfig({
         rollupFormat: 'iife',
       },
       manifest: {
+        // Una identidad fija para la app instalada: si algún día cambia start_url, sigue siendo la misma app (SPEC-KRILINXI-059).
+        id: '/',
         name: 'Lavandería',
         short_name: 'Lavandería',
         description: 'Ingreso y entrega de ropa en el mostrador.',
@@ -45,7 +47,10 @@ export default defineConfig({
         scope: '/',
         display: 'standalone',
         orientation: 'any',
-        background_color: '#ffffff',
+        // Los dos, el turquesa de la marca (`--color-marca`, SPEC-KRILINXI-052): la barra del sistema y la pantalla de arranque
+        // de la app instalada. El ícono lleva el mismo fondo, así el arranque no tiene costuras. `src/pwa/iconos.test.ts` vigila
+        // que sigan siendo iguales a `index.css`.
+        background_color: '#0f766e',
         theme_color: '#0f766e',
         icons: [
           { src: 'icono-192.png', sizes: '192x192', type: 'image/png' },
