@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-051
 name: 'Personal: volver a dar de alta y tarjetas que marcan la excepción'
 slug: personal-reactivar
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-22
 scope:
@@ -10,7 +10,9 @@ scope:
 priority: medium
 depends_on:
   - SPEC-KRILINXI-047
-tests: []
+tests:
+  - frontend\src\features\usuarios\api\cuentas.test.ts
+  - frontend\src\features\usuarios\components\PantallaPersonal.test.tsx
 ---
 
 ## Descripción
