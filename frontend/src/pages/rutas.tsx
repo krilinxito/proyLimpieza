@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { PantallaAuditoria } from '../features/auditoria/components/PantallaAuditoria';
 import { PantallaIngreso } from '../features/auth/components/PantallaIngreso';
 import { ConSucursalDeTrabajo } from '../features/atencion/components/ConSucursalDeTrabajo';
+import { BoletasDelCliente } from '../features/historial/components/BoletasDelCliente';
 import { PantallaClientes } from '../features/clientes/components/PantallaClientes';
 import { PantallaHistorial } from '../features/historial/components/PantallaHistorial';
 import { PantallaMostrador, PARAMETRO_REGISTRAR } from '../features/mostrador/components/PantallaMostrador';
@@ -124,6 +125,16 @@ export const RUTAS: readonly Ruta[] = [
         <PantallaClientes />
       </Pantalla>
     ),
+  },
+  {
+    // Sin botón en el menú: se llega con "Ver sus boletas" desde Clientes (SPEC-KRILINXI-061). Es del mostrador:
+    // las boletas que muestra son las de la sucursal de trabajo.
+    camino: '/clientes/boletas',
+    titulo: 'Boletas del cliente',
+    enMenu: false,
+    acceso: TODOS,
+    mostrador: true,
+    elemento: delMostrador('Boletas del cliente', <BoletasDelCliente />),
   },
   {
     camino: '/boletas',

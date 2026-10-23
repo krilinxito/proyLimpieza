@@ -51,6 +51,26 @@ function aBoleta(orden: OrdenVista, dia: string | null): BoletaListada {
 }
 
 /**
+ * Todas las boletas de un cliente en la sucursal de trabajo, de la más nueva a la más vieja —
+ * SPEC-KRILINXI-061, para "Ver sus boletas" en Clientes. Sin filtro de fechas: es su historia completa en
+ * este local. Lee con la misma consulta y arma con la misma regla que el historial (`SELECT_ORDENES`, `armar`).
+ */
+export async function listarBoletasDelCliente(
+  base: BaseLocal,
+  sucursalId: string,
+  clienteId: string,
+): Promise<BoletaListada[]> {
+  const filas = await base.consultar(`${SELECT_ORDENES} AND o.cliente_id = ?`, [sucursalId, clienteId]);
+  const ordenes = await armar(base, filas);
+  return ordenes
+    .sort((a, b) => instanteDe(b) - instanteDe(a) || b.id.localeCompare(a.id))
+    .map((orden) => {
+      const instante = orden.fechaEntrada ? instanteGuardado(orden.fechaEntrada) : null;
+      return aBoleta(orden, instante === null ? null : diaEnBolivia(instante));
+    });
+}
+
+/**
  * Las boletas de la sucursal que cumplen el filtro, de la más nueva a la más vieja. `hoy` es
  * `YYYY-MM-DD` en Bolivia: llega de afuera para que la consulta sea testeable.
  */

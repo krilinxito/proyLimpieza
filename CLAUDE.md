@@ -409,6 +409,13 @@ boleta, "Con la boleta" si no, y nada si no se entregó. En el Mostrador sale de
 entrega); en el historial del admin, del campo `retiro` de la API. Las dos fuentes arman el mismo `Retiro` (`features/ordenes/retiro.ts`, que
 también lo redacta con `textoDelRetiro`).
 
+SPEC-KRILINXI-061 hizo que **/clientes muestre algo antes de buscar**: los clientes por la fecha de su última boleta, la más reciente
+primero (`listarRecientes` en `features/clientes/api`, una sola consulta; los que no tienen boleta, al final por su alta; el `id` desempata), de la base
+local y paginados del tamaño de la pantalla (20 en una ancha, §9). Escribir en el buscador esconde la lista (`alCambiarEscrito` de `BuscadorVivo`) y
+vaciarlo la devuelve. Cada cliente lleva "Ver sus boletas" (solo con sucursal de trabajo), que abre `/clientes/boletas?cliente=<id>`
+(`features/historial/components/BoletasDelCliente`, ruta del mostrador, sin botón en el menú): todas sus boletas de la sucursal de trabajo,
+paginadas, cada una hacia el Mostrador. La "última boleta" es la que la tablet conoce, o sea las de su sucursal de trabajo.
+
 SPEC-KRILINXI-012 corrige el reloj de la tablet: `lib/reloj` guarda el desfase con la hora
 del servidor que traen `login` y `renovar`, y `horaOficial()` es de donde salen
 `fecha_entrada`, `fecha_pago` y `fecha_entrega`, también sin internet. Ningún archivo de

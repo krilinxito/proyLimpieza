@@ -27,6 +27,11 @@ type Props<T> = {
   demoraMs?: number;
   /** Mientras la base local se abre, no se puede buscar. */
   deshabilitado?: boolean;
+  /**
+   * Avisa si hay algo escrito, cada vez que eso cambia — SPEC-KRILINXI-061: Clientes esconde su lista de
+   * recientes mientras se busca, y la vuelve a mostrar al vaciar el campo.
+   */
+  alCambiarEscrito?: (hayTexto: boolean) => void;
 };
 
 type Estado<T> =
@@ -59,11 +64,17 @@ export function BuscadorVivo<T>({
   sinResultados,
   demoraMs = 300,
   deshabilitado = false,
+  alCambiarEscrito,
 }: Props<T>) {
   const id = useId();
   const [texto, setTexto] = useState('');
   const [estado, setEstado] = useState<Estado<T>>({ tipo: 'esperando' });
   const [activo, setActivo] = useState(-1);
+
+  const hayTexto = texto.trim() !== '';
+  const avisarEscrito = useRef(alCambiarEscrito);
+  avisarEscrito.current = alCambiarEscrito;
+  useEffect(() => avisarEscrito.current?.(hayTexto), [hayTexto]);
 
   // La función de buscar puede ser nueva en cada render de la pantalla. Si fuera dependencia del
   // efecto, cada resultado (que provoca un render) dispararía otra búsqueda, sin fin. Con una ref,
