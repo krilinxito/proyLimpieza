@@ -4,11 +4,15 @@ import { BrowserRouter } from 'react-router-dom';
 import { App } from './App';
 import { SesionProvider } from './features/auth/SesionProvider';
 import { aplicarTema } from './lib/tema';
+import { empezarAEscuchar } from './pwa/instalacion';
 import { registrarServiceWorker } from './pwa/registrar';
 import './index.css';
 
 // Antes de montar: la primera pantalla ya sale con el tema que corresponde (SPEC-KRILINXI-030).
 aplicarTema();
+
+// Antes de montar: el navegador avisa que la app se puede instalar una sola vez y temprano (SPEC-KRILINXI-059).
+empezarAEscuchar();
 
 const raiz = document.getElementById('root');
 if (!raiz) throw new Error('No se encontró el elemento #root en index.html');

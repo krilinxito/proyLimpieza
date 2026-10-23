@@ -7,6 +7,7 @@ Lo que ya existe — usalo antes de escribir uno propio (SPEC-KRILINXI-002):
 
 - `Boton` — grande, con variantes `primario`, `secundario` y `peligro` (y `navegacion` desde SPEC-KRILINXI-037, ver abajo). Si su `onClick`
   devuelve una promesa, se deshabilita hasta que termine: un doble toque no cobra dos veces.
+- `AvisoInstalar` — ofrece instalar la app en el celular (SPEC-KRILINXI-059): el botón "Instalar en este celular" donde el navegador lo permite, y los dos pasos de Safari en iPhone. Sin nada que ofrecer no se dibuja. Va en el Inicio; el estado lo lee `hooks/useInstalarApp` de `pwa/instalacion`.
 - `CampoTexto` — etiqueta siempre visible y el error debajo, enlazado al input. Con `correcto` suma un visto a la derecha y el texto "Correcto" para el lector de pantalla (SPEC-KRILINXI-058); un error manda sobre el visto. `CampoTextoLargo` es lo mismo en varias líneas: un área de texto que crece con lo escrito (el alto lo pone el código, no un `style={…}`).
 - `ModalConfirmacion` — para toda acción irreversible. Dice qué va a pasar, y solo
   `onConfirmar` ejecuta; cancelar, Escape o tocar fuera llaman a `onCancelar`.
