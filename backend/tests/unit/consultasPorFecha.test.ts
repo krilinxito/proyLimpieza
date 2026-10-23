@@ -59,7 +59,7 @@ describe('El filtro del período compara la columna tal cual — SPEC-ALE186-021
     query.mockResolvedValueOnce({ rows: [{ total: 0 }] });
 
     await auditoria.consultar(
-      { ...PERIODO, usuarioId: null, accion: null, tabla: null, registroId: null, soloParaRevisar: false },
+      { ...PERIODO, usuarioId: null, accion: null, tabla: null, registroId: null, clienteId: null, soloParaRevisar: false },
       PAGINA,
     );
 

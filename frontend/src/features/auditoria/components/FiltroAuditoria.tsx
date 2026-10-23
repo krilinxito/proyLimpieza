@@ -1,6 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { Boton } from '../../../components/Boton';
+import { BuscadorVivo } from '../../../components/BuscadorVivo';
 import { CampoTexto } from '../../../components/CampoTexto';
+import type { ResultadosDeBusqueda } from '../../../lib/texto';
+import type { Cliente } from '../../clientes/types';
 import { validarFechas } from '../../estadisticas/periodo';
 import { QUE_BUSCAR } from '../describir';
 import type { FiltroAuditoria as Filtro } from '../filtro';
@@ -41,14 +44,64 @@ function Elegir({
   );
 }
 
-type Props = { filtro: Filtro; personas: Opcion[]; sucursales: Opcion[]; alCambiar: (filtro: Filtro) => void };
+/**
+ * "¿De qué cliente?" — SPEC-KRILINXI-062. Se busca con el buscador de siempre, sobre la base local (los clientes bajan
+ * enteros a la tablet del admin); al elegir, queda su nombre y un botón para quitarlo.
+ */
+function ElegirCliente({
+  cliente,
+  buscar,
+  alCambiar,
+}: {
+  cliente: Filtro['cliente'];
+  buscar: Props['buscarClientes'];
+  alCambiar: (cliente: Filtro['cliente']) => void;
+}) {
+  if (cliente) {
+    return (
+      <div className="mt-4">
+        <p className="text-xl font-semibold text-texto">¿De qué cliente?</p>
+        <p className="mt-2 text-xl text-texto">{cliente.nombre}</p>
+        <div className="mt-2">
+          <Boton variante="secundario" tamano="compacto" onClick={() => alCambiar(null)}>
+            Quitar el cliente
+          </Boton>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <BuscadorVivo<Cliente>
+      etiqueta="¿De qué cliente? Busca por nombre, teléfono o carnet"
+      buscar={buscar}
+      claveDe={(c) => c.id}
+      mostrar={(c) => (
+        <span className="grid">
+          <span className="font-semibold">{c.nombre}</span>
+          <span className="text-lg text-texto-suave">Tel. {c.telefono}</span>
+        </span>
+      )}
+      alElegir={(c) => alCambiar({ id: c.id, nombre: c.nombre })}
+      sinResultados="Ningún cliente coincide con eso."
+    />
+  );
+}
+
+type Props = {
+  filtro: Filtro;
+  personas: Opcion[];
+  sucursales: Opcion[];
+  /** Busca clientes en la base local, mientras se escribe (SPEC-KRILINXI-062). */
+  buscarClientes: (texto: string) => Promise<ResultadosDeBusqueda<Cliente>>;
+  alCambiar: (filtro: Filtro) => void;
+};
 
 /**
  * Qué mirar. "Solo lo que hay que revisar" va arriba y a la vista; el resto, dentro de "Buscar
  * con más detalle", para que la pantalla no arranque con cinco preguntas (CLAUDE.md §9). Las
  * opciones se aplican al elegirlas; las fechas, con un botón.
  */
-export function FiltroAuditoria({ filtro, personas, sucursales, alCambiar }: Props) {
+export function FiltroAuditoria({ filtro, personas, sucursales, buscarClientes, alCambiar }: Props) {
   const [desde, setDesde] = useState(filtro.fechas?.desde ?? '');
   const [hasta, setHasta] = useState(filtro.fechas?.hasta ?? '');
   const [error, setError] = useState<string | undefined>();
@@ -86,6 +139,7 @@ export function FiltroAuditoria({ filtro, personas, sucursales, alCambiar }: Pro
         />
         <Elegir pregunta="¿Quién?" opciones={personas} valor={filtro.usuarioId} alElegir={(usuarioId) => alCambiar({ ...filtro, usuarioId })} todas="Todos" />
         <Elegir pregunta="¿En qué sucursal?" opciones={sucursales} valor={filtro.sucursalId} alElegir={(sucursalId) => alCambiar({ ...filtro, sucursalId })} />
+        <ElegirCliente cliente={filtro.cliente} buscar={buscarClientes} alCambiar={(cliente) => alCambiar({ ...filtro, cliente })} />
         <CampoTexto etiqueta="Desde" type="date" value={desde} onChange={setDesde} error={error} />
         <CampoTexto etiqueta="Hasta" type="date" value={hasta} onChange={setHasta} />
         <div className="mt-4">

@@ -240,6 +240,7 @@ describe('Auditoría: la consulta del admin — SPEC-ALE186-012', () => {
     accion: 'COBRAR' as const,
     tabla: 'pagos' as const,
     registroId: IDS.orden,
+    clienteId: null,
     soloParaRevisar: false,
   };
 
@@ -255,18 +256,19 @@ describe('Auditoría: la consulta del admin — SPEC-ALE186-012', () => {
     const [sqlTotal, valoresTotal] = (query.mock.calls[0] ?? []) as [string, unknown[]];
     const [sqlPagina, valoresPagina] = (query.mock.calls[1] ?? []) as [string, unknown[]];
     // Lo mismo hasta el final del CTE: si uno filtrara distinto, el total mentiría.
-    const filtradas = (sql: string) => sql.slice(0, sql.indexOf('\n)') + 2);
+    // (Desde SPEC-KRILINXI-062 el WITH trae dos CTE: se compara hasta el final de `filtradas`.)
+    const filtradas = (sql: string) => sql.slice(0, sql.indexOf('\n)', sql.indexOf('filtradas AS')) + 2);
     expect(filtradas(sqlTotal)).toBe(filtradas(sqlPagina));
-    expect(valoresPagina.slice(0, 9)).toEqual(valoresTotal);
+    expect(valoresPagina.slice(0, 10)).toEqual(valoresTotal);
     // La página 3 de a 2 se saltea las 4 primeras.
-    expect(valoresPagina.slice(9)).toEqual([2, 4]);
+    expect(valoresPagina.slice(10)).toEqual([2, 4]);
   });
 
   it('todos los filtros van como parámetros, nunca dentro del SQL', async () => {
     await auditoria.consultar(FILTROS, { pagina: 1, porPagina: 50 });
 
     const [sql, valores] = query.mock.calls[0] as [string, unknown[]];
-    expect(valores).toEqual(['2026-03-01', '2026-03-31', 'America/La_Paz', IDS.usuario, 'COBRAR', 'pagos', IDS.orden, IDS.sucursal, false]);
+    expect(valores).toEqual(['2026-03-01', '2026-03-31', 'America/La_Paz', IDS.usuario, 'COBRAR', 'pagos', IDS.orden, IDS.sucursal, false, null]);
     for (const valor of [IDS.usuario, IDS.sucursal, IDS.orden, '2026-03-01', "'COBRAR'"]) {
       expect(sql).not.toContain(valor);
     }
@@ -283,6 +285,54 @@ describe('Auditoría: la consulta del admin — SPEC-ALE186-012', () => {
   });
 });
 
+describe('Auditoría: filtrar por cliente — SPEC-KRILINXI-062', () => {
+  const CLIENTE = '99999999-9999-9999-9999-999999999999';
+  const SIN_FILTROS = {
+    desde: '2026-03-01',
+    hasta: '2026-03-31',
+    sucursalId: null,
+    usuarioId: null,
+    accion: null,
+    tabla: null,
+    registroId: null,
+    clienteId: null,
+    soloParaRevisar: false,
+  };
+
+  beforeEach(() => {
+    query.mockReset();
+    query.mockResolvedValueOnce({ rows: [{ total: 0 }] }).mockResolvedValueOnce({ rows: [] });
+  });
+
+  it('el cliente viaja como parámetro $10, y la página pasa su límite y su salto a $11 y $12', async () => {
+    await auditoria.consultar({ ...SIN_FILTROS, clienteId: CLIENTE }, { pagina: 2, porPagina: 20 });
+
+    const [sqlTotal, valoresTotal] = query.mock.calls[0] as [string, unknown[]];
+    const [sqlPagina, valoresPagina] = query.mock.calls[1] as [string, unknown[]];
+    expect(valoresTotal[9]).toBe(CLIENTE);
+    expect(valoresPagina.slice(9)).toEqual([CLIENTE, 20, 20]);
+    expect(sqlPagina).toMatch(/LIMIT \$11 OFFSET \$12/);
+    expect(sqlTotal).not.toContain(CLIENTE);
+  });
+
+  it('se resuelve en la misma consulta: el cliente y sus órdenes, pagos y entregas, cruzados por registro_id', async () => {
+    await auditoria.consultar({ ...SIN_FILTROS, clienteId: CLIENTE }, { pagina: 1, porPagina: 50 });
+
+    const [sql] = query.mock.calls[0] as [string];
+    expect(sql).toMatch(/ids_del_cliente AS \(/);
+    expect(sql).toMatch(/FROM ordenes o WHERE o\.cliente_id = \$10/);
+    expect(sql).toMatch(/FROM pagos p JOIN ordenes o ON o\.id = p\.orden_id WHERE o\.cliente_id = \$10/);
+    expect(sql).toMatch(/FROM entregas e JOIN ordenes o ON o\.id = e\.orden_id WHERE o\.cliente_id = \$10/);
+    expect(sql).toMatch(/a\.registro_id IN \(SELECT id FROM ids_del_cliente\)/);
+  });
+
+  it('sin cliente, el parámetro va en null', async () => {
+    await auditoria.consultar(SIN_FILTROS, { pagina: 1, porPagina: 50 });
+
+    expect((query.mock.calls[0] as [string, unknown[]])[1][9]).toBeNull();
+  });
+});
+
 describe('Auditoría: la fecha del hecho — SPEC-ALE186-015', () => {
   beforeEach(() => {
     query.mockReset();
@@ -291,7 +341,7 @@ describe('Auditoría: la fecha del hecho — SPEC-ALE186-015', () => {
 
   it('sale del registro tocado con un CASE sobre la tabla, y de la orden solo en su alta', async () => {
     await auditoria.consultar(
-      { desde: '2026-03-01', hasta: '2026-03-31', sucursalId: null, usuarioId: null, accion: null, tabla: null, registroId: null, soloParaRevisar: false },
+      { desde: '2026-03-01', hasta: '2026-03-31', sucursalId: null, usuarioId: null, accion: null, tabla: null, registroId: null, clienteId: null, soloParaRevisar: false },
       { pagina: 1, porPagina: 50 },
     );
 
@@ -303,14 +353,14 @@ describe('Auditoría: la fecha del hecho — SPEC-ALE186-015', () => {
     expect(sql).toMatch(/to_char\(\(\(fecha_del_hecho AT TIME ZONE current_setting\('TimeZone'\)\) AT TIME ZONE \$3\)/);
   });
 
-  it('no agrega parámetros: los filtros (nueve desde SPEC-ALE186-018), más el límite y el salto de la página', async () => {
+  it('no agrega parámetros: los filtros (diez desde SPEC-KRILINXI-062), más el límite y el salto de la página', async () => {
     await auditoria.consultar(
-      { desde: '2026-03-01', hasta: '2026-03-31', sucursalId: null, usuarioId: null, accion: null, tabla: null, registroId: null, soloParaRevisar: false },
+      { desde: '2026-03-01', hasta: '2026-03-31', sucursalId: null, usuarioId: null, accion: null, tabla: null, registroId: null, clienteId: null, soloParaRevisar: false },
       { pagina: 1, porPagina: 50 },
     );
 
-    expect((query.mock.calls[0] as [string, unknown[]])[1]).toHaveLength(9);
-    expect((query.mock.calls[1] as [string, unknown[]])[1]).toHaveLength(11);
+    expect((query.mock.calls[0] as [string, unknown[]])[1]).toHaveLength(10);
+    expect((query.mock.calls[1] as [string, unknown[]])[1]).toHaveLength(12);
   });
 });
 

@@ -11,6 +11,7 @@ const NOMBRES = {
   clientes: new Map([[ROSA_CLIENTE, 'Rosa Quispe']]),
   cuentas: new Map<string, string>(),
   sucursales: new Map([[SUCURSAL_CENTRO, 'Centro']]),
+  clienteDelFiltro: null,
 };
 
 /** Un registro ya leído, como lo usa la pantalla. */
@@ -86,11 +87,33 @@ describe('Auditoría: el contrato y el filtro — SPEC-KRILINXI-018', () => {
     expect(lista(modelo, 'TABLAS_AUDITADAS')).toEqual([...TABLAS]);
   });
 
+  it('un cliente elegido va como cliente_id — SPEC-KRILINXI-062', () => {
+    expect(parametrosAuditoria({ ...FILTRO_INICIAL, cliente: { id: ROSA_CLIENTE, nombre: 'Rosa Quispe' } }, '2026-10-16')).toEqual({
+      desde: '2026-09-17',
+      hasta: '2026-10-16',
+      cliente_id: ROSA_CLIENTE,
+    });
+  });
+
+  it('con un cliente elegido, la ropa, los cobros y las entregas dicen de quién son — SPEC-KRILINXI-062', () => {
+    const deRosa = { ...NOMBRES, clienteDelFiltro: 'Rosa Quispe' };
+
+    expect(sobreQue(registro({ accion: 'CREAR', tablaAfectada: 'ordenes' }), deRosa)).toBe('de Rosa Quispe');
+    expect(sobreQue(registro({ accion: 'COBRAR', tablaAfectada: 'pagos' }), deRosa)).toBe('de Rosa Quispe');
+    expect(sobreQue(registro({ accion: 'ENTREGAR', tablaAfectada: 'entregas' }), deRosa)).toBe('de Rosa Quispe');
+    // El alta del cliente sigue diciendo su nombre, no "de …".
+    expect(sobreQue(registro({ accion: 'CREAR', tablaAfectada: 'clientes', registroId: ROSA_CLIENTE }), deRosa)).toBe('Rosa Quispe');
+  });
+
+  it('sin cliente elegido, no inventa de quién es la ropa — SPEC-KRILINXI-062', () => {
+    expect(sobreQue(registro({ accion: 'COBRAR', tablaAfectada: 'pagos' }), NOMBRES)).toBeNull();
+  });
+
   it('sin elegir nada pide los últimos 30 días; cada filtro puesto va como parámetro', () => {
     expect(parametrosAuditoria(FILTRO_INICIAL, '2026-10-16')).toEqual({ desde: '2026-09-17', hasta: '2026-10-16' });
     expect(
       parametrosAuditoria(
-        { fechas: { desde: '2026-10-01', hasta: '2026-10-15' }, usuarioId: 'u', sucursalId: 's', que: 'boletas', soloParaRevisar: true },
+        { fechas: { desde: '2026-10-01', hasta: '2026-10-15' }, usuarioId: 'u', sucursalId: 's', cliente: null, que: 'boletas', soloParaRevisar: true },
         '2026-10-16',
       ),
     ).toEqual({ desde: '2026-10-01', hasta: '2026-10-15', usuario_id: 'u', sucursal_id: 's', accion: 'EDITAR', tabla: 'ordenes', revisar: 'true' });

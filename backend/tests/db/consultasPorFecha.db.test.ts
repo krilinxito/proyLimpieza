@@ -49,7 +49,7 @@ describe('Los bordes del día de Bolivia no cambian — SPEC-ALE186-021', () => 
     for (const { fecha, entra } of BORDES) ids.set(await anotarAuditoria({ usuarioId, fecha }), entra);
 
     const { registros } = await auditoria.consultar(
-      { ...MARZO, sucursalId: null, usuarioId, accion: null, tabla: null, registroId: null, soloParaRevisar: false },
+      { ...MARZO, sucursalId: null, usuarioId, accion: null, tabla: null, registroId: null, clienteId: null, soloParaRevisar: false },
       { pagina: 1, porPagina: 50 },
     );
 
@@ -114,7 +114,7 @@ describe('El filtro del período usa el índice de fecha — SPEC-ALE186-021', (
   it('la auditoría busca por idx_auditoria_fecha, sin recorrer la tabla', async () => {
     const [sql, valores] = await primeraConsulta(() =>
       auditoria.consultar(
-        { ...MARZO, sucursalId: null, usuarioId: null, accion: null, tabla: null, registroId: null, soloParaRevisar: false },
+        { ...MARZO, sucursalId: null, usuarioId: null, accion: null, tabla: null, registroId: null, clienteId: null, soloParaRevisar: false },
         { pagina: 1, porPagina: 50 },
       ),
     );

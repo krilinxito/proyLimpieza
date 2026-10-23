@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Aviso } from '../../../components/Aviso';
 import { Boton } from '../../../components/Boton';
 import { Paginas } from '../../../components/Paginas';
+import { useClientes } from '../../clientes/hooks/useClientes';
 import { useSucursales } from '../../sucursales/hooks/useSucursales';
 import { useCuentas } from '../../usuarios/hooks/useCuentas';
 import { fechaParaLeer } from '../../estadisticas/periodo';
@@ -17,13 +18,20 @@ import { TarjetaRegistro } from './TarjetaRegistro';
 export function PantallaAuditoria() {
   const [filtro, setFiltro] = useState<Filtro>(FILTRO_INICIAL);
   const { estado, recargar, pagina, irAPagina } = useAuditoria(filtro);
-  const nombres = useNombresConocidos(estado);
+  const nombres = useNombresConocidos(estado, filtro);
+  const clientes = useClientes();
   const personas = (useCuentas() ?? []).map((c) => ({ id: c.id, nombre: c.nombreCompleto }));
   const sucursales = (useSucursales() ?? []).map((s) => ({ id: s.id, nombre: s.nombre }));
 
   return (
     <>
-      <FiltroAuditoria filtro={filtro} personas={personas} sucursales={sucursales} alCambiar={setFiltro} />
+      <FiltroAuditoria
+        filtro={filtro}
+        personas={personas}
+        sucursales={sucursales}
+        buscarClientes={(texto) => (clientes.lista ? clientes.buscarVivo(texto) : Promise.resolve({ resultados: [], hayMas: false }))}
+        alCambiar={setFiltro}
+      />
 
       {estado.tipo === 'cargando' && <p className="mt-8 text-xl text-texto-suave">Buscando…</p>}
 

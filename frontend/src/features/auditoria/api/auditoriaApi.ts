@@ -62,6 +62,7 @@ export type ParametrosAuditoria = {
   hasta: string;
   usuario_id?: string;
   sucursal_id?: string;
+  cliente_id?: string;
   accion?: Accion;
   tabla?: Tabla;
   revisar?: 'true';

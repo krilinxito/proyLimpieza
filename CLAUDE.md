@@ -416,6 +416,12 @@ vaciarlo la devuelve. Cada cliente lleva "Ver sus boletas" (solo con sucursal de
 (`features/historial/components/BoletasDelCliente`, ruta del mostrador, sin botón en el menú): todas sus boletas de la sucursal de trabajo,
 paginadas, cada una hacia el Mostrador. La "última boleta" es la que la tablet conoce, o sea las de su sucursal de trabajo.
 
+SPEC-KRILINXI-062 agregó a `GET /api/auditoria` el filtro `cliente_id` (UUID; otro valor, 400): devuelve las acciones sobre el cliente (alta y
+ediciones) y sobre sus órdenes, pagos y entregas. Se resuelve en la misma consulta (`ids_del_cliente` en `models/auditoria.model.ts`, cruzado por
+`registro_id`, que tiene índice) y se combina con los demás filtros y con la paginación; la forma de la respuesta no cambió. En `/quien-hizo-que`,
+"Buscar con más detalle" suma "¿De qué cliente?" (el buscador vivo sobre la base local, con "Quitar el cliente"), y con uno elegido cada ropa, cobro o
+entrega dice "— de <nombre>" (la tablet del admin no tiene esos registros para nombrarlos; el nombre sale del filtro).
+
 SPEC-KRILINXI-012 corrige el reloj de la tablet: `lib/reloj` guarda el desfase con la hora
 del servidor que traen `login` y `renovar`, y `horaOficial()` es de donde salen
 `fecha_entrada`, `fecha_pago` y `fecha_entrega`, también sin internet. Ningún archivo de

@@ -41,4 +41,9 @@ export type NombresConocidos = {
   clientes: ReadonlyMap<string, string>;
   cuentas: ReadonlyMap<string, string>;
   sucursales: ReadonlyMap<string, string>;
+  /**
+   * El nombre del cliente por el que se está filtrando, si hay uno (SPEC-KRILINXI-062). Toda la ropa, los cobros y
+   * las entregas de esa lista son suyos, aunque la tablet no tenga esos registros para nombrarlo.
+   */
+  clienteDelFiltro: string | null;
 };

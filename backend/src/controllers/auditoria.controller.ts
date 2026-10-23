@@ -50,6 +50,7 @@ export async function getAuditoria(req: Request, res: Response): Promise<void> {
     accion: accion ?? null,
     tabla: tabla ?? null,
     registroId: leerId(query.registro_id, 'El registro elegido no es válido.'),
+    clienteId: leerId(query.cliente_id, 'El cliente elegido no es válido. Vuelve a elegirlo de la lista.'),
     soloParaRevisar: leerRevisar(query.revisar),
   };
   const paginacion = leerPaginacion(query);
