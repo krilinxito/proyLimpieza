@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-062
 name: 'Auditoría: acciones que involucran a un cliente'
 slug: auditoria-por-cliente
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-23
 scope:
