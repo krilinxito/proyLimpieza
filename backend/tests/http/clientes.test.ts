@@ -82,6 +82,35 @@ describe('POST /api/clientes — SPEC-ALE186-003', () => {
     expect(crear).not.toHaveBeenCalled();
   });
 
+  // SPEC-KRILINXI-058: el contenido, no solo que no esté vacío. Es la misma regla que el formulario (utils/formatos.ts).
+  it.each([
+    ['un teléfono con una letra', { telefono: '7012345a' }, 'El teléfono tiene que ser solo de números'],
+    ['un teléfono de menos de 7 números', { telefono: '701234' }, 'El teléfono tiene que ser solo de números'],
+    ['un teléfono de más de 8 números', { telefono: '701234567' }, 'El teléfono tiene que ser solo de números'],
+    ['un teléfono con prefijo de país', { telefono: '+591 70123456' }, 'El teléfono tiene que ser solo de números'],
+    ['un carnet sin números', { carnet: 'abcdefg' }, 'El carnet tiene que ser el número'],
+    ['un carnet con letras delante', { carnet: 'LP1234567' }, 'El carnet tiene que ser el número'],
+    ['un carnet más largo que la columna', { carnet: '1'.repeat(31) }, 'El carnet es demasiado largo'],
+    ['un nombre más largo que la columna', { nombre: 'a'.repeat(151) }, 'El nombre es demasiado largo'],
+  ])('responde 400 con %s, diciendo qué hacer', async (_caso, cambio, empieza) => {
+    const res = await alta(cuerpoDeAlta(cambio));
+
+    expectApiError(res, { status: 400, codigo: 'VALIDACION' });
+    expect(res.body.error.mensaje).toContain(empieza);
+    expect(crear).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['con su extensión', '1234567 LP'],
+    ['sin extensión', '1234567'],
+    ['con extensión de número y letra', '1234567-1A'],
+  ])('acepta un carnet %s, y uno vacío', async (_caso, carnet) => {
+    crear.mockResolvedValue({ cliente: clienteDePrueba(), creado: true });
+
+    expect((await alta(cuerpoDeAlta({ carnet }))).status).toBe(201);
+    expect((await alta(cuerpoDeAlta({ carnet: '' }))).status).toBe(201);
+  });
+
   it('guarda el teléfono solo con dígitos', async () => {
     crear.mockResolvedValue({ cliente: clienteDePrueba(), creado: true });
 

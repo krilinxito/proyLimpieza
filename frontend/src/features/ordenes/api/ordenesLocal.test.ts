@@ -5,7 +5,7 @@ import { baseLocalDePrueba } from '../../../test/baseLocalDePrueba';
 import { HORA_DEL_SERVIDOR_ISO, tabletConRelojCorrido } from '../../../test/reloj';
 import type { DatosRopa, QuienRegistra } from '../types';
 import { FALTA_NOMBRE, FALTA_TELEFONO } from '../../clientes/api/clientesLocal';
-import { MENSAJES, registrarRopa } from './ordenesLocal';
+import { MENSAJES, registrarRopa, validarRopa } from './ordenesLocal';
 
 const ROSA = { id: randomUUID(), nombre: 'Rosa Quispe', telefono: '70123456', carnet: null };
 const QUIEN: QuienRegistra = { usuarioId: randomUUID(), sucursalId: randomUUID() };
@@ -269,5 +269,27 @@ describe('Registrar ropa con un cliente nuevo, todo junto — SPEC-KRILINXI-034'
     );
     expect(resultado).toEqual({ tipo: 'telefono-ocupado', cliente: ROSA });
     expect(await cola(db)).toEqual([]);
+  });
+});
+
+describe('El contenido del número de boleta — SPEC-KRILINXI-058', () => {
+  const datos = (numeroBoleta: string) => ({ numeroBoleta, descripcion: 'Camisa', precio: '10', fechaEstimada: '' });
+
+  it.each(['001003', 'B-1003', 'A001003', ' 001003 '])('%j es un número de boleta', async (boleta) => {
+    const { control } = await baseLocalDePrueba();
+    const { errores } = await validarRopa(control.base, 'sucursal-1', datos(boleta));
+    expect(errores.numeroBoleta).toBeUndefined();
+  });
+
+  it.each(['abc', '12 34', '12/34', '12.5', '---'])('%j no lo es: dice qué hacer', async (boleta) => {
+    const { control } = await baseLocalDePrueba();
+    const { errores } = await validarRopa(control.base, 'sucursal-1', datos(boleta));
+    expect(errores.numeroBoleta).toBe(MENSAJES.boletaInvalida);
+  });
+
+  it('el largo se revisa antes que la forma: una boleta muy larga dice que es larga', async () => {
+    const { control } = await baseLocalDePrueba();
+    const { errores } = await validarRopa(control.base, 'sucursal-1', datos('a'.repeat(31)));
+    expect(errores.numeroBoleta).toBe(MENSAJES.boletaLarga);
   });
 });

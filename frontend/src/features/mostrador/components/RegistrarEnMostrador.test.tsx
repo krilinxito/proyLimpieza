@@ -1,11 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { fireEvent, screen, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { App } from '../../../App';
 import { simularApi } from '../../../test/apiFalsa';
 import { baseLocalDePrueba } from '../../../test/baseLocalDePrueba';
 import { elegirEnBuscador, escribirEnBuscador } from '../../../test/buscador';
 import { hoyEnBolivia } from '../../../lib/diaDelNegocio';
+import { CARNET_INVALIDO, TELEFONO_INVALIDO } from '../../clientes/api/clientesLocal';
+import { MENSAJES } from '../../ordenes/api/ordenesLocal';
 import { sumarDias } from '../../ordenes/components/atajosDeFecha';
 import { sinJerga } from '../../../test/jerga';
 import { renderEnRuta } from '../../../test/render';
@@ -467,5 +469,195 @@ describe('Registrar ropa: elegir al cliente primero y guardar al final — SPEC-
     sinJerga();
     await elegirARosa();
     sinJerga();
+  });
+});
+
+/**
+ * El visto de cada campo y de cada tarjeta, con reglas de verdad — SPEC-KRILINXI-058. Lo que se ve bien tiene que ser lo que
+ * el guardado acepta: un texto en el número de boleta o en el teléfono ya no pasa por bueno. La revisión espera una pausa
+ * entre teclas, así que lo que cambia se espera con findBy / waitFor.
+ */
+describe('Registrar ropa: el visto de cada campo y de cada tarjeta — SPEC-KRILINXI-058', () => {
+  const tarjeta = (nombre: string) => within(screen.getByRole('region', { name: nombre }));
+  const campo = (etiqueta: string) => screen.getByLabelText(etiqueta);
+  const salirDe = (etiqueta: string) => fireEvent.blur(campo(etiqueta));
+  const esperar = (ms: number) => new Promise((resolver) => setTimeout(resolver, ms));
+
+  it('un número de boleta con letras y sin ningún número no pasa por bueno: sin visto, y el error al salir del campo', async () => {
+    await abrir();
+    await elegirARosa();
+
+    escribir('Número de la boleta', 'abc');
+    salirDe('Número de la boleta');
+
+    expect(await screen.findByText(MENSAJES.boletaInvalida)).toBeInTheDocument();
+    expect(campo('Número de la boleta')).toHaveAccessibleDescription(MENSAJES.boletaInvalida);
+    expect(await tarjeta('La ropa').findByText('Hay datos para corregir')).toBeInTheDocument();
+  });
+
+  it('un número de boleta bien escrito muestra su visto (con el texto "Correcto" para el lector de pantalla)', async () => {
+    await abrir();
+    await elegirARosa();
+
+    escribir('Número de la boleta', 'B-1003');
+    await waitFor(() => expect(campo('Número de la boleta')).toHaveAccessibleDescription('Correcto'));
+  });
+
+  it('no regaña mientras se escribe: el error aparece al salir del campo, no antes', async () => {
+    await abrir();
+    await elegirARosa();
+
+    escribir('Número de la boleta', 'abc');
+    await esperar(350);
+    expect(screen.queryByText(MENSAJES.boletaInvalida)).not.toBeInTheDocument();
+    expect(tarjeta('La ropa').queryByText('Hay datos para corregir')).not.toBeInTheDocument();
+  });
+
+  it('una boleta ya usada en la sucursal no tiene visto: es la misma regla que al guardar', async () => {
+    await abrir();
+    await elegirARosa();
+
+    escribir('Número de la boleta', '000999');
+    salirDe('Número de la boleta');
+
+    expect(await screen.findByText(MENSAJES.boletaOcupada)).toBeInTheDocument();
+  });
+
+  it('la tarjeta de la ropa marca el visto cuando boleta, qué deja y precio están bien, y lo quita si algo deja de estarlo', async () => {
+    await abrir();
+    await elegirARosa();
+    expect(tarjeta('La ropa').queryByText('Completo')).not.toBeInTheDocument();
+
+    cargarRopa('001301');
+    expect(await tarjeta('La ropa').findByText('Completo')).toBeInTheDocument();
+
+    escribir('Precio (Bs)', 'mucho');
+    await waitFor(() => expect(tarjeta('La ropa').queryByText('Completo')).not.toBeInTheDocument());
+  });
+
+  it('un cliente que ya existe es una tarjeta completa desde que se elige', async () => {
+    await abrir();
+    await elegirARosa();
+    expect(tarjeta('Cliente').getByText('Completo')).toBeInTheDocument();
+  });
+
+  it('el cliente nuevo: teléfono con letras o carnet que no lo es muestran su error, y bien escritos completan la tarjeta', async () => {
+    await abrir();
+    await elegirEnBuscador('Beto Mamani', 'Cliente nuevo');
+
+    escribir('Teléfono', '7012345a');
+    salirDe('Teléfono');
+    expect(await screen.findByText(TELEFONO_INVALIDO)).toBeInTheDocument();
+    expect(await tarjeta('Cliente nuevo').findByText('Hay datos para corregir')).toBeInTheDocument();
+
+    escribir('Teléfono', '7111 1111');
+    escribir('Carnet (si lo da)', 'abcdefg');
+    salirDe('Carnet (si lo da)');
+    expect(await screen.findByText(CARNET_INVALIDO)).toBeInTheDocument();
+    expect(tarjeta('Cliente nuevo').queryByText('Completo')).not.toBeInTheDocument();
+
+    escribir('Carnet (si lo da)', '1234567 LP');
+    expect(await tarjeta('Cliente nuevo').findByText('Completo')).toBeInTheDocument();
+    expect(screen.queryByText(CARNET_INVALIDO)).not.toBeInTheDocument();
+    await waitFor(() => expect(campo('Teléfono')).toHaveAccessibleDescription('Correcto'));
+    expect(campo('Nombre completo')).toHaveAccessibleDescription('Correcto');
+  });
+
+  it('el carnet es opcional: vacío no estorba para completar la tarjeta del cliente nuevo', async () => {
+    await abrir();
+    await elegirEnBuscador('Beto Mamani', 'Cliente nuevo');
+    escribir('Teléfono', '71111111');
+    expect(await tarjeta('Cliente nuevo').findByText('Completo')).toBeInTheDocument();
+    expect(campo('Carnet (si lo da)')).not.toHaveAccessibleDescription('Correcto');
+  });
+
+  it('un teléfono que ya es de otro cliente no completa la tarjeta', async () => {
+    await abrir();
+    await elegirEnBuscador('Otra Persona', 'Cliente nuevo');
+    escribir('Teléfono', '7012 3456');
+    await esperar(350);
+    expect(tarjeta('Cliente nuevo').queryByText('Completo')).not.toBeInTheDocument();
+    expect(campo('Teléfono')).not.toHaveAccessibleDescription('Correcto');
+  });
+
+  it('el adelanto: la tarjeta se completa con el importe y cómo paga; sin eso, no', async () => {
+    await abrir();
+    await elegirARosa();
+    // "No deja adelanto" (lo de siempre): no hay nada que completar, y la tarjeta no marca nada.
+    expect(tarjeta('Adelanto').queryByText('Completo')).not.toBeInTheDocument();
+
+    dejaAdelanto();
+    escribir('Cuánto deja de adelanto (Bs)', '4');
+    cargarRopa('001302');
+    await esperar(350);
+    expect(tarjeta('Adelanto').queryByText('Completo')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText('Efectivo'));
+    expect(await tarjeta('Adelanto').findByText('Completo')).toBeInTheDocument();
+  });
+
+  it('al intentar guardar con un número de boleta de letras, no guarda, lo dice y marca la tarjeta', async () => {
+    const { db } = await abrir();
+    await elegirARosa();
+    cargarRopa('abc');
+    await guardar();
+
+    expect(await screen.findByText(MENSAJES.boletaInvalida)).toBeInTheDocument();
+    expect(await db.getCrudBatch()).toBeNull();
+    expect(await tarjeta('La ropa').findByText('Hay datos para corregir')).toBeInTheDocument();
+  });
+
+  it('arreglar el campo después de un intento quita su error enseguida, sin tener que guardar de nuevo', async () => {
+    await abrir();
+    await elegirARosa();
+    cargarRopa('abc');
+    await guardar();
+    expect(await screen.findByText(MENSAJES.boletaInvalida)).toBeInTheDocument();
+
+    escribir('Número de la boleta', '001303');
+    await waitFor(() => expect(screen.queryByText(MENSAJES.boletaInvalida)).not.toBeInTheDocument());
+    expect(await tarjeta('La ropa').findByText('Completo')).toBeInTheDocument();
+  });
+
+  it('el visto y la marca no dependen solo del color: llevan ícono y texto', async () => {
+    await abrir();
+    await elegirARosa();
+    cargarRopa('001304');
+    // El texto (para el lector de pantalla) está dentro de la marca, que es la que lleva el ícono y el título.
+    const marca = (await tarjeta('La ropa').findByText('Completo')).parentElement;
+    expect(marca?.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(marca).toHaveAttribute('title', 'Completo');
+  });
+});
+
+describe('Registrar ropa: "Qué deja" en varias líneas — SPEC-KRILINXI-058', () => {
+  it('es un área de texto de al menos dos renglones, y lo escrito con saltos se guarda tal cual', async () => {
+    const { db } = await abrir();
+    await elegirARosa();
+    const area = screen.getByLabelText('Qué deja');
+    expect(area.tagName).toBe('TEXTAREA');
+    expect(area).toHaveAttribute('rows', '2');
+
+    escribir('Número de la boleta', '001305');
+    escribir('Qué deja', '2 camisas\n1 pantalón azul\n  \n3 pañuelos');
+    escribir('Precio (Bs)', '30');
+    await guardar();
+
+    await resumen();
+    const orden = (await db.getCrudBatch(100))?.crud.find((c) => c.table === 'ordenes');
+    // Se recortan los bordes, no los saltos del medio.
+    expect(orden?.opData?.descripcion).toBe('2 camisas\n1 pantalón azul\n  \n3 pañuelos');
+  });
+
+  it('el resumen respeta los saltos de línea', async () => {
+    await abrir();
+    await elegirARosa();
+    escribir('Número de la boleta', '001306');
+    escribir('Qué deja', 'camisa\npantalón');
+    escribir('Precio (Bs)', '30');
+    await guardar();
+    await resumen();
+
+    expect(screen.getByText(/camisa/).closest('dd')).toHaveClass('whitespace-pre-line');
   });
 });

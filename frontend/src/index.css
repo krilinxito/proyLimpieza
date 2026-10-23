@@ -52,8 +52,9 @@
   /* El de lo que solo agrupa (tarjetas): decorativo, sin mínimo de contraste. */
   --color-borde-suave: #e2e8f0;
 
-  /* El anillo del foco con teclado: naranja, para que se vea sobre el blanco y sobre la marca. */
-  --color-foco: #c2410c;
+  /* El anillo del foco con teclado: índigo (SPEC-KRILINXI-058). Antes era naranja, y un campo con el anillo naranja parecía tener un error:
+     el índigo no se parece ni al rojo de error ni a la marca turquesa, y se ve sobre el blanco, el fondo y la marca. */
+  --color-foco: #4f46e5;
 
   /* Los cuatro tonos de aviso, cada uno con su fondo, su texto y su borde. */
   --color-info-fondo: #eff6ff;
@@ -122,7 +123,7 @@
   --color-borde: #94a3b8;
   --color-borde-suave: #334155;
 
-  --color-foco: #fb923c;
+  --color-foco: #a5b4fc;
 
   --color-info-fondo: #172554;
   --color-info-texto: #bfdbfe;

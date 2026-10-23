@@ -709,3 +709,23 @@ describe('Mostrador: volver sin bajar la página — SPEC-KRILINXI-057', () => {
     expect(volver.compareDocumentPosition(formulario) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
+
+describe('Mostrador: lo que deja el cliente en varias líneas — SPEC-KRILINXI-058', () => {
+  it('la tarjeta de la boleta y su detalle respetan los saltos de línea de lo que dejó', async () => {
+    simularApi(() => 'sin-conexion');
+    const prueba = await baseLocalDePrueba();
+    const MUCHAS = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000030', descripcion: '2 camisas\n1 pantalón azul' });
+    await prueba.sembrar('clientes', [ROSA]);
+    await prueba.sembrar('ordenes', [MUCHAS]);
+    renderEnRuta(<App />, '/mostrador', { baseLocal: prueba.control });
+
+    // En la lista: la tarjeta de la boleta.
+    const tarjeta = await screen.findByRole('button', { name: 'Boleta 000030, Rosa Quispe' });
+    expect(within(tarjeta).getByText(/2 camisas/)).toHaveClass('whitespace-pre-line');
+
+    // Y en el detalle de la boleta.
+    fireEvent.click(tarjeta);
+    const detalle = await screen.findByRole('region', { name: 'Boleta 000030' });
+    expect(within(detalle).getByText(/2 camisas/).closest('dd')).toHaveClass('whitespace-pre-line');
+  });
+});

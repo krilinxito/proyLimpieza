@@ -22,6 +22,7 @@ import {
 import * as sucursales from '../models/sucursales.model.js';
 import { ApiError, CODIGOS_ERROR } from '../utils/ApiError.js';
 import { esEstadoOrden, estadosDeOrigen, type EstadoOrden } from '../utils/dominio.js';
+import { esNumeroDeBoleta } from '../utils/formatos.js';
 import type { Centavos } from '../utils/money.js';
 import { leerPaginacion } from '../utils/paginacion.js';
 import type { Sesion } from '../utils/jwt.js';
@@ -57,6 +58,12 @@ function leerBoleta(valor: unknown): string {
   if (boleta === null) throw invalido('Escribe el número de la boleta.');
   if (boleta.length > LARGO_MAXIMO_BOLETA) {
     throw invalido('Ese número de boleta es demasiado largo. Revisa el papel y vuelve a escribirlo.');
+  }
+  // Letras, números y guion, con al menos un número (SPEC-KRILINXI-058): la misma regla que el formulario.
+  if (!esNumeroDeBoleta(boleta)) {
+    throw invalido(
+      'El número de boleta solo puede llevar letras, números y guion, y al menos un número. Revisa el papel y vuelve a escribirlo.',
+    );
   }
   return boleta;
 }

@@ -7,7 +7,7 @@ Lo que ya existe — usalo antes de escribir uno propio (SPEC-KRILINXI-002):
 
 - `Boton` — grande, con variantes `primario`, `secundario` y `peligro` (y `navegacion` desde SPEC-KRILINXI-037, ver abajo). Si su `onClick`
   devuelve una promesa, se deshabilita hasta que termine: un doble toque no cobra dos veces.
-- `CampoTexto` — etiqueta siempre visible y el error debajo, enlazado al input.
+- `CampoTexto` — etiqueta siempre visible y el error debajo, enlazado al input. Con `correcto` suma un visto a la derecha y el texto "Correcto" para el lector de pantalla (SPEC-KRILINXI-058); un error manda sobre el visto. `CampoTextoLargo` es lo mismo en varias líneas: un área de texto que crece con lo escrito (el alto lo pone el código, no un `style={…}`).
 - `ModalConfirmacion` — para toda acción irreversible. Dice qué va a pasar, y solo
   `onConfirmar` ejecuta; cancelar, Escape o tocar fuera llaman a `onCancelar`.
 
@@ -17,7 +17,7 @@ Desde SPEC-KRILINXI-022:
 - `Aviso` — un aviso con `tipo` (`informacion`, `exito`, `advertencia`, `error`). Siempre lleva
   texto; error y advertencia son `role="alert"`, información y éxito `role="status"`. No
   escribas otro `<p className="bg-red-50 …">`: usá este.
-- `Tarjeta` — agrupa lo que va junto. Con `titulo` es una sección con encabezado; `nivel={3}` si va
+- `Tarjeta` — agrupa lo que va junto. Con `estado` ("completo" o "con-errores") pone una marca chica en la esquina de arriba a la derecha: un visto o una equis, con su texto para el lector de pantalla (SPEC-KRILINXI-058). Con `titulo` es una sección con encabezado; `nivel={3}` si va
   dentro de otra sección que ya tiene su `h2` (SPEC-KRILINXI-025).
 - `Insignia` — una etiqueta corta con `tono` (`neutro`, `informacion`, `exito`, `advertencia`,
   `peligro`). No sabe de órdenes: qué tono lleva cada estado lo decide la feature.

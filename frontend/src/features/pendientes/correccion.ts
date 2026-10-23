@@ -10,7 +10,7 @@ import { aDecimal, desdeDecimal } from '../../lib/money';
 import type { RegistroParaCorregir } from './types';
 
 /** Cómo se escribe cada dato en el formulario. */
-export type TipoCampo = 'texto' | 'monto' | 'fecha' | 'metodo' | 'retiro';
+export type TipoCampo = 'texto' | 'texto-largo' | 'monto' | 'fecha' | 'metodo' | 'retiro';
 
 /** Un dato que el empleado puede corregir. `clave` es la columna de la base. */
 export type Campo = { clave: string; etiqueta: string; tipo: TipoCampo };
@@ -37,7 +37,7 @@ export const MENSAJES_CORRECCION = {
 export const CAMPOS: Record<string, readonly Campo[]> = {
   ordenes: [
     { clave: 'numero_boleta', etiqueta: 'Número de la boleta', tipo: 'texto' },
-    { clave: 'descripcion', etiqueta: 'Qué deja', tipo: 'texto' },
+    { clave: 'descripcion', etiqueta: 'Qué deja', tipo: 'texto-largo' },
     { clave: 'precio_total', etiqueta: 'Precio (Bs)', tipo: 'monto' },
     { clave: 'fecha_estimada_salida', etiqueta: 'Para cuándo estará lista (si se sabe)', tipo: 'fecha' },
   ],

@@ -10,6 +10,7 @@
  * con `baseLocalDePrueba()` sin montar ninguna pantalla. Quien la saca del contexto es el
  * hook (`hooks/useClientes.ts`).
  */
+import { esCarnetValido, esTelefonoValido } from '../../../lib/formatos';
 import type { BaseLocal, Fila, Sentencia } from '../../../lib/powersync';
 import { alcanzaParaBuscar, type ResultadosDeBusqueda } from '../../../lib/texto';
 import { normalizarTelefono } from '../telefono';
@@ -31,6 +32,16 @@ export const MAXIMO_RESULTADOS = 6;
 // (SPEC-KRILINXI-013), que valida lo mismo.
 export const FALTA_NOMBRE = 'Escribe el nombre del cliente.';
 export const FALTA_TELEFONO = 'Escribe el número de teléfono del cliente.';
+// Lo que admiten las columnas del schema (VARCHAR(150) y VARCHAR(30)): SPEC-KRILINXI-058.
+export const LARGO_MAXIMO_NOMBRE = 150;
+export const LARGO_MAXIMO_CARNET = 30;
+export const NOMBRE_LARGO = 'El nombre es demasiado largo. Revísalo y vuelve a escribirlo.';
+export const CARNET_LARGO = 'El carnet es demasiado largo. Revísalo y vuelve a escribirlo.';
+// La forma del teléfono y del carnet (SPEC-KRILINXI-058): la misma regla que el servidor (`lib/formatos.ts`).
+export const TELEFONO_INVALIDO =
+  'El teléfono tiene que ser solo de números: 7 u 8, por ejemplo 7012 3456. Revísalo y vuelve a escribirlo.';
+export const CARNET_INVALIDO =
+  'El carnet tiene que ser el número, con su extensión si la tiene, por ejemplo 1234567 LP. Revísalo y vuelve a escribirlo.';
 
 /**
  * Estrecha una fila de SQLite a `Cliente`. SQLite no garantiza tipos, así que se comprueba
@@ -114,19 +125,30 @@ export type ClienteValidado = {
  */
 export async function validarCliente(
   base: BaseLocal,
-  datos: { nombre: string; telefono: string },
+  datos: { nombre: string; telefono: string; carnet?: string },
   excluirId: string | null = null,
+  /**
+   * El teléfono que el cliente ya tiene guardado, al editarlo (SPEC-KRILINXI-058): si no se tocó, no se le exige la forma nueva.
+   * Un cliente de antes con un teléfono de otro formato puede seguir cambiando su nombre.
+   */
+  telefonoActual: string | null = null,
 ): Promise<ClienteValidado> {
   const nombre = datos.nombre.trim();
   const telefono = normalizarTelefono(datos.telefono);
 
   const errores: ErroresAlta = {};
   if (nombre === '') errores.nombre = FALTA_NOMBRE;
-  if (telefono === '') errores.telefono = FALTA_TELEFONO;
+  else if (nombre.length > LARGO_MAXIMO_NOMBRE) errores.nombre = NOMBRE_LARGO;
+  if (datos.telefono.trim() === '') errores.telefono = FALTA_TELEFONO;
+  else if (!esTelefonoValido(datos.telefono) && telefono !== telefonoActual) errores.telefono = TELEFONO_INVALIDO;
+  // El carnet es opcional (vacío vale), pero si se escribe tiene que caber y tener la forma de un carnet (SPEC-KRILINXI-058).
+  const carnet = (datos.carnet ?? '').trim();
+  if (carnet.length > LARGO_MAXIMO_CARNET) errores.carnet = CARNET_LARGO;
+  else if (carnet !== '' && !esCarnetValido(carnet)) errores.carnet = CARNET_INVALIDO;
 
   // El teléfono es único en todo el sistema (CLAUDE.md §3). El servidor lo vuelve a
   // comprobar, pero aquí el empleado se entera al momento y ve a quién pertenece.
-  const ocupadoPor = telefono === '' ? null : await buscarPorTelefono(base, telefono, excluirId);
+  const ocupadoPor = telefono === '' || errores.telefono ? null : await buscarPorTelefono(base, telefono, excluirId);
   return { errores, nombre, telefono, ocupadoPor };
 }
 
@@ -142,7 +164,7 @@ export async function validarCliente(
  */
 export async function registrarCliente(base: BaseLocal, datos: DatosAlta): Promise<ResultadoAlta> {
   const { errores, nombre, telefono, ocupadoPor } = await validarCliente(base, datos);
-  if (errores.nombre || errores.telefono) return { tipo: 'invalido', errores };
+  if (errores.nombre || errores.telefono || errores.carnet) return { tipo: 'invalido', errores };
   if (ocupadoPor) return { tipo: 'telefono-ocupado', cliente: ocupadoPor };
 
   const cliente = clienteNuevo({ nombre, telefono, carnet: datos.carnet });
@@ -178,7 +200,7 @@ export function sentenciaAltaCliente(cliente: Cliente): Sentencia {
  * (SPEC-KRILINXI-013).
  */
 export async function editarCliente(base: BaseLocal, cliente: Cliente, datos: DatosEdicion): Promise<ResultadoEdicion> {
-  const { errores, nombre, telefono, ocupadoPor } = await validarCliente(base, datos, cliente.id);
+  const { errores, nombre, telefono, ocupadoPor } = await validarCliente(base, datos, cliente.id, cliente.telefono);
   if (!errores.telefono && ocupadoPor) errores.telefono = telefonoDeOtro(ocupadoPor.nombre);
   if (errores.nombre || errores.telefono) return { tipo: 'invalido', errores };
 

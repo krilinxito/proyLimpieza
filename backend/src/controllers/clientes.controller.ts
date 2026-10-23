@@ -9,6 +9,7 @@ import { revisionDe, sesionDe } from '../middleware/auth.js';
 import * as clientes from '../models/clientes.model.js';
 import { TelefonoOcupadoError, type CambiosCliente } from '../models/clientes.model.js';
 import { ApiError, CODIGOS_ERROR } from '../utils/ApiError.js';
+import { esCarnetValido, esTelefonoValido } from '../utils/formatos.js';
 import {
   comoObjeto,
   esUuid,
@@ -20,22 +21,41 @@ function invalido(mensaje: string): ApiError {
   return new ApiError(400, CODIGOS_ERROR.VALIDACION, mensaje);
 }
 
+// Lo que admiten las columnas del schema (VARCHAR(150) y VARCHAR(30)): pasarse sería un error de tipo de Postgres, un 500.
+const LARGO_MAXIMO_NOMBRE = 150;
+const LARGO_MAXIMO_CARNET = 30;
+
 function leerNombre(valor: unknown): string {
   const nombre = textoConContenido(valor);
   if (nombre === null) throw invalido('Escribe el nombre del cliente.');
+  if (nombre.length > LARGO_MAXIMO_NOMBRE) throw invalido('El nombre es demasiado largo. Revísalo y vuelve a escribirlo.');
   return nombre;
 }
 
+/**
+ * El teléfono, solo con sus números (SPEC-KRILINXI-058): lo escrito tiene que ser de números —con espacios o guiones para
+ * leerlo—, y de 7 (fijo) u 8 (celular). La misma regla que el formulario (`lib/formatos.ts` del frontend).
+ */
 function leerTelefono(valor: unknown): string {
   const texto = textoConContenido(valor);
-  const telefono = texto === null ? '' : normalizarTelefono(texto);
-  if (telefono === '') throw invalido('Escribe el número de teléfono del cliente.');
-  return telefono;
+  if (texto === null) throw invalido('Escribe el número de teléfono del cliente.');
+  if (!esTelefonoValido(texto)) {
+    throw invalido('El teléfono tiene que ser solo de números: 7 u 8, por ejemplo 7012 3456. Revísalo y vuelve a escribirlo.');
+  }
+  return normalizarTelefono(texto);
 }
 
-/** El carnet es opcional: vacío o ausente se guarda como NULL. */
+/** El carnet es opcional: vacío o ausente se guarda como NULL. Si viene, el número con su extensión (SPEC-KRILINXI-058). */
 function leerCarnet(valor: unknown): string | null {
-  return textoConContenido(valor);
+  const carnet = textoConContenido(valor);
+  if (carnet === null) return null;
+  if (carnet.length > LARGO_MAXIMO_CARNET) throw invalido('El carnet es demasiado largo. Revísalo y vuelve a escribirlo.');
+  if (!esCarnetValido(carnet)) {
+    throw invalido(
+      'El carnet tiene que ser el número, con su extensión si la tiene, por ejemplo 1234567 LP. Revísalo y vuelve a escribirlo.',
+    );
+  }
+  return carnet;
 }
 
 /**

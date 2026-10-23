@@ -83,6 +83,7 @@ export function FormularioAltaCliente({ escrito, registrar, alTerminar, alCancel
             etiqueta="Carnet (si lo da)"
             value={datos.carnet}
             onChange={cambiar('carnet')}
+            error={errores.carnet}
             autoComplete="off"
           />
           {errorGeneral && (

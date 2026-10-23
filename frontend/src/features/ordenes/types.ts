@@ -22,7 +22,17 @@ export type DatosRopa = {
 };
 
 /** Qué está mal en cada campo, en palabras del mostrador. */
-export type ErroresRopa = Partial<Record<keyof DatosRopa | 'clienteNombre' | 'clienteTelefono', string>>;
+export type ErroresRopa = Partial<Record<keyof DatosRopa | 'clienteNombre' | 'clienteTelefono' | 'clienteCarnet', string>>;
+
+/**
+ * Cómo va lo escrito, sin guardar nada — SPEC-KRILINXI-058: lo que el formulario usa para mostrar el visto de cada campo y
+ * de cada tarjeta. Es el resultado de las mismas validaciones del guardado, no de reglas aparte.
+ */
+export type RevisionDeRopa = {
+  errores: ErroresRopa;
+  /** El cliente nuevo tiene el teléfono de otro que ya existe: no es un error de escritura, pero tampoco se puede guardar así. */
+  telefonoOcupado: boolean;
+};
 
 /** Quién registra, y dónde. Sale de la sesión, nunca de lo que se escribe en pantalla. */
 export type QuienRegistra = { usuarioId: string; sucursalId: string };

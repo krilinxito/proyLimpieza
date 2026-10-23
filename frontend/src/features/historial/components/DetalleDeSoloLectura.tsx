@@ -12,11 +12,11 @@ import { textoDelSaldo } from './FilaDeBoleta';
 /** Pares dato/valor, uno debajo del otro (como el detalle de una boleta del Mostrador). */
 function Datos({ pares }: { pares: [string, ReactNode][] }) {
   return (
-    <dl className="grid grid-cols-[auto_1fr] items-center gap-x-6 gap-y-2 text-xl">
+    <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-6 gap-y-2 text-xl">
       {pares.map(([dato, valor]) => (
         <div key={dato} className="contents">
           <dt className="font-semibold text-texto-suave">{dato}</dt>
-          <dd className="text-texto">{valor}</dd>
+          <dd className="text-texto whitespace-pre-line">{valor}</dd>
         </div>
       ))}
     </dl>

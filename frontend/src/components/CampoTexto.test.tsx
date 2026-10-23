@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { CampoTexto } from './CampoTexto';
+import { CampoTexto, CampoTextoLargo } from './CampoTexto';
 
 describe('CampoTexto — SPEC-KRILINXI-002', () => {
   it('muestra la etiqueta siempre visible y enlazada al input', () => {
@@ -68,5 +68,81 @@ describe('CampoTexto con el tema — SPEC-KRILINXI-022', () => {
   it('con teclado, el campo muestra el anillo de foco', () => {
     render(<CampoTexto etiqueta="Nombre" value="" onChange={() => {}} />);
     expect(screen.getByLabelText('Nombre')).toHaveClass('focus-visible:outline-foco', 'border-borde');
+  });
+});
+
+describe('CampoTexto con el visto de "correcto" — SPEC-KRILINXI-058', () => {
+  it('con correcto muestra un ícono y el texto "Correcto", enlazado al campo para el lector de pantalla', () => {
+    render(<CampoTexto etiqueta="Teléfono" value="70123456" onChange={() => {}} correcto />);
+    const input = screen.getByLabelText('Teléfono');
+
+    expect(input).toHaveAccessibleDescription('Correcto');
+    // El texto es solo para el lector de pantalla; a la vista queda el ícono (decorativo).
+    expect(screen.getByText('Correcto')).toHaveClass('sr-only');
+    expect(input.parentElement?.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('sin correcto no muestra nada, como siempre', () => {
+    render(<CampoTexto etiqueta="Teléfono" value="70123456" onChange={() => {}} />);
+    expect(screen.queryByText('Correcto')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Teléfono')).not.toHaveAccessibleDescription();
+  });
+
+  it('un error manda sobre el visto: si hay error, no se muestra "Correcto"', () => {
+    render(<CampoTexto etiqueta="Teléfono" value="1" onChange={() => {}} correcto error="Revisa el teléfono." />);
+    expect(screen.queryByText('Correcto')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Teléfono')).toHaveAccessibleDescription('Revisa el teléfono.');
+  });
+
+  it('deja lugar al visto a la derecha, para que el texto no quede debajo del ícono', () => {
+    render(<CampoTexto etiqueta="Teléfono" value="70123456" onChange={() => {}} correcto />);
+    expect(screen.getByLabelText('Teléfono')).toHaveClass('pr-12');
+  });
+});
+
+describe('CampoTextoLargo: varias líneas — SPEC-KRILINXI-058', () => {
+  it('es un área de texto, con su etiqueta enlazada y al menos dos renglones', () => {
+    render(<CampoTextoLargo etiqueta="Qué deja" value="" onChange={() => {}} />);
+    const area = screen.getByLabelText('Qué deja');
+
+    expect(area.tagName).toBe('TEXTAREA');
+    expect(area).toHaveAttribute('rows', '2');
+    expect(area).toHaveClass('min-h-24');
+  });
+
+  it('entrega el texto escrito con sus saltos de línea, no el evento', () => {
+    const cambiar = vi.fn();
+    render(<CampoTextoLargo etiqueta="Qué deja" value="" onChange={cambiar} />);
+    fireEvent.change(screen.getByLabelText('Qué deja'), { target: { value: 'camisa\npantalón' } });
+    expect(cambiar).toHaveBeenCalledWith('camisa\npantalón');
+  });
+
+  it('Enter pone un salto de línea y no envía el formulario donde está', () => {
+    const enviar = vi.fn((evento: Event) => evento.preventDefault());
+    render(
+      <form onSubmit={(evento) => enviar(evento.nativeEvent)}>
+        <CampoTextoLargo etiqueta="Qué deja" value="camisa" onChange={() => {}} />
+      </form>,
+    );
+    // Un área de texto no es un campo que envía con Enter: la tecla no la intercepta nadie.
+    const permitido = fireEvent.keyDown(screen.getByLabelText('Qué deja'), { key: 'Enter' });
+    expect(permitido).toBe(true);
+    expect(enviar).not.toHaveBeenCalled();
+  });
+
+  it('comparte con el campo de una línea el error y el visto', () => {
+    const { rerender } = render(<CampoTextoLargo etiqueta="Qué deja" value="" onChange={() => {}} error="Escribe qué deja." />);
+    const area = screen.getByLabelText('Qué deja');
+    expect(area).toHaveAccessibleDescription('Escribe qué deja.');
+    expect(area).toHaveAttribute('aria-invalid', 'true');
+
+    rerender(<CampoTextoLargo etiqueta="Qué deja" value="camisa" onChange={() => {}} correcto />);
+    expect(screen.getByLabelText('Qué deja')).toHaveAccessibleDescription('Correcto');
+  });
+
+  it('no usa style={…} en el marcado: el alto lo pone el código, que la política de seguridad no bloquea', () => {
+    render(<CampoTextoLargo etiqueta="Qué deja" value="camisa" onChange={() => {}} />);
+    // jsdom no mide (scrollHeight es 0), pero el efecto corre: deja un alto puesto por el código sobre el elemento.
+    expect(screen.getByLabelText('Qué deja').style.height).toBe('0px');
   });
 });

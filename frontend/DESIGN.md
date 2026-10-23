@@ -12,7 +12,7 @@ colors:
   tinta-suave: "#475569"
   borde-firme: "#64748b"
   borde-suave: "#e2e8f0"
-  naranja-de-foco: "#c2410c"
+  indigo-de-foco: "#4f46e5"
   info-fondo: "#eff6ff"
   info-texto: "#1e3a8a"
   info-borde: "#93c5fd"
@@ -188,7 +188,7 @@ Un solo turquesa de agua limpia como marca sobre un fondo frío y neutro, con cu
 - **Tinta suave** (#475569): el texto secundario (períodos, ayudas, valores de segundo orden).
 - **Borde firme** (#64748b): el borde de lo que se toca (campos, botón secundario). Llega a 3:1 contra el blanco, como pide WCAG.
 - **Borde suave** (#e2e8f0): el de lo que solo agrupa (tarjetas, cabecera, separadores). Decorativo.
-- **Naranja de foco** (#c2410c): el anillo del teclado, para que se vea sobre el blanco y sobre el turquesa.
+- **Índigo de foco** (#4f46e5): el anillo del teclado, para que se vea sobre el blanco y sobre el turquesa. No es rojo ni naranja a propósito: esos tonos dicen "error", y un campo con el cursor no tiene nada malo.
 
 ### Avisos (cada uno con fondo, texto y borde)
 - **Información:** fondo #eff6ff, texto #1e3a8a, borde #93c5fd.
@@ -210,7 +210,7 @@ Los mismos tokens con otro valor (`:root[data-tema='oscuro']`); ningún componen
 | Fondo / superficie | #0f172a / #1e293b |
 | Texto / texto suave | #f1f5f9 / #cbd5e1 |
 | Borde firme / borde suave | #94a3b8 / #334155 |
-| Foco | #fb923c |
+| Foco | #a5b4fc |
 | Información (fondo, texto, borde) | #172554, #bfdbfe, #3b82f6 |
 | Éxito | #052e16, #bbf7d0, #22c55e |
 | Advertencia | #451a03, #fde68a, #f59e0b |
@@ -271,7 +271,7 @@ Esquinas generosas y bordes marcados: se ven y se aciertan con el dedo. **12px**
 
 ## Components
 
-Grandes, firmes y obvios. Todos pintan solo con tokens del tema y llevan el anillo de foco (`focus-visible`, naranja, solo con teclado). La guía de uso está en `src/components/README.md`.
+Grandes, firmes y obvios. Todos pintan solo con tokens del tema y llevan el anillo de foco (`focus-visible`, índigo, solo con teclado). La guía de uso está en `src/components/README.md`.
 
 ### Buttons
 - **Shape:** 12px, borde de 2px, 56px de alto como mínimo (48px el `compacto`, para una fila de acciones).
@@ -288,7 +288,7 @@ Grandes, firmes y obvios. Todos pintan solo con tokens del tema y llevan el anil
 
 ### Inputs / Fields
 - **Style:** etiqueta siempre visible encima (nunca un placeholder en su lugar), campo de 56px, borde de 2px, esquina de 12px.
-- **Focus:** el anillo naranja del tema.
+- **Focus:** el anillo índigo del tema.
 - **Error:** borde rojo, ícono y un mensaje que dice qué hacer, en español y sin códigos.
 - **Opciones elegibles** (cómo paga, sucursal, estado): casillas de 56px con borde; la elegida se marca con borde turquesa y fondo turquesa suave **y** texto en negrita.
 

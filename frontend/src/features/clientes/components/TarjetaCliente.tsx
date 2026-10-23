@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Tarjeta } from '../../../components/Tarjeta';
+import { Tarjeta, type EstadoDeTarjeta } from '../../../components/Tarjeta';
 import type { Cliente } from '../types';
 
 type Props = {
@@ -8,6 +8,8 @@ type Props = {
   titulo?: string;
   /** Lo que va debajo de los datos, dentro de la misma tarjeta: "Cambiar de cliente". */
   children?: ReactNode;
+  /** La marca de la esquina (SPEC-KRILINXI-058): en Registrar ropa, un cliente ya elegido es un visto. */
+  estado?: EstadoDeTarjeta;
 };
 
 /**
@@ -15,10 +17,10 @@ type Props = {
  * tema (SPEC-KRILINXI-025) con lugar para la acción que corresponda, así no quedan tarjetas
  * dentro de tarjetas.
  */
-export function TarjetaCliente({ cliente, titulo, children }: Props) {
+export function TarjetaCliente({ cliente, titulo, children, estado }: Props) {
   return (
     <div className="mt-4">
-      <Tarjeta titulo={titulo}>
+      <Tarjeta titulo={titulo} estado={estado}>
         <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-xl">
           <dt className="font-semibold text-texto-suave">Nombre</dt>
           <dd className="text-texto">{cliente.nombre}</dd>

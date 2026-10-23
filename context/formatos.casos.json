@@ -1,0 +1,48 @@
+{
+  "_nota": "SPEC-KRILINXI-058. Los casos de los formatos de boleta, teléfono y carnet. La leen los tests del frontend (lib/formatos.test.ts) y del backend (tests/unit/formatos.test.ts): las dos implementaciones tienen que dar lo mismo para cada fila. Para cambiar una regla, se cambia acá y en las dos.",
+  "boleta": [
+    { "valor": "001003", "valido": true },
+    { "valor": "1", "valido": true },
+    { "valor": "B-1003", "valido": true },
+    { "valor": "A001003", "valido": true },
+    { "valor": "b-12-c", "valido": true },
+    { "valor": "abc", "valido": false },
+    { "valor": "---", "valido": false },
+    { "valor": "12a b", "valido": false },
+    { "valor": "12.5", "valido": false },
+    { "valor": "12/3", "valido": false },
+    { "valor": "N°123", "valido": false },
+    { "valor": "", "valido": false }
+  ],
+  "telefono": [
+    { "valor": "70123456", "valido": true },
+    { "valor": "7012 3456", "valido": true },
+    { "valor": "7012-3456", "valido": true },
+    { "valor": "2234567", "valido": true },
+    { "valor": "223 4567", "valido": true },
+    { "valor": "701234", "valido": false },
+    { "valor": "701234567", "valido": false },
+    { "valor": "7012345a", "valido": false },
+    { "valor": "abcdefgh", "valido": false },
+    { "valor": "+591 70123456", "valido": false },
+    { "valor": "(70) 123456", "valido": false },
+    { "valor": "70123456.", "valido": false },
+    { "valor": "", "valido": false }
+  ],
+  "carnet": [
+    { "valor": "1234567", "valido": true },
+    { "valor": "1234567 LP", "valido": true },
+    { "valor": "1234567LP", "valido": true },
+    { "valor": "1234567-LP", "valido": true },
+    { "valor": "1234567-1A", "valido": true },
+    { "valor": "1234", "valido": true },
+    { "valor": "123", "valido": false },
+    { "valor": "abcdefg", "valido": false },
+    { "valor": "LP1234567", "valido": false },
+    { "valor": "1234567 LPAZ", "valido": false },
+    { "valor": "1234567 1", "valido": false },
+    { "valor": "12345678901234", "valido": false },
+    { "valor": "1234 567", "valido": false },
+    { "valor": "", "valido": false }
+  ]
+}

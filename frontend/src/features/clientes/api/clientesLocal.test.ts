@@ -3,7 +3,18 @@ import { describe, expect, it } from 'vitest';
 import { simularApi } from '../../../test/apiFalsa';
 import { baseLocalDePrueba } from '../../../test/baseLocalDePrueba';
 import { subirAceptando } from '../../../test/rechazos';
-import { buscarClientes, buscarPorTelefono, editarCliente, registrarCliente, telefonoDeOtro, validarCliente } from './clientesLocal';
+import {
+  buscarClientes,
+  buscarPorTelefono,
+  CARNET_INVALIDO,
+  CARNET_LARGO,
+  editarCliente,
+  NOMBRE_LARGO,
+  registrarCliente,
+  TELEFONO_INVALIDO,
+  telefonoDeOtro,
+  validarCliente,
+} from './clientesLocal';
 
 // Una persona que ya estaba en el sistema: bajó por la sincronización, no está en la cola.
 const ROSA = { id: randomUUID(), nombre: 'Rosa Quispe', telefono: '70123456', carnet: '4455667' };
@@ -82,7 +93,7 @@ describe('Alta de cliente en la base local — SPEC-KRILINXI-005', () => {
     ['sin nombre', { nombre: '   ', telefono: '71111111', carnet: '' }, { nombre: 'Escribe el nombre del cliente.' }],
     [
       'sin teléfono',
-      { nombre: 'Juan', telefono: 'no sé', carnet: '' },
+      { nombre: 'Juan', telefono: '   ', carnet: '' },
       { telefono: 'Escribe el número de teléfono del cliente.' },
     ],
     [
@@ -171,7 +182,7 @@ describe('Editar un cliente en la base local — SPEC-KRILINXI-014', () => {
   it('no deja el nombre ni el teléfono vacíos', async () => {
     const { control } = await baseConRosa();
 
-    expect(await editarCliente(control.base, rosa, { nombre: ' ', telefono: '-' })).toEqual({
+    expect(await editarCliente(control.base, rosa, { nombre: ' ', telefono: ' ' })).toEqual({
       tipo: 'invalido',
       errores: { nombre: 'Escribe el nombre del cliente.', telefono: 'Escribe el número de teléfono del cliente.' },
     });
@@ -248,5 +259,76 @@ describe('Buscar clientes mientras se escribe — SPEC-KRILINXI-032', () => {
 
   it('un % escrito se busca tal cual, no trae a todos', async () => {
     expect(await nombres('%%')).toEqual([]);
+  });
+});
+
+describe('El contenido del cliente: teléfono y carnet de verdad — SPEC-KRILINXI-058', () => {
+  it.each([
+    ['letras en vez de un teléfono', 'no sé'],
+    ['un teléfono con una letra', '7012345a'],
+    ['menos de 7 números', '701234'],
+    ['más de 8 números', '701234567'],
+    ['un prefijo de país', '+591 70123456'],
+  ])('%s: no es un teléfono y no guarda nada', async (_caso, telefono) => {
+    const { control, db } = await baseLocalDePrueba();
+    expect(await registrarCliente(control.base, { nombre: 'Juan', telefono, carnet: '' })).toEqual({
+      tipo: 'invalido',
+      errores: { telefono: TELEFONO_INVALIDO },
+    });
+    expect(await db.getCrudBatch()).toBeNull();
+  });
+
+  it('un teléfono con espacios o guiones sigue valiendo, y se guarda solo con números', async () => {
+    const { control } = await baseLocalDePrueba();
+    expect(await registrarCliente(control.base, { nombre: 'Juan', telefono: '7111-1111', carnet: '' })).toMatchObject({
+      tipo: 'registrado',
+      cliente: { telefono: '71111111' },
+    });
+  });
+
+  it.each([
+    ['con su extensión', '1234567 LP'],
+    ['sin extensión', '1234567'],
+    ['con una extensión de número y letra', '1234567-1A'],
+  ])('un carnet %s vale', async (_caso, carnet) => {
+    const { control } = await baseLocalDePrueba();
+    expect(await registrarCliente(control.base, { nombre: 'Juan', telefono: '71111111', carnet })).toMatchObject({ tipo: 'registrado' });
+  });
+
+  it.each([
+    ['un texto sin números', 'abcdefg'],
+    ['con letras delante', 'LP1234567'],
+    ['demasiado corto', '123'],
+  ])('un carnet %s no es un carnet', async (_caso, carnet) => {
+    const { control } = await baseLocalDePrueba();
+    expect(await registrarCliente(control.base, { nombre: 'Juan', telefono: '71111111', carnet })).toEqual({
+      tipo: 'invalido',
+      errores: { carnet: CARNET_INVALIDO },
+    });
+  });
+
+  it('un carnet de más de 30 caracteres es demasiado largo; un nombre de más de 150, también', async () => {
+    const { control } = await baseLocalDePrueba();
+    expect(await registrarCliente(control.base, { nombre: 'Juan', telefono: '71111111', carnet: '1'.repeat(31) })).toEqual({
+      tipo: 'invalido',
+      errores: { carnet: CARNET_LARGO },
+    });
+    expect(await registrarCliente(control.base, { nombre: 'a'.repeat(151), telefono: '71111111', carnet: '' })).toEqual({
+      tipo: 'invalido',
+      errores: { nombre: NOMBRE_LARGO },
+    });
+  });
+
+  it('un cliente de antes con un teléfono de otro formato puede cambiar su nombre sin tocar el teléfono', async () => {
+    const viejo = { id: '00000000-0000-4000-8000-0000000000aa', nombre: 'Lucía', telefono: '12345', carnet: null };
+    const { control, sembrar } = await baseLocalDePrueba();
+    await sembrar('clientes', [viejo]);
+
+    expect(await editarCliente(control.base, viejo, { nombre: 'Lucía Vargas', telefono: '12345' })).toMatchObject({ tipo: 'editado' });
+    // Pero si cambia el teléfono, el nuevo sí tiene que ser un teléfono.
+    expect(await editarCliente(control.base, viejo, { nombre: 'Lucía Vargas', telefono: '999' })).toEqual({
+      tipo: 'invalido',
+      errores: { telefono: TELEFONO_INVALIDO },
+    });
   });
 });

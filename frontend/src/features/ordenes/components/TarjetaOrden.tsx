@@ -29,7 +29,8 @@ export function TarjetaOrden({ orden, alElegir }: { orden: OrdenVista; alElegir:
           <Insignia tono={TONO_ESTADO[orden.estado]}>{TEXTO_ESTADO_ORDEN[orden.estado]}</Insignia>
         </span>
         <span className="mt-1 block font-semibold text-texto">{orden.clienteNombre}</span>
-        <span className="mt-1 block text-texto-suave">{orden.descripcion}</span>
+        {/* Con los saltos de línea que se escribieron (SPEC-KRILINXI-058). */}
+        <span className="mt-1 block whitespace-pre-line text-texto-suave">{orden.descripcion}</span>
         <span className="mt-2 flex flex-wrap justify-between gap-x-4 text-texto-suave">
           <span>{orden.fechaEstimada ? `Para el ${fechaCorta(orden.fechaEstimada)}` : 'Sin fecha'}</span>
           <span className={orden.saldo > 0 ? 'font-semibold text-peligro-texto' : 'text-exito-texto'}>
