@@ -52,8 +52,11 @@ const escribir = (etiqueta: string, valor: string) => fireEvent.change(screen.ge
 describe('Pantalla del personal — SPEC-KRILINXI-017', () => {
   it('lista las cuentas de la base local con usuario, rol y sucursal, sin pedir nada a la API', async () => {
     const { servidor } = await abrir();
-    expect(tarjeta('Rosa Quispe').getByText('Entra como «rosa» · Empleado · Centro')).toBeInTheDocument();
-    expect(tarjeta('Ana Administradora').getByText('Entra como «ana» · Administrador')).toBeInTheDocument();
+    const rosa = tarjeta('Rosa Quispe');
+    expect(rosa.getByText('«rosa»')).toBeInTheDocument();
+    expect(rosa.getByText('Empleado')).toBeInTheDocument();
+    expect(rosa.getByText('Centro')).toBeInTheDocument();
+    expect(tarjeta('Ana Administradora').getByText('Administrador')).toBeInTheDocument();
     expect(servidor.pedidos).toEqual([]);
     sinJerga();
   });
@@ -170,11 +173,13 @@ describe('Personal con el tema — SPEC-KRILINXI-027', () => {
     await abrir(undefined, [BETO]);
 
     const rosa = screen.getByRole('region', { name: 'Rosa Quispe' });
-    expect(within(rosa).getByText('Activa')).toHaveClass('bg-exito-fondo');
+    // SPEC-KRILINXI-051: la insignia marca solo la excepción; una cuenta activa no lleva ninguna.
+    expect(within(rosa).queryByText('Activa')).not.toBeInTheDocument();
     const beto = screen.getByRole('region', { name: 'Beto Mamani' });
     expect(within(beto).getByText('Dada de baja')).toHaveClass('bg-fondo');
-    // Una cuenta dada de baja no ofrece cambios.
-    expect(within(beto).queryByRole('button')).not.toBeInTheDocument();
+    // Una cuenta dada de baja no ofrece cambios (solo volver a darla de alta, SPEC-KRILINXI-051).
+    expect(within(beto).queryByRole('button', { name: 'Cambiar datos' })).not.toBeInTheDocument();
+    expect(within(beto).queryByRole('button', { name: 'Dar de baja' })).not.toBeInTheDocument();
     sinJerga();
   });
 
@@ -213,5 +218,70 @@ describe('Personal en una grilla de tarjetas — SPEC-KRILINXI-039', () => {
     }
     expect(usoDe(tarjeta('Rosa Quispe').getByRole('button', { name: 'Dar de baja' }))).toBe('peligro');
     expect(accionesPrincipales()).toEqual(['Agregar una persona']);
+  });
+});
+
+describe('Personal: volver a dar de alta — SPEC-KRILINXI-051', () => {
+  const BETO_ID = '00000000-0000-4000-8000-0000000000e2';
+  const BETO = { id: BETO_ID, nombre_completo: 'Beto Mamani', username: 'beto', rol: 'EMPLEADO', sucursal_id: CENTRO, activo: 0 };
+
+  it('una cuenta dada de baja ofrece volver a darla de alta; una activa no', async () => {
+    await abrir(undefined, [BETO]);
+    expect(tarjeta('Beto Mamani').getByRole('button', { name: 'Volver a dar de alta' })).toBeInTheDocument();
+    expect(tarjeta('Rosa Quispe').queryByRole('button', { name: 'Volver a dar de alta' })).not.toBeInTheDocument();
+    expect(tarjeta('Rosa Quispe').getByRole('button', { name: 'Cambiar datos' })).toBeInTheDocument();
+  });
+
+  it('pide confirmación diciendo a quién y qué pasa, y manda activo: true por la API sin tocar la base local', async () => {
+    const { servidor, db } = await abrir(undefined, [BETO]);
+    fireEvent.click(tarjeta('Beto Mamani').getByRole('button', { name: 'Volver a dar de alta' }));
+    const dialogo = screen.getByRole('dialog', { name: '¿Volver a dar de alta a Beto Mamani?' });
+    expect(dialogo).toHaveTextContent('Va a poder volver a entrar al sistema');
+    sinJerga();
+    expect(servidor.pedidos).toEqual([]);
+    fireEvent.click(screen.getByRole('button', { name: 'Sí, dar de alta' }));
+
+    await screen.findByText('Guardado. Puede tardar unos segundos en verse en la lista.');
+    expect(servidor.pedidos.map((p) => [p.metodo, p.ruta, p.cuerpo])).toEqual([['PATCH', `/usuarios/${BETO_ID}`, { activo: true }]]);
+    // La lista cambia cuando PowerSync la baje, no antes: la base local sigue como estaba.
+    const filas = await db.getAll<{ activo: number }>('SELECT activo FROM usuarios WHERE id = ?', [BETO_ID]);
+    expect(filas[0]?.activo).toBe(0);
+  });
+
+  it('cancelar no manda nada', async () => {
+    const { servidor } = await abrir(undefined, [BETO]);
+    fireEvent.click(tarjeta('Beto Mamani').getByRole('button', { name: 'Volver a dar de alta' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(servidor.pedidos).toEqual([]);
+  });
+
+  it('si el servidor rechaza, muestra su mensaje y la cuenta no cambia', async () => {
+    const mensaje = 'No se pudo volver a dar de alta a esa persona. Probá de nuevo.';
+    const { db } = await abrir(() => ({ status: 409, data: cuerpoError('CONFLICTO', mensaje) }), [BETO]);
+    fireEvent.click(tarjeta('Beto Mamani').getByRole('button', { name: 'Volver a dar de alta' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sí, dar de alta' }));
+    expect(await screen.findByText(mensaje)).toBeInTheDocument();
+    const filas = await db.getAll<{ activo: number }>('SELECT activo FROM usuarios WHERE id = ?', [BETO_ID]);
+    expect(filas[0]?.activo).toBe(0);
+  });
+
+  it('sin internet, el botón está deshabilitado y la pantalla lo dice', async () => {
+    sinRed();
+    await abrir(undefined, [BETO]);
+    expect(screen.getByText(/Para hacer cambios hace falta internet/)).toBeInTheDocument();
+    expect(tarjeta('Beto Mamani').getByRole('button', { name: 'Volver a dar de alta' })).toBeDisabled();
+  });
+
+  it('cada tarjeta separa usuario, rol y sucursal en pares dato/valor, y la baja se distingue por su texto', async () => {
+    await abrir(undefined, [BETO]);
+    const beto = screen.getByRole('region', { name: 'Beto Mamani' });
+    const pares = Array.from(beto.querySelectorAll('dt')).map((dt) => [dt.textContent, dt.nextElementSibling?.textContent]);
+    expect(pares).toEqual([
+      ['Usuario', '«beto»'],
+      ['Rol', 'Empleado'],
+      ['Sucursal', 'Centro'],
+    ]);
+    expect(within(beto).getByText('Dada de baja')).toBeInTheDocument();
+    sinJerga();
   });
 });

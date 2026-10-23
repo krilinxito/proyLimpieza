@@ -345,6 +345,10 @@ SPEC-KRILINXI-039 pasó Personal y Sucursales a una **grilla de tarjetas** (una 
 acciones adentro, compactas y con ícono. Cada cuenta lleva su inicial (`Avatar decorativo`, que no se anuncia porque el
 nombre ya es el título) y cada sucursal, cuántas personas trabajan ahí: `personasPorSucursal` cuenta en la base local
 las cuentas activas, y `usePersonasPorSucursal` da `null` mientras lee, así nunca dice un cero falso.
+SPEC-KRILINXI-051 le dio a una cuenta dada de baja el botón **"Volver a dar de alta"** (`PATCH /api/usuarios/:id` con `activo: true`, directo a
+la API con `enviar()`, con su confirmación). Las tarjetas de Personal ya no marcan "Activa": la insignia es solo para la excepción, "Dada de
+baja", y usuario, rol y sucursal van como pares `<dt>`/`<dd>`. En la misma spec, la etiqueta "Qué ropa deja" pasó a **"Qué deja"** (formulario de
+Registrar ropa y `pendientes/correccion.ts`, que tienen que decir lo mismo).
 SPEC-KRILINXI-041 agregó el **Historial de boletas** (`/boletas`, `features/historial/`), en el menú para todos, y **cada uno
 ve lo que le corresponde** (`useModoDelHistorial`, que sale de `useSucursalDeTrabajo`): quien atiende, su sucursal de
 trabajo de los **últimos 30 días**, de la base local y también sin internet (`listarHistorialLocal`, que reusa

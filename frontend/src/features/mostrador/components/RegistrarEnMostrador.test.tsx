@@ -51,7 +51,7 @@ async function elegirARosa() {
 
 function cargarRopa(boleta: string) {
   escribir('Número de la boleta', boleta);
-  escribir('Qué ropa deja', 'Camisa');
+  escribir('Qué deja', 'Camisa');
   escribir('Precio (Bs)', '10');
 }
 
@@ -82,7 +82,7 @@ describe('Registrar ropa: el recorrido — SPEC-KRILINXI-006 y SPEC-KRILINXI-034
     expect(within(formulario).getByText('Rosa Quispe')).toBeInTheDocument();
 
     escribir('Número de la boleta', '001234');
-    escribir('Qué ropa deja', '2 pantalones, 1 saco');
+    escribir('Qué deja', '2 pantalones, 1 saco');
     escribir('Precio (Bs)', '50');
     escribir('Para cuándo estará lista (si se sabe)', '2026-10-10');
     dejaAdelanto();
@@ -111,7 +111,7 @@ describe('Registrar ropa: el recorrido — SPEC-KRILINXI-006 y SPEC-KRILINXI-034
     await abrir();
     await elegirARosa();
     escribir('Número de la boleta', '001235');
-    escribir('Qué ropa deja', 'Un vestido');
+    escribir('Qué deja', 'Un vestido');
     escribir('Precio (Bs)', '30');
     await guardar();
 
@@ -185,10 +185,10 @@ describe('Registrar ropa: el recorrido — SPEC-KRILINXI-006 y SPEC-KRILINXI-034
   it('"Cambiar de cliente" vuelve al buscador sin perder la ropa escrita', async () => {
     await abrir();
     await elegirARosa();
-    escribir('Qué ropa deja', 'Camisa');
+    escribir('Qué deja', 'Camisa');
     fireEvent.click(screen.getByRole('button', { name: 'Cambiar de cliente' }));
     expect(await screen.findByRole('combobox', { name: /Buscar cliente/ })).toHaveValue('');
-    expect(screen.getByLabelText('Qué ropa deja')).toHaveValue('Camisa');
+    expect(screen.getByLabelText('Qué deja')).toHaveValue('Camisa');
   });
 });
 
@@ -352,7 +352,7 @@ describe('Registrar ropa desde el Mostrador — SPEC-KRILINXI-034', () => {
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Número de la boleta')).toHaveValue('001244');
-    expect(screen.getByLabelText('Qué ropa deja')).toHaveValue('Camisa');
+    expect(screen.getByLabelText('Qué deja')).toHaveValue('Camisa');
   });
 
   it('con el formulario vacío, volver no pregunta nada — SPEC-KRILINXI-048', async () => {

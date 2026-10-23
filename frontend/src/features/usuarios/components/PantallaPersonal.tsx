@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { AvisoResultado, AvisoSinRed, avisoDe } from '../../../components/AvisosAdmin';
 import { Boton } from '../../../components/Boton';
-import { Insignia, type TonoInsignia } from '../../../components/Insignia';
+import { Insignia } from '../../../components/Insignia';
 import { Paginas } from '../../../components/Paginas';
 import { ModalConfirmacion } from '../../../components/ModalConfirmacion';
 import { Avatar } from '../../../components/marco/Avatar';
@@ -16,17 +16,6 @@ import type { Cuenta } from '../types';
 import { FormularioCuenta } from './FormularioCuenta';
 
 type Edicion = { tipo: 'nueva' } | { tipo: 'editar'; cuenta: Cuenta } | null;
-
-/**
- * Cómo se ve si la cuenta puede entrar — SPEC-KRILINXI-027. Activa en verde: es lo normal y lo que
- * se busca. Dada de baja en neutro: no es un error, es una cuenta que ya no se usa.
- */
-const ESTADO_CUENTA: Record<'activa' | 'baja', { texto: string; tono: TonoInsignia }> = {
-  activa: { texto: 'Activa', tono: 'exito' },
-  baja: { texto: 'Dada de baja', tono: 'neutro' },
-};
-
-const estadoDe = (cuenta: Cuenta) => ESTADO_CUENTA[cuenta.activo ? 'activa' : 'baja'];
 
 /**
  * El personal para el admin — SPEC-KRILINXI-017: las cuentas (de la base local), y darlas de
@@ -45,6 +34,7 @@ export function PantallaPersonal() {
   const paginas = usePaginado(cuentas);
   const [edicion, setEdicion] = useState<Edicion>(null);
   const [baja, setBaja] = useState<Cuenta | null>(null);
+  const [alta, setAlta] = useState<Cuenta | null>(null);
   const [aviso, setAviso] = useState<ReturnType<typeof avisoDe> | null>(null);
 
   if (cuentas === null) return <p className="mt-6 text-xl text-texto-suave">Buscando…</p>;
@@ -52,6 +42,12 @@ export function PantallaPersonal() {
   async function darDeBaja(cuenta: Cuenta) {
     const resultado = await cambiosDeCuenta.darDeBaja(cuenta);
     setBaja(null);
+    setAviso(resultado.tipo === 'invalido' ? null : avisoDe(resultado));
+  }
+
+  async function darDeAlta(cuenta: Cuenta) {
+    const resultado = await cambiosDeCuenta.darDeAlta(cuenta);
+    setAlta(null);
     setAviso(resultado.tipo === 'invalido' ? null : avisoDe(resultado));
   }
 
@@ -99,13 +95,29 @@ export function PantallaPersonal() {
               <div className="flex items-start gap-4">
                 <Avatar nombre={c.nombreCompleto} decorativo />
                 <div className="grid justify-items-start gap-2">
-                  <Insignia tono={estadoDe(c).tono}>{estadoDe(c).texto}</Insignia>
-                  <p className="text-xl text-texto">
-                    Entra como «{c.username}» · {TEXTO_ROL[c.rol]}
-                    {c.sucursal && ` · ${c.sucursal}`}
-                  </p>
+                  {/* La insignia marca solo la excepción (SPEC-KRILINXI-051): lo normal no lleva marca. */}
+                  {!c.activo && <Insignia tono="neutro">Dada de baja</Insignia>}
+                  <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xl">
+                    <dt className="font-semibold text-texto-suave">Usuario</dt>
+                    <dd className="text-texto">«{c.username}»</dd>
+                    <dt className="font-semibold text-texto-suave">Rol</dt>
+                    <dd className="text-texto">{TEXTO_ROL[c.rol]}</dd>
+                    {c.sucursal && (
+                      <>
+                        <dt className="font-semibold text-texto-suave">Sucursal</dt>
+                        <dd className="text-texto">{c.sucursal}</dd>
+                      </>
+                    )}
+                  </dl>
                 </div>
               </div>
+              {!c.activo && (
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <Boton variante="secundario" tamano="compacto" icono="candado-abierto" disabled={!enLinea} onClick={() => setAlta(c)}>
+                    Volver a dar de alta
+                  </Boton>
+                </div>
+              )}
               {c.activo && (
                 <div className="mt-4 flex flex-wrap gap-3">
                   <Boton
@@ -141,6 +153,14 @@ export function PantallaPersonal() {
         peligroso
         onConfirmar={() => (baja ? darDeBaja(baja) : undefined)}
         onCancelar={() => setBaja(null)}
+      />
+      <ModalConfirmacion
+        abierto={alta !== null}
+        titulo={`¿Volver a dar de alta a ${alta?.nombreCompleto ?? ''}?`}
+        mensaje="Va a poder volver a entrar al sistema con su usuario y su contraseña de siempre."
+        textoConfirmar="Sí, dar de alta"
+        onConfirmar={() => (alta ? darDeAlta(alta) : undefined)}
+        onCancelar={() => setAlta(null)}
       />
     </>
   );

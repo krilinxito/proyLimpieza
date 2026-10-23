@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { cuerpoError, simularApi } from '../../../test/apiFalsa';
 import { baseLocalDePrueba } from '../../../test/baseLocalDePrueba';
 import type { Cuenta } from '../types';
-import { crearCuenta, darDeBaja, editarCuenta, MENSAJES_CUENTA } from './cuentasApi';
+import { crearCuenta, darDeAlta, darDeBaja, editarCuenta, MENSAJES_CUENTA } from './cuentasApi';
 import { listarCuentas } from './cuentasLocal';
 
 const CENTRO = '00000000-0000-4000-8000-0000000000c1';
@@ -96,6 +96,12 @@ describe('Cuentas: los cambios van directo a la API — SPEC-KRILINXI-017', () =
     const servidor = ok();
     expect(await darDeBaja(ROSA)).toEqual({ tipo: 'guardado' });
     expect(servidor.pedidos.map((p) => [p.metodo, p.ruta, p.cuerpo])).toEqual([['PATCH', `/usuarios/${ROSA.id}`, { activo: false }]]);
+  });
+
+  it('volver a dar de alta manda activo: true — SPEC-KRILINXI-051', async () => {
+    const servidor = ok();
+    expect(await darDeAlta(ROSA)).toEqual({ tipo: 'guardado' });
+    expect(servidor.pedidos.map((p) => [p.metodo, p.ruta, p.cuerpo])).toEqual([['PATCH', `/usuarios/${ROSA.id}`, { activo: true }]]);
   });
 
   it('un usuario repetido muestra el mensaje del servidor, que dice qué hacer', async () => {
