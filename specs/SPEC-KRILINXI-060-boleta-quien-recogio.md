@@ -31,6 +31,18 @@ Una entrega sin boleta exige nombre y carnet de quien retira, pero ese dato no s
 
 ## Notas
 
+### Contrato de `GET /api/ordenes`
+
+Cada elemento de `boletas` suma un campo `retiro`:
+
+```json
+"retiro": null
+"retiro": { "tipo": "CON_BOLETA", "nombre": null, "carnet": null }
+"retiro": { "tipo": "SIN_BOLETA", "nombre": "Luis Mamani", "carnet": "1234567 LP" }
+```
+
+`null` mientras la boleta no se entregó. El resto de la respuesta no cambia.
+
 <!--
 Convención de trazabilidad: todo test relacionado con esta spec debe llevar su id
 en el nombre del describe/bloque, por ejemplo:

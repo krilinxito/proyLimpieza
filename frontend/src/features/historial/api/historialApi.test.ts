@@ -27,6 +27,19 @@ describe('Historial completo, pedido a la API — SPEC-KRILINXI-041', () => {
     });
   });
 
+  it('lee quién retiró la ropa, y una boleta sin entregar no tiene retiro — SPEC-KRILINXI-060', () => {
+    const retiro = { tipo: 'SIN_BOLETA', nombre: 'Luis Mamani', carnet: '1234567 LP' };
+    const pagina = leerPagina(paginaDeBoletas([boletaDePrueba({ retiro }), boletaDePrueba()]));
+
+    expect(pagina?.boletas[0]?.retiro).toEqual(retiro);
+    expect(pagina?.boletas[1]?.retiro).toBeNull();
+  });
+
+  it('un retiro que no encaja con el contrato descarta la página — SPEC-KRILINXI-060', () => {
+    expect(leerPagina(paginaDeBoletas([boletaDePrueba({ retiro: { tipo: 'POR_CORREO', nombre: null, carnet: null } })]))).toBeNull();
+    expect(leerPagina(paginaDeBoletas([boletaDePrueba({ retiro: 'Luis' })]))).toBeNull();
+  });
+
   it('una boleta sin entrega no tiene precio final', () => {
     expect(leerPagina(paginaDeBoletas([boletaDePrueba({ precioFinal: null })]))?.boletas[0]?.precioFinal).toBeNull();
   });

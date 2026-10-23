@@ -44,6 +44,7 @@ function aBoleta(orden: OrdenVista, dia: string | null): BoletaListada {
     dia,
     precioTotal: orden.precioTotal,
     precioFinal: orden.precioFinal,
+    retiro: orden.retiro,
     pagado: orden.pagado,
     saldo: orden.saldo,
   };

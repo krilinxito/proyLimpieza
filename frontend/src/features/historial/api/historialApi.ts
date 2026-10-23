@@ -9,9 +9,10 @@
  * solo se pasan a centavos para mostrarlos, no se suma nada.
  */
 import { api, RespuestaRara } from '../../../lib/api';
-import { esEstadoOrden } from '../../../lib/dominio';
+import { esEstadoOrden, esTipoRetiro } from '../../../lib/dominio';
 import { desdeDecimal } from '../../../lib/money';
 import { POR_PAGINA_ANCHA } from '../../../lib/tamanoDePagina';
+import type { Retiro } from '../../ordenes/retiro';
 import type { ParametrosHistorial } from '../filtro';
 import type { BoletaListada, PaginaHistorial } from '../types';
 
@@ -34,6 +35,13 @@ function leerMonto(v: unknown): number | null {
   }
 }
 
+/** El retiro de una boleta entregada; undefined si no encaja con el contrato (null = sin entregar). */
+function leerRetiro(r: unknown): Retiro | null | undefined {
+  if (r === null) return null;
+  if (!esObjeto(r) || !esTipoRetiro(r.tipo) || !textoONulo(r.nombre) || !textoONulo(r.carnet)) return undefined;
+  return { tipo: r.tipo, nombre: r.nombre, carnet: r.carnet };
+}
+
 function leerBoleta(b: unknown): BoletaListada | null {
   if (!esObjeto(b) || !esTexto(b.id) || !esTexto(b.numeroBoleta) || !esTexto(b.descripcion)) return null;
   if (!esEstadoOrden(b.estado) || !esTexto(b.fechaEntrada) || !textoONulo(b.fechaEstimadaSalida)) return null;
@@ -47,6 +55,8 @@ function leerBoleta(b: unknown): BoletaListada | null {
   const precioFinal = b.precioFinal === null ? null : leerMonto(b.precioFinal);
   if (precioTotal === null || pagado === null || saldo === null) return null;
   if (b.precioFinal !== null && precioFinal === null) return null;
+  const retiro = leerRetiro(b.retiro);
+  if (retiro === undefined) return null;
 
   return {
     id: b.id,
@@ -61,6 +71,7 @@ function leerBoleta(b: unknown): BoletaListada | null {
     dia: b.fechaEntrada.slice(0, 10),
     precioTotal,
     precioFinal,
+    retiro,
     pagado,
     saldo,
   };

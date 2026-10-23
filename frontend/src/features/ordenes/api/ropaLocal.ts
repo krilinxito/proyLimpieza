@@ -10,7 +10,14 @@
  * base local, que es SQLite normal (CLAUDE.md §7).
  */
 import type { BaseLocal, Fila } from '../../../lib/powersync';
-import { esEstadoOrden, esMetodoPago, esTipoPago, type EstadoOrden, type MetodoPago } from '../../../lib/dominio';
+import {
+  esEstadoOrden,
+  esMetodoPago,
+  esTipoPago,
+  esTipoRetiro,
+  type EstadoOrden,
+  type MetodoPago,
+} from '../../../lib/dominio';
 import { desdeDecimal, parsearMonto, sumar, type Centavos } from '../../../lib/money';
 import { horaOficial } from '../../../lib/reloj';
 import { alcanzaParaBuscar, escaparLike, type ResultadosDeBusqueda } from '../../../lib/texto';
@@ -19,6 +26,7 @@ import { normalizarTelefono } from '../../clientes/telefono';
 import { insertarPago } from '../../pagos/api/pagosLocal';
 import { calcularSaldo } from '../../pagos/saldo';
 import { estaCerrada, estadoEfectivo, puedePasarA } from '../estado';
+import type { Retiro } from '../retiro';
 import type { OrdenVista, PagoVisto, QuienRegistra, ResultadoAccion } from '../types';
 
 export const MENSAJES_ACCION = {
@@ -35,7 +43,8 @@ export const MENSAJES_ACCION = {
 export const SELECT_ORDENES = `
   SELECT o.id, o.numero_boleta, o.cliente_id, o.descripcion, o.estado, o.fecha_entrada, o.fecha_estimada_salida,
          o.precio_total, c.nombre AS cliente_nombre, c.telefono AS cliente_telefono,
-         e.id AS entrega_id, e.precio_final
+         e.id AS entrega_id, e.precio_final,
+         e.tipo_retiro, e.retirado_por_nombre, e.retirado_por_carnet
     FROM ordenes o
     LEFT JOIN clientes c ON c.id = o.cliente_id
     LEFT JOIN entregas e ON e.orden_id = o.id
@@ -80,6 +89,16 @@ async function pagosPorOrden(base: BaseLocal, ordenIds: string[]): Promise<Map<s
   return porOrden;
 }
 
+/** Quién retiró, de la fila de la entrega; null si no hay entrega o el tipo guardado no se entiende. */
+function aRetiro(fila: Fila): Retiro | null {
+  if (typeof fila.entrega_id !== 'string' || !esTipoRetiro(fila.tipo_retiro)) return null;
+  return {
+    tipo: fila.tipo_retiro,
+    nombre: texto(fila.retirado_por_nombre),
+    carnet: texto(fila.retirado_por_carnet),
+  };
+}
+
 /** Arma la vista de una orden. Una fila rota (sin estado válido) no se muestra. */
 function aOrden(fila: Fila, pagos: PagoVisto[]): OrdenVista | null {
   const { id, numero_boleta, estado } = fila;
@@ -102,6 +121,7 @@ function aOrden(fila: Fila, pagos: PagoVisto[]): OrdenVista | null {
     fechaEstimada: texto(fila.fecha_estimada_salida),
     precioTotal,
     precioFinal,
+    retiro: aRetiro(fila),
     pagado: sumar(...montos),
     saldo: calcularSaldo({ precioTotal, precioFinal, pagos: montos }),
     pagos,

@@ -1,5 +1,6 @@
 import type { EstadoOrden } from '../../lib/dominio';
 import type { Centavos } from '../../lib/money';
+import type { Retiro } from '../ordenes/retiro';
 
 /**
  * Una boleta en la lista del historial — SPEC-KRILINXI-041. Es una sola forma para las dos
@@ -23,6 +24,8 @@ export type BoletaListada = {
   precioTotal: Centavos;
   /** El de la entrega; null mientras no se entregó. */
   precioFinal: Centavos | null;
+  /** Quién retiró la ropa (SPEC-KRILINXI-060); null si todavía no se entregó. */
+  retiro: Retiro | null;
   pagado: Centavos;
   saldo: Centavos;
 };

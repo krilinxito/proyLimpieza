@@ -24,6 +24,7 @@ export function boletaDePrueba(cambios: Record<string, unknown> = {}) {
     fechaEstimadaSalida: '2026-10-18',
     precioTotal: '50.00',
     precioFinal: null,
+    retiro: null,
     pagado: '20.00',
     saldo: '30.00',
     ...cambios,
