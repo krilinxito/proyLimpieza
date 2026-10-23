@@ -31,6 +31,8 @@ export function FormularioIngreso() {
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  // SPEC-KRILINXI-054: ver lo que se escribe. Vive solo en esta pantalla: nunca va a la sesión ni se guarda.
+  const [verContrasena, setVerContrasena] = useState(false);
   const [errores, setErrores] = useState<{ username?: string; password?: string }>({});
   const [errorGeneral, setErrorGeneral] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -72,12 +74,24 @@ export function FormularioIngreso() {
       />
       <CampoTexto
         etiqueta="Contraseña"
-        type="password"
+        type={verContrasena ? 'text' : 'password'}
         value={password}
         onChange={setPassword}
         error={errores.password}
         autoComplete="current-password"
+        autoCapitalize="none"
+        spellCheck={false}
       />
+      <div>
+        <Boton
+          variante="navegacion"
+          tamano="compacto"
+          icono={verContrasena ? 'ojo-tachado' : 'ojo'}
+          onClick={() => setVerContrasena((v) => !v)}
+        >
+          {verContrasena ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+        </Boton>
+      </div>
       {errorGeneral && (
         <div className="mt-4">
           <Aviso tipo="error">{errorGeneral}</Aviso>

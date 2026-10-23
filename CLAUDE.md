@@ -356,6 +356,9 @@ avisos de información siguen azules, y las series de los gráficos no cambiaron
 SPEC-KRILINXI-053 pasó **todos los textos de la app al tuteo neutro** ("Elige", "Escribe", "Prueba", "Revisa"), tanto en la pantalla como en los mensajes de
 error de la API, que la pantalla muestra tal cual. Se acabó el voseo: `backend/tests/unit/textosEnTuteo.test.ts` recorre el código fuente de los dos lados y
 falla si encuentra una forma de su lista. Una forma nueva que se cuele se agrega a esa lista.
+SPEC-KRILINXI-054 pulió tres piezas compartidas: el ingreso tiene un botón **"Mostrar contraseña"** (solo cambia el `type` del campo; nunca se guarda), la `Paginas` de
+todas las listas es **un solo bloque chico** (botones compactos y letra de renglón), y la **cabecera del marco se acomoda en pantalla chica** (<640px) en dos
+filas, con `order` y un corte de renglón que solo existe en angosto, sin cambiar el orden del DOM. Un test de arquitectura vigila que nadie arme su propia barra de páginas.
 SPEC-KRILINXI-041 agregó el **Historial de boletas** (`/boletas`, `features/historial/`), en el menú para todos, y **cada uno
 ve lo que le corresponde** (`useModoDelHistorial`, que sale de `useSucursalDeTrabajo`): quien atiende, su sucursal de
 trabajo de los **últimos 30 días**, de la base local y también sin internet (`listarHistorialLocal`, que reusa

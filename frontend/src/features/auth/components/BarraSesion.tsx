@@ -33,11 +33,13 @@ export function BarraSesion() {
   if (!sesion) return null;
 
   return (
-    <div className="flex items-center gap-4">
+    // `contents`: la barra no hace caja propia. Quien atiende queda en el primer renglón de la cabecera y Salir baja al
+    // segundo en pantalla chica (SPEC-KRILINXI-054); cada pieza se coloca con `order` en la cabecera.
+    <div className="contents">
       {/* Quién atiende, como un círculo con su inicial (SPEC-KRILINXI-030). */}
       <Avatar nombre={sesion.usuario.nombreCompleto} />
-      <div className="w-auto">
-        <Boton variante="secundario" icono="salir" onClick={() => setConfirmando(true)}>
+      <div className="order-7 w-auto sm:order-none">
+        <Boton variante="secundario" tamano="compacto" icono="salir" onClick={() => setConfirmando(true)}>
           Salir
         </Boton>
       </div>

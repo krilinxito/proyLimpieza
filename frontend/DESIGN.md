@@ -252,7 +252,7 @@ Las cuatro series de los gráficos no cambian en oscuro.
 
 **Ritmo:** lo que va junto se separa 8 a 12px (`gap-2`, `gap-3`); las tarjetas de una lista, 12 a 16px; las secciones, 24 a 32px. Cada tarjeta respira con 16 a 24px por dentro.
 
-**Listas largas:** siempre paginadas ("Anteriores · Página 2 de 3 · Siguientes"), con 6, 10 o 20 elementos según el ancho de la pantalla. El buscador completa la paginación, no la reemplaza.
+**Listas largas:** siempre paginadas, con la barra en un solo bloque compacto ("Anteriores · Página 2 de 3 · Siguientes"), con 6, 10 o 20 elementos según el ancho de la pantalla. El buscador completa la paginación, no la reemplaza.
 
 ## Elevation & Depth
 

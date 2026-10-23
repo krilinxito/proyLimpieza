@@ -966,7 +966,8 @@ describe('Las tarjetas no se pisan en una pantalla media — SPEC-KRILINXI-044',
     await abrirPanel();
     const paginas = await within(await screen.findByRole('region', { name: 'Clientes atendidos' })).findByRole('navigation', { name: 'Páginas de clientes' });
 
-    expect(paginas).toHaveClass('flex', 'flex-wrap');
+    // Desde SPEC-KRILINXI-054 el `flex-wrap` está en el recuadro de adentro: la barra es un solo bloque.
+    expect(paginas.firstElementChild).toHaveClass('flex', 'flex-wrap');
     // Con tres columnas `1fr auto 1fr` cada `1fr` no baja del ancho de su botón: era lo que la sacaba de la tarjeta.
     expect(paginas.className).not.toMatch(/grid-cols-\[/);
   });

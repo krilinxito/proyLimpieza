@@ -155,6 +155,20 @@ const TRAZOS = {
       <path d="M8 11V7a4 4 0 0 1 7.8-1.2" />
     </>
   ),
+  // SPEC-KRILINXI-054: mostrar y ocultar lo que se escribe (la contraseña del ingreso).
+  ojo: (
+    <>
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+      <circle cx="12" cy="12" r="3" />
+    </>
+  ),
+  'ojo-tachado': (
+    <>
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+      <circle cx="12" cy="12" r="3" />
+      <path d="M4 4l16 16" />
+    </>
+  ),
   // SPEC-KRILINXI-041: el Historial de boletas (una hoja con renglones).
   historial: (
     <>

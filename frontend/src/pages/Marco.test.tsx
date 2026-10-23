@@ -359,3 +359,33 @@ describe('Marco: la conexión en una esquina — SPEC-KRILINXI-031', () => {
     expect(cabecera().queryByRole('button', { name: /internet/ })).not.toBeInTheDocument();
   });
 });
+
+describe('Marco: la cabecera en pantalla chica — SPEC-KRILINXI-054', () => {
+  // jsdom no mide el ancho: se comprueba lo que decide el acomodo, que son las clases de la cabecera.
+  const cabecera = () => within(screen.getByRole('banner'));
+
+  it('arriba van el menú, el nombre y el tema; abajo, la conexión y Salir, separados por un corte de renglón que solo existe en angosto', async () => {
+    abrir('/clientes');
+    const salir = await cabecera().findByRole('button', { name: 'Salir' });
+    const corte = screen.getByRole('banner').querySelector('[data-corte-de-renglon]');
+
+    expect(corte).toHaveClass('basis-full', 'sm:hidden');
+    expect(corte).toHaveAttribute('aria-hidden', 'true');
+    // Salir y la conexión quedan después del corte (order mayor) en angosto, y en su orden natural desde sm.
+    expect(salir.closest('.order-7')).toHaveClass('sm:order-none');
+    expect((await cabecera().findByRole('button', { name: /internet/ })).closest('.order-5')).toHaveClass('sm:order-none');
+  });
+
+  it('el nombre de la sucursal se corta con puntos suspensivos en vez de empujar los botones', async () => {
+    abrir('/clientes');
+    expect(await cabecera().findByText('Sucursal Centro')).toHaveClass('truncate');
+  });
+
+  it('no esconde nada: la cabecera sigue teniendo el menú, el tema, quién atiende y Salir', async () => {
+    abrir('/clientes');
+    await cabecera().findByRole('button', { name: 'Salir' });
+    expect(cabecera().getByRole('button', { name: 'Menú' })).toBeInTheDocument();
+    expect(cabecera().getByRole('button', { name: /Tema/ })).toBeInTheDocument();
+    expect(cabecera().getByRole('link', { name: 'Lavandería' })).toBeInTheDocument();
+  });
+});

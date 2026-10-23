@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { App } from '../../../App';
 import { leerSesion } from '../api/almacen';
 import { cuerpoError, simularApi, type RespuestaFalsa } from '../../../test/apiFalsa';
@@ -120,5 +120,44 @@ describe('Ingresar al sistema — SPEC-KRILINXI-003', () => {
   it('quien ya está adentro y abre /ingresar va directo al inicio', () => {
     renderEnRuta(<App />, '/ingresar');
     expect(screen.getByRole('heading', { name: 'Lavandería' })).toBeInTheDocument();
+  });
+});
+
+describe('Ver la contraseña al ingresar — SPEC-KRILINXI-054', () => {
+  it('por defecto está oculta, y un botón la muestra y la vuelve a ocultar', async () => {
+    abrirSinSesion();
+    const campo = screen.getByLabelText('Contraseña');
+    expect(campo).toHaveAttribute('type', 'password');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mostrar contraseña' }));
+    expect(screen.getByLabelText('Contraseña')).toHaveAttribute('type', 'text');
+
+    // El botón se queda ocupado un instante tras cada toque (evita el doble toque): se espera a que vuelva.
+    fireEvent.click(await screen.findByRole('button', { name: 'Ocultar contraseña' }));
+    await waitFor(() => expect(screen.getByLabelText('Contraseña')).toHaveAttribute('type', 'password'));
+  });
+
+  it('el botón tiene nombre en palabras, un ícono decorativo y no envía el formulario', () => {
+    const servidor = servidorQueResponde(RESPUESTA_OK);
+    abrirSinSesion();
+    escribir('Usuario', 'rosa');
+    escribir('Contraseña', 'secreta');
+    const boton = screen.getByRole('button', { name: 'Mostrar contraseña' });
+
+    expect(boton).toHaveAttribute('type', 'button');
+    expect(boton.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    fireEvent.click(boton);
+    expect(servidor.pedidos).toEqual([]);
+  });
+
+  it('lo que se manda al servidor es lo escrito, con la contraseña visible o no, y la sesión no la guarda', async () => {
+    const servidor = servidorQueResponde(RESPUESTA_OK);
+    abrirSinSesion();
+    fireEvent.click(screen.getByRole('button', { name: 'Mostrar contraseña' }));
+    entrarComo('rosa', 'secreta');
+
+    expect(await screen.findByRole('heading', { name: 'Lavandería' })).toBeInTheDocument();
+    expect(servidor.pedidos.map((p) => p.cuerpo)).toEqual([{ username: 'rosa', password: 'secreta' }]);
+    expect(JSON.stringify(leerSesion())).not.toContain('secreta');
   });
 });
