@@ -33,7 +33,7 @@ export function useAuditoria(filtro: FiltroAuditoria) {
  * Lo que la tablet sabe nombrar: personas y sucursales de la base local, y los clientes de los
  * registros de esta página. Ropa, cobros y entregas no están en la tablet del admin.
  */
-export function useNombresConocidos(estado: EstadoPedido<PaginaAuditoria>): NombresConocidos {
+export function useNombresConocidos(estado: EstadoPedido<PaginaAuditoria>, filtro: FiltroAuditoria): NombresConocidos {
   const base = useBaseLocal();
   const cuentas = useCuentas();
   const sucursales = useSucursales();
@@ -63,7 +63,8 @@ export function useNombresConocidos(estado: EstadoPedido<PaginaAuditoria>): Nomb
       clientes,
       cuentas: new Map((cuentas ?? []).map((c) => [c.id, c.nombreCompleto])),
       sucursales: new Map((sucursales ?? []).map((s) => [s.id, s.nombre])),
+      clienteDelFiltro: filtro.cliente?.nombre ?? null,
     }),
-    [clientes, cuentas, sucursales],
+    [clientes, cuentas, sucursales, filtro.cliente],
   );
 }

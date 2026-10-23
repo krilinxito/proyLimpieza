@@ -4,6 +4,7 @@ import { App } from '../../../App';
 import { simularApi, type RespuestaFalsa } from '../../../test/apiFalsa';
 import { ELENA, paginaDePrueba, registroDePrueba, ROSA_CLIENTE, SUCURSAL_CENTRO } from '../../../test/auditoriaDePrueba';
 import { baseLocalDePrueba } from '../../../test/baseLocalDePrueba';
+import { elegirEnBuscador } from '../../../test/buscador';
 import { sinJerga } from '../../../test/jerga';
 import { tabletConRelojCorrido } from '../../../test/reloj';
 import { renderEnRuta } from '../../../test/render';
@@ -108,6 +109,41 @@ describe('¿Quién hizo qué? — SPEC-KRILINXI-018', () => {
         por_pagina: 20,
       }),
     );
+  });
+
+  it('elige un cliente con el buscador de la base local y manda su cliente_id; se puede quitar — SPEC-KRILINXI-062', async () => {
+    const { servidor } = await abrir();
+    await screen.findByText(/Registró ropa/);
+    fireEvent.click(screen.getByText('Buscar con más detalle'));
+
+    await elegirEnBuscador('rosa', /Rosa Quispe/, /¿De qué cliente\?/);
+
+    await waitFor(() =>
+      expect(servidor.pedidos.at(-1)?.parametros).toEqual({
+        desde: '2026-09-17',
+        hasta: '2026-10-16',
+        cliente_id: ROSA_CLIENTE,
+        pagina: 1,
+        por_pagina: 20,
+      }),
+    );
+    expect(screen.getByText('Rosa Quispe', { selector: 'p' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Quitar el cliente' }));
+
+    await waitFor(() => expect(Object.keys(servidor.pedidos.at(-1)?.parametros as object)).not.toContain('cliente_id'));
+    expect(await screen.findByRole('combobox', { name: /¿De qué cliente\?/ })).toBeInTheDocument();
+  });
+
+  it('con un cliente elegido, cada registro dice a quién se refiere — SPEC-KRILINXI-062', async () => {
+    await abrir(() => ({ status: 200, data: paginaDePrueba([registroDePrueba({ accion: 'COBRAR', tablaAfectada: 'pagos' })]) }));
+    await screen.findByText('Elena Choque: Cobró');
+    fireEvent.click(screen.getByText('Buscar con más detalle'));
+
+    await elegirEnBuscador('rosa', /Rosa Quispe/, /¿De qué cliente\?/);
+
+    expect(await screen.findByText('Elena Choque: Cobró — de Rosa Quispe')).toBeInTheDocument();
+    sinJerga();
   });
 
   it('elegir fechas pide ese período', async () => {

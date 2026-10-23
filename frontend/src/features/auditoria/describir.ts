@@ -47,12 +47,16 @@ export function queHizo({ accion, tablaAfectada, valoresAnteriores }: RegistroAu
   return cambios[tablaAfectada];
 }
 
-/** El nombre de lo que tocó, si la tablet lo conoce; null si no (ropa, cobros, entregas). */
+/**
+ * El nombre de lo que tocó, si la tablet lo conoce; null si no (ropa, cobros, entregas). Con un cliente elegido en
+ * el filtro (SPEC-KRILINXI-062), la ropa, los cobros y las entregas de la lista son de ese cliente, y se dice: "de Rosa".
+ */
 export function sobreQue({ tablaAfectada, registroId }: RegistroAuditoria, nombres: NombresConocidos): string | null {
   if (!registroId) return null;
   if (tablaAfectada === 'clientes') return nombres.clientes.get(registroId) ?? null;
   if (tablaAfectada === 'usuarios') return nombres.cuentas.get(registroId) ?? null;
   if (tablaAfectada === 'sucursales') return nombres.sucursales.get(registroId) ?? null;
+  if (nombres.clienteDelFiltro) return `de ${nombres.clienteDelFiltro}`;
   return null;
 }
 
