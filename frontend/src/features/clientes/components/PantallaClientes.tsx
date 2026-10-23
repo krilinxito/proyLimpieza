@@ -2,10 +2,14 @@ import { useState } from 'react';
 import { Aviso } from '../../../components/Aviso';
 import { Boton } from '../../../components/Boton';
 import { BuscadorVivo } from '../../../components/BuscadorVivo';
+import { EnlaceBoton } from '../../../components/EnlaceBoton';
+import { useSucursalDeTrabajo } from '../../atencion/hooks/useSucursalDeTrabajo';
+import { enlaceABoletasDe } from '../../historial/components/BoletasDelCliente';
 import { useClientes } from '../hooks/useClientes';
 import type { Cliente } from '../types';
 import { FormularioAltaCliente } from './FormularioAltaCliente';
 import { FormularioEditarCliente } from './FormularioEditarCliente';
+import { ListaDeRecientes } from './ListaDeRecientes';
 import { TarjetaCliente } from './TarjetaCliente';
 
 /** En qué punto está el empleado. Un solo camino: buscar y, si no aparece, registrar. */
@@ -44,6 +48,8 @@ export function PantallaClientes() {
   const [paso, setPaso] = useState<Paso>({ tipo: 'inicio' });
   // Cambia cada vez que se elige un cliente: vuelve a montar el buscador, que queda vacío.
   const [vuelta, setVuelta] = useState(0);
+  // SPEC-KRILINXI-061: con algo escrito en el buscador, sus resultados reemplazan la lista de recientes.
+  const [buscando, setBuscando] = useState(false);
 
   function mostrarCliente(cliente: Cliente) {
     setPaso({ tipo: 'encontrado', cliente });
@@ -62,6 +68,7 @@ export function PantallaClientes() {
         accion={{ texto: 'Cliente nuevo', icono: 'clientes', alElegir: (escrito) => setPaso({ tipo: 'alta', escrito }) }}
         sinResultados="Ningún cliente coincide con eso. Si es la primera vez que viene, toca «Cliente nuevo»."
         deshabilitado={!clientes.lista}
+        alCambiarEscrito={setBuscando}
       />
 
       <section aria-live="polite" className="mt-6">
@@ -69,7 +76,9 @@ export function PantallaClientes() {
           <>
             <TarjetaCliente cliente={paso.cliente} />
             <Acciones
+              cliente={paso.cliente}
               alEditar={() => setPaso({ tipo: 'editando', cliente: paso.cliente })}
+              alVolver={() => setPaso({ tipo: 'inicio' })}
             />
           </>
         )}
@@ -95,7 +104,9 @@ export function PantallaClientes() {
             <Aviso tipo="exito">Cliente registrado.</Aviso>
             <TarjetaCliente cliente={paso.cliente} />
             <Acciones
+              cliente={paso.cliente}
               alEditar={() => setPaso({ tipo: 'editando', cliente: paso.cliente })}
+              alVolver={() => setPaso({ tipo: 'inicio' })}
             />
           </>
         )}
@@ -128,7 +139,9 @@ export function PantallaClientes() {
             <Aviso tipo="exito">{paso.aviso}</Aviso>
             <TarjetaCliente cliente={paso.cliente} />
             <Acciones
+              cliente={paso.cliente}
               alEditar={() => setPaso({ tipo: 'editando', cliente: paso.cliente })}
+              alVolver={() => setPaso({ tipo: 'inicio' })}
             />
           </>
         )}
@@ -140,25 +153,40 @@ export function PantallaClientes() {
             </Aviso>
             <TarjetaCliente cliente={paso.cliente} />
             <Acciones
+              cliente={paso.cliente}
               alEditar={() => setPaso({ tipo: 'editando', cliente: paso.cliente })}
+              alVolver={() => setPaso({ tipo: 'inicio' })}
             />
           </>
         )}
       </section>
+
+      {/* Sin nada elegido: los últimos clientes, mientras no se escribe en el buscador (SPEC-KRILINXI-061). */}
+      {paso.tipo === 'inicio' && !buscando && <ListaDeRecientes alElegir={mostrarCliente} />}
     </div>
   );
 }
 
 /**
- * Lo que se puede hacer con un cliente en pantalla: "Cambiar datos" (SPEC-KRILINXI-014). Hasta
+ * Lo que se puede hacer con un cliente en pantalla: "Cambiar datos" (SPEC-KRILINXI-014), "Ver sus boletas" y volver a la lista (SPEC-KRILINXI-061). Hasta
  * SPEC-KRILINXI-034 había también "Es este cliente", para elegirlo al registrar ropa; ahora el
  * cliente se elige dentro del formulario de la ropa (`ElegirClienteDeLaRopa`).
  */
-function Acciones({ alEditar }: { alEditar: () => void }) {
+function Acciones({ cliente, alEditar, alVolver }: { cliente: Cliente; alEditar: () => void; alVolver: () => void }) {
+  const conSucursal = useSucursalDeTrabajo() !== null;
   return (
     <div className="mt-4 grid gap-3">
       <Boton variante="secundario" onClick={alEditar}>
         Cambiar datos
+      </Boton>
+      {/* SPEC-KRILINXI-061: sus boletas son las de la sucursal de trabajo; sin una, no hay qué mostrar. */}
+      {conSucursal && (
+        <EnlaceBoton a={enlaceABoletasDe(cliente.id)} variante="secundario" icono="historial">
+          Ver sus boletas
+        </EnlaceBoton>
+      )}
+      <Boton variante="navegacion" onClick={alVolver}>
+        Volver a la lista de clientes
       </Boton>
     </div>
   );

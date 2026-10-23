@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-061
 name: 'Clientes: los últimos 20 y sus boletas'
 slug: clientes-recientes
-status: draft
+status: finished
 owner: krilinxito
 created: 2026-10-23
 scope:
@@ -12,7 +12,9 @@ scope:
   - frontend/src/pages/rutas.tsx
 priority: medium
 depends_on: []
-tests: []
+tests:
+  - frontend\src\features\clientes\components\ClientesRecientes.test.tsx
+  - frontend\src\test\arquitectura.test.ts
 ---
 
 ## Descripción

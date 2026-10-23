@@ -344,6 +344,9 @@ const PAGINAN = [
   'features/estadisticas/components/SeccionSaldos.tsx',
   'features/estadisticas/components/SeccionSinRecoger.tsx',
   'features/estadisticas/components/SeccionProductividad.tsx',
+  // SPEC-KRILINXI-061: los últimos clientes y las boletas de un cliente.
+  'features/clientes/components/ListaDeRecientes.tsx',
+  'features/historial/components/BoletasDelCliente.tsx',
 ];
 
 /** Listas que no crecen con el negocio, y por qué. */

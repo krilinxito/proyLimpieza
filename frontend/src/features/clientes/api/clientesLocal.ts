@@ -97,6 +97,27 @@ export async function buscarClientes(base: BaseLocal, texto: string): Promise<Re
   return { resultados: clientes.slice(0, MAXIMO_RESULTADOS), hayMas: clientes.length > MAXIMO_RESULTADOS };
 }
 
+/**
+ * Todos los clientes, del que vino hace menos al que vino hace más — SPEC-KRILINXI-061: lo que muestra
+ * /clientes antes de buscar. Se ordena por la fecha de su última boleta (la más reciente primero); el que no
+ * tiene ninguna va al final, y entre ellos el que se dio de alta después va primero. Todo en una sola consulta
+ * y con un orden total (el `id` desempata), así que la paginación nunca repite ni se salta a nadie.
+ *
+ * Las fechas se guardan en dos formatos (las de esta tablet, ISO con `Z`; las que bajan del servidor, sin
+ * zona): `datetime()` de SQLite las lleva a la misma forma, y así comparar texto es comparar instantes. La
+ * "última boleta" es la última de las que la tablet conoce: las de su sucursal de trabajo.
+ */
+export async function listarRecientes(base: BaseLocal): Promise<Cliente[]> {
+  const filas = await base.consultar(
+    `SELECT c.id, c.nombre, c.telefono, c.carnet
+       FROM clientes c
+       LEFT JOIN (SELECT cliente_id, MAX(datetime(fecha_entrada)) AS ultima FROM ordenes GROUP BY cliente_id) o
+         ON o.cliente_id = c.id
+      ORDER BY o.ultima IS NULL, o.ultima DESC, datetime(c.fecha_registro) DESC, c.nombre, c.id`,
+  );
+  return filas.map(aCliente).filter((c): c is Cliente => c !== null);
+}
+
 /** Un cliente por su id, o null — SPEC-KRILINXI-033: la ficha del Mostrador se abre también desde una boleta. */
 export async function obtenerCliente(base: BaseLocal, id: string): Promise<Cliente | null> {
   const [fila] = await base.consultar('SELECT id, nombre, telefono, carnet FROM clientes WHERE id = ?', [id]);
