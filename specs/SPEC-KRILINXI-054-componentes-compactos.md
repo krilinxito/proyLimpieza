@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-054
 name: 'Componentes compactos: ver contraseña, paginación y cabecera chica'
 slug: componentes-compactos
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-23
 scope:
