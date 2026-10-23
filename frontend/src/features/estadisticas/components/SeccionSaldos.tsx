@@ -17,7 +17,7 @@ export function SeccionSaldos({ saldos, periodo }: { saldos: Saldos; periodo: st
   return (
     <SeccionPanel nombre="Falta cobrar" pregunta="¿Cuánto falta cobrar, y desde hace cuánto?" periodo={periodo}>
       <p className="mt-2 text-3xl font-bold text-texto">{bs(saldos.total)}</p>
-      <Antiguedad nombre="Falta cobrar según los días" tramos={saldos.porAntiguedad} queFalta="sin cobrar" />
+      <Antiguedad nombre="Falta cobrar según los días" tramos={saldos.porAntiguedad} queFalta="sin cobrar" paleta="deuda" />
       {saldos.ordenes.length === 0 ? (
         <p className="mt-4 text-xl text-texto-suave">Nadie debe nada en este período.</p>
       ) : (

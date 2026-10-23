@@ -44,13 +44,14 @@ export function SeccionIngresos({ ingresos, periodo }: { ingresos: Ingresos; per
           })),
         }}
       >
-        {(elegir) => (
+        {(elegir, seleccionado) => (
           <>
             <Leyenda
               nombre="Formas de pago"
               series={METODOS_PAGO.map((m) => ({ clave: m, texto: TEXTO_METODO_PAGO[m], muestra: COLOR_METODO[m].muestra }))}
             />
             <BarrasHorizontales
+              seleccionado={seleccionado}
               maximo={Math.max(0, ...totales)}
               elegir={elegir}
               barras={ingresos.porSucursal.map((s) => ({

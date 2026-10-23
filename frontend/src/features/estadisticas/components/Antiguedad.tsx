@@ -1,7 +1,7 @@
 import { desdeDecimal } from '../../../lib/money';
 import { TEXTO_TRAMO, type Tramo } from '../types';
 import { BarrasHorizontales } from './graficos/BarrasHorizontales';
-import { COLOR_TRAMO } from './graficos/colores';
+import { COLOR_TRAMO, COLOR_TRAMO_DEUDA } from './graficos/colores';
 import { hayDatos } from './graficos/escalas';
 import { Grafico } from './graficos/Grafico';
 import { boletas, bs } from './montos';
@@ -12,6 +12,8 @@ type Props = {
   tramos: readonly { tramo: Tramo; cantidad: number; total?: string }[];
   /** Cómo termina el detalle: "sin cobrar", "sin recoger". */
   queFalta: string;
+  /** La rampa de la tarjeta (SPEC-KRILINXI-063): la ropa en azul, lo que se debe en rosa. */
+  paleta?: 'antiguedad' | 'deuda';
 };
 
 const rotulo = ({ cantidad, total }: Props['tramos'][number]) => `${boletas(cantidad)}${total !== undefined ? ` — ${bs(total)}` : ''}`;
@@ -23,7 +25,8 @@ const rotulo = ({ cantidad, total }: Props['tramos'][number]) => `${boletas(cant
  *
  * Con monto (los saldos), la barra mide la plata que se debe; sin monto (la ropa), las boletas.
  */
-export function Antiguedad({ nombre, tramos, queFalta }: Props) {
+export function Antiguedad({ nombre, tramos, queFalta, paleta = 'antiguedad' }: Props) {
+  const colores = paleta === 'deuda' ? COLOR_TRAMO_DEUDA : COLOR_TRAMO;
   const conMonto = tramos.every((t) => t.total !== undefined);
   const valor = (t: Props['tramos'][number]) => (t.total !== undefined ? desdeDecimal(t.total) : t.cantidad);
   return (
@@ -39,15 +42,16 @@ export function Antiguedad({ nombre, tramos, queFalta }: Props) {
         })),
       }}
     >
-      {(elegir) => (
+      {(elegir, seleccionado) => (
         <BarrasHorizontales
+          seleccionado={seleccionado}
           maximo={Math.max(0, ...tramos.map(valor))}
           elegir={elegir}
           barras={tramos.map((t) => ({
             clave: t.tramo,
             etiqueta: TEXTO_TRAMO[t.tramo],
             rotulo: rotulo(t),
-            tramos: [{ clave: t.tramo, valor: valor(t), clase: COLOR_TRAMO[t.tramo].marca }],
+            tramos: [{ clave: t.tramo, valor: valor(t), clase: colores[t.tramo].marca }],
             detalle: `${TEXTO_TRAMO[t.tramo]}: ${rotulo(t)} ${queFalta}.`,
           }))}
         />

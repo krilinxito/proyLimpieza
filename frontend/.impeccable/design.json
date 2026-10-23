@@ -11,7 +11,12 @@
       "rojo-sin-vuelta-atras": { "role": "danger", "displayName": "Rojo de no-hay-vuelta-atrás", "canonical": "#b91c1c" },
       "serie-efectivo": { "role": "data-series", "displayName": "Efectivo", "canonical": "#3a83fc" },
       "serie-qr": { "role": "data-series", "displayName": "Pago con QR", "canonical": "#e55108" },
-      "serie-tarjeta": { "role": "data-series", "displayName": "Tarjeta", "canonical": "#0f9958" }
+      "serie-tarjeta": { "role": "data-series", "displayName": "Tarjeta", "canonical": "#0f9958" },
+      "tarjeta-caja": { "role": "data-series", "displayName": "Caja día a día", "canonical": "#0e94ba" },
+      "tarjeta-ropa": { "role": "data-series", "displayName": "Ropa recibida", "canonical": "#b37903" },
+      "tarjeta-personas": { "role": "data-series", "displayName": "Lo que hizo cada persona", "canonical": "#ca549d" },
+      "tarjeta-clientes": { "role": "data-series", "displayName": "Clientes que más vienen", "canonical": "#928a07" },
+      "deuda": { "role": "data-series", "displayName": "Lo que se debe", "canonical": "#b93c50", "tonalRamp": ["#e06876", "#b93c50", "#7b2432"] }
     },
     "typographyMeta": {
       "body": { "displayName": "Cuerpo", "purpose": "El texto base de toda la app: 18px, para leer de pie a un brazo de distancia." },

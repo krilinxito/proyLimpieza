@@ -33,6 +33,13 @@ colors:
   antiguedad-reciente: "#3987e5"
   antiguedad-media: "#1c5cab"
   antiguedad-vieja: "#0d366b"
+  tarjeta-caja: "#0e94ba"
+  tarjeta-ropa: "#b37903"
+  tarjeta-personas: "#ca549d"
+  tarjeta-clientes: "#928a07"
+  deuda-reciente: "#e06876"
+  deuda-media: "#b93c50"
+  deuda-vieja: "#7b2432"
 typography:
   body:
     fontFamily: "Atkinson Hyperlegible, ui-sans-serif, system-ui, sans-serif"
@@ -199,7 +206,8 @@ Un solo turquesa de agua limpia como marca sobre un fondo frío y neutro, con cu
 
 ### Gráficos
 - **Una serie por forma de pago**, siempre en el mismo orden: efectivo #3a83fc (azul), QR #e55108 (naranja), tarjeta #0f9958 (verde). Validadas para daltonismo con todas sus parejas.
-- **Antigüedad**, un solo tono que se oscurece con los días: #3987e5, #1c5cab, #0d366b.
+- **Antigüedad**, un solo tono que se oscurece con los días: #3987e5, #1c5cab, #0d366b. Es la rampa de la ropa sin recoger.
+- **Una paleta propia por tarjeta** (SPEC-KRILINXI-063). Las tarjetas de una sola serie tienen su matiz: la caja día a día, turquesa-celeste #0e94ba; la ropa recibida, ámbar #b37903; lo que hizo cada persona, magenta #ca549d; los clientes que más vienen, oliva #928a07. Lo que se debe lleva su propia rampa de rosa que se oscurece con los días: #e06876, #b93c50, #7b2432. Las dos tarjetas que cuentan formas de pago siguen con las tres series de arriba. Los matices de tarjetas vecinas se eligieron con el validador de daltonismo de la guía de visualización (la peor pareja vecina separa 11,9 en la escala OKLab ×100 para protanopía y deuteranopía, y más de 21 con visión normal); la rampa de rosa pasa la prueba de rampa ordinal en los dos temas.
 
 ### Tema oscuro
 Los mismos tokens con otro valor (`:root[data-tema='oscuro']`); ningún componente cambia. Dos cosas se dan vuelta a propósito: la marca y el peligro pasan a ser claros para leerse como texto sobre la superficie oscura (y el texto encima de un botón pasa a ser oscuro), y la antigüedad se aclara al envejecer.
@@ -217,8 +225,9 @@ Los mismos tokens con otro valor (`:root[data-tema='oscuro']`); ningún componen
 | Peligro (fondo, texto, borde) | #450a0a, #fecaca, #ef4444 |
 | Botón de peligro / su hover | #f87171 / #fca5a5 |
 | Antigüedad (reciente, media, vieja) | #3b82f6, #7fb0f7, #c3dafe |
+| Deuda (reciente, media, vieja) | #cd5766, #e9878f, #feb9bd |
 
-Las tres series de los gráficos no cambian en oscuro.
+Las tres series de los gráficos y los cuatro matices de las tarjetas no cambian en oscuro; la deuda, como la antigüedad, se aclara al envejecer.
 
 ### Named Rules
 **La regla de solo tokens.** Ningún componente usa un color suelto ni la paleta cruda de Tailwind (`sky-700`, `bg-white`): se pinta con el nombre del tema (`bg-marca`, `text-peligro-texto`). Un color nuevo se agrega a `index.css` **en los dos bloques**, claro y oscuro, con su par de contraste medido en `test/tema.test.ts`.
@@ -304,7 +313,7 @@ Cuadro de 16px sobre un velo oscuro. Dice **qué va a pasar** ("Esta acción no 
 - **Conexión:** una píldora en la cabecera, corta y en palabras ("Con internet", "Sin internet · 3 por guardar"); al tocarla, la frase completa.
 
 ### Gráficos
-SVG propios, sin librería: barras horizontales y columnas, cada una un botón que al tocarlo escribe su detalle; cada gráfico tiene nombre y una tabla para el lector de pantalla con los mismos números. Los rótulos van siempre en el color del texto, al lado.
+Dos familias (SPEC-KRILINXI-063). Las **barras horizontales** (por sucursal, forma de pago, antigüedad, personas y clientes) son SVG propios: cada una un botón que al tocarlo escribe su detalle, y las que no están elegidas se apagan un poco. Las **columnas por día** y las **líneas** se dibujan con **Recharts**: se enfocan con Tab, las flechas recorren los días, tocar un día lo elige, y su detalle se escribe debajo del gráfico (una región en vivo) y flota junto al dato. El color de cada una sale de una clase del tema (`text-ropa`, `text-serie-1`), nunca de un valor escrito en el componente. Todo gráfico tiene nombre y una tabla para el lector de pantalla con los mismos números, y los rótulos van siempre en el color del texto, al lado.
 
 ## Do's and Don'ts
 

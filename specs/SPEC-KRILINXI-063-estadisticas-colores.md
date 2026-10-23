@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-063
 name: Estadísticas con más color y gráficos interactivos
 slug: estadisticas-colores
-status: draft
+status: finished
 owner: krilinxito
 created: 2026-10-23
 scope:
@@ -16,7 +16,11 @@ scope:
 priority: medium
 depends_on:
   - SPEC-KRILINXI-055
-tests: []
+tests:
+  - frontend\src\features\estadisticas\components\Graficos.test.tsx
+  - frontend\src\features\estadisticas\components\PantallaEstadisticas.test.tsx
+  - frontend\src\test\arquitectura.test.ts
+  - frontend\src\test\tema.test.ts
 ---
 
 ## Descripción

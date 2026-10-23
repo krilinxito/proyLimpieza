@@ -235,12 +235,26 @@ describe('Ninguna parte de la app usa la paleta cruda — SPEC-KRILINXI-022, SPE
 });
 
 /**
- * Los gráficos son del proyecto — SPEC-KRILINXI-026. Se dibujan en SVG con React, sin librería: no
- * suman peso al precache, abren sin internet y no piden permisos nuevos en la política de seguridad.
- * Si un gráfico necesitara algo de afuera, es una decisión para hablar en una spec, no un import.
+ * Los gráficos se dibujan con Recharts, y con nada más de afuera — SPEC-KRILINXI-063 (antes, SPEC-KRILINXI-026, eran SVG
+ * propios, sin ninguna librería). La decisión se tomó con la persona a cargo, midiendo peso, política de seguridad,
+ * funcionamiento sin internet y accesibilidad (está en la bitácora de la 063):
+ *
+ *  - Recharts es la única librería permitida, y **solo dentro de `graficos/`**: ninguna pantalla ni sección la importa. Así
+ *    la librería queda detrás de unas pocas piezas (`Columnas` y `Lineas`; `DetalleFlotante` solo recibe lo que Recharts le pasa) y se puede cambiar sin tocar
+ *    nada más.
+ *  - Una librería de gráficos nueva, o Recharts fuera de esa carpeta, es otra decisión para hablar en una spec, no un import.
  */
-describe('Los gráficos no traen librerías — SPEC-KRILINXI-026', () => {
+const LIBRERIAS_DE_GRAFICOS = ['recharts'];
+
+describe('Los gráficos usan Recharts y nada más de afuera — SPEC-KRILINXI-063', () => {
   const GRAFICOS = archivosFuente('features/estadisticas/components/graficos');
+  const importesDeAfuera = (archivos: typeof GRAFICOS) =>
+    archivos.flatMap(({ ruta, fuente }) =>
+      [...fuente.matchAll(/from\s+['"]([^'"]+)['"]/g)]
+        .map(([, modulo]) => modulo ?? '')
+        .filter((modulo) => !modulo.startsWith('.') && modulo !== 'react' && modulo !== 'vitest')
+        .map((modulo) => ({ ruta, modulo })),
+    );
 
   it('revisa la carpeta de los gráficos, no una lista vacía', () => {
     expect(GRAFICOS.map(({ ruta }) => ruta)).toEqual(
@@ -248,14 +262,24 @@ describe('Los gráficos no traen librerías — SPEC-KRILINXI-026', () => {
     );
   });
 
-  it('solo importan React, vitest en sus tests, y archivos del propio proyecto', () => {
-    const deAfuera = GRAFICOS.flatMap(({ ruta, fuente }) =>
-      [...fuente.matchAll(/from\s+['"]([^'"]+)['"]/g)]
-        .map(([, modulo]) => modulo ?? '')
-        .filter((modulo) => !modulo.startsWith('.') && modulo !== 'react' && modulo !== 'vitest')
-        .map((modulo) => `${ruta}: ${modulo}`),
-    );
+  it('solo importan React, Recharts, vitest en sus tests, y archivos del propio proyecto', () => {
+    const deAfuera = importesDeAfuera(GRAFICOS).filter(({ modulo }) => !LIBRERIAS_DE_GRAFICOS.includes(modulo));
     expect(deAfuera).toEqual([]);
+  });
+
+  it('Recharts se importa solo desde la carpeta de los gráficos', () => {
+    const fuera = archivosFuente('features', 'components', 'pages', 'lib', 'hooks')
+      .filter(({ ruta, fuente }) => !ruta.startsWith('features/estadisticas/components/graficos/') && /from\s+['"]recharts['"]/.test(fuente))
+      .map(({ ruta }) => ruta);
+    // Los tests de las pantallas no importan la librería: miran lo que dibuja.
+    expect(fuera).toEqual([]);
+  });
+
+  it('las piezas que sí la usan son las de dibujo: columnas y líneas', () => {
+    const usan = importesDeAfuera(GRAFICOS)
+      .filter(({ modulo }) => modulo === 'recharts')
+      .map(({ ruta }) => ruta.split('/').at(-1));
+    expect([...new Set(usan)].sort()).toEqual(['Columnas.tsx', 'Lineas.tsx']);
   });
 });
 

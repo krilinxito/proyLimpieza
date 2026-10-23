@@ -15,8 +15,11 @@ type Props = {
   /** Lo que se lee antes de elegir una barra: qué hacer para ver su detalle. */
   pista: string;
   tabla: TablaDeDatos;
-  /** El dibujo. Recibe `elegir`, para que cada barra muestre su detalle al tocarla o enfocarla. */
-  children: (elegir: (detalle: string) => void) => ReactNode;
+  /**
+   * El dibujo. Recibe `elegir`, para que cada barra muestre su detalle al tocarla o enfocarla, y `seleccionado`, el
+   * detalle ya elegido (o null), para resaltar ese dato y apagar un poco los demás (SPEC-KRILINXI-063).
+   */
+  children: (elegir: (detalle: string) => void, seleccionado: string | null) => ReactNode;
 };
 
 /**
@@ -38,7 +41,7 @@ export function Grafico({ nombre, vacio, pista, tabla, children }: Props) {
   const [primero, ...resto] = tabla.encabezados;
   return (
     <figure aria-label={nombre} className="mt-4 grid gap-3">
-      {children(setDetalle)}
+      {children(setDetalle, detalle)}
       <p aria-live="polite" className="min-h-8 text-lg text-texto">
         {detalle ?? pista}
       </p>

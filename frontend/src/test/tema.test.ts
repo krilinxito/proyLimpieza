@@ -108,7 +108,22 @@ const CONTROLES: [control: string, fondo: string][] = [
  * superficie donde se dibuja. Que las series se distingan entre sí con daltonismo no se mide acá:
  * lo mide el validador de la guía de visualización, y su resultado está en la bitácora.
  */
-const MARCAS = ['serie-1', 'serie-2', 'serie-3', 'antiguedad-1', 'antiguedad-2', 'antiguedad-3'];
+const MARCAS = [
+  'serie-1',
+  'serie-2',
+  'serie-3',
+  'antiguedad-1',
+  'antiguedad-2',
+  'antiguedad-3',
+  // La paleta propia de cada tarjeta (SPEC-KRILINXI-063).
+  'caja',
+  'ropa',
+  'personas',
+  'clientes',
+  'deuda-1',
+  'deuda-2',
+  'deuda-3',
+];
 
 describe('El tema se lee — SPEC-KRILINXI-022', () => {
   it('la fórmula da lo que dice WCAG en los extremos', () => {
@@ -149,6 +164,20 @@ describe('Los colores de los gráficos se ven — SPEC-KRILINXI-026', () => {
     );
     expect(media).toBeGreaterThan(nueva ?? 0);
     expect(vieja).toBeGreaterThan(media ?? 0);
+  });
+});
+
+describe('La paleta de cada tarjeta — SPEC-KRILINXI-063', () => {
+  // Como la antigüedad: la deuda resalta de a un paso, más vieja, más contraste, en los dos temas.
+  it.each(TEMAS)('en el tema %s, la deuda resalta de a un paso: más vieja, más contraste', (tema) => {
+    const fondo = color('superficie', tema);
+    const [nueva, media, vieja] = ['deuda-1', 'deuda-2', 'deuda-3'].map((n) => contraste(color(n, tema), fondo));
+    expect(media).toBeGreaterThan(nueva ?? 0);
+    expect(vieja).toBeGreaterThan(media ?? 0);
+  });
+
+  it.each(['caja', 'ropa', 'personas', 'clientes'])('el matiz de %s es el mismo en los dos temas: se ve igual de bien en ambos', (nombre) => {
+    expect(color(nombre, 'oscuro')).toBe(color(nombre));
   });
 });
 

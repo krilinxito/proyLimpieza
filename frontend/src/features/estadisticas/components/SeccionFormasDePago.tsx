@@ -32,8 +32,9 @@ export function SeccionFormasDePago({ ingresos, periodo }: { ingresos: Ingresos;
           filas: totales.map((t) => ({ clave: t.metodo, celdas: [TEXTO_METODO_PAGO[t.metodo], formatearBs(t.total)] })),
         }}
       >
-        {(elegir) => (
+        {(elegir, seleccionado) => (
           <BarrasHorizontales
+            seleccionado={seleccionado}
             maximo={Math.max(0, ...totales.map((t) => t.total))}
             elegir={elegir}
             barras={totales.map((t) => ({
