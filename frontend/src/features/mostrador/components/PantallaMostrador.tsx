@@ -190,29 +190,35 @@ export function PantallaMostrador() {
     );
   }
 
+  // Dentro de una boleta ya no se está en el mostrador (SPEC-KRILINXI-057): ni "Registrar ropa" ni el buscador. La boleta trae su
+  // propio camino para otra del mismo cliente ("Nueva boleta de este cliente") y para volver ("Ver toda la ropa de…").
+  const dentroDeUnaBoleta = vista.tipo === 'ficha' && vista.abierta !== null;
+
   return (
     <div className="mt-6">
-      {/* Siempre a mano, también con la ficha de un cliente abierta: ahí lo trae elegido. Es la
-          acción principal salvo con una boleta abierta, que trae la suya (SPEC-KRILINXI-037). */}
-      <div className="mb-6">
-        <Boton
-          icono="registrar-ropa"
-          variante={vista.tipo === 'ficha' && vista.abierta ? 'secundario' : 'primario'}
-          onClick={() => ir({ tipo: 'registrando', clienteId: vista.tipo === 'ficha' ? vista.clienteId : null })}
-        >
-          Registrar ropa
-        </Boton>
-      </div>
-      <BuscadorVivo<Encontrado>
-        key={vuelta}
-        etiqueta="Buscar cliente o boleta: nombre, teléfono, carnet o número de boleta"
-        buscar={(texto) => (mostrador.lista ? mostrador.buscar(texto) : Promise.resolve({ resultados: [], hayMas: false }))}
-        claveDe={(e) => (e.tipo === 'cliente' ? `cliente-${e.cliente.id}` : `boleta-${e.orden.id}`)}
-        mostrar={(e) => <ResultadoEncontrado encontrado={e} />}
-        alElegir={elegir}
-        sinResultados="No hay ningún cliente ni boleta con eso en esta sucursal."
-        deshabilitado={!mostrador.lista}
-      />
+      {!dentroDeUnaBoleta && (
+        <>
+          {/* A mano en el inicio y en la ficha de un cliente: ahí lo trae elegido. Es la acción principal (SPEC-KRILINXI-037). */}
+          <div className="mb-6">
+            <Boton
+              icono="registrar-ropa"
+              onClick={() => ir({ tipo: 'registrando', clienteId: vista.tipo === 'ficha' ? vista.clienteId : null })}
+            >
+              Registrar ropa
+            </Boton>
+          </div>
+          <BuscadorVivo<Encontrado>
+            key={vuelta}
+            etiqueta="Buscar cliente o boleta: nombre, teléfono, carnet o número de boleta"
+            buscar={(texto) => (mostrador.lista ? mostrador.buscar(texto) : Promise.resolve({ resultados: [], hayMas: false }))}
+            claveDe={(e) => (e.tipo === 'cliente' ? `cliente-${e.cliente.id}` : `boleta-${e.orden.id}`)}
+            mostrar={(e) => <ResultadoEncontrado encontrado={e} />}
+            alElegir={elegir}
+            sinResultados="No hay ningún cliente ni boleta con eso en esta sucursal."
+            deshabilitado={!mostrador.lista}
+          />
+        </>
+      )}
 
       {vista.tipo === 'inicio' ? (
         <RopaEnElLocal alElegir={abrirBoleta} />

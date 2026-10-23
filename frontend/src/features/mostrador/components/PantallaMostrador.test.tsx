@@ -343,7 +343,9 @@ describe('Mostrador: una sola acción principal a la vista — SPEC-KRILINXI-037
     await abrirConRopaLista();
     await abrirDetalle('000001');
     expect(accionesPrincipales()).toEqual(['Empezar a lavar']);
-    expect(usoDe(boton('Registrar ropa'))).toBe('secundario');
+    // Dentro de una boleta no se está en el mostrador (SPEC-KRILINXI-057): ni "Registrar ropa" ni el buscador.
+    expect(within(screen.getByRole('main')).queryByRole('button', { name: 'Registrar ropa' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: /Buscar cliente o boleta/ })).not.toBeInTheDocument();
     expect(usoDe(boton('Entregar la ropa'))).toBe('secundario');
     expect(boton('Cobrar')).toHaveClass('min-h-12');
     expect(usoDe(boton('Anular'))).toBe('peligro');
@@ -563,5 +565,42 @@ describe('Mostrador: "Nueva boleta de este cliente" dentro de una boleta — SPE
 
     expect(within(screen.getByRole('main')).queryByRole('button', { name: NUEVA })).not.toBeInTheDocument();
     expect(boton('Registrar ropa')).toBeInTheDocument();
+  });
+});
+
+describe('Mostrador: dentro de una boleta ya no se está en el mostrador — SPEC-KRILINXI-057', () => {
+  const buscador = () => screen.queryByRole('combobox', { name: /Buscar cliente o boleta/ });
+  const registrar = () => within(screen.getByRole('main')).queryByRole('button', { name: 'Registrar ropa' });
+
+  it('con una boleta abierta no están "Registrar ropa" ni el buscador, y al volver a la ficha reaparecen', async () => {
+    await abrirConRopaLista();
+    // En el mostrador, los dos están.
+    expect(buscador()).toBeInTheDocument();
+    expect(registrar()).toBeInTheDocument();
+
+    await abrirDetalle('000001');
+    expect(buscador()).not.toBeInTheDocument();
+    expect(registrar()).not.toBeInTheDocument();
+    // En su lugar, el camino propio de la boleta: otra del mismo cliente, y volver.
+    expect(boton('Nueva boleta de este cliente')).toBeInTheDocument();
+    expect(boton('Ver toda la ropa de Rosa Quispe')).toBeInTheDocument();
+
+    fireEvent.click(boton('Ver toda la ropa de Rosa Quispe'));
+    expect(await screen.findByRole('combobox', { name: /Buscar cliente o boleta/ })).toBeInTheDocument();
+    expect(registrar()).toBeInTheDocument();
+  });
+
+  it('abriendo la boleta desde el Inicio por su dirección tampoco muestra el buscador', async () => {
+    const { control } = await baseLocalDePrueba().then(async (p) => {
+      await p.sembrar('clientes', [ROSA]);
+      await p.sembrar('ordenes', [RECIBIDA]);
+      return p;
+    });
+    simularApi(() => 'sin-conexion');
+    renderEnRuta(<App />, `/mostrador?cliente=${ROSA.id}&boleta=${RECIBIDA.id}`, { baseLocal: control });
+
+    await screen.findByRole('region', { name: 'Boleta 000001' });
+    expect(buscador()).not.toBeInTheDocument();
+    expect(registrar()).not.toBeInTheDocument();
   });
 });

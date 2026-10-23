@@ -25,6 +25,9 @@ Caso 2: cliente nuevo. En el paso 1 se toca «Cliente nuevo» (acción del busca
 Caso 3: «Nueva boleta de este cliente». Con una boleta abierta, `FichaCliente.tsx` muestra, debajo del detalle, un botón secundario que llama a `alRegistrar`; `PantallaMostrador.tsx` abre la vista `registrando` con ese `clienteId`,
 y `RegistrarEnMostrador` lo lee y lo pasa como cliente inicial: se entra directo al paso 2.
 
+Caso 4: dentro de una boleta. Las boletas no son rutas separadas: se abren dentro de la pantalla del Mostrador (`vista = ficha` con `abierta`). `PantallaMostrador.tsx` calcula `dentroDeUnaBoleta` y, con una boleta abierta, no pinta ni el
+botón «Registrar ropa» de arriba ni el buscador: ahí ya no se está «en el mostrador», se está en esa boleta, y su camino es «Nueva boleta de este cliente» o «Ver toda la ropa de…». Ya no hace falta que «Registrar ropa» cambie a secundario con una boleta abierta: o se ve y es la principal, o no se ve.
+
 ## Dónde encaja en la arquitectura
 
 Todo es presentación dentro de `features/ordenes`, `features/clientes` y `features/mostrador`; el guardado local no cambió (CLAUDE.md §6: primero local, después la cola, y la cola sube el cliente antes que su orden).
