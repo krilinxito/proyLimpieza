@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-055
 name: Quitar la transferencia como forma de pago
 slug: quitar-transferencia
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-23
 scope:
