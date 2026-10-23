@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-052
 name: Carácter visual propio sin romper contraste ni tema oscuro
 slug: caracter-visual
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-22
 scope:
@@ -19,7 +19,9 @@ depends_on:
   - SPEC-KRILINXI-049
   - SPEC-KRILINXI-050
   - SPEC-KRILINXI-051
-tests: []
+tests:
+  - frontend\src\components\piezas.test.tsx
+  - frontend\src\test\tema.test.ts
 ---
 
 ## Descripción
