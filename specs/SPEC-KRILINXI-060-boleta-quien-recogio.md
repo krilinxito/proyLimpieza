@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-060
 name: Mostrar quién retiró la ropa cuando fue sin boleta
 slug: boleta-quien-recogio
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-23
 scope:
@@ -14,7 +14,13 @@ scope:
 priority: medium
 depends_on:
   - SPEC-KRILINXI-056
-tests: []
+tests:
+  - backend\tests\db\ordenesHistorial.db.test.ts
+  - backend\tests\unit\ordenesHistorial.model.test.ts
+  - frontend\src\features\historial\api\historialApi.test.ts
+  - frontend\src\features\historial\components\PantallaHistorial.test.tsx
+  - frontend\src\features\mostrador\components\PantallaMostrador.test.tsx
+  - frontend\src\features\ordenes\retiro.test.ts
 ---
 
 ## Descripción
