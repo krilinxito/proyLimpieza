@@ -2,14 +2,17 @@
 id: SPEC-KRILINXI-058
 name: Indicador visual de campo correcto en Registrar ropa
 slug: validacion-visual-campos
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-23
 scope:
   - frontend/src/components/CampoTexto.tsx
+  - frontend/src/components/Tarjeta.tsx
   - frontend/src/components/README.md
   - frontend/src/features/clientes/**
   - frontend/src/features/ordenes/**
+  - frontend/src/features/historial/**
+  - frontend/src/features/pendientes/**
 priority: medium
 depends_on:
   - SPEC-KRILINXI-057
@@ -18,7 +21,7 @@ tests: []
 
 ## Descripción
 
-Al llenar los datos del cliente y de la boleta la persona no sabe si lo que escribió está bien hasta que intenta guardar. Se agrega un indicador visual de campo correcto (un ícono de visto con texto, nunca solo color) que aparece cuando el valor cumple su regla: por ejemplo el largo del carnet, el teléfono con su formato y el número de boleta. Las reglas son las que ya existen (validarCliente y la validación de la orden); esta spec no inventa reglas nuevas, solo las muestra mientras se escribe. Un campo vacío o que todavía no es válido no muestra error hasta que se sale del campo o se intenta guardar.
+Al llenar los datos del cliente y de la boleta la persona no sabe si lo que escribió está bien hasta que intenta guardar. Se agrega un indicador visual de campo correcto (un ícono de visto con texto, nunca solo color) que aparece cuando el valor cumple su regla: por ejemplo el largo del carnet, el teléfono con su formato y el número de boleta. Las reglas son las que ya existen (validarCliente y la validación de la orden); esta spec no inventa reglas nuevas, solo las muestra mientras se escribe. Lo mismo, pero **a nivel de cada tarjeta**: una marca chica en la esquina de arriba a la derecha de la tarjeta («Cliente», «Cliente nuevo», «La ropa», «Adelanto») que dice de un vistazo si esa parte ya está bien llena: un visto cuando todos sus datos son correctos, y una equis cuando alguno ya mostró un error. Mientras la tarjeta se está llenando (o está vacía) no muestra nada, para no regañar antes de tiempo. Además, «Qué deja» pasa a admitir **varias líneas** (un área de texto que crece), porque una boleta suele listar varias prendas; el salto de línea se respeta donde esa descripción se muestra (boleta, historial, resumen, Para corregir). Un campo vacío o que todavía no es válido no muestra error hasta que se sale del campo o se intenta guardar.
 
 ## Criterios de aceptación
 
@@ -27,6 +30,11 @@ Al llenar los datos del cliente y de la boleta la persona no sabe si lo que escr
 - [ ] El indicador usa colores del tema (éxito) en claro y oscuro, con su par de contraste medido en tema.test.ts si se agrega un color.
 - [ ] No aparece ningún mensaje de error antes de que la persona salga del campo o intente guardar.
 - [ ] Las reglas de validación no se duplican: el indicador y el guardado llaman a la misma función.
+- [ ] Cada tarjeta del formulario de Registrar ropa («Cliente», «Cliente nuevo», «La ropa» y «Adelanto», en su caso) tiene una marca chica en la esquina de arriba a la derecha: un visto cuando todos los datos que pide están completos y correctos, y una equis cuando alguno ya mostró un error; vacía o a medio llenar, no muestra nada.
+- [ ] La marca de la tarjeta se anuncia en palabras para el lector de pantalla («Completo» / «Hay datos para corregir») y se distingue por su forma (visto o equis), no solo por el color; usa los colores del tema (éxito y peligro) en claro y oscuro, con su par de contraste medido en `tema.test.ts`.
+- [ ] La marca de la tarjeta sale de las mismas funciones de validación que usa el guardado, no de una regla propia: lo que la marca da por bueno es lo que el guardado acepta.
+- [ ] «Qué deja» admite varias líneas: es un área de texto que crece con lo escrito (con un alto mínimo de dos renglones y sin cortar el texto), Enter pone un salto de línea y no envía el formulario, y se guarda tal cual (con sus saltos) en la descripción de la boleta.
+- [ ] El salto de línea de la descripción se respeta donde se muestra: el detalle de la boleta, la tarjeta de la boleta, el historial (incluido el de solo lectura), el resumen al registrar y Para corregir; y el buscador y el backend la aceptan sin recortar los saltos del medio (el espacio de los bordes sí se recorta, como hasta ahora).
 - [ ] Tests con el id de esta spec en el describe, sin jerga en pantalla, y suite completa en verde.
 
 ## Notas
