@@ -6,26 +6,25 @@ import type { Ingresos } from './types';
 
 const ingresos = (datos: Record<string, unknown>) => ingresosDePrueba(datos) as unknown as Ingresos;
 
-const sucursal = (sucursalId: string, porMetodo: Partial<Record<'EFECTIVO' | 'QR' | 'TARJETA' | 'TRANSFERENCIA', string>>) => ({
+const sucursal = (sucursalId: string, porMetodo: Partial<Record<'EFECTIVO' | 'QR' | 'TARJETA', string>>) => ({
   sucursalId,
   sucursal: sucursalId,
   total: '0.00',
-  porMetodo: { EFECTIVO: '0.00', QR: '0.00', TARJETA: '0.00', TRANSFERENCIA: '0.00', ...porMetodo },
+  porMetodo: { EFECTIVO: '0.00', QR: '0.00', TARJETA: '0.00', ...porMetodo },
 });
 
 describe('Total por forma de pago, la única suma del frontend — SPEC-KRILINXI-042', () => {
-  it('suma lo de cada sucursal, y devuelve siempre las cuatro formas en su orden fijo', () => {
+  it('suma lo de cada sucursal, y devuelve siempre las tres formas en su orden fijo', () => {
     const totales = totalesPorFormaDePago(
       ingresos({
-        porSucursal: [sucursal('centro', { EFECTIVO: '100.00', QR: '25.50' }), sucursal('norte', { EFECTIVO: '10.00', TRANSFERENCIA: '24.50' })],
+        porSucursal: [sucursal('centro', { EFECTIVO: '100.00', QR: '25.50' }), sucursal('norte', { EFECTIVO: '10.00', TARJETA: '24.50' })],
       }),
     );
 
     expect(totales).toEqual([
       { metodo: 'EFECTIVO', total: 11000 },
       { metodo: 'QR', total: 2550 },
-      { metodo: 'TARJETA', total: 0 },
-      { metodo: 'TRANSFERENCIA', total: 2450 },
+      { metodo: 'TARJETA', total: 2450 },
     ]);
   });
 
@@ -37,15 +36,15 @@ describe('Total por forma de pago, la única suma del frontend — SPEC-KRILINXI
     expect(0.1 + 0.2).not.toBe(0.3);
   });
 
-  it('sin ninguna sucursal con cobros, las cuatro valen cero', () => {
-    expect(totalesPorFormaDePago(ingresos({ porSucursal: [] })).map((t) => t.total)).toEqual([0, 0, 0, 0]);
+  it('sin ninguna sucursal con cobros, las tres valen cero', () => {
+    expect(totalesPorFormaDePago(ingresos({ porSucursal: [] })).map((t) => t.total)).toEqual([0, 0, 0]);
   });
 
-  it('coincide con el total que suma Postgres: la suma de las cuatro formas es el total general', () => {
+  it('coincide con el total que suma Postgres: la suma de las tres formas es el total general', () => {
     // Mientras esta suma viva en el frontend, este es el aviso si dejara de coincidir con el servidor.
     const datos = ingresos({
       total: '160.00',
-      porSucursal: [sucursal('centro', { EFECTIVO: '100.00', QR: '25.50' }), sucursal('norte', { EFECTIVO: '10.00', TRANSFERENCIA: '24.50' })],
+      porSucursal: [sucursal('centro', { EFECTIVO: '100.00', QR: '25.50' }), sucursal('norte', { EFECTIVO: '10.00', TARJETA: '24.50' })],
     });
 
     expect(sumar(...totalesPorFormaDePago(datos).map((t) => t.total))).toBe(desdeDecimal(datos.total));

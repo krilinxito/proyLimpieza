@@ -11,8 +11,7 @@
       "rojo-sin-vuelta-atras": { "role": "danger", "displayName": "Rojo de no-hay-vuelta-atrás", "canonical": "#b91c1c" },
       "serie-efectivo": { "role": "data-series", "displayName": "Efectivo", "canonical": "#3a83fc" },
       "serie-qr": { "role": "data-series", "displayName": "Pago con QR", "canonical": "#e55108" },
-      "serie-tarjeta": { "role": "data-series", "displayName": "Tarjeta", "canonical": "#0f9958" },
-      "serie-transferencia": { "role": "data-series", "displayName": "Transferencia", "canonical": "#d14ead" }
+      "serie-tarjeta": { "role": "data-series", "displayName": "Tarjeta", "canonical": "#0f9958" }
     },
     "typographyMeta": {
       "body": { "displayName": "Cuerpo", "purpose": "El texto base de toda la app: 18px, para leer de pie a un brazo de distancia." },

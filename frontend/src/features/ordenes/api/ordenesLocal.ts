@@ -32,7 +32,7 @@ export const MENSAJES = {
   fecha: 'La fecha de entrega estimada no es válida.',
   adelanto: 'Escribe cuánto deja de adelanto, con números mayores que cero, por ejemplo 20 o 20,50.',
   adelantoMayor: 'El adelanto no puede ser mayor que el precio.',
-  sinMetodo: 'Elige cómo paga el adelanto: efectivo, QR, tarjeta o transferencia.',
+  sinMetodo: 'Elige cómo paga el adelanto: efectivo, QR o tarjeta.',
 } as const;
 
 const FECHA = /^(\d{4})-(\d{2})-(\d{2})$/;

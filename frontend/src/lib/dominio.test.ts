@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
   ESTADOS_ORDEN,
@@ -20,15 +20,26 @@ import {
 } from './dominio';
 
 /**
- * Lee los ENUM directamente del schema, que es la fuente de verdad. Así el test no compara
- * el código consigo mismo: compara el código con la base.
+ * Lee los ENUM directamente del schema, que es la fuente de verdad: la línea base congelada y, encima, lo que cambian las
+ * migraciones (SPEC-KRILINXI-055: `005_quitar_transferencia.sql` recrea `metodo_pago` sin un valor). Un `CREATE TYPE`
+ * posterior pisa al anterior. Así el test no compara el código consigo mismo: compara el código con la base.
  */
 function enumsDelSchema(): Map<string, string[]> {
-  const ruta = resolve(import.meta.dirname, '../../../context/lavanderia_schema.sql');
-  const sql = readFileSync(ruta, 'utf8');
+  const raiz = resolve(import.meta.dirname, '../../..');
+  const carpeta = resolve(raiz, 'backend/migraciones');
+  const archivos = [
+    resolve(raiz, 'context/lavanderia_schema.sql'),
+    ...readdirSync(carpeta)
+      .filter((nombre) => /^\d{3}_.+\.sql$/.test(nombre))
+      .sort()
+      .map((nombre) => resolve(carpeta, nombre)),
+  ];
   const enums = new Map<string, string[]>();
-  for (const [, nombre = '', valores = ''] of sql.matchAll(/CREATE TYPE (\w+)\s+AS ENUM \(([^)]*)\)/g)) {
-    enums.set(nombre, [...valores.matchAll(/'([^']+)'/g)].map(([, v = '']) => v));
+  for (const ruta of archivos) {
+    const sql = readFileSync(ruta, 'utf8');
+    for (const [, nombre = '', valores = ''] of sql.matchAll(/CREATE TYPE (\w+)\s+AS ENUM \(([^)]*)\)/g)) {
+      enums.set(nombre, [...valores.matchAll(/'([^']+)'/g)].map(([, v = '']) => v));
+    }
   }
   return enums;
 }

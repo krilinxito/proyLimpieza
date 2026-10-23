@@ -27,14 +27,14 @@ export function ingresosDePrueba(cambios: Record<string, unknown> = {}) {
         sucursalId: SUCURSAL_CENTRO,
         sucursal: 'Centro',
         total: '125.50',
-        porMetodo: { EFECTIVO: '100.00', QR: '25.50', TARJETA: '0.00', TRANSFERENCIA: '0.00' },
+        porMetodo: { EFECTIVO: '100.00', QR: '25.50', TARJETA: '0.00' },
       },
     ],
     ...cambios,
   };
 }
 
-const EN_CERO = { EFECTIVO: '0.00', QR: '0.00', TARJETA: '0.00', TRANSFERENCIA: '0.00' };
+const EN_CERO = { EFECTIVO: '0.00', QR: '0.00', TARJETA: '0.00' };
 
 /**
  * `GET /api/estadisticas/ingresos-por-dia` — SPEC-KRILINXI-044 (el contrato es de SPEC-KRILINXI-043). Tres días:

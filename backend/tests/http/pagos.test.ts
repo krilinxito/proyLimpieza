@@ -174,10 +174,18 @@ describe('POST /api/pagos — SPEC-ALE186-005', () => {
     expect(res.status).toBe(201);
   });
 
-  it.each(['EFECTIVO', 'QR', 'TARJETA', 'TRANSFERENCIA'])('acepta el método %s', async (metodo) => {
+  it.each(['EFECTIVO', 'QR', 'TARJETA'])('acepta el método %s', async (metodo) => {
     const res = await cobro(cuerpoDePago({ metodo }));
 
     expect(res.status).toBe(201);
+  });
+
+  // SPEC-KRILINXI-055: la transferencia ya no es una forma de pago.
+  it('rechaza TRANSFERENCIA con 400 y un mensaje que nombra las tres que quedan', async () => {
+    const res = await cobro(cuerpoDePago({ metodo: 'TRANSFERENCIA' }));
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.mensaje).toBe('Elige cómo paga el cliente: efectivo, QR o tarjeta.');
   });
 
   it('sin fecha_pago, deja que la ponga el servidor', async () => {

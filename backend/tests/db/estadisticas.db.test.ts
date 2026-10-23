@@ -33,7 +33,7 @@ describe('Estadísticas: ingresos — SPEC-ALE186-008', () => {
         sucursalId: esc.sucursalId,
         sucursal: expect.any(String),
         total: '20.00',
-        porMetodo: { EFECTIVO: '14.50', QR: '5.50', TARJETA: '0.00', TRANSFERENCIA: '0.00' },
+        porMetodo: { EFECTIVO: '14.50', QR: '5.50', TARJETA: '0.00' },
       },
     ]);
   });

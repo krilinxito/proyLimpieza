@@ -39,7 +39,7 @@ function leerTipo(valor: unknown): TipoPago {
 
 function leerMetodo(valor: unknown): MetodoPago {
   if (!esMetodoPago(valor)) {
-    throw invalido('Elige cómo paga el cliente: efectivo, QR, tarjeta o transferencia.');
+    throw invalido('Elige cómo paga el cliente: efectivo, QR o tarjeta.');
   }
   return valor;
 }

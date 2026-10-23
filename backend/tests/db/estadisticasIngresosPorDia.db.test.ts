@@ -9,10 +9,10 @@ import { comoAdmin } from '../helpers/usuarios.js';
 // dice la base. Cada test usa su propia sucursal para no pisarse con los demás archivos de la suite,
 // que corren en paralelo, y fechas de un año que ningún otro test usa.
 
-const EN_CERO = { EFECTIVO: '0.00', QR: '0.00', TARJETA: '0.00', TRANSFERENCIA: '0.00' };
+const EN_CERO = { EFECTIVO: '0.00', QR: '0.00', TARJETA: '0.00' };
 
 /** Un cobro de la sucursal del escenario, en la fecha dada (ISO con zona, como la manda el dispositivo). */
-async function cobrar(esc: Escenario, monto: string, fechaPago: string, metodo: 'EFECTIVO' | 'QR' | 'TARJETA' | 'TRANSFERENCIA' = 'EFECTIVO') {
+async function cobrar(esc: Escenario, monto: string, fechaPago: string, metodo: 'EFECTIVO' | 'QR' | 'TARJETA' = 'EFECTIVO') {
   const orden = await crearOrden(esc);
   await crearPago(orden, esc, { monto, metodo, fechaPago });
 }
@@ -146,7 +146,7 @@ describe('Ingresos por día: la sucursal y la coincidencia con /ingresos — SPE
     const sumaDeLosDias = porDia.porDia.reduce((suma, d) => suma + centavos(d.total), 0);
     expect(sumaDeLosDias).toBe(centavos(general.total));
     const sucursal = general.porSucursal[0];
-    for (const metodo of ['EFECTIVO', 'QR', 'TARJETA', 'TRANSFERENCIA'] as const) {
+    for (const metodo of ['EFECTIVO', 'QR', 'TARJETA'] as const) {
       const delMetodo = porDia.porDia.reduce((suma, d) => suma + centavos(d.porMetodo[metodo]), 0);
       expect(delMetodo).toBe(centavos(sucursal?.porMetodo[metodo] ?? '0.00'));
     }

@@ -104,7 +104,7 @@ describe('Estadísticas: volumen, productividad y clientes — SPEC-KRILINXI-016
 });
 
 describe('Estadísticas: lo cobrado por día — SPEC-KRILINXI-044', () => {
-  it('lee una respuesta válida, con los cuatro montos de cada día, también los días en cero', () => {
+  it('lee una respuesta válida, con los tres montos de cada día, también los días en cero', () => {
     const leida = leerIngresosPorDia(ingresosPorDiaDePrueba());
 
     expect(leida?.total).toBe('165.50');
@@ -112,7 +112,7 @@ describe('Estadísticas: lo cobrado por día — SPEC-KRILINXI-044', () => {
     expect(leida?.porDia[2]).toEqual({
       fecha: '2026-10-16',
       total: '0.00',
-      porMetodo: { EFECTIVO: '0.00', QR: '0.00', TARJETA: '0.00', TRANSFERENCIA: '0.00' },
+      porMetodo: { EFECTIVO: '0.00', QR: '0.00', TARJETA: '0.00' },
     });
   });
 
@@ -120,7 +120,7 @@ describe('Estadísticas: lo cobrado por día — SPEC-KRILINXI-044', () => {
     expect(leerIngresosPorDia(ingresosPorDiaDePrueba({ porDia: [], total: '0.00' }))?.porDia).toEqual([]);
   });
 
-  const DIA = { fecha: '2026-10-14', total: '1.00', porMetodo: { EFECTIVO: '1.00', QR: '0.00', TARJETA: '0.00', TRANSFERENCIA: '0.00' } };
+  const DIA = { fecha: '2026-10-14', total: '1.00', porMetodo: { EFECTIVO: '1.00', QR: '0.00', TARJETA: '0.00' } };
 
   it.each([
     ['no es un objeto', 'hola'],
@@ -133,7 +133,7 @@ describe('Estadísticas: lo cobrado por día — SPEC-KRILINXI-044', () => {
     ['un día con un monto que no es un monto', ingresosPorDiaDePrueba({ porDia: [{ ...DIA, total: 'mucho' }] })],
     ['un día con un monto negativo', ingresosPorDiaDePrueba({ porDia: [{ ...DIA, total: '-1.00' }] })],
     ['un día sin el desglose', ingresosPorDiaDePrueba({ porDia: [{ ...DIA, porMetodo: undefined }] })],
-    ['un día al que le falta una forma de pago', ingresosPorDiaDePrueba({ porDia: [{ ...DIA, porMetodo: { EFECTIVO: '1.00', QR: '0.00', TARJETA: '0.00' } }] })],
+    ['un día al que le falta una forma de pago', ingresosPorDiaDePrueba({ porDia: [{ ...DIA, porMetodo: { EFECTIVO: '1.00', QR: '0.00' } }] })],
     ['una forma de pago con un monto roto', ingresosPorDiaDePrueba({ porDia: [{ ...DIA, porMetodo: { ...DIA.porMetodo, QR: 0 } }] })],
   ])('no se fía de una respuesta que %s', (_caso, datos) => {
     expect(leerIngresosPorDia(datos)).toBeNull();

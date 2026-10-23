@@ -38,7 +38,7 @@ export const MENSAJES_ENTREGA = {
   precioFinal: 'Escribe el precio final con números, por ejemplo 45 o 45,50.',
   pago: 'Escribe cuánto paga el cliente, con números mayores que cero, por ejemplo 20 o 20,50.',
   pagoMayor: 'El cobro no puede ser mayor que lo que falta pagar.',
-  sinMetodo: 'Elige cómo paga: efectivo, QR, tarjeta o transferencia.',
+  sinMetodo: 'Elige cómo paga: efectivo, QR o tarjeta.',
 } as const;
 
 function leerMonto(texto: string): Centavos | null {

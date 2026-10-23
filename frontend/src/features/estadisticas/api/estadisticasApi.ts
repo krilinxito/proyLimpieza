@@ -70,7 +70,7 @@ export function leerIngresos(datos: unknown): Ingresos | null {
       sucursalId: s.sucursalId,
       sucursal: s.sucursal,
       total: s.total,
-      porMetodo: { EFECTIVO: montos[0], QR: montos[1], TARJETA: montos[2], TRANSFERENCIA: montos[3] },
+      porMetodo: { EFECTIVO: montos[0], QR: montos[1], TARJETA: montos[2] },
     };
   });
   if (!porSucursal) return null;
@@ -88,7 +88,7 @@ export function leerIngresosPorDia(datos: unknown): IngresosPorDia | null {
     return {
       fecha: d.fecha,
       total: d.total,
-      porMetodo: { EFECTIVO: montos[0], QR: montos[1], TARJETA: montos[2], TRANSFERENCIA: montos[3] },
+      porMetodo: { EFECTIVO: montos[0], QR: montos[1], TARJETA: montos[2] },
     };
   });
   if (!porDia) return null;

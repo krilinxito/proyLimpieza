@@ -1,7 +1,7 @@
 /**
  * Los valores válidos del negocio, en un solo sitio.
  *
- * En Postgres son ENUM (`context/lavanderia_schema.sql`, sección 0). SQLite no tiene ENUM,
+ * En Postgres son ENUM (`context/lavanderia_schema.sql`, sección 0, y sus migraciones). SQLite no tiene ENUM,
  * así que al dispositivo llegan como texto suelto: sin este módulo, nada impediría escribir
  * `'EN PROCESO'` con un espacio y descubrirlo cuando el servidor rechace la subida.
  *
@@ -16,7 +16,7 @@
 export const ESTADOS_ORDEN = ['RECIBIDO', 'EN_PROCESO', 'LISTO', 'ENTREGADO', 'ANULADO'] as const;
 export const TIPOS_RETIRO = ['CON_BOLETA', 'SIN_BOLETA'] as const;
 export const TIPOS_PAGO = ['ADELANTO', 'PAGO_FINAL'] as const;
-export const METODOS_PAGO = ['EFECTIVO', 'QR', 'TARJETA', 'TRANSFERENCIA'] as const;
+export const METODOS_PAGO = ['EFECTIVO', 'QR', 'TARJETA'] as const;
 export const ROLES = ['ADMIN', 'EMPLEADO'] as const;
 
 // `(typeof LISTA)[number]` es "el tipo de cualquier elemento de la lista": la unión
@@ -66,7 +66,6 @@ export const TEXTO_METODO_PAGO: Record<MetodoPago, string> = {
   EFECTIVO: 'Efectivo',
   QR: 'Pago con QR',
   TARJETA: 'Tarjeta',
-  TRANSFERENCIA: 'Transferencia',
 };
 
 export const TEXTO_ROL: Record<Rol, string> = {
