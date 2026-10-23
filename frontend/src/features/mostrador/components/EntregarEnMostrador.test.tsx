@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { App } from '../../../App';
 import { simularApi } from '../../../test/apiFalsa';
 import { baseLocalDePrueba } from '../../../test/baseLocalDePrueba';
@@ -7,6 +7,7 @@ import { elegirEnBuscador } from '../../../test/buscador';
 import { clienteDePrueba, ordenDePrueba, pagoDePrueba } from '../../../test/filasDePrueba';
 import { accionesPrincipales } from '../../../test/jerarquia';
 import { sinJerga } from '../../../test/jerga';
+import { subirRechazandoPorRuta } from '../../../test/rechazos';
 import { renderEnRuta } from '../../../test/render';
 import { sesionDePrueba } from '../../../test/sesion';
 
@@ -47,6 +48,12 @@ function escribir(formulario: HTMLElement, etiqueta: string, valor: string) {
   fireEvent.change(within(formulario).getByLabelText(etiqueta), { target: { value: valor } });
 }
 
+/** Paga en efectivo lo que falta de la boleta de siempre (Bs 30): desde SPEC-KRILINXI-056 no se entrega con deuda. */
+function pagarLoQueFalta(formulario: HTMLElement) {
+  escribir(formulario, 'Cuánto paga ahora (Bs, si paga)', '30');
+  fireEvent.click(within(formulario).getByLabelText('Efectivo'));
+}
+
 /** Toca "Entregar" y espera a que aparezca la confirmación. */
 async function pedirConfirmacion(formulario: HTMLElement) {
   fireEvent.click(within(formulario).getByRole('button', { name: 'Entregar' }));
@@ -68,8 +75,8 @@ describe('Entregar en el Mostrador: el recorrido — SPEC-KRILINXI-009 y SPEC-KR
     expect(within(formulario).getByText('Falta pagar Bs 30,00.')).toBeInTheDocument();
 
     fireEvent.click(within(formulario).getByLabelText('Trae la boleta'));
-    escribir(formulario, 'Cuánto paga ahora (Bs, si paga)', '30');
-    fireEvent.click(within(formulario).getByLabelText('Efectivo'));
+    pagarLoQueFalta(formulario);
+    expect(within(formulario).getByText('Con este cobro queda todo pagado.')).toBeInTheDocument();
     const dialogo = await pedirConfirmacion(formulario);
     // Paga todo: la confirmación no habla de deuda.
     expect(dialogo).toHaveTextContent('Esta acción no se puede deshacer.');
@@ -83,27 +90,39 @@ describe('Entregar en el Mostrador: el recorrido — SPEC-KRILINXI-009 y SPEC-KR
       Retiró: 'Trajo la boleta',
       'Precio final': 'Bs 50,00',
       'Cobrado ahora': 'Bs 30,00',
-      'Queda debiendo': 'Nada',
     });
+    // SPEC-KRILINXI-056: el pago va antes que la entrega, que es el orden en que la cola los sube.
     expect((await db.getCrudBatch(100))?.crud.map((c) => [c.op, c.table])).toEqual([
-      ['PUT', 'entregas'],
       ['PUT', 'pagos'],
+      ['PUT', 'entregas'],
     ]);
     expect(servidor.pedidos).toEqual([]);
     sinJerga();
   });
 
-  it('con saldo pendiente, la confirmación dice cuánto queda debiendo', async () => {
-    await abrir();
+  it('con saldo pendiente no se puede entregar: el botón está apagado y dice cuánto falta — SPEC-KRILINXI-056', async () => {
+    const { db } = await abrir();
     const formulario = await abrirEntrega();
     fireEvent.click(within(formulario).getByLabelText('Trae la boleta'));
+    const entregar = within(formulario).getByRole('button', { name: 'Entregar' });
+
+    // Sin escribir nada: falta todo lo que debe.
+    expect(entregar).toBeDisabled();
+    expect(within(formulario).getByText('Falta pagar Bs 30,00.')).toBeInTheDocument();
+
+    // Pagando solo una parte, sigue apagado y dice cuánto falta todavía.
     escribir(formulario, 'Cuánto paga ahora (Bs, si paga)', '15');
     fireEvent.click(within(formulario).getByLabelText('Pago con QR'));
+    expect(within(formulario).getByText('Con este cobro todavía falta pagar Bs 15,00.')).toBeInTheDocument();
+    expect(entregar).toBeDisabled();
+    fireEvent.click(entregar);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(await db.getCrudBatch()).toBeNull();
 
-    const dialogo = await pedirConfirmacion(formulario);
-    expect(dialogo).toHaveTextContent('Esta acción no se puede deshacer. El cliente queda debiendo Bs 15,00.');
-    fireEvent.click(screen.getByRole('button', { name: 'Sí, entregar' }));
-    expect(await resumen()).toMatchObject({ 'Queda debiendo': 'Bs 15,00' });
+    // Pagando todo, se habilita.
+    escribir(formulario, 'Cuánto paga ahora (Bs, si paga)', '30');
+    expect(within(formulario).getByText('Con este cobro queda todo pagado.')).toBeInTheDocument();
+    expect(entregar).toBeEnabled();
   });
 
   it('el saldo se recalcula al cambiar el precio final (recargo)', async () => {
@@ -117,6 +136,7 @@ describe('Entregar en el Mostrador: el recorrido — SPEC-KRILINXI-009 y SPEC-KR
     await abrir();
     const formulario = await abrirEntrega();
     fireEvent.click(within(formulario).getByLabelText('No trae la boleta'));
+    pagarLoQueFalta(formulario);
     fireEvent.click(within(formulario).getByRole('button', { name: 'Entregar' }));
 
     expect(await within(formulario).findByText('Si no trae la boleta, escribe el nombre de quien retira la ropa.')).toBeInTheDocument();
@@ -134,6 +154,7 @@ describe('Entregar en el Mostrador: el recorrido — SPEC-KRILINXI-009 y SPEC-KR
     const { db } = await abrir();
     const formulario = await abrirEntrega();
     fireEvent.click(within(formulario).getByLabelText('Trae la boleta'));
+    pagarLoQueFalta(formulario);
     await pedirConfirmacion(formulario);
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancelar' }));
 
@@ -147,6 +168,7 @@ describe('Entregar en el Mostrador: después de entregar — SPEC-KRILINXI-009 y
     await abrir();
     const formulario = await abrirEntrega();
     fireEvent.click(within(formulario).getByLabelText('Trae la boleta'));
+    pagarLoQueFalta(formulario);
     await pedirConfirmacion(formulario);
     fireEvent.click(screen.getByRole('button', { name: 'Sí, entregar' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Entregar otra ropa' }));
@@ -192,6 +214,7 @@ describe('Entregar en el Mostrador con el tema — SPEC-KRILINXI-025 y SPEC-KRIL
     const opcion = within(formulario).getByLabelText('Trae la boleta');
     fireEvent.click(opcion);
     expect(opcion.closest('label')).toHaveClass('font-semibold', 'border-marca');
+    pagarLoQueFalta(formulario);
     await pedirConfirmacion(formulario);
     fireEvent.click(screen.getByRole('button', { name: 'Sí, entregar' }));
 
@@ -257,7 +280,9 @@ describe('Entregar una boleta ya pagada: sin pedir montos — SPEC-KRILINXI-046'
     sinJerga();
     fireEvent.click(screen.getByRole('button', { name: 'Sí, entregar' }));
 
-    expect(await resumen()).toMatchObject({ Boleta: '001240', Retiró: 'Trajo la boleta', 'Precio final': 'Bs 50,00', 'Queda debiendo': 'Nada' });
+    expect(await resumen()).toMatchObject({ Boleta: '001240', Retiró: 'Trajo la boleta', 'Precio final': 'Bs 50,00' });
+    // Desde SPEC-KRILINXI-056 nunca queda deuda: el resumen ya no tiene la fila "Queda debiendo".
+    expect(await resumen()).not.toHaveProperty('Queda debiendo');
     // La entrega lleva el precio de la boleta, y NO se encola ningún pago: solo la entrega.
     expect(await control.base.consultar('SELECT precio_final FROM entregas')).toEqual([{ precio_final: '50.00' }]);
     expect(await control.base.consultar("SELECT count(*) AS n FROM pagos WHERE orden_id = ?", [PAGADA.id])).toEqual([{ n: 2 }]);
@@ -302,6 +327,8 @@ describe('Entregar una boleta ya pagada: sin pedir montos — SPEC-KRILINXI-046'
     // Al escribir un pago, aparece cómo paga.
     escribir(formulario, 'Cuánto paga ahora (Bs, si paga)', '30');
     expect(within(formulario).getByText('¿Cómo paga?')).toBeInTheDocument();
+    // Y ya no ofrece transferencia (SPEC-KRILINXI-055): solo efectivo, QR y tarjeta.
+    expect(within(formulario).queryByLabelText('Transferencia')).not.toBeInTheDocument();
   });
 
   it('sigue habiendo una sola acción principal a la vista: Entregar', async () => {
@@ -309,5 +336,29 @@ describe('Entregar una boleta ya pagada: sin pedir montos — SPEC-KRILINXI-046'
     await abrirEntrega('001240');
 
     expect(accionesPrincipales()).toEqual(['Entregar']);
+  });
+});
+
+describe('Una entrega rechazada por falta de cobro llega a Para corregir — SPEC-KRILINXI-056', () => {
+  it('sube el pago antes que la entrega; si el servidor dice que falta cobrar, el empleado se entera y puede corregirlo', async () => {
+    const { control, db } = await abrir();
+    const formulario = await abrirEntrega();
+    fireEvent.click(within(formulario).getByLabelText('Trae la boleta'));
+    pagarLoQueFalta(formulario);
+    await pedirConfirmacion(formulario);
+    fireEvent.click(screen.getByRole('button', { name: 'Sí, entregar' }));
+    await resumen();
+
+    const MENSAJE = 'La boleta 001234 todavía tiene Bs 30.00 sin cobrar. Cobra todo antes de entregar la ropa.';
+    const pedidos = await subirRechazandoPorRuta(db, { '/entregas': [409, 'SALDO_PENDIENTE', MENSAJE] });
+
+    // El orden en que sube es el que hace que el servidor cuente el pago al recibir la entrega.
+    expect(pedidos.map((p) => p.ruta)).toEqual(['/pagos', '/entregas']);
+
+    cleanup();
+    renderEnRuta(<App />, '/para-corregir', { baseLocal: control });
+    expect(await screen.findByText(MENSAJE)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Corregir/ })).toBeInTheDocument();
+    sinJerga();
   });
 });

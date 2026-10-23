@@ -32,10 +32,30 @@ function saldoConPrecio(orden: OrdenVista, precioFinal: string): number | null {
   }
 }
 
+/** Lo que dice el renglón del saldo: cuánto falta, y cuánto faltaría después de lo que se escribió en "Cuánto paga ahora". */
+function mensajeDeSaldo(saldo: number | null, pagoAhora: number): string {
+  if (saldo === null) return ' ';
+  if (saldo <= 0) return 'No falta pagar nada.';
+  if (pagoAhora <= 0) return `Falta pagar ${formatearBs(saldo)}.`;
+  const despues = saldo - pagoAhora;
+  return despues > 0 ? `Con este cobro todavía falta pagar ${formatearBs(despues)}.` : 'Con este cobro queda todo pagado.';
+}
+
+/** El monto escrito en centavos; vacío o mal escrito, cero. */
+function montoOCero(texto: string): number {
+  try {
+    return texto.trim() === '' ? 0 : parsearMonto(texto);
+  } catch {
+    return 0;
+  }
+}
+
 /**
  * Entregar la ropa — SPEC-KRILINXI-009. Valida quien guarda (`api/entregasLocal`); esto
- * muestra lo que le contesta y, antes de escribir, pide confirmación diciendo cuánto queda
- * debiendo el cliente si queda algo.
+ * muestra lo que le contesta y, antes de escribir, pide confirmación.
+ *
+ * Desde SPEC-KRILINXI-056 la ropa solo sale con la boleta pagada por completo: el botón "Entregar" se
+ * habilita cuando lo que se paga ahora cubre lo que falta, y el texto de arriba dice cuánto falta todavía.
  *
  * Si la boleta **ya está pagada** (lo pagado cubre su precio) no pide ningún monto — SPEC-KRILINXI-046:
  * ni el precio final ni cuánto paga ahora ni cómo paga. Un campo de dinero en una boleta sin deuda da a
@@ -63,6 +83,11 @@ export function FormularioEntrega({ orden, alEntregar, alCancelar }: Props) {
   // `orden.saldo` ya es precio de la boleta − pagos (la ropa todavía no tiene entrega): cero o menos, no hay nada que cobrar.
   const yaPagada = orden.saldo <= 0;
   const saldo = saldoConPrecio(orden, datos.precioFinal);
+  // Lo que falta cobrar después del pago escrito (SPEC-KRILINXI-056). Un pago vacío o mal escrito cuenta como cero.
+  const pagoAhora = montoOCero(datos.pagoFinal);
+  const faltaDespues = saldo === null ? null : saldo - pagoAhora;
+  // En una boleta ya pagada no hay nada que cobrar; si no, hasta que lo escrito no cubra lo que falta, no se entrega.
+  const faltaCobrar = !yaPagada && (faltaDespues === null || faltaDespues > 0);
 
   /**
    * Lo que se manda a validar y guardar. En una boleta ya pagada, el precio final es el de la boleta y no hay pago
@@ -105,9 +130,6 @@ export function FormularioEntrega({ orden, alEntregar, alCancelar }: Props) {
       setAviso(NO_SE_GUARDO);
     }
   }
-
-  const debe =
-    confirmar && confirmar.saldoDespues > 0 ? ` El cliente queda debiendo ${formatearBs(confirmar.saldoDespues)}.` : '';
 
   return (
     <form
@@ -181,7 +203,7 @@ export function FormularioEntrega({ orden, alEntregar, alCancelar }: Props) {
             autoComplete="off"
           />
           <p className="text-xl text-texto" aria-live="polite">
-            {saldo === null ? ' ' : saldo > 0 ? `Falta pagar ${formatearBs(saldo)}.` : 'No falta pagar nada.'}
+            {mensajeDeSaldo(saldo, pagoAhora)}
           </p>
 
           <CampoTexto
@@ -209,7 +231,7 @@ export function FormularioEntrega({ orden, alEntregar, alCancelar }: Props) {
         </div>
       )}
       <div className="mt-4 grid gap-3">
-        <Boton type="submit" ocupado={!entregar.lista} textoOcupado="Preparando…">
+        <Boton type="submit" ocupado={!entregar.lista} textoOcupado="Preparando…" disabled={faltaCobrar}>
           Entregar
         </Boton>
         <Boton variante="secundario" onClick={alCancelar}>
@@ -220,7 +242,7 @@ export function FormularioEntrega({ orden, alEntregar, alCancelar }: Props) {
       <ModalConfirmacion
         abierto={confirmar !== null}
         titulo={`¿Entregar la ropa de la boleta ${orden.numeroBoleta}?`}
-        mensaje={`Esta acción no se puede deshacer.${debe}`}
+        mensaje="Esta acción no se puede deshacer."
         textoConfirmar="Sí, entregar"
         onConfirmar={guardar}
         onCancelar={() => setConfirmar(null)}

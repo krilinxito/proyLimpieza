@@ -15,7 +15,6 @@ export function ResumenEntrega({ entrega, alEntregarOtra }: { entrega: EntregaLi
     ],
     ['Precio final', formatearBs(entrega.precioFinal)],
     ['Cobrado ahora', entrega.pagoFinal > 0 ? formatearBs(entrega.pagoFinal) : 'Nada'],
-    ['Queda debiendo', entrega.saldoDespues > 0 ? formatearBs(entrega.saldoDespues) : 'Nada'],
   ];
 
   return (

@@ -197,8 +197,49 @@ describe('Entregas model: crear — SPEC-ALE186-006', () => {
   });
 
   it('falla en voz alta si no se insertó y no encuentra el motivo', async () => {
-    laBaseDevuelve([], [], [FILA_ORDEN]);
+    // La orden está bien y no falta cobrar nada: no hay ningún motivo para que no se haya insertado.
+    laBaseDevuelve([], [], [FILA_ORDEN], [{ saldo: '0.00' }]);
 
     await expect(entregas.crear(NUEVA, SIN_RESTRICCION)).rejects.toThrow(/no se insertó/);
+  });
+});
+
+describe('Entregas model: solo con la boleta pagada — SPEC-KRILINXI-056', () => {
+  it('la condición del saldo va dentro del mismo UPDATE que pasa la orden a ENTREGADO', async () => {
+    laBaseDevuelve([FILA_ENTREGA]);
+
+    await entregas.crear(NUEVA, SIN_RESTRICCION);
+
+    const [sql] = llamada(0);
+    // Del UPDATE de la orden hasta su RETURNING: ahí, y no en otra parte, tiene que estar la condición.
+    const update = /UPDATE ordenes[\s\S]*?RETURNING/.exec(sql)?.[0] ?? '';
+    expect(update.replace(/\s+/g, ' ')).toContain(
+      'AND COALESCE($7::numeric, precio_total) <= COALESCE((SELECT SUM(p.monto) FROM pagos p WHERE p.orden_id = ordenes.id), 0)',
+    );
+  });
+
+  it('si no se insertó porque falta cobrar, devuelve saldo-pendiente con lo que falta', async () => {
+    laBaseDevuelve([], [], [FILA_ORDEN], [{ saldo: '25.50' }]);
+
+    expect(await entregas.crear(NUEVA, SIN_RESTRICCION)).toMatchObject({
+      tipo: 'saldo-pendiente',
+      saldo: '25.50',
+      orden: { numeroBoleta: '001234' },
+    });
+  });
+
+  it('para calcular lo que falta usa el precio final que vino, no solo el de la boleta', async () => {
+    laBaseDevuelve([], [], [FILA_ORDEN], [{ saldo: '4.50' }]);
+
+    await entregas.crear({ ...NUEVA, precioFinal: 5000 }, SIN_RESTRICCION);
+
+    const [, valores] = llamada(3);
+    expect(valores).toEqual([IDS.orden, '50.00']);
+  });
+
+  it('una anulada o ya entregada se explica por eso, no por el saldo', async () => {
+    laBaseDevuelve([], [], [{ ...FILA_ORDEN, estado: 'ANULADO' }]);
+    expect(await entregas.crear(NUEVA, SIN_RESTRICCION)).toMatchObject({ tipo: 'orden-anulada' });
+    expect(query).toHaveBeenCalledTimes(3);
   });
 });

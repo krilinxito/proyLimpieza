@@ -5,7 +5,8 @@
 //   - Sin GET: las entregas de la sucursal bajan por el bucket `sucursal`.
 //   - Sin PATCH ni DELETE: un retiro ya hecho no se reescribe.
 //
-// El cobro final NO va acá: se registra aparte, por POST /api/pagos.
+// El cobro final NO va acá: se registra aparte, por POST /api/pagos. Desde SPEC-KRILINXI-056 tiene que estar registrado
+// ANTES de la entrega: la ropa solo sale con la boleta pagada por completo (409 SALDO_PENDIENTE si no).
 import type { Request, Response } from 'express';
 import { revisionDe, sesionDe } from '../middleware/auth.js';
 import * as entregas from '../models/entregas.model.js';
@@ -151,6 +152,13 @@ export async function postEntrega(req: Request, res: Response): Promise<void> {
         CODIGOS_ERROR.ORDEN_YA_ENTREGADA,
         `La ropa de la orden ${resultado.orden.numeroBoleta} ya fue entregada. ` +
           'Revisa el número de boleta.',
+      );
+    case 'saldo-pendiente':
+      throw new ApiError(
+        409,
+        CODIGOS_ERROR.SALDO_PENDIENTE,
+        `La boleta ${resultado.orden.numeroBoleta} todavía tiene Bs ${resultado.saldo} sin cobrar. ` +
+          'Cobra todo antes de entregar la ropa.',
       );
   }
 }

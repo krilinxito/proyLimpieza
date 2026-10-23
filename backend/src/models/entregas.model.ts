@@ -5,6 +5,10 @@
 // sentencia que inserta. La ropa se retira en la misma sucursal donde se dejó,
 // así que la entrega queda siempre con la sucursal de su orden.
 //
+// Desde SPEC-KRILINXI-056 la ropa solo se entrega con la boleta pagada por completo: lo cobrado (los pagos que la
+// orden ya tiene) tiene que cubrir el precio final. Como el pago final y la entrega suben como dos pedidos, el
+// dispositivo manda primero el pago y después la entrega (ver `registrarEntrega` en el frontend).
+//
 // Lo nuevo es que registrar una entrega escribe en DOS tablas: la entrega, y la
 // orden, que pasa a ENTREGADO. Tienen que ocurrir las dos o ninguna — ver `crear`.
 import pg from 'pg';
@@ -82,6 +86,21 @@ export async function buscarPorId(id: string): Promise<Entrega | null> {
   return fila === undefined ? null : aEntrega(fila);
 }
 
+/**
+ * Lo que faltaría cobrar si se entregara con ese precio final (`null` = el de la boleta): el precio menos todo lo cobrado,
+ * como texto de Postgres. Solo sirve para armar el mensaje cuando la sentencia de `crear` no insertó nada.
+ */
+async function saldoAlEntregar(ordenId: string, precioFinal: Centavos | null): Promise<string | null> {
+  const { rows } = await pool.query<{ saldo: string }>(
+    `SELECT (COALESCE($2::numeric, o.precio_total)
+              - COALESCE((SELECT SUM(p.monto) FROM pagos p WHERE p.orden_id = o.id), 0))::text AS saldo
+       FROM ordenes o
+      WHERE o.id = $1`,
+    [ordenId, precioFinal === null ? null : formatear(precioFinal)],
+  );
+  return rows[0]?.saldo ?? null;
+}
+
 export interface EntregaNueva {
   id: string;
   ordenId: string;
@@ -109,7 +128,9 @@ export type ResultadoCrear =
   | { tipo: 'orden-no-encontrada' }
   | { tipo: 'orden-anulada'; orden: Orden }
   /** La orden ya tiene una entrega, con otro id. */
-  | { tipo: 'orden-ya-entregada'; orden: Orden };
+  | { tipo: 'orden-ya-entregada'; orden: Orden }
+  /** La ropa se puede entregar, pero lo cobrado no cubre el precio final. `saldo` es lo que falta, como lo da Postgres (`"25.50"`). */
+  | { tipo: 'saldo-pendiente'; orden: Orden; saldo: string };
 
 /**
  * Registra la entrega y pasa la orden a ENTREGADO, o devuelve la que ya existe.
@@ -124,6 +145,10 @@ export type ResultadoCrear =
  * El `UPDATE` bloquea la fila de la orden, así que no hace falta `FOR SHARE`
  * como en pagos: una anulación simultánea espera, o se espera a ella y la
  * condición se vuelve a evaluar sobre la fila ya anulada.
+ *
+ * La regla del saldo (SPEC-KRILINXI-056) es una condición más del mismo `UPDATE`: la orden solo pasa a ENTREGADO si lo cobrado
+ * cubre el precio final (el que viene, o el de la boleta). Si no, el UPDATE no devuelve nada, el INSERT no inserta nada y no
+ * se escribe ni la entrega ni la auditoría. Un pago nunca se borra, así que una carrera con otro cobro solo puede ayudar.
  *
  * A diferencia de pagos, NO hay `ON CONFLICT (id) DO NOTHING`. Ese DO NOTHING
  * solo afecta al INSERT: si el id chocara, el UPDATE ya habría marcado la orden
@@ -149,6 +174,8 @@ export async function crear(
             WHERE id = $2
               AND estado = ANY($9::estado_orden[])
               AND ($10::uuid IS NULL OR sucursal_id = $10)
+              AND COALESCE($7::numeric, precio_total)
+                  <= COALESCE((SELECT SUM(p.monto) FROM pagos p WHERE p.orden_id = ordenes.id), 0)
            RETURNING id, sucursal_id, precio_total
          )`,
         sql: `INSERT INTO entregas (id, orden_id, sucursal_id, tipo_retiro, retirado_por_nombre,
@@ -201,6 +228,10 @@ export async function crear(
   if (!visible) return { tipo: 'orden-no-encontrada' };
   if (orden.estado === 'ANULADO') return { tipo: 'orden-anulada', orden };
   if (orden.estado === 'ENTREGADO' || ordenConOtraEntrega) return { tipo: 'orden-ya-entregada', orden };
+
+  // Entregable y sin choques: queda la regla del saldo (SPEC-KRILINXI-056).
+  const saldo = await saldoAlEntregar(entrega.ordenId, entrega.precioFinal);
+  if (saldo !== null && !saldo.startsWith('-') && saldo !== '0.00') return { tipo: 'saldo-pendiente', orden, saldo };
 
   // Existe, es visible, está en un estado entregable y no chocó con nada, pero
   // no se insertó: no debería pasar. Mejor enterarse que inventar un motivo.

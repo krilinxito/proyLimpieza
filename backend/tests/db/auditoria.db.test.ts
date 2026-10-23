@@ -9,6 +9,7 @@ import {
   contar,
   crearCliente,
   crearOrden,
+  pagarOrden,
   crearSucursal,
   crearUsuario,
   escenario,
@@ -109,6 +110,7 @@ describe('Auditoría de cobros y entregas — SPEC-ALE186-010', () => {
   it('una entrega anota ENTREGAR, una sola vez, y nada más sobre la orden', async () => {
     const esc = await escenario();
     const orden = await crearOrden(esc);
+    await pagarOrden(orden, esc);
     const cuerpo = cuerpoDeEntrega({ orden_id: orden.id });
 
     expect((await testApi().post('/api/entregas').set(sesionDe(esc)).send(cuerpo)).status).toBe(201);
