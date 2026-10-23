@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { Aviso, type TipoAviso } from './Aviso';
 import { Insignia, type TonoInsignia } from './Insignia';
+import { BotonAtras } from './BotonAtras';
 import { Paginas } from './Paginas';
 import { ESTILO_TARJETA, SenalTocable, Tarjeta } from './Tarjeta';
 
@@ -157,5 +158,42 @@ describe('Paginas en un solo bloque — SPEC-KRILINXI-054', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Anteriores' }));
     fireEvent.click(screen.getByRole('button', { name: 'Siguientes' }));
     expect(visitadas).toEqual([1, 3]);
+  });
+});
+
+describe('BotonAtras: la flechita de volver — SPEC-KRILINXI-057', () => {
+  it('es un botón sin texto visible, con su nombre para el lector de pantalla y al pasar el mouse', () => {
+    render(<BotonAtras nombre="Volver al mostrador" alTocar={() => undefined} />);
+    const boton = screen.getByRole('button', { name: 'Volver al mostrador' });
+
+    expect(boton.textContent).toBe('');
+    expect(boton).toHaveAttribute('title', 'Volver al mostrador');
+    expect(boton).toHaveAttribute('type', 'button');
+    // El ícono es decorativo: el que habla es el aria-label.
+    expect(boton.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('chico a la vista pero de dedo (48px), con borde para que se note que es un botón, y pinta con el tema', () => {
+    render(<BotonAtras nombre="Volver" alTocar={() => undefined} />);
+    const boton = screen.getByRole('button', { name: 'Volver' });
+
+    expect(boton).toHaveClass('size-12', 'border-2', 'border-borde', 'bg-superficie');
+    expect(boton.className).toContain('focus-visible:outline-foco');
+  });
+
+  it('en pantalla ancha sale al hueco de la izquierda del contenido, a la altura del título; en angosta, arriba, en su renglón', () => {
+    render(<BotonAtras nombre="Volver" alTocar={() => undefined} />);
+    const lugar = screen.getByRole('button', { name: 'Volver' }).parentElement;
+
+    // jsdom no mide: se comprueba con qué clases se armó. Sin ellas (angosta) queda en el flujo, con aire debajo.
+    expect(lugar).toHaveClass('mb-4');
+    expect(lugar).toHaveClass('min-[1200px]:absolute', 'min-[1200px]:top-6', 'min-[1200px]:-left-16', 'min-[1200px]:mb-0');
+  });
+
+  it('al tocarlo avisa', () => {
+    let veces = 0;
+    render(<BotonAtras nombre="Volver" alTocar={() => (veces += 1)} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Volver' }));
+    expect(veces).toBe(1);
   });
 });

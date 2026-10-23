@@ -182,12 +182,17 @@ describe('Registrar ropa: el recorrido — SPEC-KRILINXI-006 y SPEC-KRILINXI-034
     expect(campo).toHaveValue('2026-12-24');
   });
 
-  it('"Cambiar de cliente" vuelve al buscador sin perder la ropa escrita', async () => {
+  it('"Cambiar de cliente" vuelve al buscador, y al elegir de nuevo la ropa escrita sigue ahí — SPEC-KRILINXI-057', async () => {
     await abrir();
     await elegirARosa();
     escribir('Qué deja', 'Camisa');
     fireEvent.click(screen.getByRole('button', { name: 'Cambiar de cliente' }));
     expect(await screen.findByRole('combobox', { name: /Buscar cliente/ })).toHaveValue('');
+    // Mientras se elige cliente no se ve la boleta (ni se puede guardar)…
+    expect(screen.queryByLabelText('Qué deja')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Guardar' })).not.toBeInTheDocument();
+    // …pero lo escrito no se pierde.
+    await elegirARosa();
     expect(screen.getByLabelText('Qué deja')).toHaveValue('Camisa');
   });
 });
@@ -205,11 +210,13 @@ describe('Registrar ropa: lo que se corrige en pantalla — SPEC-KRILINXI-006 y 
     expect(await db.getCrudBatch()).toBeNull();
   });
 
-  it('marca cada campo que falta, todos a la vez, también el cliente', async () => {
+  it('marca cada campo que falta, todos a la vez, también los del cliente nuevo', async () => {
     await abrir();
+    // Sin cliente no hay qué guardar (SPEC-KRILINXI-057): con uno nuevo en blanco, falta todo.
+    await elegirEnBuscador('zz', 'Cliente nuevo');
     await guardar();
 
-    expect(await screen.findByText('Falta elegir el cliente que deja la ropa.')).toBeInTheDocument();
+    expect(await screen.findByText('Escribe el número de teléfono del cliente.')).toBeInTheDocument();
     expect(screen.getByText('Escribe el número de la boleta.')).toBeInTheDocument();
     expect(screen.getByText('Escribe qué ropa deja el cliente.')).toBeInTheDocument();
     expect(screen.getByText('Escribe el precio con números, por ejemplo 25 o 25,50.')).toBeInTheDocument();
@@ -284,11 +291,15 @@ describe('Registrar ropa con un cliente nuevo — SPEC-KRILINXI-034', () => {
     expect(await cola(db)).toEqual([['PUT', 'ordenes']]);
   });
 
-  it('"Buscar un cliente que ya existe" vuelve al buscador', async () => {
-    await abrir();
+  it('el botón de la tarjeta del cliente nuevo dice "Atrás" (y no "Buscar un cliente que ya existe") y vuelve a elegir sin guardar nada — SPEC-KRILINXI-057', async () => {
+    const { db } = await abrir();
     await elegirEnBuscador('zz', 'Cliente nuevo');
-    fireEvent.click(await screen.findByRole('button', { name: 'Buscar un cliente que ya existe' }));
+    expect(screen.queryByRole('button', { name: 'Buscar un cliente que ya existe' })).not.toBeInTheDocument();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Atrás' }));
+
     expect(await screen.findByRole('combobox', { name: /Buscar cliente/ })).toBeInTheDocument();
+    expect(await db.getCrudBatch()).toBeNull();
   });
 });
 
@@ -323,10 +334,13 @@ describe('Registrar ropa desde el Mostrador — SPEC-KRILINXI-034', () => {
     expect(await within(ficha).findByRole('region', { name: 'Boleta 001242' })).toBeInTheDocument();
   });
 
-  it('/registrar-ropa lleva al Mostrador con el formulario abierto', async () => {
+  it('/registrar-ropa lleva al Mostrador y empieza por elegir al cliente, sin la boleta todavía', async () => {
     await abrir();
     expect(screen.getByRole('heading', { name: 'Mostrador', level: 1 })).toBeInTheDocument();
-    expect(screen.getByRole('form', { name: 'Datos de la ropa' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: /Buscar cliente/ })).toBeInTheDocument();
+    // SPEC-KRILINXI-057: ni los datos de la boleta ni "Guardar" hasta que haya un cliente.
+    expect(screen.queryByRole('form', { name: 'Datos de la ropa' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Guardar' })).not.toBeInTheDocument();
   });
 
   it('"Volver al mostrador sin guardar" no guarda nada, y con algo escrito pide confirmar antes', async () => {
@@ -406,6 +420,52 @@ describe('Registrar ropa: el idioma del mostrador — SPEC-KRILINXI-006 y SPEC-K
     fireEvent.click(screen.getByLabelText('Tarjeta'));
     await guardar();
     await screen.findByText('Ropa registrada con la boleta 001238.');
+    sinJerga();
+  });
+});
+
+describe('Registrar ropa: elegir al cliente primero y guardar al final — SPEC-KRILINXI-057', () => {
+  it('con un cliente elegido hay un solo "Guardar", y es el último control de la boleta', async () => {
+    await abrir();
+    const formulario = await elegirARosa();
+
+    const guardares = within(formulario).getAllByRole('button', { name: 'Guardar' });
+    expect(guardares).toHaveLength(1);
+    const controles = within(formulario).getAllByRole('button');
+    expect(controles.at(-1)).toBe(guardares[0]);
+    // Es el que envía el formulario; los demás (atajos, cambiar de cliente…) no envían.
+    expect(guardares[0]).toHaveAttribute('type', 'submit');
+    expect(controles.filter((c) => c.getAttribute('type') === 'submit')).toHaveLength(1);
+  });
+
+  it('el cliente nuevo se escribe en la misma boleta y todo se guarda junto, al final: alta, ropa y adelanto o nada', async () => {
+    const { db } = await abrir();
+    await elegirEnBuscador('Beto Mamani', 'Cliente nuevo');
+    escribir('Teléfono', '71111111');
+    cargarRopa('001300');
+    dejaAdelanto();
+    escribir('Cuánto deja de adelanto (Bs)', '4');
+    fireEvent.click(screen.getByLabelText('Efectivo'));
+    // Hasta apretar "Guardar" no se escribe nada: ni el cliente, ni la ropa, ni el adelanto.
+    expect(await db.getCrudBatch()).toBeNull();
+    await guardar();
+
+    expect(await resumen()).toMatchObject({ Cliente: 'Beto Mamani' });
+    expect(await cola(db)).toEqual([['PUT', 'clientes'], ['PUT', 'ordenes'], ['PUT', 'pagos']]);
+  });
+
+  it('salir pregunta solo si ya se eligió o escribió algo: en el primer paso, vuelve directo', async () => {
+    await abrir();
+    fireEvent.click(screen.getByRole('button', { name: 'Volver al mostrador sin guardar' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Mostrador', level: 1 })).toBeInTheDocument();
+  });
+
+  it('sin jerga en ninguno de los dos pasos', async () => {
+    await abrir();
+    sinJerga();
+    await elegirARosa();
     sinJerga();
   });
 });

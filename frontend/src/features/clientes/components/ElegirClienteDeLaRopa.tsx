@@ -33,7 +33,12 @@ function ResultadoCliente({ cliente }: { cliente: Cliente }) {
  * de pantalla:
  *  - todavía nadie: el buscador vivo (SPEC-KRILINXI-032), con "Cliente nuevo" al final;
  *  - uno que ya existe: su tarjeta, con "Cambiar de cliente";
- *  - uno nuevo: nombre, teléfono y carnet acá mismo, que se guardan junto con la ropa.
+ *  - uno nuevo: nombre, teléfono y carnet acá mismo, que se guardan junto con la ropa, con un
+ *    "Atrás" que vuelve a elegir (SPEC-KRILINXI-057; antes decía "Buscar un cliente que ya existe" y
+ *    parecía un paso que había que enviar).
+ *
+ * Desde SPEC-KRILINXI-057 el buscador es solo el primer paso: `FormularioRopa` no muestra a la vez
+ * el buscador y los datos de la boleta.
  *
  * No guarda nada: le dice al formulario qué cliente es. Valida quien guarda (`registrarRopa`).
  */
@@ -74,8 +79,8 @@ export function ElegirClienteDeLaRopa({ valor, alCambiar, errores, deshabilitado
           />
           <CampoTexto etiqueta="Carnet (si lo da)" value={valor.datos.carnet} onChange={cambiar('carnet')} autoComplete="off" />
           <div className="mt-4">
-            <Boton variante="secundario" onClick={() => alCambiar(null)} disabled={deshabilitado}>
-              Buscar un cliente que ya existe
+            <Boton variante="navegacion" onClick={() => alCambiar(null)} disabled={deshabilitado}>
+              Atrás
             </Boton>
           </div>
         </Tarjeta>

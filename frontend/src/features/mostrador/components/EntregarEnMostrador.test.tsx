@@ -181,7 +181,7 @@ describe('Entregar en el Mostrador: después de entregar — SPEC-KRILINXI-009 y
     );
 
     // Ya no está en la ropa del local…
-    fireEvent.click(screen.getByRole('button', { name: 'Ver toda la ropa en el local' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Volver al mostrador' }));
     await screen.findByRole('heading', { name: 'Ropa en el local' });
     expect(screen.queryByRole('button', { name: 'Boleta 001234, Rosa Quispe' })).not.toBeInTheDocument();
 
@@ -313,6 +313,8 @@ describe('Entregar una boleta ya pagada: sin pedir montos — SPEC-KRILINXI-046'
       expect(within(formulario).getByRole('status')).toHaveTextContent('Ya está todo pagado');
       expect(within(formulario).queryByLabelText('Precio final (Bs)')).not.toBeInTheDocument();
       fireEvent.click(within(formulario).getByRole('button', { name: 'Cancelar' }));
+      // Dentro de una boleta no hay buscador (SPEC-KRILINXI-057): para buscar otra se vuelve a la ficha.
+      fireEvent.click(screen.getByRole('button', { name: 'Ver toda la ropa de Rosa Quispe' }));
     }
   });
 

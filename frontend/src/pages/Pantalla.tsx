@@ -9,7 +9,8 @@ import type { ReactNode } from 'react';
  */
 export function Pantalla({ titulo, children }: { titulo: string; children?: ReactNode }) {
   return (
-    <div className="mx-auto max-w-3xl px-4 py-6 lg:px-6">
+    // `relative`: la flechita de volver (`BotonAtras`) se coloca respecto de esta columna, en el hueco de su izquierda.
+    <div className="relative mx-auto max-w-3xl px-4 py-6 lg:px-6">
       <h1 className="text-3xl font-bold text-texto">{titulo}</h1>
       {children}
     </div>

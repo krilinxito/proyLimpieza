@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Boton } from '../../../components/Boton';
+import { BotonAtras } from '../../../components/BotonAtras';
 import { BuscadorVivo } from '../../../components/BuscadorVivo';
 import { Insignia } from '../../../components/Insignia';
 import { ModalConfirmacion } from '../../../components/ModalConfirmacion';
 import { Paginas } from '../../../components/Paginas';
 import { usePaginado } from '../../../hooks/usePaginado';
+import { useReinicioDeRuta } from '../../../hooks/useReinicioDeRuta';
 import { TEXTO_ESTADO_ORDEN } from '../../../lib/dominio';
 import { TONO_ESTADO } from '../../ordenes/estado';
 import { ResumenRopa } from '../../ordenes/components/ResumenRopa';
@@ -130,6 +132,17 @@ export function PantallaMostrador() {
   const [hayEscrito, setHayEscrito] = useState(false);
   const [saliendo, setSaliendo] = useState(false);
 
+  // Volver a tocar "Mostrador" en el menú, estando ya acá, vuelve al principio (SPEC-KRILINXI-057). Si se estaba
+  // registrando ropa con algo escrito, antes se pregunta: no se descarta en silencio.
+  useReinicioDeRuta(() => {
+    if (vista.tipo === 'registrando' && hayEscrito) {
+      setSaliendo(true);
+      return;
+    }
+    setSaliendo(false);
+    ir({ tipo: 'inicio' });
+  });
+
   function ir(nueva: Vista) {
     setVista(nueva);
     setVuelta((v) => v + 1);
@@ -153,17 +166,14 @@ export function PantallaMostrador() {
     };
     return (
       <div className="mt-6">
+        {/* Una flechita arriba, a la izquierda: no hay que bajar hasta el final del formulario para volver (SPEC-KRILINXI-057).
+            Con algo escrito, volver lo descartaría: se pregunta antes (SPEC-KRILINXI-048). */}
+        <BotonAtras nombre="Volver al mostrador sin guardar" alTocar={() => (hayEscrito ? setSaliendo(true) : volver())} />
         <RegistrarEnMostrador
           clienteId={vista.clienteId}
           alRegistrar={(ropa) => ir({ tipo: 'registrada', ropa })}
           alCambiarEscrito={setHayEscrito}
         />
-        <div className="mt-6">
-          {/* Con algo escrito, volver lo descartaría: se pregunta antes (SPEC-KRILINXI-048). */}
-          <Boton variante="navegacion" onClick={() => (hayEscrito ? setSaliendo(true) : volver())}>
-            Volver al mostrador sin guardar
-          </Boton>
-        </div>
         <ModalConfirmacion
           abierto={saliendo}
           titulo="¿Salir sin guardar?"
@@ -190,29 +200,38 @@ export function PantallaMostrador() {
     );
   }
 
+  // Dentro de una boleta ya no se está en el mostrador (SPEC-KRILINXI-057): ni "Registrar ropa" ni el buscador. La boleta trae su
+  // propio camino para otra del mismo cliente ("Nueva boleta de este cliente") y para volver ("Ver toda la ropa de…").
+  const dentroDeUnaBoleta = vista.tipo === 'ficha' && vista.abierta !== null;
+
   return (
     <div className="mt-6">
-      {/* Siempre a mano, también con la ficha de un cliente abierta: ahí lo trae elegido. Es la
-          acción principal salvo con una boleta abierta, que trae la suya (SPEC-KRILINXI-037). */}
-      <div className="mb-6">
-        <Boton
-          icono="registrar-ropa"
-          variante={vista.tipo === 'ficha' && vista.abierta ? 'secundario' : 'primario'}
-          onClick={() => ir({ tipo: 'registrando', clienteId: vista.tipo === 'ficha' ? vista.clienteId : null })}
-        >
-          Registrar ropa
-        </Boton>
-      </div>
-      <BuscadorVivo<Encontrado>
-        key={vuelta}
-        etiqueta="Buscar cliente o boleta: nombre, teléfono, carnet o número de boleta"
-        buscar={(texto) => (mostrador.lista ? mostrador.buscar(texto) : Promise.resolve({ resultados: [], hayMas: false }))}
-        claveDe={(e) => (e.tipo === 'cliente' ? `cliente-${e.cliente.id}` : `boleta-${e.orden.id}`)}
-        mostrar={(e) => <ResultadoEncontrado encontrado={e} />}
-        alElegir={elegir}
-        sinResultados="No hay ningún cliente ni boleta con eso en esta sucursal."
-        deshabilitado={!mostrador.lista}
-      />
+      {/* Con un cliente o una boleta abiertos, una flechita arriba, a la izquierda, vuelve al mostrador (SPEC-KRILINXI-057):
+          antes era un botón al final de la página y había que bajar hasta ahí. */}
+      {vista.tipo === 'ficha' && <BotonAtras nombre="Volver al mostrador" alTocar={() => ir({ tipo: 'inicio' })} />}
+      {!dentroDeUnaBoleta && (
+        <>
+          {/* A mano en el inicio y en la ficha de un cliente: ahí lo trae elegido. Es la acción principal (SPEC-KRILINXI-037). */}
+          <div className="mb-6">
+            <Boton
+              icono="registrar-ropa"
+              onClick={() => ir({ tipo: 'registrando', clienteId: vista.tipo === 'ficha' ? vista.clienteId : null })}
+            >
+              Registrar ropa
+            </Boton>
+          </div>
+          <BuscadorVivo<Encontrado>
+            key={vuelta}
+            etiqueta="Buscar cliente o boleta: nombre, teléfono, carnet o número de boleta"
+            buscar={(texto) => (mostrador.lista ? mostrador.buscar(texto) : Promise.resolve({ resultados: [], hayMas: false }))}
+            claveDe={(e) => (e.tipo === 'cliente' ? `cliente-${e.cliente.id}` : `boleta-${e.orden.id}`)}
+            mostrar={(e) => <ResultadoEncontrado encontrado={e} />}
+            alElegir={elegir}
+            sinResultados="No hay ningún cliente ni boleta con eso en esta sucursal."
+            deshabilitado={!mostrador.lista}
+          />
+        </>
+      )}
 
       {vista.tipo === 'inicio' ? (
         <RopaEnElLocal alElegir={abrirBoleta} />
@@ -223,12 +242,8 @@ export function PantallaMostrador() {
             clienteId={vista.clienteId}
             abierta={vista.abierta}
             alAbrir={(ordenId) => setVista({ ...vista, abierta: ordenId })}
+            alRegistrar={() => ir({ tipo: 'registrando', clienteId: vista.clienteId })}
           />
-          <div className="mt-6">
-            <Boton variante="navegacion" onClick={() => ir({ tipo: 'inicio' })}>
-              Ver toda la ropa en el local
-            </Boton>
-          </div>
         </>
       )}
     </div>
