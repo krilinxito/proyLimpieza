@@ -41,6 +41,7 @@ export function RegistrarEnMostrador({ clienteId, alRegistrar, alCambiarEscrito 
     <FormularioRopa
       clienteInicial={cliente}
       registrar={registro.registrar}
+      revisar={registro.revisar}
       alRegistrar={alRegistrar}
       alCambiarEscrito={alCambiarEscrito}
     />

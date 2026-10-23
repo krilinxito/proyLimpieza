@@ -1,7 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { Aviso } from '../../../components/Aviso';
 import { Boton } from '../../../components/Boton';
-import { CampoTexto } from '../../../components/CampoTexto';
+import { CampoTexto, CampoTextoLargo } from '../../../components/CampoTexto';
 import { EnlaceBoton } from '../../../components/EnlaceBoton';
 import { esMetodoPago } from '../../../lib/dominio';
 import { ElegirMetodo } from '../../ordenes/components/ElegirMetodo';
@@ -102,6 +102,12 @@ export function FormularioCorreccion({ registro, guardar, alGuardar, alVolver, a
     if (tipo === 'retiro') return <ElegirRetiro key={clave} value={valor} onChange={cambiar(clave)} error={errores[clave]} />;
     // Quién retira solo se pide sin boleta, igual que al entregar.
     if ((clave === 'retirado_por_nombre' || clave === 'retirado_por_carnet') && !sinBoleta) return null;
+    // "Qué deja" admite varias líneas, igual que al registrar la ropa (SPEC-KRILINXI-058).
+    if (tipo === 'texto-largo') {
+      return (
+        <CampoTextoLargo key={clave} etiqueta={etiqueta} value={valor} onChange={cambiar(clave)} error={errores[clave]} autoComplete="off" />
+      );
+    }
     return (
       <CampoTexto
         key={clave}

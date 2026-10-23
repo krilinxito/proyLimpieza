@@ -2,13 +2,18 @@ import { useMemo } from 'react';
 import { useSession } from '../../../hooks/useSession';
 import { useSucursalDeTrabajo } from '../../atencion/hooks/useSucursalDeTrabajo';
 import { useBaseLocal } from '../../../lib/powersync';
-import { registrarRopa } from '../api/ordenesLocal';
-import type { DatosRopa, ResultadoRegistro } from '../types';
+import { registrarRopa, revisarRopa } from '../api/ordenesLocal';
+import type { DatosRopa, ResultadoRegistro, RevisionDeRopa } from '../types';
 
 export type RegistroRopa =
   /** La base local se está abriendo, o quien está adentro no trabaja en ninguna sucursal. */
   | { lista: false }
-  | { lista: true; registrar: (datos: DatosRopa) => Promise<ResultadoRegistro> };
+  | {
+      lista: true;
+      registrar: (datos: DatosRopa) => Promise<ResultadoRegistro>;
+      /** Cómo va lo escrito, sin guardar: las mismas validaciones que `registrar` (SPEC-KRILINXI-058). */
+      revisar: (datos: DatosRopa) => Promise<RevisionDeRopa>;
+    };
 
 /**
  * La puerta de la pantalla a "registrar ropa" (mismo patrón que `useClientes`, SPEC-KRILINXI-005).
@@ -25,6 +30,11 @@ export function useRegistrarRopa(): RegistroRopa {
 
   return useMemo<RegistroRopa>(() => {
     if (!base || !usuarioId || !sucursalId) return { lista: false };
-    return { lista: true, registrar: (datos) => registrarRopa(base, { usuarioId, sucursalId }, datos) };
+    const quien = { usuarioId, sucursalId };
+    return {
+      lista: true,
+      registrar: (datos) => registrarRopa(base, quien, datos),
+      revisar: (datos) => revisarRopa(base, quien, datos),
+    };
   }, [base, usuarioId, sucursalId]);
 }

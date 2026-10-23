@@ -161,6 +161,58 @@ describe('Paginas en un solo bloque — SPEC-KRILINXI-054', () => {
   });
 });
 
+describe('Tarjeta: la marca de cómo va lo que pide — SPEC-KRILINXI-058', () => {
+  it('sin estado no marca nada, y no cambia de aspecto', () => {
+    render(<Tarjeta titulo="La ropa">Datos</Tarjeta>);
+    const tarjeta = screen.getByRole('region', { name: 'La ropa' });
+    expect(tarjeta).not.toHaveClass('relative');
+    expect(screen.queryByText('Completo')).not.toBeInTheDocument();
+    expect(screen.queryByText('Hay datos para corregir')).not.toBeInTheDocument();
+  });
+
+  it('completo: un visto en la esquina, con el texto "Completo" para el lector de pantalla y los colores de éxito', () => {
+    render(
+      <Tarjeta titulo="La ropa" estado="completo">
+        Datos
+      </Tarjeta>,
+    );
+    const marca = screen.getByText('Completo').parentElement;
+    expect(marca).toHaveClass('absolute', 'top-4', 'right-4', 'bg-exito-fondo', 'text-exito-texto', 'border-exito-borde');
+    expect(screen.getByText('Completo')).toHaveClass('sr-only');
+    expect(marca?.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(marca).toHaveAttribute('title', 'Completo');
+  });
+
+  it('con errores: una equis en la esquina, con su texto y los colores de peligro, distinta del visto por su forma', () => {
+    const { container, rerender } = render(
+      <Tarjeta titulo="La ropa" estado="con-errores">
+        Datos
+      </Tarjeta>,
+    );
+    const marca = screen.getByText('Hay datos para corregir').parentElement;
+    expect(marca).toHaveClass('bg-peligro-fondo', 'text-peligro-texto', 'border-peligro-borde');
+    const equis = container.querySelector('svg')?.innerHTML;
+
+    rerender(
+      <Tarjeta titulo="La ropa" estado="completo">
+        Datos
+      </Tarjeta>,
+    );
+    // No se distinguen solo por el color: el dibujo es otro.
+    expect(container.querySelector('svg')?.innerHTML).not.toBe(equis);
+  });
+
+  it('el nombre de la sección sigue siendo su título: la marca no lo ensucia, y el título deja lugar a la marca', () => {
+    render(
+      <Tarjeta titulo="La ropa" estado="completo">
+        Datos
+      </Tarjeta>,
+    );
+    expect(screen.getByRole('region', { name: 'La ropa' })).toHaveClass('relative');
+    expect(screen.getByRole('heading', { name: 'La ropa' })).toHaveClass('pr-12');
+  });
+});
+
 describe('BotonAtras: la flechita de volver — SPEC-KRILINXI-057', () => {
   it('es un botón sin texto visible, con su nombre para el lector de pantalla y al pasar el mouse', () => {
     render(<BotonAtras nombre="Volver al mostrador" alTocar={() => undefined} />);

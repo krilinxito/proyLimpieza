@@ -99,6 +99,8 @@ describe('Corregir lo que no se pudo guardar — SPEC-KRILINXI-013', () => {
     const boleta = screen.getByLabelText('Número de la boleta');
     expect(boleta).toHaveValue('001234');
     expect(screen.getByLabelText('Qué deja')).toHaveValue('2 pantalones');
+    // SPEC-KRILINXI-058: igual que al registrar, "Qué deja" admite varias líneas también al corregir.
+    expect(screen.getByLabelText('Qué deja').tagName).toBe('TEXTAREA');
     expect(screen.getByLabelText('Precio (Bs)')).toHaveValue('50,00');
     sinJerga();
 

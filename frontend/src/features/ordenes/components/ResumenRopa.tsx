@@ -31,7 +31,7 @@ export function ResumenRopa({ ropa, alSeguir, textoSeguir = 'Registrar otra ropa
         {filas.map(([dato, valor]) => (
           <div key={dato} className="contents">
             <dt className="font-semibold text-texto-suave">{dato}</dt>
-            <dd className="text-texto">{valor}</dd>
+            <dd className="text-texto whitespace-pre-line">{valor}</dd>
           </div>
         ))}
       </dl>

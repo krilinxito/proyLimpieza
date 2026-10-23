@@ -97,6 +97,10 @@ const CONTROLES: [control: string, fondo: string][] = [
   ['peligro', 'superficie'],
   // SPEC-KRILINXI-052: el borde de la tarjeta que destaca, sobre su propio fondo.
   ['marca', 'marca-suave'],
+  // SPEC-KRILINXI-058: el visto de un campo es un ícono de éxito sobre la superficie del formulario. (La marca de la esquina
+  // de una tarjeta lleva texto sobre su propio fondo de aviso: esos pares, exito-texto/exito-fondo y peligro-texto/peligro-fondo,
+  // ya se miden arriba, en TEXTOS.)
+  ['exito-texto', 'superficie'],
 ];
 
 /**
@@ -172,5 +176,33 @@ describe('El tema oscuro se lee — SPEC-KRILINXI-030', () => {
       expect(new RegExp(`--color-${nombre}:\\s*${color(nombre, 'oscuro')};`).test(instante ?? '')).toBe(true);
     }
     expect(nombresDeColor(instante ?? '')).toEqual(['fondo', 'texto']);
+  });
+});
+
+/** El matiz de un color #rrggbb, en grados (0 a 360): 0 es rojo, 30 naranja, 120 verde, 240 azul. */
+function matiz(hex: string): number {
+  const [r = 0, g = 0, b = 0] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  if (max === min) return 0;
+  const salto = max - min;
+  const grados = max === r ? ((g - b) / salto) % 6 : max === g ? (b - r) / salto + 2 : (r - g) / salto + 4;
+  return (grados * 60 + 360) % 360;
+}
+
+describe('El anillo de foco no parece un error — SPEC-KRILINXI-058', () => {
+  it('el matiz se calcula bien: rojo cerca de 0, naranja cerca de 30, índigo cerca de 240', () => {
+    expect(matiz('#ff0000')).toBeCloseTo(0, 0);
+    expect(matiz('#c2410c')).toBeGreaterThan(15);
+    expect(matiz('#c2410c')).toBeLessThan(30);
+    expect(matiz('#4f46e5')).toBeGreaterThan(235);
+    expect(matiz('#4f46e5')).toBeLessThan(250);
+  });
+
+  // Un campo con el cursor no tiene nada malo. Con el anillo en tono de error (rojo o naranja, que es lo que usa "peligro"),
+  // parecía que sí: lo dijo quien lo usa (SPEC-KRILINXI-058).
+  it.each(['claro', 'oscuro'] as const)('en el tema %s no cae en la zona del rojo ni del naranja, que es la del error', (tema) => {
+    const grados = matiz(color('foco', tema));
+    expect(grados > 60 && grados < 330).toBe(true);
   });
 });

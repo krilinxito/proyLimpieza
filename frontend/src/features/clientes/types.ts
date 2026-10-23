@@ -19,6 +19,8 @@ export type DatosAlta = {
 export type ErroresAlta = {
   nombre?: string;
   telefono?: string;
+  /** Desde SPEC-KRILINXI-058: un carnet más largo de lo que entra en la base. */
+  carnet?: string;
 };
 
 /**

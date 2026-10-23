@@ -81,6 +81,25 @@ describe('POST /api/ordenes — SPEC-ALE186-004', () => {
     });
   });
 
+  // SPEC-KRILINXI-058
+  it.each(['001003', 'B-1003', 'A001003'])('acepta la boleta %s', async (boleta) => {
+    expect((await alta(cuerpoDeOrden({ numero_boleta: boleta }))).status).toBe(201);
+    expect(loQueSeCreo()).toMatchObject({ numeroBoleta: boleta });
+  });
+
+  it('la boleta con letras y sin números dice qué hacer', async () => {
+    const res = await alta(cuerpoDeOrden({ numero_boleta: 'abc' }));
+
+    expectApiError(res, { status: 400, codigo: 'VALIDACION' });
+    expect(res.body.error.mensaje).toContain('El número de boleta solo puede llevar letras, números y guion');
+  });
+
+  it('lo que deja el cliente puede venir en varias líneas, y se guarda con sus saltos (solo se recortan los bordes)', async () => {
+    await alta(cuerpoDeOrden({ descripcion: '  2 camisas\n1 pantalón\n\n3 pañuelos  ' }));
+
+    expect(loQueSeCreo()).toMatchObject({ descripcion: '2 camisas\n1 pantalón\n\n3 pañuelos' });
+  });
+
   it('en un reintento responde 200 con la que ya existía', async () => {
     crear.mockResolvedValue({ orden: ordenDePrueba(), creada: false });
 
@@ -147,6 +166,10 @@ describe('POST /api/ordenes — SPEC-ALE186-004', () => {
     ['sin boleta', { numero_boleta: undefined }],
     ['con la boleta en blanco', { numero_boleta: '   ' }],
     ['con una boleta más larga que la columna', { numero_boleta: '1'.repeat(31) }],
+    // SPEC-KRILINXI-058: letras, números y guion, con al menos un número.
+    ['con una boleta de solo letras', { numero_boleta: 'abc' }],
+    ['con una boleta con espacios en el medio', { numero_boleta: '12 34' }],
+    ['con una boleta con signos', { numero_boleta: '12/34' }],
     ['sin descripción', { descripcion: undefined }],
     ['con la descripción en blanco', { descripcion: '  ' }],
   ])('responde 400 %s', async (_caso, cambio) => {
