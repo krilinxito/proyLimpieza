@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-062
 name: 'Auditoría: acciones que involucran a un cliente'
 slug: auditoria-por-cliente
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-23
 scope:
@@ -12,7 +12,12 @@ scope:
   - frontend/src/features/auditoria/**
 priority: medium
 depends_on: []
-tests: []
+tests:
+  - backend\tests\db\auditoriaConsulta.db.test.ts
+  - backend\tests\http\auditoria.test.ts
+  - backend\tests\unit\auditoria.model.test.ts
+  - frontend\src\features\auditoria\components\PantallaAuditoria.test.tsx
+  - frontend\src\features\auditoria\describir.test.ts
 ---
 
 ## Descripción
