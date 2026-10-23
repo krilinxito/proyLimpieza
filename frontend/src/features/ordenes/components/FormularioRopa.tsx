@@ -143,7 +143,7 @@ export function FormularioRopa({ clienteInicial, registrar, alRegistrar, alCambi
             autoFocus={clienteInicial !== null}
           />
           <CampoTexto
-            etiqueta="Qué ropa deja"
+            etiqueta="Qué deja"
             value={datos.descripcion}
             onChange={cambiar('descripcion')}
             error={errores.descripcion}
