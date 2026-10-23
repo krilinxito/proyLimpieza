@@ -63,6 +63,13 @@ async function abrirConRopaLista() {
 
 const boton = (nombre: string) => within(screen.getByRole('main')).getByRole('button', { name: nombre });
 
+/** Una flechita: un botón sin texto visible, con su nombre en aria-label y title, y un ícono decorativo (SPEC-KRILINXI-057). */
+const esFlechita = (b: HTMLElement) =>
+  b.textContent === '' &&
+  b.getAttribute('title') === b.getAttribute('aria-label') &&
+  b.querySelector('svg')?.getAttribute('aria-hidden') === 'true' &&
+  b.classList.contains('size-12');
+
 function datoDelDetalle(detalle: HTMLElement, dato: string) {
   const termino = within(detalle).getByText(dato, { selector: 'dt' });
   return termino.nextElementSibling?.textContent;
@@ -119,10 +126,10 @@ describe('Mostrador: una sola pantalla — SPEC-KRILINXI-033', () => {
     expect(screen.getByRole('region', { name: 'Ficha de Rosa Quispe' })).toContainElement(detalle);
   });
 
-  it('"Ver toda la ropa en el local" vuelve a la lista', async () => {
+  it('la flechita de volver al mostrador lleva a la ropa en el local — SPEC-KRILINXI-057', async () => {
     await abrir();
     await abrirDetalle();
-    fireEvent.click(screen.getByRole('button', { name: 'Ver toda la ropa en el local' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Volver al mostrador' }));
     expect(await screen.findByRole('heading', { name: 'Ropa en el local' })).toBeInTheDocument();
   });
 
@@ -358,22 +365,24 @@ describe('Mostrador: una sola acción principal a la vista — SPEC-KRILINXI-037
     expect(accionesPrincipales()).toEqual(['Entregar la ropa']);
   });
 
-  it('en la ficha, volver a toda la ropa del local es navegación', async () => {
+  it('en la ficha, volver al mostrador es una flechita, y no una acción más', async () => {
     await abrirConRopaLista();
     await elegirEnBuscador('rosa', /Rosa Quispe/);
     await screen.findByRole('region', { name: 'Ficha de Rosa Quispe' });
     expect(accionesPrincipales()).toEqual(['Registrar ropa']);
-    expect(usoDe(boton('Ver toda la ropa en el local'))).toBe('navegacion');
+    expect(esFlechita(boton('Volver al mostrador'))).toBe(true);
+    // Y como no es una acción, no cuenta entre las principales.
+    expect(accionesPrincipales()).toEqual(['Registrar ropa']);
   });
 
-  it('registrando, la única principal es Guardar, y salir sin guardar es navegación', async () => {
+  it('registrando, la única principal es Guardar, y salir sin guardar es una flechita', async () => {
     await abrirConRopaLista();
     fireEvent.click(boton('Registrar ropa'));
     // Primero se elige el cliente: ahí todavía no hay nada que guardar (SPEC-KRILINXI-057).
     await elegirEnBuscador('zz', 'Cliente nuevo');
     await screen.findByRole('form', { name: 'Datos de la ropa' });
     expect(accionesPrincipales()).toEqual(['Guardar']);
-    expect(usoDe(boton('Volver al mostrador sin guardar'))).toBe('navegacion');
+    expect(esFlechita(boton('Volver al mostrador sin guardar'))).toBe(true);
   });
 });
 
@@ -430,7 +439,7 @@ describe('Mostrador: las acciones de la boleta en fila, con su símbolo — SPEC
     const volver = boton('Ver toda la ropa de Rosa Quispe');
     expect(usoDe(volver)).toBe('navegacion');
     expect(fila()).not.toContainElement(volver);
-    expect(fila()).not.toContainElement(boton('Ver toda la ropa en el local'));
+    expect(fila()).not.toContainElement(boton('Volver al mostrador'));
   });
 
   it('al abrir el formulario de entrega, ocupa la fila entera', async () => {
@@ -602,5 +611,101 @@ describe('Mostrador: dentro de una boleta ya no se está en el mostrador — SPE
     await screen.findByRole('region', { name: 'Boleta 000001' });
     expect(buscador()).not.toBeInTheDocument();
     expect(registrar()).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Volver a tocar "Mostrador" en el menú, y el volver arriba de todo — SPEC-KRILINXI-057. Las boletas no son rutas
+ * aparte: se abren en la misma pantalla, así que antes tocar "Mostrador" estando ahí no hacía nada, y el botón de volver
+ * estaba al final de la boleta.
+ */
+describe('Mostrador: volver sin bajar la página — SPEC-KRILINXI-057', () => {
+  const menu = () => screen.getByRole('navigation', { name: 'Menú principal' });
+  const tocarMostradorEnElMenu = () => fireEvent.click(within(menu()).getByRole('link', { name: 'Mostrador' }));
+
+  it('tocar "Mostrador" en el menú con una boleta abierta vuelve al principio del mostrador', async () => {
+    await abrirConRopaLista();
+    await abrirDetalle('000001');
+    expect(screen.getByRole('region', { name: 'Boleta 000001' })).toBeInTheDocument();
+
+    tocarMostradorEnElMenu();
+
+    // Otra vez el mostrador: la ropa en el local, el buscador y "Registrar ropa"; la boleta ya no.
+    expect(await screen.findByRole('heading', { name: 'Ropa en el local' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Boleta 000001' })).not.toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: /Buscar cliente o boleta/ })).toBeInTheDocument();
+    expect(boton('Registrar ropa')).toBeInTheDocument();
+  });
+
+  it('también desde la ficha de un cliente, y se puede repetir las veces que haga falta', async () => {
+    await abrirConRopaLista();
+    for (const _vez of [1, 2]) {
+      await elegirEnBuscador('rosa', /Rosa Quispe/);
+      await screen.findByRole('region', { name: 'Ficha de Rosa Quispe' });
+      tocarMostradorEnElMenu();
+      expect(await screen.findByRole('heading', { name: 'Ropa en el local' })).toBeInTheDocument();
+      expect(screen.queryByRole('region', { name: 'Ficha de Rosa Quispe' })).not.toBeInTheDocument();
+    }
+  });
+
+  it('registrando ropa sin escribir nada, vuelve; con algo escrito, pregunta antes de descartarlo', async () => {
+    await abrirConRopaLista();
+    fireEvent.click(boton('Registrar ropa'));
+    await elegirEnBuscador('zz', 'Cliente nuevo');
+    await screen.findByRole('form', { name: 'Datos de la ropa' });
+
+    // Con el cliente nuevo ya elegido hay algo escrito: no se descarta en silencio.
+    tocarMostradorEnElMenu();
+    const aviso = await screen.findByRole('dialog');
+    expect(within(aviso).getByText('¿Salir sin guardar?')).toBeInTheDocument();
+    fireEvent.click(within(aviso).getByRole('button', { name: 'Seguir escribiendo' }));
+    expect(screen.getByRole('form', { name: 'Datos de la ropa' })).toBeInTheDocument();
+  });
+
+  it('tocar el menú en otra pantalla sigue yendo a esa pantalla, como siempre', async () => {
+    await abrirConRopaLista();
+    await abrirDetalle('000001');
+    fireEvent.click(within(menu()).getByRole('link', { name: 'Inicio' }));
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Mostrador', level: 1 })).not.toBeInTheDocument());
+    expect(screen.queryByRole('region', { name: 'Boleta 000001' })).not.toBeInTheDocument();
+  });
+
+  it('con una boleta abierta, "Ver toda la ropa de Rosa" sigue al final de la boleta, y la flechita arriba vuelve al mostrador', async () => {
+    await abrirConRopaLista();
+    await abrirDetalle('000001');
+    const ficha = screen.getByRole('region', { name: 'Ficha de Rosa Quispe' });
+    const detalle = screen.getByRole('region', { name: 'Boleta 000001' });
+
+    // El de la ropa del cliente: dentro de la boleta, al final, como siempre.
+    const delCliente = within(detalle).getAllByRole('button', { name: 'Ver toda la ropa de Rosa Quispe' });
+    expect(delCliente).toHaveLength(1);
+    expect(usoDe(delCliente[0] as HTMLElement)).toBe('navegacion');
+    // El de volver al mostrador: la flechita, antes de todo lo demás.
+    const atras = boton('Volver al mostrador');
+    expect(esFlechita(atras)).toBe(true);
+    expect(atras.compareDocumentPosition(ficha) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(screen.getByRole('main')).getAllByRole('button')[0]).toBe(atras);
+    // Ya no existe el botón de texto del final.
+    expect(within(screen.getByRole('main')).queryByRole('button', { name: 'Ver toda la ropa en el local' })).not.toBeInTheDocument();
+  });
+
+  it('la flechita está en la ficha de un cliente y en la boleta, pero no en el inicio del mostrador', async () => {
+    await abrirConRopaLista();
+    expect(within(screen.getByRole('main')).queryByRole('button', { name: 'Volver al mostrador' })).not.toBeInTheDocument();
+
+    await elegirEnBuscador('rosa', /Rosa Quispe/);
+    await screen.findByRole('region', { name: 'Ficha de Rosa Quispe' });
+    expect(boton('Volver al mostrador')).toBeInTheDocument();
+  });
+
+  it('registrando, "Volver al mostrador sin guardar" va arriba del formulario, no al final', async () => {
+    await abrirConRopaLista();
+    fireEvent.click(boton('Registrar ropa'));
+    await elegirEnBuscador('zz', 'Cliente nuevo');
+    const formulario = await screen.findByRole('form', { name: 'Datos de la ropa' });
+
+    const volver = boton('Volver al mostrador sin guardar');
+    expect(esFlechita(volver)).toBe(true);
+    expect(volver.compareDocumentPosition(formulario) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Boton } from '../../../components/Boton';
+import { BotonAtras } from '../../../components/BotonAtras';
 import { BuscadorVivo } from '../../../components/BuscadorVivo';
 import { Insignia } from '../../../components/Insignia';
 import { ModalConfirmacion } from '../../../components/ModalConfirmacion';
 import { Paginas } from '../../../components/Paginas';
 import { usePaginado } from '../../../hooks/usePaginado';
+import { useReinicioDeRuta } from '../../../hooks/useReinicioDeRuta';
 import { TEXTO_ESTADO_ORDEN } from '../../../lib/dominio';
 import { TONO_ESTADO } from '../../ordenes/estado';
 import { ResumenRopa } from '../../ordenes/components/ResumenRopa';
@@ -130,6 +132,17 @@ export function PantallaMostrador() {
   const [hayEscrito, setHayEscrito] = useState(false);
   const [saliendo, setSaliendo] = useState(false);
 
+  // Volver a tocar "Mostrador" en el menú, estando ya acá, vuelve al principio (SPEC-KRILINXI-057). Si se estaba
+  // registrando ropa con algo escrito, antes se pregunta: no se descarta en silencio.
+  useReinicioDeRuta(() => {
+    if (vista.tipo === 'registrando' && hayEscrito) {
+      setSaliendo(true);
+      return;
+    }
+    setSaliendo(false);
+    ir({ tipo: 'inicio' });
+  });
+
   function ir(nueva: Vista) {
     setVista(nueva);
     setVuelta((v) => v + 1);
@@ -153,17 +166,16 @@ export function PantallaMostrador() {
     };
     return (
       <div className="mt-6">
+        {/* Una flechita arriba, a la izquierda: no hay que bajar hasta el final del formulario para volver (SPEC-KRILINXI-057).
+            Con algo escrito, volver lo descartaría: se pregunta antes (SPEC-KRILINXI-048). */}
+        <div className="mb-2">
+          <BotonAtras nombre="Volver al mostrador sin guardar" alTocar={() => (hayEscrito ? setSaliendo(true) : volver())} />
+        </div>
         <RegistrarEnMostrador
           clienteId={vista.clienteId}
           alRegistrar={(ropa) => ir({ tipo: 'registrada', ropa })}
           alCambiarEscrito={setHayEscrito}
         />
-        <div className="mt-6">
-          {/* Con algo escrito, volver lo descartaría: se pregunta antes (SPEC-KRILINXI-048). */}
-          <Boton variante="navegacion" onClick={() => (hayEscrito ? setSaliendo(true) : volver())}>
-            Volver al mostrador sin guardar
-          </Boton>
-        </div>
         <ModalConfirmacion
           abierto={saliendo}
           titulo="¿Salir sin guardar?"
@@ -196,6 +208,13 @@ export function PantallaMostrador() {
 
   return (
     <div className="mt-6">
+      {/* Con un cliente o una boleta abiertos, una flechita arriba, a la izquierda, vuelve al mostrador (SPEC-KRILINXI-057):
+          antes era un botón al final de la página y había que bajar hasta ahí. */}
+      {vista.tipo === 'ficha' && (
+        <div className="mb-4">
+          <BotonAtras nombre="Volver al mostrador" alTocar={() => ir({ tipo: 'inicio' })} />
+        </div>
+      )}
       {!dentroDeUnaBoleta && (
         <>
           {/* A mano en el inicio y en la ficha de un cliente: ahí lo trae elegido. Es la acción principal (SPEC-KRILINXI-037). */}
@@ -231,11 +250,6 @@ export function PantallaMostrador() {
             alAbrir={(ordenId) => setVista({ ...vista, abierta: ordenId })}
             alRegistrar={() => ir({ tipo: 'registrando', clienteId: vista.clienteId })}
           />
-          <div className="mt-6">
-            <Boton variante="navegacion" onClick={() => ir({ tipo: 'inicio' })}>
-              Ver toda la ropa en el local
-            </Boton>
-          </div>
         </>
       )}
     </div>

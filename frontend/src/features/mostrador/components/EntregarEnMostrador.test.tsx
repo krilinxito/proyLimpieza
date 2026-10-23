@@ -181,7 +181,7 @@ describe('Entregar en el Mostrador: después de entregar — SPEC-KRILINXI-009 y
     );
 
     // Ya no está en la ropa del local…
-    fireEvent.click(screen.getByRole('button', { name: 'Ver toda la ropa en el local' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Volver al mostrador' }));
     await screen.findByRole('heading', { name: 'Ropa en el local' });
     expect(screen.queryByRole('button', { name: 'Boleta 001234, Rosa Quispe' })).not.toBeInTheDocument();
 
