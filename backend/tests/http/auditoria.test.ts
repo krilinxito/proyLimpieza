@@ -66,6 +66,7 @@ describe('GET /api/auditoria — SPEC-ALE186-012', () => {
         accion: null,
         tabla: null,
         registroId: null,
+        clienteId: null,
         soloParaRevisar: false,
       },
       { pagina: 1, porPagina: 50 },
@@ -89,12 +90,19 @@ describe('GET /api/auditoria — SPEC-ALE186-012', () => {
     );
   });
 
+  it('pasa al model el cliente elegido — SPEC-KRILINXI-062', async () => {
+    await pedir({ cliente_id: USUARIO });
+
+    expect(consultar).toHaveBeenCalledWith(expect.objectContaining({ clienteId: USUARIO }), expect.anything());
+  });
+
   it.each([
     ['una acción que no existe', { accion: 'BORRAR' }],
     ['una tabla que no se audita', { tabla: 'auditoria' }],
     ['un usuario que no es UUID', { usuario_id: '42' }],
     ['una sucursal que no es UUID', { sucursal_id: '42' }],
     ['un registro que no es UUID', { registro_id: '42' }],
+    ['un cliente que no es UUID — SPEC-KRILINXI-062', { cliente_id: '42' }],
     ['una fecha mal escrita', { desde: '10/03/2026' }],
     ['desde después de hasta', { desde: '2026-03-31', hasta: '2026-03-01' }],
     ['la página 0', { pagina: '0' }],

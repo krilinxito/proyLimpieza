@@ -12,6 +12,7 @@
 //   crearOrden(esc, {...})  Una orden de ese escenario (por defecto LISTO, de
 //                           Bs 45,50). Se retoca solo lo que el test necesita.
 //   crearPago(orden, esc, {...}) / crearEntrega(orden, esc, {...})
+//                           (devuelven el id de lo que crean: SPEC-KRILINXI-062, para anotarle auditoría)
 //                           (`sinBoleta: {nombre, carnet}` en el retiro: SPEC-KRILINXI-060)
 //                           Un cobro o un retiro con la fecha que el test elija
 //                           (ISO con zona, como la manda el dispositivo) —
@@ -141,13 +142,14 @@ export async function crearPago(
   orden: OrdenCreada,
   esc: Escenario,
   campos: { monto: string; metodo?: MetodoPago; tipo?: TipoPago; fechaPago?: string },
-): Promise<void> {
+): Promise<string> {
+  const id = randomUUID();
   await pool.query(
     `INSERT INTO pagos (id, orden_id, sucursal_id, monto, tipo, metodo, usuario_id, fecha_pago)
      SELECT $1, o.id, o.sucursal_id, $3, $4, $5, $6, COALESCE($7::timestamptz::timestamp, LOCALTIMESTAMP)
        FROM ordenes o WHERE o.id = $2`,
     [
-      randomUUID(),
+      id,
       orden.id,
       campos.monto,
       campos.tipo ?? 'ADELANTO',
@@ -156,6 +158,7 @@ export async function crearPago(
       campos.fechaPago ?? null,
     ],
   );
+  return id;
 }
 
 /** Cobra la orden por completo (su precio_total) o por `monto`, como pago final en efectivo — SPEC-KRILINXI-056. */
@@ -173,16 +176,17 @@ export async function crearEntrega(
   orden: OrdenCreada,
   esc: Escenario,
   campos: { precioFinal: string; sinBoleta?: { nombre: string; carnet: string } },
-): Promise<void> {
+): Promise<string> {
   // SPEC-KRILINXI-060: `sinBoleta` registra el retiro SIN_BOLETA con quien lo hizo.
   const { sinBoleta } = campos;
+  const id = randomUUID();
   await pool.query(
     `WITH o AS (UPDATE ordenes SET estado = 'ENTREGADO' WHERE id = $2 RETURNING id, sucursal_id)
      INSERT INTO entregas (id, orden_id, sucursal_id, tipo_retiro, retirado_por_nombre, retirado_por_carnet,
                            usuario_entrega_id, precio_final)
      SELECT $1, o.id, o.sucursal_id, $5::tipo_retiro, $6, $7, $3, $4 FROM o`,
     [
-      randomUUID(),
+      id,
       orden.id,
       esc.usuarioId,
       campos.precioFinal,
@@ -191,6 +195,7 @@ export async function crearEntrega(
       sinBoleta?.carnet ?? null,
     ],
   );
+  return id;
 }
 
 export async function leerOrden(id: string): Promise<{ estado: EstadoOrden; sucursalId: string }> {

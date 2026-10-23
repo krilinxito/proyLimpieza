@@ -196,6 +196,8 @@ export interface FiltrosAuditoria extends Periodo {
   accion: AccionAuditoria | null;
   tabla: TablaAuditada | null;
   registroId: string | null;
+  /** Todo lo que involucra a este cliente: su alta y ediciones, y sus órdenes, pagos y entregas (SPEC-KRILINXI-062). */
+  clienteId: string | null;
   /** Solo lo marcado para revisión (SPEC-ALE186-018). */
   soloParaRevisar: boolean;
 }
@@ -289,13 +291,26 @@ const FECHA_DEL_HECHO = `CASE a.tabla_afectada
  * CTE para la página y para el total: así no pueden filtrar distinto.
  *
  * Parámetros: $1 desde, $2 hasta, $3 zona, $4 usuario, $5 acción, $6 tabla,
- * $7 registro, $8 sucursal, $9 solo lo marcado para revisión. Un filtro en NULL
- * (o `false`, el $9) no filtra.
+ * $7 registro, $8 sucursal, $9 solo lo marcado para revisión, $10 cliente. Un filtro
+ * en NULL (o `false`, el $9) no filtra.
+ *
+ * El filtro por cliente (SPEC-KRILINXI-062) se resuelve en la misma consulta: `ids_del_cliente`
+ * junta el id del cliente y los de sus órdenes, pagos y entregas (cada uno entra por su índice:
+ * `idx_ordenes_cliente`, `idx_pagos_orden` y el único de `entregas.orden_id`), y la auditoría se
+ * cruza con ese conjunto por `registro_id`, que tiene índice desde SPEC-ALE186-020. Los ids son
+ * UUID, únicos entre tablas, así que no hace falta mirar también `tabla_afectada`. Con el
+ * filtro en NULL el conjunto ni se consulta.
  *
  * La marca de revisión (SPEC-ALE186-018) es su propia columna desde
  * SPEC-ALE186-020; el filtro "solo lo marcado" usa su índice parcial.
  */
-const FILTRADAS = `filtradas AS (
+const FILTRADAS = `ids_del_cliente AS (
+  SELECT c.id FROM clientes c WHERE c.id = $10::uuid
+  UNION ALL SELECT o.id FROM ordenes o WHERE o.cliente_id = $10::uuid
+  UNION ALL SELECT p.id FROM pagos p JOIN ordenes o ON o.id = p.orden_id WHERE o.cliente_id = $10::uuid
+  UNION ALL SELECT e.id FROM entregas e JOIN ordenes o ON o.id = e.orden_id WHERE o.cliente_id = $10::uuid
+),
+filtradas AS (
   SELECT * FROM (
     SELECT a.id, a.fecha, a.accion, a.tabla_afectada, a.registro_id,
            a.revision,
@@ -311,6 +326,7 @@ const FILTRADAS = `filtradas AS (
        AND ($6::text IS NULL OR a.tabla_afectada = $6)
        AND ($7::uuid IS NULL OR a.registro_id = $7)
        AND (NOT $9::boolean OR a.revision IS NOT NULL)
+       AND ($10::uuid IS NULL OR a.registro_id IN (SELECT id FROM ids_del_cliente))
   ) con_sucursal
   WHERE ($8::uuid IS NULL OR con_sucursal.sucursal_id = $8)
 )`;
@@ -326,6 +342,7 @@ function parametrosDe(filtros: FiltrosAuditoria): unknown[] {
     filtros.registroId,
     filtros.sucursalId,
     filtros.soloParaRevisar,
+    filtros.clienteId,
   ];
 }
 
@@ -356,7 +373,7 @@ export async function consultar(
             usuario_id, nombre_completo, username
        FROM filtradas
       ORDER BY filtradas.fecha DESC, id DESC
-      LIMIT $10 OFFSET $11`,
+      LIMIT $11 OFFSET $12`,
     [...parametros, paginacion.porPagina, salteo(paginacion)],
   );
 

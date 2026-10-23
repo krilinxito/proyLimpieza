@@ -5,6 +5,9 @@ import {
   anotarAuditoria,
   contar,
   crearCliente,
+  crearEntrega,
+  crearOrden,
+  crearPago,
   crearSucursal,
   crearUsuario,
   escenario,
@@ -151,5 +154,72 @@ describe('Auditoría: lo que nunca hace la consulta — SPEC-ALE186-012', () => 
     await consultar({}, admin);
 
     expect(await filas()).toBe(antes);
+  });
+});
+
+describe('Auditoría por cliente — SPEC-KRILINXI-062', () => {
+  // Las acciones se anotan el 5 de marzo: se mira ese mes, no los últimos 30 días.
+  const MARZO = { desde: '2026-03-01', hasta: '2026-03-31' };
+
+  /** Un cliente con una orden, un pago y una entrega, todo anotado en la auditoría. */
+  async function clienteConHistoria(esc: Awaited<ReturnType<typeof escenario>>, fecha: string) {
+    const clienteId = await crearCliente();
+    const orden = await crearOrden({ ...esc, clienteId });
+    const pagoId = await crearPago(orden, { ...esc, clienteId }, { monto: '45.50', tipo: 'PAGO_FINAL' });
+    const entregaId = await crearEntrega(orden, { ...esc, clienteId }, { precioFinal: '45.50' });
+    const anotar = (tabla: string, registroId: string, accion: string) =>
+      anotarAuditoria({ usuarioId: esc.usuarioId, fecha, tabla, registroId, accion });
+    await anotar('clientes', clienteId, 'CREAR');
+    await anotar('ordenes', orden.id, 'CREAR');
+    await anotar('pagos', pagoId, 'COBRAR');
+    await anotar('entregas', entregaId, 'ENTREGAR');
+    return { clienteId, ordenId: orden.id, pagoId, entregaId };
+  }
+
+  const registros = (res: { body: { registros: { registroId: string }[] } }) => res.body.registros.map((r) => r.registroId);
+
+  it('trae el cliente y lo de sus órdenes, pagos y entregas, y nada de otro cliente', async () => {
+    const esc = await escenario();
+    const suyo = await clienteConHistoria(esc, '2026-03-05T12:00:00Z');
+    await clienteConHistoria(esc, '2026-03-05T12:00:00Z'); // otro cliente: no tiene que aparecer
+
+    const res = await consultar({ ...MARZO, cliente_id: suyo.clienteId, usuario_id: esc.usuarioId });
+
+    expect(res.status).toBe(200);
+    expect(res.body.total).toBe(4);
+    expect(registros(res).sort()).toEqual([suyo.clienteId, suyo.ordenId, suyo.pagoId, suyo.entregaId].sort());
+  });
+
+  it('un cliente sin nada anotado da una lista vacía, no un error', async () => {
+    const res = await consultar({ ...MARZO, cliente_id: await crearCliente() });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ total: 0, registros: [] });
+  });
+
+  it('se combina con los otros filtros y con las páginas, sin cambiar la sucursal de cada acción', async () => {
+    const esc = await escenario();
+    const suyo = await clienteConHistoria(esc, '2026-03-05T12:00:00Z');
+
+    const soloCobros = await consultar({ ...MARZO, cliente_id: suyo.clienteId, tabla: 'pagos' });
+    const deSucursal = await consultar({ ...MARZO, cliente_id: suyo.clienteId, sucursal_id: esc.sucursalId, usuario_id: esc.usuarioId });
+    const primera = await consultar({ ...MARZO, cliente_id: suyo.clienteId, usuario_id: esc.usuarioId, por_pagina: '3' });
+    const segunda = await consultar({ ...MARZO, cliente_id: suyo.clienteId, usuario_id: esc.usuarioId, por_pagina: '3', pagina: '2' });
+
+    expect(registros(soloCobros)).toEqual([suyo.pagoId]);
+    // El alta del cliente no se hizo "en" la sucursal del escenario (el cliente de prueba no la tiene), el resto sí.
+    expect(deSucursal.body.registros.every((r: { sucursalId: string | null }) => r.sucursalId === esc.sucursalId)).toBe(true);
+    expect(deSucursal.body.total).toBe(3);
+    expect([primera.body.total, segunda.body.total]).toEqual([4, 4]);
+    expect(primera.body.registros).toHaveLength(3);
+    expect(segunda.body.registros).toHaveLength(1);
+    // Las dos páginas son disjuntas y completas.
+    expect(new Set([...registros(primera), ...registros(segunda)]).size).toBe(4);
+  });
+
+  it('un cliente_id que no es UUID responde 400', async () => {
+    const res = await consultar({ ...MARZO, cliente_id: 'no-es-uuid' });
+
+    expect(res.status).toBe(400);
   });
 });
