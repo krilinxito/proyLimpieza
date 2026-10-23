@@ -99,7 +99,7 @@ describe('POST /api/sucursales — SPEC-ALE186-011', () => {
     const res = await alta(cuerpoDeSucursal({ nombre: 'Central' }));
 
     expectApiError(res, { status: 409, codigo: 'NOMBRE_SUCURSAL_DUPLICADO' });
-    expect(res.body.error.mensaje).toMatch(/Elegí otro nombre/);
+    expect(res.body.error.mensaje).toMatch(/Elige otro nombre/);
   });
 
   it('en un reintento con los mismos datos responde 200 con la que ya estaba', async () => {

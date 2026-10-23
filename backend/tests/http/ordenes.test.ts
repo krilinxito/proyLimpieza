@@ -120,7 +120,7 @@ describe('POST /api/ordenes — SPEC-ALE186-004', () => {
     const res = await alta(cuerpoDeOrden());
 
     expectApiError(res, { status: 409, codigo: 'BOLETA_DUPLICADA' });
-    expect(res.body.error.mensaje).toContain('Revisá el papel');
+    expect(res.body.error.mensaje).toContain('Revisa el papel');
   });
 
   it('el mismo número en otra sucursal no choca: la unicidad es por sucursal', async () => {
@@ -371,7 +371,7 @@ describe('POST /api/ordenes: sucursal cerrada y fecha futura — SPEC-ALE186-014
     const res = await alta(cuerpoDeOrden());
 
     expectApiError(res, { status: 409, codigo: 'SUCURSAL_CERRADA' });
-    expect(res.body.error.mensaje).toMatch(/Avisale al encargado/);
+    expect(res.body.error.mensaje).toMatch(/Avísale al encargado/);
   });
 
   it('responde 400 FECHA_FUTURA, pidiendo revisar la hora de la tablet', async () => {

@@ -80,7 +80,7 @@ function Tendencia({ dias, total, vista, alCambiar }: { dias: IngresoDia[]; tota
       <Grafico
         nombre="Cobrado por día"
         vacio={!hayDatos(totales)}
-        pista="Tocá un día para ver cuánto se cobró y con qué."
+        pista="Toca un día para ver cuánto se cobró y con qué."
         tabla={{
           encabezados: ['Día', 'Total', ...METODOS_PAGO.map((m) => TEXTO_METODO_PAGO[m])],
           filas: dias.map((d) => ({ clave: d.fecha, celdas: [fechaParaLeer(d.fecha), bs(d.total), ...METODOS_PAGO.map((m) => bs(d.porMetodo[m]))] })),

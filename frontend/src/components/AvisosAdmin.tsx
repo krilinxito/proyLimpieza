@@ -31,7 +31,7 @@ export function AvisoResultado({ aviso }: { aviso: { tipo: 'bien' | 'mal'; texto
 export const TEXTOS_ADMIN = {
   guardado: 'Guardado. Puede tardar unos segundos en verse en la lista.',
   sinCambios: 'No cambiaste ningún dato: quedó como estaba.',
-  sinConexion: 'No hay internet: no se guardó. Probá de nuevo cuando vuelva la conexión.',
+  sinConexion: 'No hay internet: no se guardó. Prueba de nuevo cuando vuelva la conexión.',
 } as const;
 
 /** Lo que dice el aviso para un resultado de `enviar` ya traducido por la feature. */

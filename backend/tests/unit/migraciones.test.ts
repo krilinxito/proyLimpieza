@@ -60,7 +60,7 @@ describe('Migraciones: el chequeo del arranque — SPEC-ALE186-019', () => {
     const dir = await carpeta(['001_ya.sql', '002_falta.sql']);
 
     expect(await chequeoDeArranque(baseCon(['001_ya.sql']), dir)).toBe(
-      'Falta 1 migración en la base (002_falta.sql). Aplicalas con `npm run migrar --workspace backend` y volvé a arrancar.',
+      'Falta 1 migración en la base (002_falta.sql). Aplícalas con `npm run migrar --workspace backend` y vuelve a arrancar.',
     );
   });
 

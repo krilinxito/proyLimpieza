@@ -3,8 +3,8 @@ import { alcanzaParaBuscar, type ResultadosDeBusqueda } from '../lib/texto';
 import { Aviso } from './Aviso';
 import { Icono, type NombreIcono } from './iconos';
 
-const NO_SE_PUDO_BUSCAR = 'No se pudo buscar. Probá de nuevo y, si sigue pasando, avisale al encargado.';
-const HAY_MAS = 'Hay más resultados: escribí un poco más.';
+const NO_SE_PUDO_BUSCAR = 'No se pudo buscar. Prueba de nuevo y, si sigue pasando, avísale al encargado.';
+const HAY_MAS = 'Hay más resultados: escribe un poco más.';
 
 type Props<T> = {
   /** Lo que dice arriba del campo, y el nombre del campo para el lector de pantalla. */

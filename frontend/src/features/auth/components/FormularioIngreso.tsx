@@ -7,7 +7,7 @@ import { useSession } from '../../../hooks/useSession';
 import { ErrorApi, ErrorSinConexion } from '../../../lib/api';
 
 const SIN_CONEXION = 'No hay conexión con el servidor. Para entrar hace falta internet.';
-const INESPERADO = 'No se pudo entrar. Probá de nuevo y, si sigue pasando, avisale al encargado.';
+const INESPERADO = 'No se pudo entrar. Prueba de nuevo y, si sigue pasando, avísale al encargado.';
 
 /** A dónde volver después de entrar: la pantalla que se había pedido, o el inicio. */
 function destino(estado: unknown): string {
@@ -41,8 +41,8 @@ export function FormularioIngreso() {
   async function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     const faltan = {
-      username: username.trim() === '' ? 'Escribí tu usuario.' : undefined,
-      password: password === '' ? 'Escribí tu contraseña.' : undefined,
+      username: username.trim() === '' ? 'Escribe tu usuario.' : undefined,
+      password: password === '' ? 'Escribe tu contraseña.' : undefined,
     };
     setErrores(faltan);
     setErrorGeneral(null);

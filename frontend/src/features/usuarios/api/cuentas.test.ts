@@ -105,7 +105,7 @@ describe('Cuentas: los cambios van directo a la API — SPEC-KRILINXI-017', () =
   });
 
   it('un usuario repetido muestra el mensaje del servidor, que dice qué hacer', async () => {
-    const repetido = 'Ese nombre de usuario ya lo usa otra persona. Elegí otro, por ejemplo agregándole el apellido.';
+    const repetido = 'Ese nombre de usuario ya lo usa otra persona. Elige otro, por ejemplo agregándole el apellido.';
     simularApi(() => ({ status: 409, data: cuerpoError('USERNAME_DUPLICADO', repetido) }));
     expect(await crearCuenta(ALTA)).toEqual({ tipo: 'rechazado', mensaje: repetido });
   });

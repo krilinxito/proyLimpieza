@@ -29,7 +29,7 @@ export function parsearMonto(texto: string): Centavos {
   const limpio = texto.trim();
 
   if (limpio === '') {
-    throw new Error('Escribí un monto.');
+    throw new Error('Escribe un monto.');
   }
 
   const partes = MONTO_ESCRITO.exec(limpio);

@@ -12,7 +12,7 @@ import { subirRechazando } from '../../../test/rechazos';
 import { renderEnRuta } from '../../../test/render';
 import { MENSAJES } from '../../ordenes/api/ordenesLocal';
 
-const BOLETA_REPETIDA = 'Ese número de boleta ya está usado en esta sucursal. Revisá el papel y volvé a escribirlo.';
+const BOLETA_REPETIDA = 'Ese número de boleta ya está usado en esta sucursal. Revisa el papel y vuelve a escribirlo.';
 
 /**
  * El recorrido que pide CLAUDE.md §6: el servidor rechaza una boleta y el empleado se entera.

@@ -45,7 +45,7 @@ export function SeccionClientes({ filtro, periodo }: { filtro: Filtro; periodo: 
           <Grafico
             nombre="Veces que vino cada cliente"
             vacio={!hayDatos(estado.datos.clientes.map((c) => c.ordenes))}
-            pista="Tocá un cliente para ver cuánto pagó y cuándo vino por última vez."
+            pista="Toca un cliente para ver cuánto pagó y cuándo vino por última vez."
             tabla={{
               encabezados: ['Cliente', 'Veces que vino', 'Pagó', 'Última vez'],
               filas: estado.datos.clientes.map((c) => ({

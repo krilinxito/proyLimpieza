@@ -10,7 +10,7 @@ import { calcularSaldo } from '../../pagos/saldo';
 import { useEntregar } from '../hooks/useEntregar';
 import type { DatosEntrega, EntregaLista, ErroresEntrega } from '../types';
 
-const NO_SE_GUARDO = 'No se pudo guardar la entrega. Probá de nuevo y, si sigue pasando, avisale al encargado.';
+const NO_SE_GUARDO = 'No se pudo guardar la entrega. Prueba de nuevo y, si sigue pasando, avísale al encargado.';
 
 type Props = {
   orden: OrdenVista;

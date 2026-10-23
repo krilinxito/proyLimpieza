@@ -92,9 +92,9 @@ describe('Buscador mientras se escribe — SPEC-KRILINXI-032', () => {
     escribir('ro');
     // La región viva existe desde el principio, vacía: se espera el texto, no solo que aparezca.
     await waitFor(() =>
-      expect(screen.getByRole('status')).toHaveTextContent('2 resultados. Hay más resultados: escribí un poco más.'),
+      expect(screen.getByRole('status')).toHaveTextContent('2 resultados. Hay más resultados: escribe un poco más.'),
     );
-    expect(screen.getByText('Hay más resultados: escribí un poco más.', { selector: 'p:not([role])' })).toBeInTheDocument();
+    expect(screen.getByText('Hay más resultados: escribe un poco más.', { selector: 'p:not([role])' })).toBeInTheDocument();
   });
 
   it('sin resultados lo dice, y la acción fija sigue ahí', async () => {

@@ -15,10 +15,10 @@ import type { Cuenta, DatosAlta, DatosEdicion, ErroresCuenta, ResultadoCuenta } 
 export const LARGO_MINIMO_CONTRASENA = 8;
 
 export const MENSAJES_CUENTA = {
-  sinNombre: 'Escribí el nombre y apellido de la persona.',
-  sinUsuario: 'Escribí el nombre de usuario con el que va a entrar.',
-  contrasena: `La contraseña tiene que tener al menos ${LARGO_MINIMO_CONTRASENA} caracteres. Elegí otra.`,
-  sinSucursal: 'Elegí en qué sucursal trabaja.',
+  sinNombre: 'Escribe el nombre y apellido de la persona.',
+  sinUsuario: 'Escribe el nombre de usuario con el que va a entrar.',
+  contrasena: `La contraseña tiene que tener al menos ${LARGO_MINIMO_CONTRASENA} caracteres. Elige otra.`,
+  sinSucursal: 'Elige en qué sucursal trabaja.',
 } as const;
 
 function resultadoDe(envio: Envio<unknown>): ResultadoCuenta {

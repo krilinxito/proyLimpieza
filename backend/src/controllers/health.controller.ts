@@ -11,7 +11,7 @@ export async function getHealth(_req: Request, res: Response): Promise<void> {
     throw new ApiError(
       503,
       CODIGOS_ERROR.SERVICIO_NO_DISPONIBLE,
-      'No hay conexión con la base de datos. Revisá que el servidor esté encendido.',
+      'No hay conexión con la base de datos. Revisa que el servidor esté encendido.',
     );
   }
 

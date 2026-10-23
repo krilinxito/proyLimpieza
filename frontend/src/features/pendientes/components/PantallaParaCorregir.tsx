@@ -75,7 +75,7 @@ export function PantallaParaCorregir() {
       setAviso(`Se descartó: ${registro.que}.`);
     } catch (causa) {
       console.error('No se pudo descartar el registro.', causa);
-      setError('No se pudo descartar. Probá de nuevo y, si sigue pasando, avisale al encargado.');
+      setError('No se pudo descartar. Prueba de nuevo y, si sigue pasando, avísale al encargado.');
     }
     setDescartando(null);
   }
@@ -111,8 +111,8 @@ export function PantallaParaCorregir() {
     <>
       {avisos}
       <p className="mt-4 text-xl text-texto-suave">
-        Estos registros no se pudieron guardar. Leé el motivo de cada uno: corregí lo que está mal y volvé a guardarlo,
-        o descartalo si no va.
+        Estos registros no se pudieron guardar. Lee el motivo de cada uno: corrige lo que está mal y vuelve a guardarlo,
+        o descártalo si no va.
       </p>
       <ul className="mt-6 grid gap-4">
         {(paginas.visibles ?? []).map((registro) => (

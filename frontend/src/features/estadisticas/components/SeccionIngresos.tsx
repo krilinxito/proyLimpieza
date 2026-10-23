@@ -35,7 +35,7 @@ export function SeccionIngresos({ ingresos, periodo }: { ingresos: Ingresos; per
       <Grafico
         nombre="Cobrado por sucursal y forma de pago"
         vacio={!hayDatos(totales)}
-        pista="Tocá una sucursal para ver cuánto se cobró de cada forma."
+        pista="Toca una sucursal para ver cuánto se cobró de cada forma."
         tabla={{
           encabezados: ['Sucursal', ...METODOS_PAGO.map((m) => TEXTO_METODO_PAGO[m]), 'Total'],
           filas: ingresos.porSucursal.map((s) => ({

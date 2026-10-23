@@ -238,7 +238,7 @@ describe('Mostrador: la boleta — SPEC-KRILINXI-008 y SPEC-KRILINXI-033', () =>
 
   it('un ADMIN que no está atendiendo ve cómo empezar (SPEC-KRILINXI-029)', () => {
     renderEnRuta(<App />, '/mostrador', { sesion: sesionDePrueba({ rol: 'ADMIN' }) });
-    expect(screen.getByText(/elegí en qué sucursal vas a atender/)).toBeInTheDocument();
+    expect(screen.getByText(/elige en qué sucursal vas a atender/)).toBeInTheDocument();
   });
 });
 

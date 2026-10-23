@@ -103,8 +103,8 @@ describe('Pantalla del personal — SPEC-KRILINXI-017', () => {
     expect(screen.getByLabelText('Nombre y apellido')).toHaveValue('Rosa Quispe');
     expect(screen.queryByLabelText(/Nombre de usuario/)).not.toBeInTheDocument();
     expect(screen.queryByRole('radio', { name: 'Administrador' })).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Teléfono nuevo (dejalo vacío para no cambiarlo)')).toHaveValue('');
-    escribir('Contraseña nueva (dejala vacía para no cambiarla)', 'otra12345');
+    expect(screen.getByLabelText('Teléfono nuevo (déjalo vacío para no cambiarlo)')).toHaveValue('');
+    escribir('Contraseña nueva (déjala vacía para no cambiarla)', 'otra12345');
     fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
     await screen.findByText('Guardado. Puede tardar unos segundos en verse en la lista.');
@@ -130,7 +130,7 @@ describe('Pantalla del personal — SPEC-KRILINXI-017', () => {
   });
 
   it('un usuario repetido deja el formulario abierto con el mensaje del servidor', async () => {
-    const repetido = 'Ese nombre de usuario ya lo usa otra persona. Elegí otro, por ejemplo agregándole el apellido.';
+    const repetido = 'Ese nombre de usuario ya lo usa otra persona. Elige otro, por ejemplo agregándole el apellido.';
     await abrir(() => ({ status: 409, data: cuerpoError('USERNAME_DUPLICADO', repetido) }));
     fireEvent.click(screen.getByRole('button', { name: 'Agregar una persona' }));
     escribir('Nombre y apellido', 'Rosa Mamani');
@@ -152,7 +152,7 @@ describe('Pantalla del personal — SPEC-KRILINXI-017', () => {
     escribir('Contraseña (al menos 8 letras o números)', 'secreta123');
     fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
-    expect(await screen.findByText('No hay internet: no se guardó. Probá de nuevo cuando vuelva la conexión.')).toBeInTheDocument();
+    expect(await screen.findByText('No hay internet: no se guardó. Prueba de nuevo cuando vuelva la conexión.')).toBeInTheDocument();
     expect(screen.queryByText(/^Guardado/)).not.toBeInTheDocument();
   });
 
@@ -256,7 +256,7 @@ describe('Personal: volver a dar de alta — SPEC-KRILINXI-051', () => {
   });
 
   it('si el servidor rechaza, muestra su mensaje y la cuenta no cambia', async () => {
-    const mensaje = 'No se pudo volver a dar de alta a esa persona. Probá de nuevo.';
+    const mensaje = 'No se pudo volver a dar de alta a esa persona. Prueba de nuevo.';
     const { db } = await abrir(() => ({ status: 409, data: cuerpoError('CONFLICTO', mensaje) }), [BETO]);
     fireEvent.click(tarjeta('Beto Mamani').getByRole('button', { name: 'Volver a dar de alta' }));
     fireEvent.click(screen.getByRole('button', { name: 'Sí, dar de alta' }));

@@ -5,7 +5,7 @@
  * misma capa de acceso (`envolver`) que el navegador. Lo único que cambia es el driver:
  * SQLite nativo de Node (`@powersync/node` + better-sqlite3) en vez de WASM, porque el
  * SDK web no corre en jsdom. Las consultas son SQL real y la cola de subida es la real.
- * Usala cuando lo que probás es SQL o la cola:
+ * Úsala cuando lo que pruebas es SQL o la cola:
  *
  *     const { control, db } = await baseLocalDePrueba();
  *     await control.base.ejecutar('INSERT INTO clientes (id, nombre) VALUES (uuid(), ?)', ['Rosa']);
@@ -21,7 +21,7 @@
  *     const { control, sembrar } = await baseLocalDePrueba();
  *     await sembrar('clientes', [{ id: randomUUID(), nombre: 'Rosa', telefono: '70123456' }]);
  *
- * Sembrá antes de escribir nada: si la cola ya tiene algo, `sembrar` falla en vez de darlo
+ * Siembra antes de escribir nada: si la cola ya tiene algo, `sembrar` falla en vez de darlo
  * por subido sin que el test se entere.
  *
  * Para una pantalla que no lee datos alcanza con `controlFalso()` (test/controlFalso.ts),
@@ -42,7 +42,7 @@ import { SCHEMA_LOCAL, TABLAS } from '../lib/powersync/schema';
  * Al azar y no parejo, a propósito: una carrera es entre dos cosas que llegan por caminos
  * distintos (la lista y el aviso de conexión, la lista del local y una búsqueda). Con una demora
  * pareja llegan en el mismo orden de siempre y la carrera no se ve; al azar, en algunas corridas
- * llegan al revés, y un test que mira con `getBy…` algo que todavía no llegó falla. Correlo varias
+ * llegan al revés, y un test que mira con `getBy…` algo que todavía no llegó falla. Córrelo varias
  * veces: cada corrida es un orden distinto. Un test que espera bien lo que afirma pasa siempre.
  * Sin la variable, no cambia nada.
  */

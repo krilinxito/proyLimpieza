@@ -32,7 +32,7 @@ function invalido(mensaje: string): ApiError {
 }
 
 function leerTipoRetiro(valor: unknown): TipoRetiro {
-  if (!esTipoRetiro(valor)) throw invalido('Elegí si el cliente trae la boleta o no.');
+  if (!esTipoRetiro(valor)) throw invalido('Elige si el cliente trae la boleta o no.');
   return valor;
 }
 
@@ -49,7 +49,7 @@ function leerPrecioFinal(valor: unknown): Centavos | null {
   const precio = montoEnCentavos(valor);
   // Puede ser cero (se perdonó el cobro), pero nunca negativo.
   if (precio === null || precio < 0 || precio > MONTO_MAXIMO) {
-    throw invalido('Escribí el precio final con números, por ejemplo 45 o 45.50.');
+    throw invalido('Escribe el precio final con números, por ejemplo 45 o 45.50.');
   }
   return precio;
 }
@@ -74,7 +74,7 @@ function sucursalPermitida(sesion: Sesion): string | null {
     throw new ApiError(
       403,
       CODIGOS_ERROR.SIN_PERMISO,
-      'Tu usuario no tiene una sucursal asignada. Pedile al administrador que lo revise.',
+      'Tu usuario no tiene una sucursal asignada. Pídele al administrador que lo revise.',
     );
   }
   return sesion.sucursalId;
@@ -86,7 +86,7 @@ export async function postEntrega(req: Request, res: Response): Promise<void> {
   const cuerpo = comoObjeto(req.body);
 
   if (!esUuid(cuerpo.id)) {
-    throw invalido('Falta el identificador de la entrega o no es válido. Volvé a intentarlo.');
+    throw invalido('Falta el identificador de la entrega o no es válido. Vuelve a intentarlo.');
   }
   if (!esUuid(cuerpo.orden_id)) {
     throw invalido('Falta elegir la orden que se está entregando.');
@@ -101,14 +101,14 @@ export async function postEntrega(req: Request, res: Response): Promise<void> {
   const retiradoPorCarnet = leerTextoOpcional(
     cuerpo.retirado_por_carnet,
     LARGO_MAXIMO_CARNET,
-    'El carnet de quien retira es demasiado largo. Revisalo y volvé a escribirlo.',
+    'El carnet de quien retira es demasiado largo. Revísalo y vuelve a escribirlo.',
   );
 
   // Regla del negocio (CLAUDE.md, sección 3): sin boleta, quien retira tiene que
   // dejar nombre Y carnet. El schema también lo exige (chk_datos_sin_boleta),
   // pero si se dejara caer hasta ahí sería un 500 sin mensaje.
   if (tipoRetiro === 'SIN_BOLETA' && (retiradoPorNombre === null || retiradoPorCarnet === null)) {
-    throw invalido('Si el cliente no trae la boleta, escribí el nombre y el carnet de quien retira la ropa.');
+    throw invalido('Si el cliente no trae la boleta, escribe el nombre y el carnet de quien retira la ropa.');
   }
 
   const datos: entregas.EntregaNueva = {
@@ -137,20 +137,20 @@ export async function postEntrega(req: Request, res: Response): Promise<void> {
     case 'orden-no-encontrada':
       // 400 y no 404, como en pagos: lo que no existe es un dato del cuerpo. Una
       // orden de otra sucursal responde lo mismo, para no confirmar que existe.
-      throw invalido('Esa orden no existe en esta sucursal. Revisá el número de boleta.');
+      throw invalido('Esa orden no existe en esta sucursal. Revisa el número de boleta.');
     case 'orden-anulada':
       throw new ApiError(
         409,
         CODIGOS_ERROR.ORDEN_ANULADA,
         `La orden ${resultado.orden.numeroBoleta} está anulada y no se puede entregar. ` +
-          'Si el cliente se lleva la ropa igual, avisale al administrador.',
+          'Si el cliente se lleva la ropa igual, avísale al administrador.',
       );
     case 'orden-ya-entregada':
       throw new ApiError(
         409,
         CODIGOS_ERROR.ORDEN_YA_ENTREGADA,
         `La ropa de la orden ${resultado.orden.numeroBoleta} ya fue entregada. ` +
-          'Revisá el número de boleta.',
+          'Revisa el número de boleta.',
       );
   }
 }

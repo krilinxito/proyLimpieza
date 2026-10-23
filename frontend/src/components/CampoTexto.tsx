@@ -9,7 +9,7 @@ type Props = AtributosInput & {
   value: string;
   /** Recibe el texto ya extraído del evento: quien usa el campo no toca el DOM. */
   onChange: (valor: string) => void;
-  /** Qué está mal y qué hacer: "Escribí el teléfono del cliente." */
+  /** Qué está mal y qué hacer: "Escribe el teléfono del cliente." */
   error?: string;
 };
 

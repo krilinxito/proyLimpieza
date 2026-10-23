@@ -26,7 +26,7 @@ function sinConexion(causa: unknown): Error {
   const detalle = describir(causa);
   return new Error(
     'No se pudo conectar a Postgres para los tests contra la base real.\n' +
-      '¿Está levantado Docker? Corré `docker compose up -d postgres` desde la raíz y volvé a intentarlo.\n' +
+      '¿Está levantado Docker? Corré `docker compose up -d postgres` desde la raíz y vuelve a intentarlo.\n' +
       `(Detalle: ${detalle})`,
   );
 }

@@ -79,16 +79,16 @@ describe('Alta de cliente en la base local — SPEC-KRILINXI-005', () => {
   });
 
   it.each([
-    ['sin nombre', { nombre: '   ', telefono: '71111111', carnet: '' }, { nombre: 'Escribí el nombre del cliente.' }],
+    ['sin nombre', { nombre: '   ', telefono: '71111111', carnet: '' }, { nombre: 'Escribe el nombre del cliente.' }],
     [
       'sin teléfono',
       { nombre: 'Juan', telefono: 'no sé', carnet: '' },
-      { telefono: 'Escribí el número de teléfono del cliente.' },
+      { telefono: 'Escribe el número de teléfono del cliente.' },
     ],
     [
       'sin nada',
       { nombre: '', telefono: '', carnet: '' },
-      { nombre: 'Escribí el nombre del cliente.', telefono: 'Escribí el número de teléfono del cliente.' },
+      { nombre: 'Escribe el nombre del cliente.', telefono: 'Escribe el número de teléfono del cliente.' },
     ],
   ])('%s no guarda y dice qué falta', async (_caso, datos, errores) => {
     const { control, db } = await baseLocalDePrueba();
@@ -173,7 +173,7 @@ describe('Editar un cliente en la base local — SPEC-KRILINXI-014', () => {
 
     expect(await editarCliente(control.base, rosa, { nombre: ' ', telefono: '-' })).toEqual({
       tipo: 'invalido',
-      errores: { nombre: 'Escribí el nombre del cliente.', telefono: 'Escribí el número de teléfono del cliente.' },
+      errores: { nombre: 'Escribe el nombre del cliente.', telefono: 'Escribe el número de teléfono del cliente.' },
     });
   });
 });

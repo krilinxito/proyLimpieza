@@ -102,7 +102,7 @@ describe('Pantalla de clientes: registrar — SPEC-KRILINXI-005', () => {
     const { db } = await abrirAlta();
     fireEvent.click(screen.getByRole('button', { name: 'Guardar cliente' }));
 
-    expect(await screen.findByText('Escribí el nombre del cliente.')).toBeInTheDocument();
+    expect(await screen.findByText('Escribe el nombre del cliente.')).toBeInTheDocument();
     expect(await db.getCrudBatch()).toBeNull();
   });
 
@@ -146,7 +146,7 @@ describe('Pantalla de clientes: el idioma del mostrador — SPEC-KRILINXI-005', 
     fireEvent.click(await screen.findByRole('option', { name: 'Cliente nuevo' }));
     await screen.findByRole('form', { name: 'Registrar cliente nuevo' });
     fireEvent.click(screen.getByRole('button', { name: 'Guardar cliente' }));
-    await screen.findByText('Escribí el nombre del cliente.');
+    await screen.findByText('Escribe el nombre del cliente.');
     sinJerga();
 
     escribir('Nombre completo', 'Juan Mamani');
@@ -212,7 +212,7 @@ describe('Pantalla de clientes: cambiar datos — SPEC-KRILINXI-014', () => {
     escribir('Teléfono', '70555555');
     fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
 
-    expect(await screen.findByText('Ese teléfono ya es de Juan Mamani. Revisalo y volvé a escribirlo.')).toBeInTheDocument();
+    expect(await screen.findByText('Ese teléfono ya es de Juan Mamani. Revísalo y vuelve a escribirlo.')).toBeInTheDocument();
     expect(screen.getByLabelText('Teléfono')).toHaveAttribute('aria-invalid', 'true');
     expect(await db.getCrudBatch()).toBeNull();
     sinJerga();

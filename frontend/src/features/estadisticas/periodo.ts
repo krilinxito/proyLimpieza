@@ -82,8 +82,8 @@ export function describirPeriodo(filtro: Filtro, seccion: 'ingresos' | 'pendient
 }
 
 export const MENSAJES_PERIODO = {
-  faltaFecha: 'Elegí las dos fechas: desde cuándo y hasta cuándo.',
-  alReves: 'La fecha «desde» no puede ser posterior a «hasta». Revisalas y volvé a elegirlas.',
+  faltaFecha: 'Elige las dos fechas: desde cuándo y hasta cuándo.',
+  alReves: 'La fecha «desde» no puede ser posterior a «hasta». Revísalas y vuelve a elegirlas.',
 } as const;
 
 /** Las fechas que escribió el admin, o el error que hay que mostrarle. */

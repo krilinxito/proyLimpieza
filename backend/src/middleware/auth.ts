@@ -39,7 +39,7 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction): v
     throw new ApiError(
       401,
       CODIGOS_ERROR.NO_AUTENTICADO,
-      'Necesitás iniciar sesión para hacer esto.',
+      'Necesitas iniciar sesión para hacer esto.',
     );
   }
 
@@ -61,7 +61,7 @@ export function sesionDe(req: Request): Sesion {
     throw new ApiError(
       401,
       CODIGOS_ERROR.NO_AUTENTICADO,
-      'Necesitás iniciar sesión para hacer esto.',
+      'Necesitas iniciar sesión para hacer esto.',
     );
   }
 
@@ -88,7 +88,7 @@ export async function requireAuthDeLaCola(req: Request, _res: Response, next: Ne
   const cabecera = req.get('authorization');
 
   if (cabecera === undefined || !cabecera.startsWith(PREFIJO)) {
-    throw new ApiError(401, CODIGOS_ERROR.NO_AUTENTICADO, 'Necesitás iniciar sesión para hacer esto.');
+    throw new ApiError(401, CODIGOS_ERROR.NO_AUTENTICADO, 'Necesitas iniciar sesión para hacer esto.');
   }
 
   const sesion = verificarTokenDeLaCola(cabecera.slice(PREFIJO.length).trim());
@@ -96,7 +96,7 @@ export async function requireAuthDeLaCola(req: Request, _res: Response, next: Ne
   if (usuario === null) {
     // No hay borrado de usuarios: un token firmado para alguien que no existe no
     // debería pasar. Si pasa, no hay a nombre de quién anotar nada.
-    throw new ApiError(401, CODIGOS_ERROR.NO_AUTENTICADO, 'Necesitás iniciar sesión para hacer esto.');
+    throw new ApiError(401, CODIGOS_ERROR.NO_AUTENTICADO, 'Necesitas iniciar sesión para hacer esto.');
   }
 
   req.usuario = sesion;

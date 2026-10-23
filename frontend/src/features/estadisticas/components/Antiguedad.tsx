@@ -30,7 +30,7 @@ export function Antiguedad({ nombre, tramos, queFalta }: Props) {
     <Grafico
       nombre={nombre}
       vacio={!hayDatos(tramos.map((t) => t.cantidad))}
-      pista="Tocá una barra para ver su detalle."
+      pista="Toca una barra para ver su detalle."
       tabla={{
         encabezados: conMonto ? ['Antigüedad', 'Boletas', 'Falta cobrar'] : ['Antigüedad', 'Boletas'],
         filas: tramos.map((t) => ({

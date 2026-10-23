@@ -16,7 +16,7 @@ export function ConSucursalDeTrabajo({ children }: { children: ReactNode }) {
   return (
     <div className="mt-6 grid justify-items-start gap-6">
       <Aviso tipo="informacion">
-        Para usar esta parte, primero elegí en qué sucursal vas a atender. Se elige en el inicio, con «Atender en
+        Para usar esta parte, primero elige en qué sucursal vas a atender. Se elige en el inicio, con «Atender en
         una sucursal».
       </Aviso>
       <EnlaceBoton a="/" icono="sucursales">

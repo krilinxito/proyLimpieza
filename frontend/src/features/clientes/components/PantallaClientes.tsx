@@ -60,7 +60,7 @@ export function PantallaClientes() {
         mostrar={(cliente) => <ResultadoCliente cliente={cliente} />}
         alElegir={mostrarCliente}
         accion={{ texto: 'Cliente nuevo', icono: 'clientes', alElegir: (escrito) => setPaso({ tipo: 'alta', escrito }) }}
-        sinResultados="Ningún cliente coincide con eso. Si es la primera vez que viene, tocá «Cliente nuevo»."
+        sinResultados="Ningún cliente coincide con eso. Si es la primera vez que viene, toca «Cliente nuevo»."
         deshabilitado={!clientes.lista}
       />
 

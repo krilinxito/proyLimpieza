@@ -41,7 +41,7 @@ export function AvisoConexion(props: Props) {
         <p>{fraseConexion(props)}</p>
         {paraCorregir > 0 && (
           <Link to="/para-corregir" className="mt-1 inline-block font-semibold text-peligro-texto underline">
-            {cuantos(paraCorregir)} {paraCorregir === 1 ? 'no se pudo guardar' : 'no se pudieron guardar'}. Tocá acá para revisarlos.
+            {cuantos(paraCorregir)} {paraCorregir === 1 ? 'no se pudo guardar' : 'no se pudieron guardar'}. Toca acá para revisarlos.
           </Link>
         )}
       </div>

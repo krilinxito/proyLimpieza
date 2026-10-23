@@ -29,7 +29,7 @@ export function AtenderEnUnaSucursal() {
     if (!atencion.puedeElegir) return;
     // Una que se cerró mientras estaba en pantalla ya no está en la lista: no vale.
     if (!elegida || !sucursales.some((s) => s.id === elegida)) {
-      setError('Elegí una sucursal de la lista.');
+      setError('Elige una sucursal de la lista.');
       return;
     }
     atencion.empezar(elegida);
@@ -47,7 +47,7 @@ export function AtenderEnUnaSucursal() {
           </div>
         ) : sucursales.length === 0 ? (
           <div className="mt-4">
-            <Aviso tipo="informacion">Todavía no hay sucursales abiertas en esta tablet. Esperá unos segundos.</Aviso>
+            <Aviso tipo="informacion">Todavía no hay sucursales abiertas en esta tablet. Espera unos segundos.</Aviso>
           </div>
         ) : (
           <>

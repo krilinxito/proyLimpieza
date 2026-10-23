@@ -22,14 +22,14 @@ function invalido(mensaje: string): ApiError {
 
 function leerNombre(valor: unknown): string {
   const nombre = textoConContenido(valor);
-  if (nombre === null) throw invalido('Escribí el nombre del cliente.');
+  if (nombre === null) throw invalido('Escribe el nombre del cliente.');
   return nombre;
 }
 
 function leerTelefono(valor: unknown): string {
   const texto = textoConContenido(valor);
   const telefono = texto === null ? '' : normalizarTelefono(texto);
-  if (telefono === '') throw invalido('Escribí el número de teléfono del cliente.');
+  if (telefono === '') throw invalido('Escribe el número de teléfono del cliente.');
   return telefono;
 }
 
@@ -53,7 +53,7 @@ async function telefonoDuplicado(telefono: string): Promise<ApiError> {
     409,
     CODIGOS_ERROR.TELEFONO_DUPLICADO,
     `Ese teléfono ya está registrado a nombre de ${aNombreDe}. ` +
-      'Buscalo por su teléfono en vez de darlo de alta otra vez.',
+      'Búscalo por su teléfono en vez de darlo de alta otra vez.',
   );
 }
 
@@ -62,7 +62,7 @@ export async function postCliente(req: Request, res: Response): Promise<void> {
   const cuerpo = comoObjeto(req.body);
 
   if (!esUuid(cuerpo.id)) {
-    throw invalido('Falta el identificador del cliente o no es válido. Volvé a intentarlo.');
+    throw invalido('Falta el identificador del cliente o no es válido. Vuelve a intentarlo.');
   }
 
   const datos: clientes.ClienteNuevo = {

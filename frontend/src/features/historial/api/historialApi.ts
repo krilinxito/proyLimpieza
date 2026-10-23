@@ -15,8 +15,8 @@ import { POR_PAGINA_ANCHA } from '../../../lib/tamanoDePagina';
 import type { ParametrosHistorial } from '../filtro';
 import type { BoletaListada, PaginaHistorial } from '../types';
 
-export const ERROR_HISTORIAL = 'No se pudo traer el historial. Probá de nuevo y, si sigue pasando, avisale al encargado.';
-const INCOMPLETA = 'La lista llegó incompleta. Probá de nuevo y, si sigue pasando, avisale al encargado.';
+export const ERROR_HISTORIAL = 'No se pudo traer el historial. Prueba de nuevo y, si sigue pasando, avísale al encargado.';
+const INCOMPLETA = 'La lista llegó incompleta. Prueba de nuevo y, si sigue pasando, avísale al encargado.';
 
 type Objeto = Record<string, unknown>;
 const esObjeto = (v: unknown): v is Objeto => typeof v === 'object' && v !== null && !Array.isArray(v);

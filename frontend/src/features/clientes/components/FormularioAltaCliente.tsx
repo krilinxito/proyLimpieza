@@ -5,7 +5,7 @@ import { Tarjeta } from '../../../components/Tarjeta';
 import { CampoTexto } from '../../../components/CampoTexto';
 import type { DatosAlta, ErroresAlta, ResultadoAlta } from '../types';
 
-const NO_SE_GUARDO = 'No se pudo guardar el cliente. Probá de nuevo y, si sigue pasando, avisale al encargado.';
+const NO_SE_GUARDO = 'No se pudo guardar el cliente. Prueba de nuevo y, si sigue pasando, avísale al encargado.';
 
 type Props = {
   /**

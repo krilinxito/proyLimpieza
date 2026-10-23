@@ -54,16 +54,16 @@ function invalido(mensaje: string): ApiError {
 
 function leerBoleta(valor: unknown): string {
   const boleta = textoConContenido(valor);
-  if (boleta === null) throw invalido('Escribí el número de la boleta.');
+  if (boleta === null) throw invalido('Escribe el número de la boleta.');
   if (boleta.length > LARGO_MAXIMO_BOLETA) {
-    throw invalido('Ese número de boleta es demasiado largo. Revisá el papel y volvé a escribirlo.');
+    throw invalido('Ese número de boleta es demasiado largo. Revisa el papel y vuelve a escribirlo.');
   }
   return boleta;
 }
 
 function leerDescripcion(valor: unknown): string {
   const descripcion = textoConContenido(valor);
-  if (descripcion === null) throw invalido('Escribí qué ropa deja el cliente.');
+  if (descripcion === null) throw invalido('Escribe qué ropa deja el cliente.');
   return descripcion;
 }
 
@@ -71,7 +71,7 @@ function leerPrecio(valor: unknown): Centavos {
   const precio = montoEnCentavos(valor);
   // El precio puede ser cero (un trabajo de cortesía), pero nunca negativo.
   if (precio === null || precio < 0 || precio > PRECIO_MAXIMO) {
-    throw invalido('Escribí el precio con números, por ejemplo 25 o 25.50.');
+    throw invalido('Escribe el precio con números, por ejemplo 25 o 25.50.');
   }
   return precio;
 }
@@ -94,7 +94,7 @@ function boletaDuplicada(): ApiError {
   return new ApiError(
     409,
     CODIGOS_ERROR.BOLETA_DUPLICADA,
-    'Ese número de boleta ya está usado en esta sucursal. Revisá el papel y volvé a escribirlo.',
+    'Ese número de boleta ya está usado en esta sucursal. Revisa el papel y vuelve a escribirlo.',
   );
 }
 
@@ -114,7 +114,7 @@ async function sucursalDeRegistro(sesion: Sesion, cuerpo: Record<string, unknown
       throw new ApiError(
         403,
         CODIGOS_ERROR.SIN_PERMISO,
-        'Tu usuario no tiene una sucursal asignada. Pedile al administrador que lo revise.',
+        'Tu usuario no tiene una sucursal asignada. Pídele al administrador que lo revise.',
       );
     }
     return sesion.sucursalId;
@@ -123,7 +123,7 @@ async function sucursalDeRegistro(sesion: Sesion, cuerpo: Record<string, unknown
   const id = cuerpo.sucursal_id;
   const sucursal = esUuid(id) ? await sucursales.buscarPorId(id) : null;
   if (sucursal === null || !sucursal.activa) {
-    throw invalido('Elegí en qué sucursal estás atendiendo.');
+    throw invalido('Elige en qué sucursal estás atendiendo.');
   }
   return sucursal.id;
 }
@@ -134,7 +134,7 @@ export async function postOrden(req: Request, res: Response): Promise<void> {
   const cuerpo = comoObjeto(req.body);
 
   if (!esUuid(cuerpo.id)) {
-    throw invalido('Falta el identificador de la orden o no es válido. Volvé a intentarlo.');
+    throw invalido('Falta el identificador de la orden o no es válido. Vuelve a intentarlo.');
   }
   if (!esUuid(cuerpo.cliente_id)) {
     throw invalido('Falta elegir el cliente que deja la ropa.');
@@ -161,7 +161,7 @@ export async function postOrden(req: Request, res: Response): Promise<void> {
   } catch (error) {
     if (error instanceof BoletaOcupadaError) throw boletaDuplicada();
     if (error instanceof ClienteInexistenteError) {
-      throw invalido('Ese cliente no está registrado. Buscalo por su teléfono o dalo de alta.');
+      throw invalido('Ese cliente no está registrado. Búscalo por su teléfono o dalo de alta.');
     }
     // SPEC-ALE186-014. Un 409 y un 400: la tablet aparta los dos en "para
     // corregir" (SPEC-KRILINXI-007), así que la ropa no se pierde en silencio.
@@ -169,14 +169,14 @@ export async function postOrden(req: Request, res: Response): Promise<void> {
       throw new ApiError(
         409,
         CODIGOS_ERROR.SUCURSAL_CERRADA,
-        'Esta sucursal fue dada de baja y ya no recibe ropa nueva. Avisale al encargado para que te asigne a otra sucursal.',
+        'Esta sucursal fue dada de baja y ya no recibe ropa nueva. Avísale al encargado para que te asigne a otra sucursal.',
       );
     }
     if (error instanceof ordenes.FechaFuturaError) {
       throw new ApiError(
         400,
         CODIGOS_ERROR.FECHA_FUTURA,
-        'La fecha de ingreso de la ropa está en el futuro. Revisá la fecha y la hora de la tablet y volvé a cargarla.',
+        'La fecha de ingreso de la ropa está en el futuro. Revisa la fecha y la hora de la tablet y vuelve a cargarla.',
       );
     }
     throw error;
@@ -189,7 +189,7 @@ function transicionInvalida(actual: Orden, pedido: EstadoOrden | undefined): Api
   let mensaje: string;
 
   if (pedido === 'ENTREGADO') {
-    mensaje = 'Para dar la ropa por entregada, registrá la entrega desde "Entregar ropa".';
+    mensaje = 'Para dar la ropa por entregada, registra la entrega desde "Entregar ropa".';
   } else if (actual.estado === 'ENTREGADO' || actual.estado === 'ANULADO') {
     mensaje = `La orden ${boleta} ya está ${ESTADO_EN_PALABRAS[actual.estado]} y no se puede cambiar.`;
   } else {
@@ -264,7 +264,7 @@ const LARGO_MAXIMO_TEXTO = 100;
 function leerFechaOpcional(valor: unknown, nombre: 'desde' | 'hasta'): string | null {
   if (valor === undefined) return null;
   if (!esFechaCalendario(valor)) {
-    throw invalido(`La fecha "${nombre}" no es válida. Escribila como año-mes-día, por ejemplo 2025-06-30.`);
+    throw invalido(`La fecha "${nombre}" no es válida. Escríbela como año-mes-día, por ejemplo 2025-06-30.`);
   }
   return valor;
 }
@@ -273,7 +273,7 @@ function leerTexto(valor: unknown): string | null {
   if (valor === undefined) return null;
   const texto = textoConContenido(valor);
   if (typeof valor !== 'string' || (texto !== null && texto.length > LARGO_MAXIMO_TEXTO)) {
-    throw invalido('Escribí menos para buscar: un número de boleta, un nombre o un teléfono.');
+    throw invalido('Escribe menos para buscar: un número de boleta, un nombre o un teléfono.');
   }
   return texto;
 }
@@ -281,7 +281,7 @@ function leerTexto(valor: unknown): string | null {
 function leerConSaldo(valor: unknown): boolean {
   if (valor === undefined || valor === 'false') return false;
   if (valor === 'true') return true;
-  throw invalido('Para ver solo lo que se debe, usá con_saldo=true.');
+  throw invalido('Para ver solo lo que se debe, usa con_saldo=true.');
 }
 
 /**
@@ -301,10 +301,10 @@ export async function getOrdenes(req: Request, res: Response): Promise<void> {
 
   const { sucursal_id: sucursalId, estado } = query;
   if (sucursalId !== undefined && !esUuid(sucursalId)) {
-    throw invalido('La sucursal elegida no es válida. Volvé a elegirla de la lista.');
+    throw invalido('La sucursal elegida no es válida. Vuelve a elegirla de la lista.');
   }
   if (estado !== undefined && !esEstadoOrden(estado)) {
-    throw invalido('Ese estado de la ropa no existe. Elegí uno de la lista.');
+    throw invalido('Ese estado de la ropa no existe. Elige uno de la lista.');
   }
 
   const filtros: ordenes.FiltrosHistorial = {

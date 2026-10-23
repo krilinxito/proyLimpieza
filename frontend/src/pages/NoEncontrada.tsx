@@ -6,7 +6,7 @@ export function NoEncontrada() {
   return (
     <Pantalla titulo="Esa página no existe">
       <p className="mt-4 text-xl text-texto-suave">
-        Puede que el enlace esté mal escrito. Volvé al inicio y elegí qué querés hacer.
+        Puede que el enlace esté mal escrito. Vuelve al inicio y elige qué quieres hacer.
       </p>
       <div className="mt-8">
         <EnlaceBoton a="/" icono="inicio">

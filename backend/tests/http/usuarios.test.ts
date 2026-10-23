@@ -173,7 +173,7 @@ describe('POST /api/usuarios — SPEC-ALE186-009', () => {
     const res = await alta(cuerpoDeAltaUsuario());
 
     expectApiError(res, { status: 409, codigo: 'USERNAME_DUPLICADO' });
-    expect(res.body.error.mensaje).toMatch(/Elegí otro/);
+    expect(res.body.error.mensaje).toMatch(/Elige otro/);
   });
 
   it('en un reintento con los mismos datos responde 200 con la cuenta que ya estaba', async () => {

@@ -10,7 +10,7 @@ import { api, enviar, type Envio } from '../../../lib/api';
 import type { DatosSucursal, ErroresSucursal, ResultadoSucursal, Sucursal } from '../types';
 
 export const MENSAJES_SUCURSAL = {
-  sinNombre: 'Escribí el nombre de la sucursal.',
+  sinNombre: 'Escribe el nombre de la sucursal.',
   // El servidor dice "Quedan 3 órdenes…": "orden" es una palabra del sistema (CLAUDE.md §9).
   conRopa:
     'Todavía hay ropa en esta sucursal, y los clientes la retiran acá. Para cerrarla, primero hay que entregar o anular esa ropa.',

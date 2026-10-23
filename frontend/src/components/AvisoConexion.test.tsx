@@ -27,7 +27,7 @@ describe('Aviso de conexión — SPEC-KRILINXI-007', () => {
 
   it('si hay registros para corregir, lo dice y lleva a revisarlos', () => {
     mostrar(true, 0, 2);
-    const enlace = screen.getByRole('link', { name: '2 registros no se pudieron guardar. Tocá acá para revisarlos.' });
+    const enlace = screen.getByRole('link', { name: '2 registros no se pudieron guardar. Toca acá para revisarlos.' });
     expect(enlace).toHaveAttribute('href', '/para-corregir');
     sinJerga();
   });

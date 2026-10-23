@@ -16,7 +16,7 @@
  * local (SQLite) no se tocan: el service worker solo maneja su propia caché de archivos.
  */
 
-/** El mensaje que la versión que espera entiende como "tomá el mando". */
+/** El mensaje que la versión que espera entiende como "toma el mando". */
 export const TOMAR_EL_MANDO = 'TOMAR_EL_MANDO';
 
 /**

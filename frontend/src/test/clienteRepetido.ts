@@ -33,8 +33,8 @@ export async function dosTabletsConLaMismaRosa({ bajaLaOtra = true } = {}) {
   );
   await subirRechazandoPorRuta(prueba.db, {
     '/clientes': [409, 'TELEFONO_DUPLICADO', 'Ese teléfono ya es de Rosa Quispe.'],
-    '/ordenes': [400, 'VALIDACION', 'Ese cliente no está registrado. Buscalo por su teléfono o dalo de alta.'],
-    '/pagos': [400, 'VALIDACION', 'Esa orden no existe en esta sucursal. Revisá el número de boleta.'],
+    '/ordenes': [400, 'VALIDACION', 'Ese cliente no está registrado. Búscalo por su teléfono o dalo de alta.'],
+    '/pagos': [400, 'VALIDACION', 'Esa orden no existe en esta sucursal. Revisa el número de boleta.'],
   });
   if (bajaLaOtra) await prueba.sembrar('clientes', [{ id: ROSA_DE_LA_OTRA_TABLET, nombre: 'Rosa Quispe', telefono: '70123456' }]);
   const [cliente] = (await listarParaCorregir(base)).filter((r) => r.tabla === 'clientes');

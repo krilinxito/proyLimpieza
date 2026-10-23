@@ -27,10 +27,10 @@ export type ResultadoCorreccion =
 
 export const MENSAJES_CORRECCION = {
   estado:
-    'Un cambio de estado no se corrige aquí: puede que la ropa ya esté en otro paso. Buscá la boleta en el Mostrador, fijate cómo está y, si hace falta, hacé el cambio de nuevo desde ahí.',
-  desconocido: 'Este registro no se puede corregir desde aquí. Avisale al encargado o descartalo.',
-  sinCambios: 'No cambiaste ningún dato. Corregí lo que está mal o descartá el registro.',
-  yaNoEsta: 'Ese registro ya no está en esta tablet. Descartalo y, si hace falta, volvé a hacerlo.',
+    'Un cambio de estado no se corrige aquí: puede que la ropa ya esté en otro paso. Busca la boleta en el Mostrador, fíjate cómo está y, si hace falta, haz el cambio de nuevo desde ahí.',
+  desconocido: 'Este registro no se puede corregir desde aquí. Avísale al encargado o descártalo.',
+  sinCambios: 'No cambiaste ningún dato. Corrige lo que está mal o descarta el registro.',
+  yaNoEsta: 'Ese registro ya no está en esta tablet. Descártalo y, si hace falta, vuelve a hacerlo.',
 } as const;
 
 /** Los datos que se corrigen de cada tabla, con las mismas etiquetas que su pantalla de origen. */

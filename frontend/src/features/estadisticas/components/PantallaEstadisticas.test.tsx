@@ -207,7 +207,7 @@ describe('Panel de estadísticas — SPEC-KRILINXI-015', () => {
   });
 
   it('si la API responde un error, muestra su mensaje y deja probar de nuevo', async () => {
-    const mensaje = 'La sucursal elegida no es válida. Volvé a elegirla de la lista.';
+    const mensaje = 'La sucursal elegida no es válida. Vuelve a elegirla de la lista.';
     simularEstadisticas({ saldos: { status: 400, data: cuerpoError('VALIDACION', mensaje) } });
     await abrirPanel({ desplegar: false });
 
@@ -486,7 +486,7 @@ describe('El panel como tablero — SPEC-KRILINXI-026', () => {
     await abrirPanel();
     await screen.findByRole('heading', { name: '¿Cuánta ropa entró cada día?' });
     const porDia = grafico('Ropa recibida por día');
-    expect(within(porDia).getByText('Tocá un día para ver cuánta ropa entró.')).toBeInTheDocument();
+    expect(within(porDia).getByText('Toca un día para ver cuánta ropa entró.')).toBeInTheDocument();
 
     // Con el dedo.
     fireEvent.click(within(porDia).getByRole('button', { name: '15/10/2026: 4 boletas (1 anulada)' }));
@@ -874,7 +874,7 @@ describe('La tendencia de lo cobrado — SPEC-KRILINXI-044', () => {
     simularEstadisticas();
     await abrirPanel();
     const dibujo = await figura();
-    expect(within(dibujo).getByText('Tocá un día para ver cuánto se cobró y con qué.')).toBeInTheDocument();
+    expect(within(dibujo).getByText('Toca un día para ver cuánto se cobró y con qué.')).toBeInTheDocument();
 
     // Con el dedo.
     fireEvent.click(within(dibujo).getByRole('button', { name: '15/10/2026: Bs 125,50. Efectivo Bs 100,00, Pago con QR Bs 25,50.' }));

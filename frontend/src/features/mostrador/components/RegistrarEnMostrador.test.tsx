@@ -162,7 +162,7 @@ describe('Registrar ropa: el recorrido — SPEC-KRILINXI-006 y SPEC-KRILINXI-034
     dejaAdelanto();
     await guardar();
 
-    expect(await screen.findByText('Escribí cuánto deja de adelanto, o elegí «No deja adelanto».')).toBeInTheDocument();
+    expect(await screen.findByText('Escribe cuánto deja de adelanto, o elige «No deja adelanto».')).toBeInTheDocument();
     expect(await db.getCrudBatch()).toBeNull();
   });
 
@@ -200,7 +200,7 @@ describe('Registrar ropa: lo que se corrige en pantalla — SPEC-KRILINXI-006 y 
     await guardar();
 
     expect(
-      await screen.findByText('Ese número de boleta ya está usado en esta sucursal. Revisá el papel y volvé a escribirlo.'),
+      await screen.findByText('Ese número de boleta ya está usado en esta sucursal. Revisa el papel y vuelve a escribirlo.'),
     ).toBeInTheDocument();
     expect(await db.getCrudBatch()).toBeNull();
   });
@@ -210,9 +210,9 @@ describe('Registrar ropa: lo que se corrige en pantalla — SPEC-KRILINXI-006 y 
     await guardar();
 
     expect(await screen.findByText('Falta elegir el cliente que deja la ropa.')).toBeInTheDocument();
-    expect(screen.getByText('Escribí el número de la boleta.')).toBeInTheDocument();
-    expect(screen.getByText('Escribí qué ropa deja el cliente.')).toBeInTheDocument();
-    expect(screen.getByText('Escribí el precio con números, por ejemplo 25 o 25,50.')).toBeInTheDocument();
+    expect(screen.getByText('Escribe el número de la boleta.')).toBeInTheDocument();
+    expect(screen.getByText('Escribe qué ropa deja el cliente.')).toBeInTheDocument();
+    expect(screen.getByText('Escribe el precio con números, por ejemplo 25 o 25,50.')).toBeInTheDocument();
   });
 
   it('con un adelanto mayor que el precio no guarda nada', async () => {
@@ -261,9 +261,9 @@ describe('Registrar ropa con un cliente nuevo — SPEC-KRILINXI-034', () => {
     escribir('Nombre completo', '');
     await guardar();
 
-    expect(await screen.findByText('Escribí el nombre del cliente.')).toBeInTheDocument();
-    expect(screen.getByText('Escribí el número de teléfono del cliente.')).toBeInTheDocument();
-    expect(screen.getByText('Escribí el número de la boleta.')).toBeInTheDocument();
+    expect(await screen.findByText('Escribe el nombre del cliente.')).toBeInTheDocument();
+    expect(screen.getByText('Escribe el número de teléfono del cliente.')).toBeInTheDocument();
+    expect(screen.getByText('Escribe el número de la boleta.')).toBeInTheDocument();
     expect(await db.getCrudBatch()).toBeNull();
   });
 
@@ -385,7 +385,7 @@ describe('Registrar ropa desde el Mostrador — SPEC-KRILINXI-034', () => {
 
   it('un ADMIN que no está atendiendo ve cómo empezar, no el formulario (SPEC-KRILINXI-029)', async () => {
     renderEnRuta(<App />, '/registrar-ropa', { sesion: sesionDePrueba({ rol: 'ADMIN' }) });
-    expect(await screen.findByText(/elegí en qué sucursal vas a atender/)).toBeInTheDocument();
+    expect(await screen.findByText(/elige en qué sucursal vas a atender/)).toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: /Buscar cliente/ })).not.toBeInTheDocument();
   });
 });
@@ -397,7 +397,7 @@ describe('Registrar ropa: el idioma del mostrador — SPEC-KRILINXI-006 y SPEC-K
     await elegirARosa();
     sinJerga();
     await guardar();
-    await screen.findByText('Escribí el número de la boleta.');
+    await screen.findByText('Escribe el número de la boleta.');
     sinJerga();
 
     cargarRopa('001238');

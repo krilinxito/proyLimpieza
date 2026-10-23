@@ -204,7 +204,7 @@ describe('POST /api/pagos — SPEC-ALE186-005', () => {
 
     expectApiError(res, { status: 409, codigo: 'ORDEN_ANULADA' });
     expect(res.body.error.mensaje).toContain('001234');
-    expect(res.body.error.mensaje).toContain('avisale al administrador');
+    expect(res.body.error.mensaje).toContain('avísale al administrador');
   });
 
   it('acepta un PAGO_FINAL sin mirar si hay entrega, ni cuánto se pagó antes', async () => {

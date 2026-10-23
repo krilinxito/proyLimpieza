@@ -28,7 +28,7 @@ function leerId(valor: unknown, mensaje: string): string | null {
 function leerRevisar(valor: unknown): boolean {
   if (valor === undefined || valor === 'false') return false;
   if (valor === 'true') return true;
-  throw invalido('Para ver solo lo que hay que revisar, usá revisar=true.');
+  throw invalido('Para ver solo lo que hay que revisar, usa revisar=true.');
 }
 
 /** GET /api/auditoria */
@@ -38,15 +38,15 @@ export async function getAuditoria(req: Request, res: Response): Promise<void> {
 
   const { accion, tabla } = query;
   if (accion !== undefined && !esAccionAuditoria(accion)) {
-    throw invalido('Esa acción no existe. Elegí una de la lista.');
+    throw invalido('Esa acción no existe. Elige una de la lista.');
   }
   if (tabla !== undefined && !esTablaAuditada(tabla)) {
-    throw invalido('Ese tipo de registro no existe. Elegí uno de la lista.');
+    throw invalido('Ese tipo de registro no existe. Elige uno de la lista.');
   }
 
   const filtros = {
     ...periodo,
-    usuarioId: leerId(query.usuario_id, 'La persona elegida no es válida. Volvé a elegirla de la lista.'),
+    usuarioId: leerId(query.usuario_id, 'La persona elegida no es válida. Vuelve a elegirla de la lista.'),
     accion: accion ?? null,
     tabla: tabla ?? null,
     registroId: leerId(query.registro_id, 'El registro elegido no es válido.'),

@@ -25,7 +25,7 @@ export function SeccionVolumen({ volumen, periodo }: { volumen: Volumen; periodo
       <Grafico
         nombre="Ropa recibida por día"
         vacio={!hayDatos(volumen.porDia.map((d) => d.ordenes))}
-        pista="Tocá un día para ver cuánta ropa entró."
+        pista="Toca un día para ver cuánta ropa entró."
         tabla={{
           encabezados: ['Día', 'Ropa recibida'],
           filas: volumen.porDia.map((dia) => ({ clave: dia.fecha, celdas: [fechaParaLeer(dia.fecha), delDia(dia)] })),

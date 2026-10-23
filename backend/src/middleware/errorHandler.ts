@@ -10,7 +10,7 @@ export function notFoundHandler(_req: Request, res: Response): void {
   const error = new ApiError(
     404,
     CODIGOS_ERROR.NO_ENCONTRADO,
-    'Esa dirección no existe en el sistema. Verificá el enlace o volvé al inicio.',
+    'Esa dirección no existe en el sistema. Verifica el enlace o vuelve al inicio.',
   );
   res.status(error.status).json(error.toBody());
 }
@@ -71,7 +71,7 @@ export function errorHandler(
   const generico = new ApiError(
     500,
     CODIGOS_ERROR.ERROR_INTERNO,
-    'Ocurrió un problema en el sistema. Volvé a intentarlo; si sigue igual, avisá al encargado.',
+    'Ocurrió un problema en el sistema. Vuelve a intentarlo; si sigue igual, avisa al encargado.',
   );
 
   res.status(generico.status).json(generico.toBody());

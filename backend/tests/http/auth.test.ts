@@ -272,7 +272,7 @@ describe('Límite de intentos en el login — SPEC-ALE186-016', () => {
     const res = await login({ username: 'maria', password: CONTRASENA_DE_PRUEBA });
 
     expectApiError(res, { status: 429, codigo: 'DEMASIADOS_INTENTOS' });
-    expect(res.body.error.mensaje).toMatch(/Esperá 5 minutos/);
+    expect(res.body.error.mensaje).toMatch(/Espera 5 minutos/);
     expect(res.headers['retry-after']).toBe('300');
   });
 
@@ -329,7 +329,7 @@ describe('Límite de intentos en el login — SPEC-ALE186-016', () => {
     const res = await login({ username: 'nadie', password: 'loquesea' });
 
     expectApiError(res, { status: 429, codigo: 'DEMASIADOS_INTENTOS' });
-    expect(res.body.error.mensaje).toMatch(/Esperá 5 minutos/);
+    expect(res.body.error.mensaje).toMatch(/Espera 5 minutos/);
   });
 
   it('una cuenta dada de baja con su contraseña correcta cuenta como fallo, y también se bloquea', async () => {

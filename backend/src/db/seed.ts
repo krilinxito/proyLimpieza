@@ -44,7 +44,7 @@ export function leerDatos(env: NodeJS.ProcessEnv): Datos {
 
   if (contrasena === '') {
     throw new Error(
-      'Falta SEED_ADMIN_PASSWORD. Elegí la contraseña del administrador y pasala por el ' +
+      'Falta SEED_ADMIN_PASSWORD. Elige la contraseña del administrador y pásala por el ' +
         'entorno; no hay una por defecto a propósito. Por ejemplo:\n' +
         '  SEED_ADMIN_PASSWORD="la-que-elijas" npm run seed --workspace backend',
     );

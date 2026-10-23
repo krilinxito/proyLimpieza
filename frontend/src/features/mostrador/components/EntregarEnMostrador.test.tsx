@@ -119,8 +119,8 @@ describe('Entregar en el Mostrador: el recorrido — SPEC-KRILINXI-009 y SPEC-KR
     fireEvent.click(within(formulario).getByLabelText('No trae la boleta'));
     fireEvent.click(within(formulario).getByRole('button', { name: 'Entregar' }));
 
-    expect(await within(formulario).findByText('Si no trae la boleta, escribí el nombre de quien retira la ropa.')).toBeInTheDocument();
-    expect(within(formulario).getByText('Si no trae la boleta, escribí el carnet de quien retira la ropa.')).toBeInTheDocument();
+    expect(await within(formulario).findByText('Si no trae la boleta, escribe el nombre de quien retira la ropa.')).toBeInTheDocument();
+    expect(within(formulario).getByText('Si no trae la boleta, escribe el carnet de quien retira la ropa.')).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
     escribir(formulario, 'Nombre de quien retira', 'Juan Mamani');
@@ -181,7 +181,7 @@ describe('Entregar en el Mostrador: la dirección vieja — SPEC-KRILINXI-009 y 
   it('/entregar lleva al Mostrador; un ADMIN que no está atendiendo ve cómo empezar (SPEC-KRILINXI-029)', async () => {
     renderEnRuta(<App />, '/entregar', { sesion: sesionDePrueba({ rol: 'ADMIN' }) });
     expect(await screen.findByRole('heading', { name: 'Mostrador', level: 1 })).toBeInTheDocument();
-    expect(screen.getByText(/elegí en qué sucursal vas a atender/)).toBeInTheDocument();
+    expect(screen.getByText(/elige en qué sucursal vas a atender/)).toBeInTheDocument();
   });
 });
 

@@ -10,7 +10,7 @@ import type { DatosRopa, ErroresRopa, ResultadoRegistro, RopaRegistrada } from '
 import { atajosDeFecha } from './atajosDeFecha';
 import { ElegirMetodo } from './ElegirMetodo';
 
-const NO_SE_GUARDO = 'No se pudo guardar la ropa. Probá de nuevo y, si sigue pasando, avisale al encargado.';
+const NO_SE_GUARDO = 'No se pudo guardar la ropa. Prueba de nuevo y, si sigue pasando, avísale al encargado.';
 
 type Props = {
   /** El cliente ya elegido (desde su ficha, en el Mostrador), o null para elegirlo acá. */
@@ -77,7 +77,7 @@ export function FormularioRopa({ clienteInicial, registrar, alRegistrar, alCambi
     evento.preventDefault();
     if (guardando) return;
     if (dejaAdelanto && datos.adelanto.trim() === '') {
-      setErrores({ adelanto: 'Escribí cuánto deja de adelanto, o elegí «No deja adelanto».' });
+      setErrores({ adelanto: 'Escribe cuánto deja de adelanto, o elige «No deja adelanto».' });
       return;
     }
     setGuardando(true);
@@ -117,7 +117,7 @@ export function FormularioRopa({ clienteInicial, registrar, alRegistrar, alCambi
       {ocupadoPor && (
         <div className="mt-4 grid gap-3">
           <Aviso tipo="advertencia">
-            Ese teléfono ya es de {ocupadoPor.nombre}. Si es la misma persona, elegila y guardá la ropa a su nombre.
+            Ese teléfono ya es de {ocupadoPor.nombre}. Si es la misma persona, elígela y guarda la ropa a su nombre.
           </Aviso>
           <Boton
             variante="secundario"

@@ -9,7 +9,7 @@ import { useTamanoDePagina } from './useTamanoDePagina';
  * recién después el de la página 1 (→ SPEC-KRILINXI-016, "reiniciar un estado cuando cambia otro sin
  * useEffect"). La página 3 de a 6 no es la página 3 de a 20, por eso el tamaño también reinicia.
  *
- * `reinicio` se compara por identidad (`===`): pasá un valor primitivo o un objeto estable.
+ * `reinicio` se compara por identidad (`===`): pasa un valor primitivo o un objeto estable.
  */
 export function usePagina(
   reinicio: unknown,

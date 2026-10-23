@@ -5,7 +5,7 @@ import { EnlaceBoton } from '../../../components/EnlaceBoton';
 export function AvisoSoloAdministrador() {
   return (
     <div className="mt-6 grid justify-items-start gap-6">
-      <Aviso tipo="informacion">Esta parte es solo para el administrador. Si necesitás estos datos, pedíselos al encargado.</Aviso>
+      <Aviso tipo="informacion">Esta parte es solo para el administrador. Si necesitas estos datos, pedíselos al encargado.</Aviso>
       <EnlaceBoton a="/" icono="inicio">
         Volver al inicio
       </EnlaceBoton>
