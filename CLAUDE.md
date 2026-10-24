@@ -381,7 +381,14 @@ error de la API, que la pantalla muestra tal cual. Se acabó el voseo: `backend/
 falla si encuentra una forma de su lista. Una forma nueva que se cuele se agrega a esa lista.
 SPEC-KRILINXI-054 pulió tres piezas compartidas: el ingreso tiene un botón **"Mostrar contraseña"** (solo cambia el `type` del campo; nunca se guarda), la `Paginas` de
 todas las listas es **un solo bloque chico** (botones compactos y letra de renglón), y la **cabecera del marco se acomoda en pantalla chica** (<640px) en dos
-filas, con `order` y un corte de renglón que solo existe en angosto, sin cambiar el orden del DOM. Un test de arquitectura vigila que nadie arme su propia barra de páginas.
+filas, con `order` y un corte de renglón que solo existe en angosto, sin cambiar el orden del DOM (**la cabecera ya no se parte en dos filas: ver SPEC-KRILINXI-066**). Un test de arquitectura vigila que nadie arme su propia barra de páginas.
+SPEC-KRILINXI-066 hizo **compactas la cabecera y la paginación en el celular** (<640px; desde `sm` no cambia nada). La cabecera es de **un solo renglón bajo**: el menú, dónde se trabaja ("Administración", "Sucursal Centro"; el nombre "Lavandería" se esconde en el celular porque juntos se pisaban, y
+sin sesión se ve siempre), la conexión (un punto de color más su texto corto, sin ícono) y el círculo de quien atiende. Ese círculo es ahí un botón ("Opciones de Rosa Quispe") que
+abre un panel con **el tema, "Dejar de atender" y Salir** (`components/marco/MenuPerfil.tsx`; la tercera excepción a "un ícono nunca va solo", con su `aria-label`): se cierra con Escape, tocando
+fuera o al cambiar de pantalla, devuelve el foco al círculo y **no se cierra al tocar Salir**, porque su confirmación vive dentro del panel. **Cada pieza existe una sola vez en el DOM**: lo que
+cambia entre celular y pantalla ancha es qué clase la esconde (`hidden` / `sm:contents`), así no se repite para el lector de pantalla y los tests (jsdom no aplica el CSS) la ven siempre; `BarraSesion`
+ya no dibuja el círculo, lo compone `Marco`. Sin sesión el tema sigue suelto en la cabecera. La `Paginas` muestra en el celular **una flecha por botón** (el nombre "Anteriores"/"Siguientes" sigue
+para el lector de pantalla) y el contador "Página N de M" siempre; los botones miden 48px aunque se vean chicos.
 SPEC-KRILINXI-055 **quitó la transferencia como forma de pago**: `metodo_pago` tiene tres valores (EFECTIVO, QR y TARJETA), por la migración
 `005_quitar_transferencia.sql` (recrea el tipo; los cobros que ya eran transferencia pasaron a EFECTIVO con el mismo monto). La API rechaza con 400 una
 transferencia nueva. Las series de los gráficos son tres. Como la línea base de `context/lavanderia_schema.sql` no se edita y sigue diciendo cuatro, los

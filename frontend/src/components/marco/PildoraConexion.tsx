@@ -9,6 +9,9 @@ import { fraseConexion, resumenConexion, type EstadoConexion } from '../textoCon
  * 3 por guardar". Sin internet cambia de color, pero el texto es el que lo dice: el color solo
  * acompaña. Al tocarla se despliega la frase completa de siempre; Escape o tocar fuera la cierran.
  *
+ * Desde SPEC-KRILINXI-066, en un celular es más baja y sin ícono —un punto de color delante del texto—, para que quepa en el
+ * renglón de la cabecera; desde `sm` es la de siempre. El texto, que es lo que lo dice, no cambia.
+ *
  * Va dentro de un `role="status"`: cuando se corta o vuelve la conexión, el lector de pantalla lo
  * anuncia sin interrumpir (como el aviso grande, que el marco muestra solo si hay algo para
  * corregir). Recibe los números por props: quien los saca de la base es `useConexion`.
@@ -50,9 +53,12 @@ export function PildoraConexion(estado: EstadoConexion) {
           aria-expanded={abierta}
           aria-controls={id}
           onClick={() => setAbierta((a) => !a)}
-          className={`inline-flex min-h-12 items-center gap-2 rounded-full border-2 px-4 text-base font-semibold whitespace-nowrap focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-foco ${color}`}
+          className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border-2 px-2.5 text-sm font-semibold sm:min-h-12 sm:gap-2 sm:px-4 sm:text-base whitespace-nowrap focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-foco ${color}`}
         >
-          <Icono nombre={estado.conectado ? 'informacion' : 'advertencia'} tamano="size-5" />
+          <span aria-hidden="true" className="size-2.5 rounded-full bg-current sm:hidden" />
+          <span className="hidden sm:inline-flex">
+            <Icono nombre={estado.conectado ? 'informacion' : 'advertencia'} tamano="size-5" />
+          </span>
           {resumenConexion(estado)}
         </button>
       </div>

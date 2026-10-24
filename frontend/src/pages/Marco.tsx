@@ -2,9 +2,11 @@ import { useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { AvisoConexion } from '../components/AvisoConexion';
 import { Cabecera } from '../components/marco/Cabecera';
+import { Avatar } from '../components/marco/Avatar';
 import { BotonTema } from '../components/marco/BotonTema';
 import { PildoraConexion } from '../components/marco/PildoraConexion';
 import { MenuCompacto } from '../components/marco/MenuCompacto';
+import { MenuPerfil } from '../components/marco/MenuPerfil';
 import { MenuPrincipal } from '../components/marco/MenuPrincipal';
 import { Pie } from '../components/marco/Pie';
 import { SaltarAlContenido } from '../components/marco/SaltarAlContenido';
@@ -72,16 +74,20 @@ export function Marco() {
       <Cabecera
         lugar={lugar}
         menu={usuario && <MenuCompacto destinos={destinos} />}
-        tema={<BotonTema tema={tema} alCambiar={cambiar} />}
+        // Con sesión, el tema va dentro de `acciones` (tras el círculo en un celular, SPEC-KRILINXI-066); sin ella, suelto.
+        tema={!usuario && <BotonTema tema={tema} alCambiar={cambiar} />}
         conexion={usuario && conexion && <PildoraConexion conectado={conexion.conectado} pendientes={conexion.pendientes} />}
         acciones={
           usuario && (
-            <>
-              <div className="order-6 sm:order-none">
-                <DejarDeAtender />
-              </div>
+            <MenuPerfil nombre={usuario.nombreCompleto}>
+              <BotonTema tema={tema} alCambiar={cambiar} />
+              <DejarDeAtender />
+              {/* Desde sm el círculo está a la vista, entre "Dejar de atender" y Salir; en un celular es el botón del panel. */}
+              <span className="hidden sm:inline-flex">
+                <Avatar nombre={usuario.nombreCompleto} />
+              </span>
               <BarraSesion />
-            </>
+            </MenuPerfil>
           )
         }
       />

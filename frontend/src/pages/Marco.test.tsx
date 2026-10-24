@@ -345,13 +345,13 @@ describe('Marco: la conexión en una esquina — SPEC-KRILINXI-031', () => {
     expect(boton.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
   });
 
-  it('en pantalla chica no empuja Salir afuera: el texto es corto, no se parte, y la cabecera pasa a otra línea', async () => {
+  it('en pantalla chica no empuja nada afuera: el texto es corto, no se parte, y la cabecera es de un solo renglón (SPEC-KRILINXI-066)', async () => {
     abrir('/clientes', EMPLEADO, SIN_INTERNET);
     const boton = await cabecera().findByRole('button', { name: /Sin internet/ });
     expect(boton.textContent?.length).toBeLessThanOrEqual(30);
     expect(boton).toHaveClass('whitespace-nowrap');
-    // jsdom no mide: que pase a otra línea en vez de desbordar lo garantiza el `flex-wrap`.
-    expect(screen.getByRole('banner').firstElementChild).toHaveClass('flex-wrap');
+    // jsdom no mide: desde SPEC-KRILINXI-066 no hay segundo renglón (`flex-wrap`); lo que sobra va tras el círculo de quien atiende.
+    expect(screen.getByRole('banner').firstElementChild).not.toHaveClass('flex-wrap');
   });
 
   it('sin nadie adentro no hay píldora: no hay base local que mirar', () => {
@@ -360,25 +360,109 @@ describe('Marco: la conexión en una esquina — SPEC-KRILINXI-031', () => {
   });
 });
 
-describe('Marco: la cabecera en pantalla chica — SPEC-KRILINXI-054', () => {
-  // jsdom no mide el ancho: se comprueba lo que decide el acomodo, que son las clases de la cabecera.
+describe('Marco: la cabecera en pantalla chica — SPEC-KRILINXI-066', () => {
+  // jsdom no mide el ancho ni aplica el CSS: se comprueba lo que decide el acomodo, que son las clases, y que cada pieza
+  // existe una sola vez (si el DOM tuviera una copia para el celular y otra para la pantalla ancha, aparecerían repetidas).
   const cabecera = () => within(screen.getByRole('banner'));
+  const avatar = () => cabecera().getByRole('button', { name: 'Opciones de Rosa Quispe' });
+  const panel = () => document.getElementById(avatar().getAttribute('aria-controls') ?? '') as HTMLElement;
 
-  it('arriba van el menú, el nombre y el tema; abajo, la conexión y Salir, separados por un corte de renglón que solo existe en angosto', async () => {
+  it('es de un solo renglón: sin segundo renglón ni corte, más baja y con el nombre del negocio más chico', async () => {
     abrir('/clientes');
-    const salir = await cabecera().findByRole('button', { name: 'Salir' });
-    const corte = screen.getByRole('banner').querySelector('[data-corte-de-renglon]');
-
-    expect(corte).toHaveClass('basis-full', 'sm:hidden');
-    expect(corte).toHaveAttribute('aria-hidden', 'true');
-    // Salir y la conexión quedan después del corte (order mayor) en angosto, y en su orden natural desde sm.
-    expect(salir.closest('.order-7')).toHaveClass('sm:order-none');
-    expect((await cabecera().findByRole('button', { name: /internet/ })).closest('.order-5')).toHaveClass('sm:order-none');
+    await cabecera().findByText('Sucursal Centro');
+    const fila = screen.getByRole('banner').firstElementChild;
+    expect(fila).not.toHaveClass('flex-wrap');
+    expect(fila).toHaveClass('py-2', 'sm:py-3');
+    expect(screen.getByRole('banner').querySelector('[data-corte-de-renglon]')).toBeNull();
+    // En un celular con sesión el nombre del negocio se esconde (juntos con la sucursal se pisaban); desde sm vuelve.
+    expect(cabecera().getByRole('link', { name: 'Lavandería' })).toHaveClass('hidden', 'sm:block', 'sm:text-2xl');
   });
 
-  it('el nombre de la sucursal se corta con puntos suspensivos en vez de empujar los botones', async () => {
+  it('el nombre de la sucursal va debajo en letra pequeña y se corta con puntos suspensivos en vez de empujar los botones', async () => {
     abrir('/clientes');
-    expect(await cabecera().findByText('Sucursal Centro')).toHaveClass('truncate');
+    expect(await cabecera().findByText('Sucursal Centro')).toHaveClass('truncate', 'text-base', 'font-semibold', 'sm:text-lg');
+  });
+
+  it('el menú y la conexión se achican en el celular y vuelven a su tamaño desde sm', async () => {
+    abrir('/clientes');
+    expect(cabecera().getByRole('button', { name: 'Menú' })).toHaveClass('min-h-11', 'sm:min-h-14');
+    const pildora = await cabecera().findByRole('button', { name: /internet/ });
+    expect(pildora).toHaveClass('min-h-11', 'text-sm', 'sm:min-h-12', 'sm:text-base');
+    // Sigue diciéndolo en palabras: lo único que cambia en angosto es que el ícono se vuelve un punto.
+    expect(pildora).toHaveTextContent('Con internet');
+  });
+
+  it('tras el círculo de quien atiende están el tema y Salir, cerrados en el celular y a la vista desde sm', async () => {
+    abrir('/clientes');
+    await cabecera().findByRole('button', { name: 'Salir' });
+    expect(avatar()).toHaveClass('sm:hidden');
+    expect(avatar()).toHaveAttribute('aria-expanded', 'false');
+    expect(panel()).toHaveClass('hidden', 'sm:contents');
+    expect(panel()).toContainElement(cabecera().getByRole('button', { name: /Tema/ }));
+    expect(panel()).toContainElement(cabecera().getByRole('button', { name: 'Salir' }));
+  });
+
+  it('cada pieza está una sola vez: un solo "Perfil de…", un solo tema y un solo Salir', async () => {
+    abrir('/clientes');
+    await cabecera().findByRole('button', { name: 'Salir' });
+    expect(cabecera().getAllByRole('img', { name: 'Perfil de Rosa Quispe' })).toHaveLength(1);
+    expect(cabecera().getAllByRole('button', { name: /Tema/ })).toHaveLength(1);
+    expect(cabecera().getAllByRole('button', { name: 'Salir' })).toHaveLength(1);
+    // El círculo de la pantalla ancha es el de siempre; el del botón es decorativo (el botón ya dice a quién pertenece).
+    expect(cabecera().getByRole('img', { name: 'Perfil de Rosa Quispe' }).parentElement).toHaveClass('hidden', 'sm:inline-flex');
+  });
+
+  it('el círculo abre el panel: el foco va al primer botón, y el botón dice que está abierto y cuál controla', async () => {
+    abrir('/clientes');
+    await cabecera().findByRole('button', { name: 'Salir' });
+    fireEvent.click(avatar());
+    expect(avatar()).toHaveAttribute('aria-expanded', 'true');
+    expect(panel()).toHaveClass('flex');
+    expect(panel()).not.toHaveClass('hidden');
+    expect(within(panel()).getByRole('button', { name: /Tema/ })).toHaveFocus();
+  });
+
+  it('Escape cierra el panel y el foco vuelve al círculo', async () => {
+    abrir('/clientes');
+    await cabecera().findByRole('button', { name: 'Salir' });
+    fireEvent.click(avatar());
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(avatar()).toHaveAttribute('aria-expanded', 'false');
+    expect(avatar()).toHaveFocus();
+  });
+
+  it('tocar fuera lo cierra, y tocar dentro no', async () => {
+    abrir('/clientes');
+    await cabecera().findByRole('button', { name: 'Salir' });
+    fireEvent.click(avatar());
+    fireEvent.pointerDown(panel());
+    expect(avatar()).toHaveAttribute('aria-expanded', 'true');
+    fireEvent.pointerDown(document.body);
+    expect(avatar()).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('cambiar de pantalla lo cierra', async () => {
+    abrir('/clientes');
+    await cabecera().findByRole('button', { name: 'Salir' });
+    fireEvent.click(avatar());
+    fireEvent.click(within(menu()).getByRole('link', { name: 'Mostrador' }));
+    await waitFor(() => expect(avatar()).toHaveAttribute('aria-expanded', 'false'));
+  });
+
+  it('Salir sigue pidiendo su confirmación desde el panel, y el panel no se cierra debajo de ella', async () => {
+    abrir('/clientes');
+    fireEvent.click(await cabecera().findByRole('button', { name: 'Opciones de Rosa Quispe' }));
+    fireEvent.click(within(panel()).getByRole('button', { name: 'Salir' }));
+    expect(screen.getByRole('dialog', { name: '¿Salir del sistema?' })).toBeInTheDocument();
+    expect(avatar()).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('sin nadie adentro no hay panel: el tema queda suelto en la cabecera', () => {
+    abrir('/ingresar', null);
+    expect(cabecera().queryByRole('button', { name: /Opciones de/ })).not.toBeInTheDocument();
+    expect(cabecera().getByRole('button', { name: /Tema/ })).toBeInTheDocument();
+    // Sin sesión no hay lugar que mostrar: el nombre del negocio se ve en todos los tamaños.
+    expect(cabecera().getByRole('link', { name: 'Lavandería' })).not.toHaveClass('hidden');
   });
 
   it('no esconde nada: la cabecera sigue teniendo el menú, el tema, quién atiende y Salir', async () => {
@@ -386,6 +470,7 @@ describe('Marco: la cabecera en pantalla chica — SPEC-KRILINXI-054', () => {
     await cabecera().findByRole('button', { name: 'Salir' });
     expect(cabecera().getByRole('button', { name: 'Menú' })).toBeInTheDocument();
     expect(cabecera().getByRole('button', { name: /Tema/ })).toBeInTheDocument();
+    expect(cabecera().getByRole('img', { name: 'Perfil de Rosa Quispe' })).toBeInTheDocument();
     expect(cabecera().getByRole('link', { name: 'Lavandería' })).toBeInTheDocument();
   });
 });

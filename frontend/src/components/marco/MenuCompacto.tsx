@@ -17,6 +17,8 @@ const ENFOCABLES = 'a[href], button:not([disabled])';
  *   quedaría en ningún lado y el próximo Tab empezaría desde el principio de la página.
  * - Elegir un destino navega y lo cierra.
  *
+ * Desde SPEC-KRILINXI-066, en un celular el botón es más bajo (44px) y de letra más chica, para el renglón único de la cabecera.
+ *
  * En pantalla ancha no se muestra (`lg:hidden`): ahí el menú es la barra lateral.
  */
 export function MenuCompacto({ destinos }: { destinos: readonly DestinoMenu[] }) {
@@ -63,7 +65,7 @@ export function MenuCompacto({ destinos }: { destinos: readonly DestinoMenu[] })
         aria-expanded={abierto}
         aria-controls={id}
         onClick={() => setAbierto(true)}
-        className="inline-flex min-h-14 items-center gap-2 rounded-xl border-2 border-borde bg-superficie px-4 text-xl font-semibold text-texto focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-foco"
+        className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border-2 border-borde bg-superficie px-3 text-base font-semibold text-texto sm:min-h-14 sm:gap-2 sm:px-4 sm:text-xl focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-foco"
       >
         <Icono nombre="menu" />
         Menú

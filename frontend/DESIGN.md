@@ -254,13 +254,13 @@ Las tres series de los gráficos y los cuatro matices de las tarjetas no cambian
 
 **Una columna de contenido, centrada y angosta** (`max-w-3xl`, 48rem), con 16px de margen a los costados (24px desde 1024px). Las pantallas son listas y tarjetas apiladas: nunca tablas anchas.
 
-**El marco** envuelve todas las pantallas: una cabecera fija arriba (`sticky`) con el nombre del negocio, dónde se está trabajando, la conexión, el tema y quién atiende con Salir; un pie chico abajo (solo sucursal y versión, cada centímetro de alto es pantalla útil); y el menú. Desde **1024px** el menú es una barra lateral de 288px (`w-72`); por debajo, un botón "Menú" que abre un cajón.
+**El marco** envuelve todas las pantallas: una cabecera fija arriba (`sticky`) con el nombre del negocio, dónde se está trabajando, la conexión, el tema y quién atiende con Salir (en un celular, de **un solo renglón**: el tema, "Dejar de atender" y Salir se abren tras el círculo de quien atiende); un pie chico abajo (solo sucursal y versión, cada centímetro de alto es pantalla útil); y el menú. Desde **1024px** el menú es una barra lateral de 288px (`w-72`); por debajo, un botón "Menú" que abre un cajón.
 
 **Cortes:** solo dos, los de Tailwind: `sm` (640px) y `lg` (1024px). En angosto, una columna; desde `lg`, las grillas pasan a dos (Personal y Sucursales). **Las tarjetas del dashboard de estadísticas van siempre en una sola columna**, una debajo de otra y del mismo ancho (SPEC-KRILINXI-065); cada tarjeta con gráfico lleva un botón "Agrandar" que abre el gráfico en un diálogo grande (`max-w-4xl`), con el detalle del dato a un lado, la tabla a la vista y, en los gráficos por día, el rango de fechas.
 
 **Ritmo:** lo que va junto se separa 8 a 12px (`gap-2`, `gap-3`); las tarjetas de una lista, 12 a 16px; las secciones, 24 a 32px. Cada tarjeta respira con 16 a 24px por dentro.
 
-**Listas largas:** siempre paginadas, con la barra en un solo bloque compacto ("Anteriores · Página 2 de 3 · Siguientes"), con 6, 10 o 20 elementos según el ancho de la pantalla. El buscador completa la paginación, no la reemplaza.
+**Listas largas:** siempre paginadas, con la barra en un solo bloque compacto ("Anteriores · Página 2 de 3 · Siguientes"; en un celular, una flecha por botón y el contador a la vista), con 6, 10 o 20 elementos según el ancho de la pantalla. El buscador completa la paginación, no la reemplaza.
 
 ## Elevation & Depth
 
