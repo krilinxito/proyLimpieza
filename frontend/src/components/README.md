@@ -57,7 +57,7 @@ mensajes de error y las confirmaciones, nunca (CLAUDE.md §9).
 ## Las listas largas se paginan (SPEC-KRILINXI-041)
 
 Ninguna lista que pueda crecer se muestra de golpe, en ninguna pantalla: se parte en páginas con
-`Paginas` ("Anteriores · Página 2 de 3 · Siguientes", todo en un solo bloque chico con botones compactos, SPEC-KRILINXI-054; se ve siempre que haya algo, también "Página 1 de 1", y no con la lista vacía). Cuántas filas
+`Paginas` ("Anteriores · Página 2 de 3 · Siguientes", todo en un solo bloque chico con botones compactos, SPEC-KRILINXI-054; se ve siempre que haya algo, también "Página 1 de 1", y no con la lista vacía; en un celular, los botones son una flecha sin palabras visibles —el nombre accesible no cambia—, SPEC-KRILINXI-066). Cuántas filas
 entran depende del ancho del dispositivo (6 en angosta, 10 en mediana, 20 en ancha) y se decide en un solo
 lugar, `lib/tamanoDePagina.ts`:
 

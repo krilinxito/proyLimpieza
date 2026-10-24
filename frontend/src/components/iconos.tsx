@@ -11,7 +11,7 @@ import type { ReactElement } from 'react';
  * Por eso son siempre decorativos (`aria-hidden`): el que dice qué es cada cosa es el texto de
  * al lado, y para un lector de pantalla el ícono no existe.
  *
- * Las excepciones son el tema (`sol`, `luna`, SPEC-KRILINXI-030) y la flecha de volver de `BotonAtras` (SPEC-KRILINXI-057): un botón discreto en la
+ * Las excepciones son el tema (`sol`, `luna`, SPEC-KRILINXI-030), la flecha de volver de `BotonAtras` (SPEC-KRILINXI-057) y el círculo de quien atiende que abre el panel de la cabecera en un celular (`MenuPerfil`, SPEC-KRILINXI-066): un botón discreto en la
  * cabecera, sin texto visible. Su nombre va en `aria-label` y en `title` (lo dice al pasar el
  * mouse); el ícono sigue siendo decorativo.
  */
