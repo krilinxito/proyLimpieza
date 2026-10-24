@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { cspEnElBuild } from './src/pwa/csp';
+import { leerDireccionPublica, previewDeLaDemo } from './src/pwa/demo';
 import paquete from './package.json' with { type: 'json' };
 
 // Los WASM del SQLite de PowerSync pesan hasta 2,5 MB, y Workbox por defecto no guarda nada
@@ -60,6 +61,11 @@ export default defineConfig({
       },
     }),
   ],
+  // La demo para el cliente (SPEC-KRILINXI-064): `npm run demo` pone DEMO_URL_PUBLICA, y el servidor de la app
+  // compilada reparte /api y /powersync detrás de una sola dirección. Sin la variable, `vite preview` es el de siempre.
+  preview: process.env.DEMO_URL_PUBLICA
+    ? { port: 4173, strictPort: true, ...previewDeLaDemo(leerDireccionPublica(process.env.DEMO_URL_PUBLICA)) }
+    : {},
   server: {
     // Fijo y estricto: CLAUDE.md documenta el 5173, y con strictPort Vite falla en vez
     // de saltar a otro puerto en silencio y dejar el .env apuntando al sitio equivocado.
