@@ -83,12 +83,15 @@ CSP de la demo con las del build normal y corre el script (sin dirección → fa
 `backend/tests/http/seguridad.test.ts` suma los dos casos de CORS. Además se compiló a mano con las variables de la demo y se leyó el
 `<meta>` de la CSP en `dist/index.html`.
 
-## Pendiente de probar a mano (criterio 7 de la spec)
+## Prueba a mano con ngrok real (criterio 7)
 
-Con ngrok de verdad hay que comprobar y anotar aquí: que la app abre por la dirección pública; entrar, registrar ropa, cobrar y entregar;
-que sincroniza (**la sincronización de PowerSync por HTTP en streaming atraviesa el túnel**: es el riesgo principal); que tras la primera visita
-abre sin internet; que **la página de aviso del plan gratuito** no rompe ningún pedido de la app (los `fetch` no la ven, pero hay que mirarlo);
-y **cuántos túneles permite el plan** que se tenga. Hasta entonces esa casilla de la spec no se puede dar por cumplida.
+El 2026-10-23 krilinxito abrió la demo por la dirección pública de ngrok desde su celular y dio el resultado por bueno. Su observación: quedan
+detalles **visuales** por corregir, que van en otra spec (`SPEC-KRILINXI-065`), no en esta.
+
+**Lo que NO quedó registrado**, porque no se detalló en la prueba: el paso a paso de registrar ropa, cobrar y entregar; si la sincronización de
+PowerSync atravesó el túnel entre dos dispositivos (el riesgo principal); si abrió sin internet tras la primera visita; si la página de aviso
+del plan gratuito molestó algún pedido; y cuántos túneles permite el plan. Quien repita la prueba antes de una demo importante debería revisar
+esos puntos.
 
 ## Si mañana tienes que tocar esto
 

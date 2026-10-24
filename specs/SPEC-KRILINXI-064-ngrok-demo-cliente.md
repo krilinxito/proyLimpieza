@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-064
 name: Demo para el cliente con un solo túnel de ngrok
 slug: ngrok-demo-cliente
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-23
 scope:
@@ -15,7 +15,11 @@ scope:
   - frontend/src/lib/env.ts
 priority: high
 depends_on: []
-tests: []
+tests:
+  - backend\tests\http\seguridad.test.ts
+  - frontend\src\lib\api.test.ts
+  - frontend\src\lib\env.test.ts
+  - frontend\src\pwa\demo.test.ts
 ---
 
 ## Descripción
