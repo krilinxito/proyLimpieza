@@ -21,7 +21,7 @@ import { SeccionPanel } from './SeccionPanel';
 export function SeccionFormasDePago({ ingresos, periodo }: { ingresos: Ingresos; periodo: string }) {
   const totales = totalesPorFormaDePago(ingresos);
   return (
-    <SeccionPanel nombre="Cobrado por forma de pago" pregunta="¿Cuánto se cobró con cada forma de pago?" periodo={periodo}>
+    <SeccionPanel nombre="Cobrado por forma de pago" pregunta="¿Cuánto se cobró con cada forma de pago?" periodo={periodo} ampliable={hayDatos(totales.map((t) => t.total))}>
       <p className="mt-2 text-3xl font-bold text-texto">{bs(ingresos.total)}</p>
       <Grafico
         nombre="Cobrado con cada forma de pago"

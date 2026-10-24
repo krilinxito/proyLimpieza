@@ -31,7 +31,12 @@ export function SeccionClientes({ filtro, periodo }: { filtro: Filtro; periodo: 
   const { estado, recargar, pagina, irAPagina } = useClientesAtendidos(filtro);
 
   return (
-    <SeccionPanel nombre="Clientes atendidos" pregunta="¿Quiénes son los clientes que más vienen?" periodo={periodo}>
+    <SeccionPanel
+      nombre="Clientes atendidos"
+      pregunta="¿Quiénes son los clientes que más vienen?"
+      periodo={periodo}
+      ampliable={estado.tipo === 'listo' && estado.datos.clientes.length > 0}
+    >
       {estado.tipo === 'cargando' && <Esqueleto texto="Buscando los clientes…" />}
 
       {(estado.tipo === 'sin-conexion' || estado.tipo === 'error') && <AvisoDeTarjeta estado={estado} recargar={recargar} />}

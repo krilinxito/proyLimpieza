@@ -1,5 +1,8 @@
-import type { ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
+import { estiloBoton } from '../../../components/estilosBoton';
+import { Icono } from '../../../components/iconos';
 import { Tarjeta } from '../../../components/Tarjeta';
+import { VistaGrande } from './VistaGrande';
 
 /**
  * Una tarjeta del dashboard — SPEC-KRILINXI-026, y desde SPEC-KRILINXI-042 la de un gráfico que
@@ -11,32 +14,66 @@ import { Tarjeta } from '../../../components/Tarjeta';
  * mira ("De hoy"), debajo. Por eso no se usa el `titulo` de `Tarjeta`: nombraría la región con la
  * pregunta y el período, y la haría cambiar de nombre al elegir fechas.
  *
- * Es una celda de la grilla del tablero (`PantallaEstadisticas`): ocupa su lugar y se estira al
- * alto de la de al lado. `entera` la lleva a todo el ancho desde 1024px, para lo que necesita
- * espacio de largo (los treinta días de ropa recibida).
+ * Desde SPEC-KRILINXI-065 las tarjetas van **una debajo de otra, siempre del mismo ancho** (ya no hay dos columnas ni
+ * una que ocupe la fila entera), y la que tiene un gráfico (`ampliable`) lleva el botón "Agrandar": abre `VistaGrande`
+ * con **los mismos hijos** dibujados en grande. Al cerrarla, el foco vuelve a este botón. Un `ampliable` en `false` es
+ * una tarjeta sin gráfico que mostrar (cargando, con un aviso o sin datos): agrandar nada no sirve.
  */
 export function SeccionPanel({
   nombre,
   pregunta,
   periodo,
-  entera = false,
+  ampliable = false,
   children,
 }: {
   nombre: string;
   pregunta: string;
   periodo: string;
-  entera?: boolean;
+  ampliable?: boolean;
   children: ReactNode;
 }) {
+  const [grande, setGrande] = useState(false);
+  // Un `<button>` propio y no `Boton`: hay que devolverle el foco al cerrar, y `Boton` no entrega su elemento.
+  const agrandar = useRef<HTMLButtonElement>(null);
+
+  function cerrar() {
+    setGrande(false);
+    agrandar.current?.focus();
+  }
+
   // `grid-cols-1` y `min-w-0`: una columna que puede ENCOGERSE. Un `grid` sin columnas definidas deja que su
-  // contenido ensanche la tarjeta, y en una pantalla media (dos columnas con el menú al costado) pisaba a la vecina.
+  // contenido ensanche la tarjeta, y en una pantalla media (con el menú al costado) pisaba a la vecina.
   return (
-    <section aria-label={nombre} className={`grid min-w-0 grid-cols-1 ${entera ? 'lg:col-span-2' : ''}`}>
+    <section aria-label={nombre} className="grid min-w-0 grid-cols-1">
       <Tarjeta>
-        <h2 className="text-2xl font-bold text-texto">{pregunta}</h2>
-        <p className="mt-1 text-lg text-texto-suave">{periodo}</p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-2xl font-bold text-texto">{pregunta}</h2>
+            <p className="mt-1 text-lg text-texto-suave">{periodo}</p>
+          </div>
+          {ampliable && (
+            <button
+              ref={agrandar}
+              type="button"
+              aria-haspopup="dialog"
+              onClick={() => setGrande(true)}
+              className={estiloBoton('secundario', 'compacto')}
+            >
+              <Icono nombre="agrandar" />
+              {/* El nombre accesible dice cuál gráfico: "Agrandar: Cobrado por día". */}
+              <span>
+                Agrandar<span className="sr-only">: {nombre}</span>
+              </span>
+            </button>
+          )}
+        </div>
         {children}
       </Tarjeta>
+      {grande && (
+        <VistaGrande nombre={nombre} pregunta={pregunta} periodo={periodo} alCerrar={cerrar}>
+          {children}
+        </VistaGrande>
+      )}
     </section>
   );
 }

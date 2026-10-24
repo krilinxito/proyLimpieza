@@ -15,7 +15,7 @@ import { SeccionPanel } from './SeccionPanel';
 export function SeccionSaldos({ saldos, periodo }: { saldos: Saldos; periodo: string }) {
   const paginas = usePaginado(saldos.ordenes, saldos);
   return (
-    <SeccionPanel nombre="Falta cobrar" pregunta="¿Cuánto falta cobrar, y desde hace cuánto?" periodo={periodo}>
+    <SeccionPanel nombre="Falta cobrar" pregunta="¿Cuánto falta cobrar, y desde hace cuánto?" periodo={periodo} ampliable={saldos.porAntiguedad.some((t) => t.cantidad > 0)}>
       <p className="mt-2 text-3xl font-bold text-texto">{bs(saldos.total)}</p>
       <Antiguedad nombre="Falta cobrar según los días" tramos={saldos.porAntiguedad} queFalta="sin cobrar" paleta="deuda" />
       {saldos.ordenes.length === 0 ? (

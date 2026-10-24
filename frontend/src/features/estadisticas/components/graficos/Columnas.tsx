@@ -2,6 +2,7 @@ import { Bar, BarChart, Cell, LabelList, ResponsiveContainer, Tooltip, XAxis, YA
 import { animar } from './animacion';
 import type { Color } from './colores';
 import { DetalleFlotante } from './DetalleFlotante';
+import { useGrande } from './grande';
 import { indiceDelMayor, rotulosDelEje } from './escalas';
 
 export type Columna = {
@@ -23,6 +24,8 @@ type Props = {
 };
 
 const ALTO = 192;
+/** Desde SPEC-KRILINXI-065, en la vista grande el dibujo es más alto. */
+const ALTO_GRANDE = 360;
 
 /**
  * Columnas a lo largo del tiempo — SPEC-KRILINXI-026, dibujadas con Recharts desde SPEC-KRILINXI-063: una por día,
@@ -40,10 +43,11 @@ export function Columnas({ columnas, elegir, seleccionado = null, color }: Props
   const mayor = indiceDelMayor(columnas.map((c) => c.valor));
   const rotulos = rotulosDelEje(columnas.length);
   const animada = animar();
+  const alto = useGrande() ? ALTO_GRANDE : ALTO;
 
   return (
     <div className={`mt-4 ${color.trazo}`}>
-      <ResponsiveContainer width="100%" height={ALTO} initialDimension={{ width: 640, height: ALTO }}>
+      <ResponsiveContainer width="100%" height={alto} initialDimension={{ width: 640, height: alto }}>
         <BarChart
           data={[...columnas]}
           margin={{ top: 28, right: 24, bottom: 0, left: 24 }}

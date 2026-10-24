@@ -1,6 +1,7 @@
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { animar } from './animacion';
 import { DetalleFlotante } from './DetalleFlotante';
+import { useGrande } from './grande';
 import { rotulosDelEje } from './escalas';
 
 /** Una línea del gráfico: un valor por día, en el mismo orden que `dias`. */
@@ -30,6 +31,8 @@ type Props = {
 };
 
 const ALTO = 192;
+/** Desde SPEC-KRILINXI-065, en la vista grande el dibujo es más alto. */
+const ALTO_GRANDE = 360;
 const RADIO_DEL_PUNTO = 4;
 const GROSOR_DE_LA_LINEA = 3;
 
@@ -47,6 +50,7 @@ const GROSOR_DE_LA_LINEA = 3;
 export function Lineas({ series, dias, maximo, elegir }: Props) {
   const rotulos = rotulosDelEje(dias.length);
   const animada = animar();
+  const alto = useGrande() ? ALTO_GRANDE : ALTO;
   const filas = dias.map((dia, i) => ({
     ...dia,
     ...Object.fromEntries(series.map((serie) => [serie.clave, serie.valores[i] ?? 0])),
@@ -54,7 +58,7 @@ export function Lineas({ series, dias, maximo, elegir }: Props) {
 
   return (
     <div className="mt-4">
-      <ResponsiveContainer width="100%" height={ALTO} initialDimension={{ width: 640, height: ALTO }}>
+      <ResponsiveContainer width="100%" height={alto} initialDimension={{ width: 640, height: alto }}>
         <LineChart
           data={filas}
           margin={{ top: 12, right: 24, bottom: 0, left: 24 }}

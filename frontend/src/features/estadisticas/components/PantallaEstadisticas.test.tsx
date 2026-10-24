@@ -594,34 +594,22 @@ describe('El panel como dashboard — SPEC-KRILINXI-042', () => {
   ] as const;
   const TARJETAS = [...A_LA_VISTA, ...PLEGADAS];
 
-  it('debajo de los indicadores hay una grilla de tarjetas: una por fila en angosta y dos desde 1024px', async () => {
+  it('debajo de los indicadores hay una grilla de tarjetas, en una sola columna (SPEC-KRILINXI-065)', async () => {
     simularEstadisticas();
     await abrirPanel();
     const primera = await screen.findByRole('region', { name: 'Cobrado por forma de pago' });
 
     const grilla = primera.parentElement as HTMLElement;
-    // `lg:grid-cols-2` es desde 1024px; sin prefijo, una sola columna.
-    expect(grilla).toHaveClass('grid', 'grid-cols-1', 'gap-6', 'lg:grid-cols-2');
-    expect(grilla).not.toHaveClass('grid-cols-2');
+    // Desde SPEC-KRILINXI-065 no hay dos columnas en ningún ancho: una tarjeta debajo de otra.
+    expect(grilla).toHaveClass('grid', 'grid-cols-1', 'gap-6');
+    expect(grilla.className).not.toMatch(/lg:grid-cols/);
     // Desde SPEC-KRILINXI-050 las de a la vista son tres, hijas de la misma grilla y después de los indicadores;
     // las otras cinco están en otra grilla igual, dentro de "Ver más estadísticas".
     expect([...grilla.children].map((c) => c.getAttribute('aria-label'))).toEqual(A_LA_VISTA.map((t) => t.region));
     expect(seccion('Resumen').compareDocumentPosition(grilla)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     const plegadas = seccion('Cobrado por sucursal').parentElement as HTMLElement;
-    expect(plegadas).toHaveClass('grid', 'grid-cols-1', 'gap-6', 'lg:grid-cols-2');
+    expect(plegadas).toHaveClass('grid', 'grid-cols-1', 'gap-6');
     expect([...plegadas.children].map((c) => c.getAttribute('aria-label'))).toEqual(PLEGADAS.map((t) => t.region));
-  });
-
-  it('lo que necesita ancho (la caja y la ropa de treinta días) ocupa la fila entera; las demás, una celda', async () => {
-    simularEstadisticas();
-    await abrirPanel();
-    await screen.findByRole('region', { name: 'Cobrado por forma de pago' });
-
-    const anchas = ['Ropa recibida', 'Cobrado por día'];
-    for (const region of anchas) expect(seccion(region)).toHaveClass('lg:col-span-2');
-    for (const { region } of TARJETAS.filter((t) => !anchas.includes(t.region))) {
-      expect(seccion(region)).not.toHaveClass('lg:col-span-2');
-    }
   });
 
   it.each(TARJETAS)('"$pregunta" tiene su título en palabras, su gráfico con nombre y su tabla para el lector de pantalla', async ({ region, pregunta, grafico }) => {
@@ -1093,5 +1081,381 @@ describe('El tablero con una pregunta principal y el resto a pedido — SPEC-KRI
 
     expect(within(estado).getByText('Buscando algo…')).toHaveClass('sr-only');
     expect(estado.querySelector('[aria-hidden="true"]')).toHaveClass('h-64');
+  });
+});
+
+describe('Estadísticas en una sola columna y con vista grande — SPEC-KRILINXI-065', () => {
+  // Las ocho tarjetas con gráfico: la región, su pregunta y el nombre de su gráfico.
+  const GRANDES = [
+    { region: 'Cobrado por día', pregunta: '¿Cómo vino la caja día a día?' },
+    { region: 'Cobrado por forma de pago', pregunta: '¿Cuánto se cobró con cada forma de pago?' },
+    { region: 'Falta cobrar', pregunta: '¿Cuánto falta cobrar, y desde hace cuánto?' },
+    { region: 'Cobrado por sucursal', pregunta: '¿Cuánto se cobró en cada sucursal?' },
+    { region: 'Ropa recibida', pregunta: '¿Cuánta ropa entró cada día?' },
+    { region: 'Ropa sin recoger', pregunta: '¿Cuánta ropa falta recoger, y desde hace cuánto?' },
+    { region: 'Lo que hizo cada persona', pregunta: '¿Cuánto atendió cada persona?' },
+    { region: 'Clientes atendidos', pregunta: '¿Quiénes son los clientes que más vienen?' },
+  ] as const;
+
+  /** Toca "Agrandar" de una tarjeta y devuelve el botón y el diálogo que se abrió. */
+  async function agrandar(region: string) {
+    const boton = await within(seccion(region)).findByRole('button', { name: `Agrandar: ${region}` });
+    fireEvent.click(boton);
+    return { boton, dialogo: screen.getByRole('dialog', { name: region }) };
+  }
+
+  it('todas las tarjetas van en una sola columna, una debajo de otra y del mismo ancho: sin dos columnas ni fila entera', async () => {
+    simularEstadisticas();
+    await abrirPanel();
+    for (const { region } of GRANDES) await screen.findByRole('region', { name: region });
+
+    // Las dos grillas (las tres a la vista y las cinco de "Ver más"): ninguna regla de más de una columna.
+    for (const grilla of new Set(GRANDES.map(({ region }) => seccion(region).parentElement as HTMLElement))) {
+      expect(grilla).toHaveClass('grid', 'grid-cols-1', 'gap-6');
+      expect(grilla.className).not.toMatch(/lg:grid-cols|\bcol-span/);
+    }
+    // Y ninguna tarjeta pide ocupar la fila entera.
+    for (const { region } of GRANDES) expect(seccion(region).className).not.toMatch(/col-span/);
+    expect([...(seccion('Cobrado por día').parentElement as HTMLElement).children].map((c) => c.getAttribute('aria-label'))).toEqual([
+      'Cobrado por día',
+      'Cobrado por forma de pago',
+      'Falta cobrar',
+    ]);
+  });
+
+  it.each(GRANDES)('"$region" tiene su botón "Agrandar", con ícono y el nombre del gráfico', async ({ region }) => {
+    simularEstadisticas();
+    await abrirPanel();
+    const boton = await within(seccion(region)).findByRole('button', { name: `Agrandar: ${region}` });
+
+    expect(boton).toHaveTextContent('Agrandar');
+    expect(boton.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(boton).toHaveAttribute('aria-haspopup', 'dialog');
+    sinJerga();
+  });
+
+  it('sin nada que dibujar no ofrece agrandar: una tarjeta vacía no tiene qué mostrar en grande', async () => {
+    simularEstadisticas({ volumen: { status: 200, data: volumenDeDias(3, () => 0) } });
+    await abrirPanel();
+    await screen.findByRole('region', { name: 'Ropa recibida' });
+
+    expect(within(seccion('Ropa recibida')).queryByRole('button', { name: /Agrandar/ })).not.toBeInTheDocument();
+  });
+
+  it('"Agrandar" abre un diálogo con el nombre del gráfico y su pregunta, que no ocupa toda la pantalla', async () => {
+    simularEstadisticas();
+    await abrirPanel();
+    const { dialogo } = await agrandar('Cobrado por día');
+
+    expect(dialogo).toHaveAttribute('aria-modal', 'true');
+    expect(within(dialogo).getByRole('heading', { name: '¿Cómo vino la caja día a día?', level: 2 })).toBeInTheDocument();
+    expect(within(dialogo).getByRole('figure', { name: 'Cobrado por día' })).toBeInTheDocument();
+    // `max-w-4xl` y un margen alrededor: es un cuadro sobre el tablero, no la pantalla entera.
+    expect(dialogo).toHaveClass('max-w-4xl');
+    expect(dialogo.parentElement).toHaveClass('p-3', 'sm:p-4');
+    sinJerga();
+  });
+
+  it('el gráfico de la vista grande es más alto que el de la tarjeta', async () => {
+    simularEstadisticas();
+    await abrirPanel();
+    const { dialogo } = await agrandar('Ropa recibida');
+    const alto = (contenedor: HTMLElement) => contenedor.querySelector('.recharts-responsive-container')?.getAttribute('style') ?? '';
+
+    expect(alto(dialogo)).toContain('360px');
+    expect(alto(seccion('Ropa recibida'))).toContain('192px');
+  });
+
+  it('se cierra con "Cerrar", con Escape y tocando fuera, y el foco vuelve al botón que lo abrió', async () => {
+    simularEstadisticas();
+    await abrirPanel();
+
+    let abierto = await agrandar('Cobrado por día');
+    fireEvent.click(within(abierto.dialogo).getByRole('button', { name: 'Cerrar' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(abierto.boton).toHaveFocus();
+
+    abierto = await agrandar('Cobrado por día');
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(abierto.boton).toHaveFocus();
+
+    abierto = await agrandar('Cobrado por día');
+    // Tocar dentro del cuadro no lo cierra; el fondo, sí.
+    fireEvent.click(abierto.dialogo);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    fireEvent.click(abierto.dialogo.parentElement as HTMLElement);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(abierto.boton).toHaveFocus();
+  });
+
+  it('mientras está abierto, el foco empieza en "Cerrar" y Tab no se escapa del diálogo', async () => {
+    simularEstadisticas();
+    await abrirPanel();
+    const { dialogo } = await agrandar('Cobrado por día');
+    expect(within(dialogo).getByRole('button', { name: 'Cerrar' })).toHaveFocus();
+
+    const enfocables = [...dialogo.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex="0"]')];
+    const primero = enfocables[0];
+    const ultimo = enfocables.at(-1);
+    if (!primero || !ultimo) throw new Error('el diálogo tiene que tener qué enfocar');
+    ultimo.focus();
+    fireEvent.keyDown(ultimo, { key: 'Tab' });
+    expect(primero).toHaveFocus();
+    fireEvent.keyDown(primero, { key: 'Tab', shiftKey: true });
+    expect(ultimo).toHaveFocus();
+  });
+
+  it('usa los mismos datos que la tarjeta: abrirla no hace ningún pedido a la API', async () => {
+    const servidor = simularEstadisticas();
+    await abrirPanel();
+    for (const { region } of GRANDES) await within(seccion(region)).findByRole('button', { name: `Agrandar: ${region}` });
+    const antes = servidor.pedidos.length;
+
+    for (const { region } of GRANDES) {
+      const { dialogo } = await agrandar(region);
+      expect(within(dialogo).getByRole('figure')).toBeInTheDocument();
+      fireEvent.keyDown(document, { key: 'Escape' });
+    }
+    expect(servidor.pedidos).toHaveLength(antes);
+  });
+
+  it('en grande, "Ver el detalle" (las listas) no se repite: ahí está la tabla', async () => {
+    simularEstadisticas();
+    await abrirPanel();
+    const { dialogo } = await agrandar('Falta cobrar');
+
+    expect(within(dialogo).queryByText('Ver el detalle')).not.toBeInTheDocument();
+    expect(within(seccion('Falta cobrar')).getByText('Ver el detalle')).toBeInTheDocument();
+  });
+
+  describe('la caja día a día, por forma de pago', () => {
+    /** La tarjeta en "Por forma de pago", y su vista grande abierta. */
+    async function enGrande() {
+      simularEstadisticas();
+      await abrirPanel();
+      fireEvent.click(await within(seccion('Cobrado por día')).findByRole('radio', { name: 'Por forma de pago' }));
+      return agrandar('Cobrado por día');
+    }
+    const lineas = (dialogo: HTMLElement) => dialogo.querySelectorAll('.recharts-line');
+
+    it('la leyenda apaga y prende cada forma de pago, y lo dice en palabras', async () => {
+      const { dialogo } = await enGrande();
+      const leyenda = within(dialogo).getByRole('list', { name: 'Formas de pago' });
+      const efectivo = within(leyenda).getByRole('button', { name: 'Efectivo' });
+      expect(efectivo).toHaveAttribute('aria-pressed', 'true');
+      expect(lineas(dialogo)).toHaveLength(3);
+
+      fireEvent.click(efectivo);
+      // Apagada: lo dice el texto y no solo el color, y su línea deja de dibujarse (quedan las otras dos).
+      const apagada = within(leyenda).getByRole('button', { name: 'Efectivo (apagada)' });
+      expect(apagada).toHaveAttribute('aria-pressed', 'false');
+      await waitFor(() => expect(lineas(dialogo)).toHaveLength(2));
+      expect([...lineas(dialogo)].map((l) => [...l.classList].find((c) => c.startsWith('text-')))).toEqual(['text-serie-2', 'text-serie-3']);
+
+      fireEvent.click(apagada);
+      expect(within(leyenda).getByRole('button', { name: 'Efectivo' })).toHaveAttribute('aria-pressed', 'true');
+      await waitFor(() => expect(lineas(dialogo)).toHaveLength(3));
+    });
+
+    it('se maneja con el teclado: es un botón que se enfoca y se activa con Enter o Espacio', async () => {
+      const { dialogo } = await enGrande();
+      const qr = within(dialogo).getByRole('button', { name: 'Pago con QR' });
+      expect(qr.tagName).toBe('BUTTON');
+      expect(qr).toHaveClass('min-h-12');
+      act(() => qr.focus());
+      expect(qr).toHaveFocus();
+    });
+
+    it('la leyenda de la tarjeta sigue siendo una lista sin botones: apagar series es solo de la vista grande', async () => {
+      const { dialogo } = await enGrande();
+      fireEvent.click(within(dialogo).getByRole('button', { name: 'Cerrar' }));
+      const leyenda = within(seccion('Cobrado por día')).getByRole('list', { name: 'Formas de pago' });
+      expect(within(leyenda).queryAllByRole('button')).toHaveLength(0);
+    });
+
+    it('en la vista grande el "¿Cómo verlo?" sigue funcionando y no pisa al de la tarjeta', async () => {
+      const { dialogo } = await enGrande();
+      const radios = within(dialogo).getAllByRole('radio');
+      const delGrupoDeLaTarjeta = within(seccion('Cobrado por día')).getAllByRole('radio');
+      expect(new Set([...radios, ...delGrupoDeLaTarjeta].map((r) => r.getAttribute('name'))).size).toBe(2);
+
+      fireEvent.click(within(dialogo).getByRole('radio', { name: 'El total' }));
+      await waitFor(() => expect(lineas(dialogo)).toHaveLength(1));
+    });
+  });
+
+  describe('el desglose del dato elegido', () => {
+    it('al elegir un día de la caja, un panel lo lista en palabras, también las formas de pago en cero, en una región aria-live', async () => {
+      simularEstadisticas();
+      await abrirPanel();
+      const { dialogo } = await agrandar('Cobrado por día');
+      const figura = within(dialogo).getByRole('figure', { name: 'Cobrado por día' });
+      expect(within(figura).getByText('Toca un día para ver cuánto se cobró y con qué.')).toBeInTheDocument();
+
+      const superficie = figura.querySelector('svg[role="application"]') as SVGElement;
+      act(() => superficie.focus());
+      fireEvent.keyDown(superficie, { key: 'ArrowRight' });
+
+      const panel = within(figura).getByRole('heading', { name: 'Detalle', level: 3 }).parentElement as HTMLElement;
+      const viva = panel.querySelector('[aria-live]') as HTMLElement;
+      expect(within(viva).getByText('15/10/2026: Bs 125,50. Efectivo Bs 100,00, Pago con QR Bs 25,50.')).toBeInTheDocument();
+      expect(within(viva).getAllByRole('listitem').map((li) => li.textContent)).toEqual([
+        'Total: Bs 125,50',
+        'Efectivo: Bs 100,00',
+        'Pago con QR: Bs 25,50',
+        'Tarjeta: Bs 0,00',
+      ]);
+      // Una sola región `aria-live` por gráfico.
+      expect(figura.querySelectorAll('[aria-live]')).toHaveLength(1);
+    });
+
+    it('en la ropa recibida el desglose dice cuántas boletas entraron y cuántas se anularon', async () => {
+      simularEstadisticas();
+      await abrirPanel();
+      const { dialogo } = await agrandar('Ropa recibida');
+      const figura = within(dialogo).getByRole('figure', { name: 'Ropa recibida por día' });
+
+      const superficie = figura.querySelector('svg[role="application"]') as SVGElement;
+      act(() => superficie.focus());
+      fireEvent.keyDown(superficie, { key: 'ArrowRight' });
+
+      const viva = figura.querySelector('[aria-live]') as HTMLElement;
+      expect(within(viva).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Ropa recibida: 4 boletas', 'Anuladas: 1', 'Siguen en pie: 3 boletas']);
+    });
+
+    it('una barra (la sucursal) desglosa lo cobrado de cada forma de pago', async () => {
+      simularEstadisticas();
+      await abrirPanel();
+      const { dialogo } = await agrandar('Cobrado por sucursal');
+
+      fireEvent.click(within(dialogo).getByRole('button', { name: /^Centro:/ }));
+      const viva = dialogo.querySelector('figure [aria-live]') as HTMLElement;
+      expect(within(viva).getAllByRole('listitem')[0]).toHaveTextContent('Total: Bs 125,50');
+      expect(within(viva).getAllByRole('listitem')).toHaveLength(4);
+    });
+
+    it('en la tarjeta (sin vista grande) no hay panel de desglose: solo el texto de siempre', async () => {
+      simularEstadisticas();
+      await abrirPanel();
+      const figura = within(seccion('Cobrado por día')).getByRole('figure', { name: 'Cobrado por día' });
+      expect(within(figura).queryByRole('heading', { name: 'Detalle' })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('acercar a un rango de días', () => {
+    const columnas = (dialogo: HTMLElement) => dialogo.querySelectorAll('.recharts-bar-rectangle path').length;
+    async function volumenGrande() {
+      simularEstadisticas({ volumen: { status: 200, data: volumenDeDias(10, () => 1) } });
+      await abrirPanel();
+      return agrandar('Ropa recibida');
+    }
+
+    it('con "Desde" y "Hasta" dentro de los días cargados, el gráfico y la tabla muestran solo esos días', async () => {
+      const { dialogo } = await volumenGrande();
+      expect(columnas(dialogo)).toBe(10);
+      const desde = within(dialogo).getByLabelText('Desde');
+      const hasta = within(dialogo).getByLabelText('Hasta');
+      // Las listas ofrecen los diez días ya cargados, no fechas inventadas.
+      expect(within(desde as HTMLElement).getAllByRole('option')).toHaveLength(10);
+
+      fireEvent.change(desde, { target: { value: '2026-10-10' } });
+      fireEvent.change(hasta, { target: { value: '2026-10-13' } });
+
+      await waitFor(() => expect(columnas(dialogo)).toBe(4));
+      const filas = within(within(dialogo).getByRole('table', { name: 'Ropa recibida por día' })).getAllByRole('row');
+      expect(filas).toHaveLength(5);
+    });
+
+    it('con las fechas al revés lo dice en palabras y no cambia el gráfico', async () => {
+      const { dialogo } = await volumenGrande();
+      fireEvent.change(within(dialogo).getByLabelText('Desde'), { target: { value: '2026-10-12' } });
+      fireEvent.change(within(dialogo).getByLabelText('Hasta'), { target: { value: '2026-10-10' } });
+
+      expect(within(dialogo).getByText('El día de inicio es posterior al día final. Revisa las fechas.')).toBeInTheDocument();
+      // Se quedó con el último rango que tenía sentido (del 12 al 16: cinco días).
+      expect(columnas(dialogo)).toBe(5);
+    });
+
+    it('"Ver todos los días" vuelve al período completo, y está apagado si ya se ve todo', async () => {
+      const { dialogo } = await volumenGrande();
+      const todos = within(dialogo).getByRole('button', { name: 'Ver todos los días' });
+      expect(todos).toBeDisabled();
+
+      fireEvent.change(within(dialogo).getByLabelText('Desde'), { target: { value: '2026-10-14' } });
+      await waitFor(() => expect(columnas(dialogo)).toBe(3));
+      expect(todos).toBeEnabled();
+
+      fireEvent.click(todos);
+      await waitFor(() => expect(columnas(dialogo)).toBe(10));
+      expect(within(dialogo).queryByText(/posterior al día final/)).not.toBeInTheDocument();
+    });
+
+    it('acercar en la vista grande no cambia la tarjeta: ella sigue mostrando todos los días', async () => {
+      const { dialogo } = await volumenGrande();
+      fireEvent.change(within(dialogo).getByLabelText('Desde'), { target: { value: '2026-10-14' } });
+      await waitFor(() => expect(columnas(dialogo)).toBe(3));
+
+      // La vista grande vive dentro de la misma región: la tarjeta es su primera figura.
+      expect(columnas(seccion('Ropa recibida').querySelector('figure') as HTMLElement)).toBe(10);
+    });
+
+    it('la caja día a día también se acerca, y la tarjeta de sucursales (sin días) no tiene rango', async () => {
+      simularEstadisticas();
+      await abrirPanel();
+      const caja = await agrandar('Cobrado por día');
+      expect(within(caja.dialogo).getByRole('group', { name: 'Acercar a unos días' })).toBeInTheDocument();
+      fireEvent.keyDown(document, { key: 'Escape' });
+
+      const sucursales = await agrandar('Cobrado por sucursal');
+      expect(within(sucursales.dialogo).queryByRole('group', { name: 'Acercar a unos días' })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('"Ver la tabla"', () => {
+    it('muestra a la vista la misma tabla que lee el lector de pantalla, con las mismas cifras', async () => {
+      simularEstadisticas();
+      await abrirPanel();
+      const { dialogo } = await agrandar('Cobrado por día');
+      const tabla = within(dialogo).getByRole('table', { name: 'Cobrado por día' });
+      expect(tabla.parentElement).toHaveClass('sr-only');
+
+      const boton = within(dialogo).getByRole('button', { name: 'Ver la tabla' });
+      fireEvent.click(boton);
+
+      // La misma tabla (no una copia): ahora a la vista, con el botón para esconderla.
+      expect(within(dialogo).getByRole('table', { name: 'Cobrado por día' })).toBe(tabla);
+      expect(tabla.parentElement).not.toHaveClass('sr-only');
+      expect(fila(dialogo, 'Cobrado por día', '15/10/2026')).toEqual(['15/10/2026', 'Bs 125,50', 'Bs 100,00', 'Bs 25,50', 'Bs 0,00']);
+      expect(within(dialogo).getByRole('button', { name: 'Ocultar la tabla' })).toBeInTheDocument();
+
+      // `Boton` descarta un segundo toque mientras termina el primero: se espera a que vuelva a estar habilitado.
+      await waitFor(() => expect(within(dialogo).getByRole('button', { name: 'Ocultar la tabla' })).toBeEnabled());
+      fireEvent.click(within(dialogo).getByRole('button', { name: 'Ocultar la tabla' }));
+      expect(tabla.parentElement).toHaveClass('sr-only');
+    });
+
+    it.each(GRANDES)('"$region" ofrece "Ver la tabla" en su vista grande', async ({ region }) => {
+      simularEstadisticas();
+      await abrirPanel();
+      const { dialogo } = await agrandar(region);
+      expect(within(dialogo).getByRole('button', { name: 'Ver la tabla' })).toBeInTheDocument();
+    });
+
+    it('la tarjeta no tiene el botón: la tabla de la tarjeta es solo para el lector de pantalla', async () => {
+      simularEstadisticas();
+      await abrirPanel();
+      await within(seccion('Cobrado por día')).findByRole('figure', { name: 'Cobrado por día' });
+      expect(within(seccion('Cobrado por día')).queryByRole('button', { name: /la tabla/ })).not.toBeInTheDocument();
+    });
+  });
+
+  it('la vista grande no usa estilos en línea propios ni jerga, también con las series apagadas', async () => {
+    simularEstadisticas();
+    await abrirPanel();
+    const { dialogo } = await agrandar('Cobrado por día');
+    const propios = [...dialogo.querySelectorAll('[style]')].filter((e) => !e.closest('.recharts-responsive-container'));
+    expect(propios).toEqual([]);
+    sinJerga();
   });
 });
