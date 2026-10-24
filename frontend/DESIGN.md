@@ -256,7 +256,7 @@ Las tres series de los gráficos y los cuatro matices de las tarjetas no cambian
 
 **El marco** envuelve todas las pantallas: una cabecera fija arriba (`sticky`) con el nombre del negocio, dónde se está trabajando, la conexión, el tema y quién atiende con Salir; un pie chico abajo (solo sucursal y versión, cada centímetro de alto es pantalla útil); y el menú. Desde **1024px** el menú es una barra lateral de 288px (`w-72`); por debajo, un botón "Menú" que abre un cajón.
 
-**Cortes:** solo dos, los de Tailwind: `sm` (640px) y `lg` (1024px). En angosto, una columna; desde `lg`, las grillas pasan a dos (las tarjetas del dashboard, Personal y Sucursales).
+**Cortes:** solo dos, los de Tailwind: `sm` (640px) y `lg` (1024px). En angosto, una columna; desde `lg`, las grillas pasan a dos (Personal y Sucursales). **Las tarjetas del dashboard de estadísticas van siempre en una sola columna**, una debajo de otra y del mismo ancho (SPEC-KRILINXI-065); cada tarjeta con gráfico lleva un botón "Agrandar" que abre el gráfico en un diálogo grande (`max-w-4xl`), con el detalle del dato a un lado, la tabla a la vista y, en los gráficos por día, el rango de fechas.
 
 **Ritmo:** lo que va junto se separa 8 a 12px (`gap-2`, `gap-3`); las tarjetas de una lista, 12 a 16px; las secciones, 24 a 32px. Cada tarjeta respira con 16 a 24px por dentro.
 

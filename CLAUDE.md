@@ -249,7 +249,7 @@ gráfico (`Grafico`) tiene nombre y una tabla `sr-only` con los mismos números,
 leen los valores. Los colores son `serie-1`…`serie-3` desde SPEC-KRILINXI-055 (antes eran cuatro; uno por forma de pago, validados con todas sus
 parejas para daltonismo, ver la bitácora) y `antiguedad-1`…`3` en el tema.
 SPEC-KRILINXI-042 hizo de `/estadisticas` un **dashboard**: debajo de los indicadores, una grilla de siete tarjetas
-(`SeccionPanel`: dos por fila desde 1024px, una en angosta; la de ropa recibida ocupa la fila entera), cada una con
+(`SeccionPanel`; desde SPEC-KRILINXI-065 **en una sola columna**, una debajo de otra y siempre del mismo ancho), cada una con
 **un gráfico que responde una pregunta** escrita en palabras ("¿Cuánto se cobró en cada sucursal?") y su período
 debajo. El detalle en listas (cada boleta, persona o cliente) va plegado en "Ver el detalle" (`Detalle`, un
 `<details>`). Sumó el gráfico de forma de pago y el de clientes que más vienen. No hizo falta ningún color nuevo.
@@ -282,6 +282,15 @@ que falta cobrar); las otras cinco (por sucursal, ropa recibida, sin recoger, pr
 pide hasta que se despliega; lo que alimenta los indicadores se pide siempre. Mientras llegan los datos hay un **esqueleto** (`Esqueleto`,
 `EsqueletoDelTablero`) y nunca un número; una tarjeta con su propio pedido que falla lo dice ella (`AvisoDeTarjeta`), pero si falla una de las cuatro
 del panel, falla el panel entero.
+SPEC-KRILINXI-065 pasó el tablero a **una sola columna** (ninguna regla `lg:grid-cols-2` ni tarjeta que ocupe una fila distinta; un test de arquitectura lo vigila) y le dio a cada tarjeta con gráfico el botón
+**"Agrandar"** (nombre accesible "Agrandar: Cobrado por día"; **solo `SeccionPanel` lo escribe**): abre `VistaGrande`, un diálogo (`max-w-4xl`, no toda la pantalla) que **vuelve a dibujar los mismos hijos de la
+tarjeta** con `GrandeContext` en `true` (`graficos/grande.ts`, `useGrande()`). No tiene código por gráfico y **no pide nada a la API**: los datos salen de las mismas variables (un test cuenta los pedidos y la
+arquitectura impide que `VistaGrande` importe la API). Se cierra con "Cerrar", Escape o tocando fuera, el foco no sale de él mientras está abierto, y al cerrar vuelve al botón "Agrandar". Cada pieza se acomoda en grande:
+`Grafico` pasa el detalle a un panel junto al dibujo con el **desglose** del dato elegido (`desglose`, una línea por cosa; sigue habiendo una sola región `aria-live`) y suma **"Ver la tabla"** (la misma tabla del lector de
+pantalla, a la vista); `Lineas` y `Columnas` son más altas; `Detalle` (las listas) no se dibuja. En los gráficos por día (la caja y la ropa recibida) hay además un **rango "Desde / Hasta"** dentro de los días ya cargados
+(`useRangoDeDias`, `RangoDeDias`: unas fechas al revés se avisan en palabras y no cambian el gráfico, y "Ver todos los días" vuelve al período), y en la caja por forma de pago la **leyenda apaga y prende** cada serie
+(botones con `aria-pressed`; una apagada dice "(apagada)" y va tachada). Toda `Seccion…` nueva declara `ampliable` (un test lo exige): en `false` mientras no haya gráfico que mostrar. Acercar un rango o apagar una serie
+nunca cambia la tarjeta.
 SPEC-KRILINXI-027 cerró la ola con las pantallas de gestión: Personal, Sucursales, ¿Quién hizo qué? y
 Registros para corregir. Cada cuenta, sucursal, registro de la auditoría y rechazo es una `Tarjeta`; su
 estado, una `Insignia` (qué tono lleva cada estado lo decide la feature, como `TONO_ESTADO`), y el
