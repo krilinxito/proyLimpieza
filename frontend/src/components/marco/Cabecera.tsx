@@ -25,6 +25,9 @@ type Props = {
  * SPEC-KRILINXI-054 lo había partido en dos renglones con un corte; ya no hace falta.) El orden del DOM, que es el que
  * recorre el teclado, no cambia entre un tamaño y otro.
  *
+ * En un celular, con sesión, el nombre "Lavandería" **se esconde** y queda solo dónde se trabaja ("Administración", "Sucursal Centro"): juntos no
+ * cabían y se pisaban. El Inicio sigue a un toque en el menú. Sin sesión (el ingreso) no hay lugar, y el nombre se ve siempre.
+ *
  * El nombre del negocio no es un encabezado (`h1`): el `h1` es el de cada pantalla, que es lo
  * que cambia y lo que el lector de pantalla tiene que anunciar.
  */
@@ -36,11 +39,13 @@ export function Cabecera({ lugar, menu, acciones, tema, conexion }: Props) {
         <div className="mr-auto min-w-0 flex-1 sm:flex-none">
           <Link
             to="/"
-            className="text-lg font-bold text-marca sm:text-2xl focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-foco"
+            className={`${lugar ? 'hidden sm:block' : 'block'} text-lg font-bold text-marca sm:text-2xl focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-foco`}
           >
             Lavandería
           </Link>
-          {lugar && <p className="truncate text-sm text-texto-suave sm:text-lg">{lugar}</p>}
+          {lugar && (
+            <p className="truncate text-base font-semibold text-texto sm:text-lg sm:font-normal sm:text-texto-suave">{lugar}</p>
+          )}
         </div>
         {conexion}
         {tema}

@@ -369,17 +369,18 @@ describe('Marco: la cabecera en pantalla chica — SPEC-KRILINXI-066', () => {
 
   it('es de un solo renglón: sin segundo renglón ni corte, más baja y con el nombre del negocio más chico', async () => {
     abrir('/clientes');
-    await cabecera().findByRole('button', { name: 'Salir' });
+    await cabecera().findByText('Sucursal Centro');
     const fila = screen.getByRole('banner').firstElementChild;
     expect(fila).not.toHaveClass('flex-wrap');
     expect(fila).toHaveClass('py-2', 'sm:py-3');
     expect(screen.getByRole('banner').querySelector('[data-corte-de-renglon]')).toBeNull();
-    expect(cabecera().getByRole('link', { name: 'Lavandería' })).toHaveClass('text-lg', 'sm:text-2xl');
+    // En un celular con sesión el nombre del negocio se esconde (juntos con la sucursal se pisaban); desde sm vuelve.
+    expect(cabecera().getByRole('link', { name: 'Lavandería' })).toHaveClass('hidden', 'sm:block', 'sm:text-2xl');
   });
 
   it('el nombre de la sucursal va debajo en letra pequeña y se corta con puntos suspensivos en vez de empujar los botones', async () => {
     abrir('/clientes');
-    expect(await cabecera().findByText('Sucursal Centro')).toHaveClass('truncate', 'text-sm', 'sm:text-lg');
+    expect(await cabecera().findByText('Sucursal Centro')).toHaveClass('truncate', 'text-base', 'font-semibold', 'sm:text-lg');
   });
 
   it('el menú y la conexión se achican en el celular y vuelven a su tamaño desde sm', async () => {
@@ -460,6 +461,8 @@ describe('Marco: la cabecera en pantalla chica — SPEC-KRILINXI-066', () => {
     abrir('/ingresar', null);
     expect(cabecera().queryByRole('button', { name: /Opciones de/ })).not.toBeInTheDocument();
     expect(cabecera().getByRole('button', { name: /Tema/ })).toBeInTheDocument();
+    // Sin sesión no hay lugar que mostrar: el nombre del negocio se ve en todos los tamaños.
+    expect(cabecera().getByRole('link', { name: 'Lavandería' })).not.toHaveClass('hidden');
   });
 
   it('no esconde nada: la cabecera sigue teniendo el menú, el tema, quién atiende y Salir', async () => {
