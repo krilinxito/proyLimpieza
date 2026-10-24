@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Boton } from '../../../components/Boton';
 import { ModalConfirmacion } from '../../../components/ModalConfirmacion';
-import { Avatar } from '../../../components/marco/Avatar';
 import { useConexion } from '../../../hooks/useConexion';
 import { useSession } from '../../../hooks/useSession';
 
@@ -19,8 +18,9 @@ function avisoDeSalida(pendientes: number): string {
 }
 
 /**
- * Quién está atendiendo, y cómo salir. Va dentro de la cabecera del marco (SPEC-KRILINXI-023),
- * por eso no es un `<header>` propio: dos cabeceras serían dos "banner" para el lector de pantalla.
+ * Cómo salir. Va dentro de la cabecera del marco (SPEC-KRILINXI-023), por eso no es un `<header>` propio: dos
+ * cabeceras serían dos "banner" para el lector de pantalla. Quién atiende (el círculo con la inicial) ya no se dibuja
+ * acá: desde SPEC-KRILINXI-066 lo pone `MenuPerfil`, que en un celular esconde Salir tras ese círculo.
  *
  * Salir pide confirmación porque sin internet no tiene vuelta atrás: el login necesita al
  * servidor, así que quien sale sin conexión deja la tablet sin poder usarse.
@@ -33,16 +33,11 @@ export function BarraSesion() {
   if (!sesion) return null;
 
   return (
-    // `contents`: la barra no hace caja propia. Quien atiende queda en el primer renglón de la cabecera y Salir baja al
-    // segundo en pantalla chica (SPEC-KRILINXI-054); cada pieza se coloca con `order` en la cabecera.
+    // `contents`: la barra no hace caja propia, para que Salir se acomode como un hijo más de la cabecera o del panel.
     <div className="contents">
-      {/* Quién atiende, como un círculo con su inicial (SPEC-KRILINXI-030). */}
-      <Avatar nombre={sesion.usuario.nombreCompleto} />
-      <div className="order-7 w-auto sm:order-none">
-        <Boton variante="secundario" tamano="compacto" icono="salir" onClick={() => setConfirmando(true)}>
-          Salir
-        </Boton>
-      </div>
+      <Boton variante="secundario" tamano="compacto" icono="salir" onClick={() => setConfirmando(true)}>
+        Salir
+      </Boton>
       <ModalConfirmacion
         abierto={confirmando}
         titulo="¿Salir del sistema?"

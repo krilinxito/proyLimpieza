@@ -139,7 +139,7 @@ describe('Paginas en un solo bloque — SPEC-KRILINXI-054', () => {
     for (const nombre of ['Anteriores', 'Siguientes']) {
       expect(screen.getByRole('button', { name: nombre })).toHaveClass('min-h-12', 'text-lg');
     }
-    expect(screen.getByText('Página 1 de 3')).toHaveClass('text-lg');
+    expect(screen.getByText('Página 1 de 3')).toHaveClass('sm:text-lg');
   });
 
   it('con todo en una página sigue diciendo "Página 1 de 1", con los dos botones apagados', () => {
@@ -158,6 +158,45 @@ describe('Paginas en un solo bloque — SPEC-KRILINXI-054', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Anteriores' }));
     fireEvent.click(screen.getByRole('button', { name: 'Siguientes' }));
     expect(visitadas).toEqual([1, 3]);
+  });
+});
+
+describe('Paginas en el celular — SPEC-KRILINXI-066', () => {
+  // jsdom no aplica el CSS: se comprueba qué clase esconde o muestra cada cosa en cada tamaño.
+  const barra = () => render(<Paginas pagina={2} total={25} porPagina={10} irAPagina={() => undefined} nombre="Páginas de prueba" />);
+
+  it('los botones son una flecha en el celular y llevan las palabras desde sm; el nombre accesible no cambia', () => {
+    barra();
+    for (const nombre of ['Anteriores', 'Siguientes']) {
+      const boton = screen.getByRole('button', { name: nombre });
+      // La palabra existe siempre (la lee el lector de pantalla); solo se ve desde sm.
+      expect(within(boton).getByText(nombre)).toHaveClass('sr-only', 'sm:not-sr-only');
+      // La flecha es decorativa y solo se ve en el celular.
+      const icono = boton.querySelector('svg');
+      expect(icono).toHaveAttribute('aria-hidden', 'true');
+      expect(icono?.parentElement).toHaveClass('sm:hidden');
+    }
+  });
+
+  it('el contador "Página N de M" se ve siempre, con letra más chica en el celular', () => {
+    barra();
+    expect(screen.getByText('Página 2 de 3')).toHaveClass('text-base', 'sm:text-lg');
+  });
+
+  it('el recuadro y los márgenes se achican en el celular, y los botones siguen midiendo 48px', () => {
+    barra();
+    const barraDePaginas = screen.getByRole('navigation', { name: 'Páginas de prueba' });
+    expect(barraDePaginas).toHaveClass('mt-3', 'sm:mt-4');
+    expect(barraDePaginas.firstElementChild).toHaveClass('p-1', 'sm:p-1.5', 'gap-1', 'sm:gap-2');
+    for (const nombre of ['Anteriores', 'Siguientes']) {
+      expect(screen.getByRole('button', { name: nombre })).toHaveClass('min-h-12');
+    }
+  });
+
+  it('las flechas se apagan en la primera y la última página, como los botones con palabras', () => {
+    render(<Paginas pagina={1} total={25} porPagina={10} irAPagina={() => undefined} nombre="Primera" />);
+    expect(screen.getByRole('button', { name: 'Anteriores' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Siguientes' })).toBeEnabled();
   });
 });
 

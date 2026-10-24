@@ -6,9 +6,9 @@ type Props = {
   lugar?: string | null;
   /** El botón del menú en pantalla chica. */
   menu?: ReactNode;
-  /** Quién atiende y Salir. */
+  /** Quién atiende y sus acciones (el tema, Dejar de atender y Salir tras el círculo, en un celular). */
   acciones?: ReactNode;
-  /** Claro u oscuro (SPEC-KRILINXI-030). Está también sin sesión: en el ingreso se lee igual. */
+  /** Claro u oscuro (SPEC-KRILINXI-030). Solo sin sesión, en el ingreso; con sesión va dentro de `acciones`. */
   tema?: ReactNode;
   /** La píldora de la conexión (SPEC-KRILINXI-031). Solo con sesión: sin nadie adentro no hay base. */
   conexion?: ReactNode;
@@ -19,10 +19,11 @@ type Props = {
  * está trabajando y quién atiende. Se queda fija al bajar (`sticky`): Salir y el menú están
  * siempre a mano, también al final de una lista larga.
  *
- * Desde SPEC-KRILINXI-054 se acomoda en pantalla chica (celular): arriba el menú, el nombre y dónde se está, el tema y quién
- * atiende; en un segundo renglón, la conexión, "Dejar de atender" y Salir. Desde `sm` (640px) todo vuelve a una sola fila.
- * Se logra con `order` y un corte de renglón (`basis-full`) que solo existe en angosto: el orden del DOM, que es el que
- * recorre el teclado, no cambia.
+ * Desde SPEC-KRILINXI-066 es de **un solo renglón bajo** en un celular (menos de 640px): el menú, el nombre del negocio con
+ * dónde se está en letra pequeña debajo, la conexión y el círculo de quien atiende. El tema, "Dejar de atender" y Salir
+ * viven tras ese círculo (`MenuPerfil`). Desde `sm` (640px) todo está a la vista en la misma fila, como siempre. (La
+ * SPEC-KRILINXI-054 lo había partido en dos renglones con un corte; ya no hace falta.) El orden del DOM, que es el que
+ * recorre el teclado, no cambia entre un tamaño y otro.
  *
  * El nombre del negocio no es un encabezado (`h1`): el `h1` es el de cada pantalla, que es lo
  * que cambia y lo que el lector de pantalla tiene que anunciar.
@@ -30,21 +31,19 @@ type Props = {
 export function Cabecera({ lugar, menu, acciones, tema, conexion }: Props) {
   return (
     <header className="sticky top-0 z-30 border-b border-borde-suave bg-superficie shadow-sm">
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-2 px-4 py-3 sm:gap-x-4 lg:px-6">
+      <div className="flex items-center gap-2 px-3 py-2 sm:gap-4 sm:px-4 sm:py-3 lg:px-6">
         {menu}
-        <div className="mr-auto min-w-0">
+        <div className="mr-auto min-w-0 flex-1 sm:flex-none">
           <Link
             to="/"
-            className="text-2xl font-bold text-marca focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-foco"
+            className="text-lg font-bold text-marca sm:text-2xl focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-foco"
           >
             Lavandería
           </Link>
-          {lugar && <p className="truncate text-lg text-texto-suave">{lugar}</p>}
+          {lugar && <p className="truncate text-sm text-texto-suave sm:text-lg">{lugar}</p>}
         </div>
-        {conexion && <div className="order-5 mr-auto sm:order-none sm:mr-0">{conexion}</div>}
+        {conexion}
         {tema}
-        {/* El corte de renglón: solo en angosto, para que la conexión y Salir queden abajo. */}
-        <div aria-hidden="true" className="order-4 basis-full sm:hidden" data-corte-de-renglon />
         {acciones}
       </div>
     </header>
