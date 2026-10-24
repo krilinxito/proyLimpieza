@@ -2,8 +2,7 @@
 id: SPEC-KRILINXI-066
 spec: specs/SPEC-KRILINXI-066-cabecera-paginacion-movil.md
 explica:
-  - dos tamaños)
-  - responsive con clases de Tailwind (un DOM
+  - responsive con clases de Tailwind (un DOM y dos tamaños)
 ---
 
 # SPEC-KRILINXI-066 — Cabecera y paginación compactas en el celular
@@ -46,7 +45,7 @@ Se sigue a Rosa (EMPLEADO) en su celular, de abrir la app a salir.
 
 ## Fundamentos
 
-**Responsive con clases de Tailwind (un DOM, dos tamaños).** Tailwind trabaja "primero el celular": una clase sin prefijo vale en todos los tamaños y
+**Responsive con clases de Tailwind (un DOM y dos tamaños).** Tailwind trabaja "primero el celular": una clase sin prefijo vale en todos los tamaños y
 `sm:` la reemplaza desde 640 px. `hidden sm:contents` significa "escondido en el celular; desde 640 px, sin caja propia". Sirve para que **una misma
 pieza** se acomode distinto según el ancho sin duplicarla. Sin ese patrón habría que duplicar el HTML o medir el ancho con JavaScript. Aquí:
 `MenuPerfil.tsx:75` (el panel) y `Paginas.tsx:43` (la palabra del botón solo para el lector de pantalla en angosto). Las clases se escriben enteras: Tailwind
