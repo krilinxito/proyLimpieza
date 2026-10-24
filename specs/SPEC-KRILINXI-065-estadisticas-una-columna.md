@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-065
 name: Estadísticas en una sola columna, con gráficos que se agrandan
 slug: estadisticas-una-columna
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-23
 scope:
@@ -15,7 +15,9 @@ scope:
 priority: medium
 depends_on:
   - SPEC-KRILINXI-063
-tests: []
+tests:
+  - frontend\src\features\estadisticas\components\PantallaEstadisticas.test.tsx
+  - frontend\src\test\arquitectura.test.ts
 ---
 
 ## Descripción
