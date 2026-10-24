@@ -14,7 +14,7 @@ import { SeccionPanel } from './SeccionPanel';
 export function SeccionSinRecoger({ sinRecoger, periodo }: { sinRecoger: SinRecoger; periodo: string }) {
   const paginas = usePaginado(sinRecoger.ordenes, sinRecoger);
   return (
-    <SeccionPanel nombre="Ropa sin recoger" pregunta="¿Cuánta ropa falta recoger, y desde hace cuánto?" periodo={periodo}>
+    <SeccionPanel nombre="Ropa sin recoger" pregunta="¿Cuánta ropa falta recoger, y desde hace cuánto?" periodo={periodo} ampliable={sinRecoger.porAntiguedad.some((t) => t.cantidad > 0)}>
       <p className="mt-2 text-3xl font-bold text-texto">{boletas(sinRecoger.cantidad)}</p>
       <Antiguedad nombre="Ropa sin recoger según los días" tramos={sinRecoger.porAntiguedad} queFalta="sin recoger" />
       {sinRecoger.ordenes.length === 0 ? (

@@ -32,8 +32,8 @@ function EsqueletoDelTablero() {
             <div key={n} className={`h-28 ${hueco}`} />
           ))}
         </div>
-        <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div className={`h-96 lg:col-span-2 ${hueco}`} />
+        <div className="mt-8 grid grid-cols-1 gap-6">
+          <div className={`h-96 ${hueco}`} />
           <div className={`h-80 ${hueco}`} />
           <div className={`h-80 ${hueco}`} />
         </div>
@@ -51,8 +51,8 @@ function EsqueletoDelTablero() {
  * Desde SPEC-KRILINXI-026 es un tablero: arriba los indicadores, y cada sección con su gráfico y,
  * debajo, el detalle de siempre. Ni los indicadores ni los gráficos aparecen sin el panel listo.
  *
- * Desde SPEC-KRILINXI-042 es un dashboard: debajo de los indicadores, una grilla de tarjetas (dos por
- * fila desde 1024px, una en pantalla angosta), cada una con un gráfico que responde una pregunta, y
+ * Desde SPEC-KRILINXI-042 es un dashboard: debajo de los indicadores, una grilla de tarjetas (desde
+ * SPEC-KRILINXI-065, **una sola columna** en cualquier ancho: una debajo de otra, del mismo ancho), cada una con un gráfico que responde una pregunta, y
  * el detalle en tablas plegado en "Ver el detalle". El filtro de arriba cambia todas a la vez.
  */
 export function PantallaEstadisticas() {
@@ -101,7 +101,7 @@ export function PantallaEstadisticas() {
             }}
           />
           {/* A la vista, tres tarjetas: la caja día a día, con qué se pagó y lo que falta cobrar (SPEC-KRILINXI-050). */}
-          <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="mt-8 grid grid-cols-1 gap-6">
             {/* Pide su propio dato (`useIngresosPorDia`): una tendencia son días, no el "hoy" de los indicadores. */}
             <SeccionTendencia filtro={filtro} periodo={conMayuscula(describirPeriodo(filtro, 'historia'))} />
             <SeccionFormasDePago ingresos={estado.datos.ingresos} periodo={conMayuscula(describirPeriodo(filtro, 'ingresos'))} />
@@ -109,7 +109,7 @@ export function PantallaEstadisticas() {
           </div>
           {/* El resto se despliega a pedido; la productividad y los clientes no se piden hasta entonces. */}
           <VerMas abierto={masAbierto} alCambiar={setMasAbierto}>
-            <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="mt-6 grid grid-cols-1 gap-6">
               <SeccionIngresos ingresos={estado.datos.ingresos} periodo={conMayuscula(describirPeriodo(filtro, 'ingresos'))} />
               <SeccionVolumen volumen={estado.datos.volumen} periodo={conMayuscula(describirPeriodo(filtro, 'historia'))} />
               <SeccionSinRecoger sinRecoger={estado.datos.sinRecoger} periodo={conMayuscula(describirPeriodo(filtro, 'pendientes'))} />

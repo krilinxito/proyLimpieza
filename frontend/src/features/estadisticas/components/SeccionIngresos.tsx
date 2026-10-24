@@ -30,12 +30,16 @@ function detalle(s: DeSucursal): string {
 export function SeccionIngresos({ ingresos, periodo }: { ingresos: Ingresos; periodo: string }) {
   const totales = ingresos.porSucursal.map((s) => desdeDecimal(s.total));
   return (
-    <SeccionPanel nombre="Cobrado por sucursal" pregunta="¿Cuánto se cobró en cada sucursal?" periodo={periodo}>
+    <SeccionPanel nombre="Cobrado por sucursal" pregunta="¿Cuánto se cobró en cada sucursal?" periodo={periodo} ampliable={hayDatos(totales)}>
       <p className="mt-2 text-3xl font-bold text-texto">{bs(ingresos.total)}</p>
       <Grafico
         nombre="Cobrado por sucursal y forma de pago"
         vacio={!hayDatos(totales)}
         pista="Toca una sucursal para ver cuánto se cobró de cada forma."
+        desglose={(texto) => {
+          const sucursal = ingresos.porSucursal.find((s) => detalle(s) === texto);
+          return sucursal && [`Total: ${bs(sucursal.total)}`, ...METODOS_PAGO.map((m) => `${TEXTO_METODO_PAGO[m]}: ${bs(sucursal.porMetodo[m])}`)];
+        }}
         tabla={{
           encabezados: ['Sucursal', ...METODOS_PAGO.map((m) => TEXTO_METODO_PAGO[m]), 'Total'],
           filas: ingresos.porSucursal.map((s) => ({

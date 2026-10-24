@@ -32,7 +32,12 @@ const resumen = (f: Fila) => `Recibió ${f.ordenesRecibidas} · Cobró ${veces(f
 export function SeccionProductividad({ filtro, periodo }: { filtro: Filtro; periodo: string }) {
   const { estado, recargar } = useProductividad(filtro);
   return (
-    <SeccionPanel nombre="Lo que hizo cada persona" pregunta="¿Cuánto atendió cada persona?" periodo={periodo}>
+    <SeccionPanel
+      nombre="Lo que hizo cada persona"
+      pregunta="¿Cuánto atendió cada persona?"
+      periodo={periodo}
+      ampliable={estado.tipo === 'listo' && estado.datos.porEmpleado.length > 0}
+    >
       {estado.tipo === 'cargando' && <Esqueleto texto="Buscando lo que hizo cada persona…" />}
       {(estado.tipo === 'sin-conexion' || estado.tipo === 'error') && <AvisoDeTarjeta estado={estado} recargar={recargar} />}
       {estado.tipo === 'listo' && <PorPersona productividad={estado.datos} />}
@@ -50,6 +55,10 @@ function PorPersona({ productividad }: { productividad: Productividad }) {
         nombre="Ropa recibida por cada persona"
         vacio={filas.length === 0}
         pista="Toca una persona para ver todo lo que hizo."
+        desglose={(texto) => {
+          const f = filas.find((x) => `${quien(x)}: ${resumen(x)}` === texto);
+          return f && [`Recibió: ${f.ordenesRecibidas}`, `Cobró: ${veces(f.cobros)} (${bs(f.montoCobrado)})`, `Entregó: ${f.entregas}`];
+        }}
         tabla={{
           encabezados: ['Persona', 'Sucursal', 'Recibió', 'Cobró', 'Monto cobrado', 'Entregó'],
           filas: ordenadas.map((f) => ({

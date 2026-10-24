@@ -84,6 +84,14 @@ const TRAZOS = {
   ),
   menu: <path d="M4 6h16M4 12h16M4 18h16" />,
   cerrar: <path d="M6 6l12 12M18 6 6 18" />,
+  agrandar: (
+    <>
+      <path d="M15 3h6v6" />
+      <path d="M9 21H3v-6" />
+      <path d="M21 3l-7 7" />
+      <path d="M3 21l7-7" />
+    </>
+  ),
   salir: (
     <>
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />

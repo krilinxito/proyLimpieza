@@ -381,6 +381,7 @@ const CORTAS: Record<string, string> = {
   'features/auditoria/components/TarjetaRegistro.tsx': 'lo que cambió en UN registro: un puñado de campos',
   'features/estadisticas/components/graficos/BarrasHorizontales.tsx': 'las barras de un gráfico, con su propia tabla',
   'features/estadisticas/components/graficos/Leyenda.tsx': 'la leyenda de un gráfico: tres o cuatro series',
+  'features/estadisticas/components/graficos/Grafico.tsx': 'el desglose de UN dato elegido en la vista grande: un puñado de líneas (SPEC-KRILINXI-065)',
   'components/AvisoInstalar.tsx': 'los dos pasos fijos de instalar en iPhone, escritos en el código (SPEC-KRILINXI-059)',
 };
 
@@ -417,6 +418,53 @@ describe('La barra de páginas se dibuja en un solo lugar — SPEC-KRILINXI-054'
     const culpables = archivosFuente('features', 'pages', 'hooks', 'components')
       .filter(({ ruta }) => ruta !== 'components/Paginas.tsx')
       .filter(({ fuente }) => /\bAnteriores\b|\bSiguientes\b|Página \{/.test(sinComentarios(fuente)))
+      .map(({ ruta }) => ruta);
+    expect(culpables).toEqual([]);
+  });
+});
+
+/**
+ * El tablero de estadísticas en una sola columna, con vista grande — SPEC-KRILINXI-065. Las tarjetas van una debajo de otra,
+ * siempre del mismo ancho, y la vista grande es de `SeccionPanel`: dibuja los mismos hijos de la tarjeta, sin pedir nada.
+ */
+describe('El tablero de estadísticas en una columna y con vista grande — SPEC-KRILINXI-065', () => {
+  const tablero = archivosFuente('features').filter(({ ruta }) => ruta.startsWith('features/estadisticas/components/'));
+
+  it('revisa los componentes del tablero, no una lista vacía', () => {
+    expect(tablero.map(({ ruta }) => ruta)).toEqual(
+      expect.arrayContaining([
+        'features/estadisticas/components/PantallaEstadisticas.tsx',
+        'features/estadisticas/components/SeccionPanel.tsx',
+        'features/estadisticas/components/VistaGrande.tsx',
+      ]),
+    );
+  });
+
+  it('no queda ninguna regla de dos columnas ni tarjeta que ocupe una fila distinta', () => {
+    const culpables = tablero
+      .filter(({ fuente }) => /lg:grid-cols-2|lg:col-span-2|\bentera\b/.test(sinComentarios(fuente)))
+      .map(({ ruta }) => ruta);
+    expect(culpables).toEqual([]);
+  });
+
+  it('toda tarjeta (Seccion…) decide si se puede agrandar: declara `ampliable`', () => {
+    const sinDecidir = tablero
+      .filter(({ ruta }) => /\/Seccion[A-Za-z]+\.tsx$/.test(ruta) && !ruta.endsWith('/SeccionPanel.tsx'))
+      .filter(({ fuente }) => /<SeccionPanel\b/.test(fuente) && !/\bampliable=/.test(sinComentarios(fuente)))
+      .map(({ ruta }) => ruta);
+    expect(sinDecidir).toEqual([]);
+  });
+
+  it('la vista grande no pide nada: no importa la API ni ningún hook de pedidos', () => {
+    const vista = tablero.find(({ ruta }) => ruta.endsWith('/VistaGrande.tsx'));
+    expect(vista?.fuente).toBeDefined();
+    expect(sinComentarios(vista?.fuente ?? '')).not.toMatch(/lib\/api|hooks\/use(Panel|IngresosPorDia|Productividad|ClientesAtendidos|PedidoOnline)|axios|fetch\(/);
+  });
+
+  it('solo SeccionPanel escribe el botón "Agrandar": una pieza nueva no arma el suyo', () => {
+    const culpables = archivosFuente('features', 'components', 'pages')
+      .filter(({ ruta }) => ruta !== 'features/estadisticas/components/SeccionPanel.tsx')
+      .filter(({ fuente }) => /\bAgrandar\b/.test(sinComentarios(fuente)))
       .map(({ ruta }) => ruta);
     expect(culpables).toEqual([]);
   });
