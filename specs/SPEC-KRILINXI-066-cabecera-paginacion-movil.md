@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-066
 name: Cabecera y paginación compactas en el celular
 slug: cabecera-paginacion-movil
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-24
 scope:
@@ -17,7 +17,9 @@ scope:
   - CLAUDE.md
 priority: medium
 depends_on: []
-tests: []
+tests:
+  - frontend\src\components\piezas.test.tsx
+  - frontend\src\pages\Marco.test.tsx
 ---
 
 ## Descripción
