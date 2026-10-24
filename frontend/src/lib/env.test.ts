@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { leerEntorno } from './env';
+import { leerEntorno, direccionesDeServidores } from './env';
 
 const COMPLETO = { VITE_API_URL: 'http://localhost:4000', VITE_POWERSYNC_URL: 'http://localhost:8080' };
 
@@ -36,5 +36,14 @@ describe('Entorno: servicio de sincronización — SPEC-KRILINXI-004', () => {
     const sinPowersync = () => leerEntorno({ VITE_API_URL: COMPLETO.VITE_API_URL });
     expect(sinPowersync).toThrowError(/falta configurar la dirección del servicio de sincronización/);
     expect(sinPowersync).toThrowError(/\.env\.example/);
+  });
+});
+
+describe('Entorno: direcciones que el service worker no atiende — SPEC-KRILINXI-064', () => {
+  it('la API va con su /api, así con un solo dominio para todo no abarca el sitio entero', () => {
+    expect(direccionesDeServidores({ apiUrl: 'https://demo.example', powersyncUrl: 'https://demo.example/powersync' })).toEqual([
+      'https://demo.example/api',
+      'https://demo.example/powersync',
+    ]);
   });
 });

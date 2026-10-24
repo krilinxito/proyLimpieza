@@ -36,3 +36,12 @@ export function leerEntorno(fuente: Record<string, string | undefined>): Entorno
 }
 
 export const entorno = leerEntorno(import.meta.env);
+
+/**
+ * Las direcciones de los servidores, tal como las pide la app (la API con su `/api`, que es como la llama `lib/api`). El
+ * service worker las usa para saber de qué no ocuparse (SPEC-KRILINXI-064): con un solo dominio para todo (la demo), la
+ * dirección pelada de la API abarcaría el sitio entero y ninguna pantalla abriría sin internet.
+ */
+export function direccionesDeServidores(fuente: Entorno): string[] {
+  return [`${fuente.apiUrl}/api`, fuente.powersyncUrl];
+}
