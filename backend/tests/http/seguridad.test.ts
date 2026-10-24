@@ -45,6 +45,29 @@ describe('CORS con lista de orígenes — SPEC-ALE186-023', () => {
   });
 });
 
+// La demo con un solo túnel (SPEC-KRILINXI-064): la app y la API comparten dirección pública.
+describe('CORS con la dirección pública de la demo — SPEC-KRILINXI-064', () => {
+  const PUBLICA = 'https://mi-demo.ngrok-free.app';
+
+  it('con la dirección en CORS_ORIGENES, la devuelve en Access-Control-Allow-Origin', async () => {
+    const res = await request(createApp({ corsOrigenes: [PUBLICA] }))
+      .get('/api/no-existe')
+      .set('Origin', PUBLICA);
+
+    expect(res.headers['access-control-allow-origin']).toBe(PUBLICA);
+  });
+
+  it('sin ella no necesita ninguna: el pedido del mismo origen se atiende igual, solo sin cabecera de CORS', async () => {
+    const res = await request(createApp({ corsOrigenes: ['http://localhost:5173'] }))
+      .post('/api/no-existe')
+      .set('Origin', PUBLICA)
+      .send({});
+
+    expect(res.status).toBe(404);
+    expect(res.headers['access-control-allow-origin']).toBeUndefined();
+  });
+});
+
 describe('Cabeceras de seguridad (helmet) — SPEC-ALE186-023', () => {
   it('pone nosniff y la protección contra iframes, y no dice que es Express', async () => {
     const res = await request(app()).get('/api/no-existe');

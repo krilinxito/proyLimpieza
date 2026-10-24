@@ -19,7 +19,7 @@
  */
 import { addRoute, createHandlerBoundToURL, precache, type PrecacheEntry } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
-import { entorno } from '../lib/env';
+import { direccionesDeServidores, entorno } from '../lib/env';
 import { esperarQueSeActive, esPedidoDeTomarElMando, puedeTomarElMando, respuestaQueRecarga, TOMAR_EL_MANDO } from './actualizar';
 import { esPantallaDeLaApp } from './navegacion';
 
@@ -42,9 +42,8 @@ declare const self: {
 precache(self.__WB_MANIFEST);
 
 const index = createHandlerBoundToURL('index.html');
-// Todos los servidores con los que habla la app (la API, PowerSync, y cualquiera que se sume a
-// `lib/env`). El service worker no les pide nada: solo necesita saber de qué no ocuparse.
-const servidores = Object.values(entorno);
+// Los servidores con los que habla la app. El service worker no les pide nada: solo necesita saber de qué no ocuparse.
+const servidores = direccionesDeServidores(entorno);
 
 registerRoute(
   ({ request }) => esPantallaDeLaApp(request, self.location.origin, servidores),

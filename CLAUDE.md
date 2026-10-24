@@ -23,7 +23,7 @@ conexión no puede dejar de recibir ropa.
 
 ## 2. Estado actual
 
-Fase inicial, con los dos workspaces en pie.
+Fase inicial, con los dos workspaces en pie. SPEC-KRILINXI-064 agregó `npm run demo`: la app compilada y repartida en una sola dirección pública para probarla con un túnel de ngrok (§11); el service worker ahora excluye `/api` y no toda la dirección de la API.
 
 `backend/` tiene el esqueleto de SPEC-ALE186-001 —arranca, se conecta a Postgres, responde
 `GET /api/health`— y la autenticación de SPEC-ALE186-002: `POST /api/auth/login` y
@@ -889,6 +889,8 @@ cd frontend && npm run dev  # Vite en :5173
 
 npm test                    # suite completa desde la raíz (no necesita Docker)
 npm run test:db --workspace backend   # tests contra Postgres real (necesita Docker)
+
+DEMO_URL_PUBLICA=https://<dominio>.ngrok-free.app npm run demo   # demo para el cliente (ver abajo)
 ```
 
 La **línea base** del schema (`context/lavanderia_schema.sql`) se carga sola en el primer
@@ -899,6 +901,45 @@ archivo **no se vuelve a editar**: todo cambio al schema es una migración en
 aplica con `npm run migrar --workspace backend` sobre la base que ya existe, sin borrar datos.
 **Después de cada `git pull`, corré `npm run migrar`**: si falta alguna, el backend no arranca
 y dice cuántas. `down -v` sigue sirviendo para empezar de cero, pero borra todo.
+
+### La demo para el cliente con ngrok (SPEC-KRILINXI-064)
+
+Antes de hostear la app, el cliente puede probarla desde su equipo o su celular con **un solo túnel de ngrok**.
+`npm run demo` compila el frontend con la dirección pública y levanta `vite preview` (puerto 4173), que además reparte
+los pedidos: `/api/*` al backend (:4000) y `/powersync/*` a PowerSync (:8080, sin el prefijo). Así el navegador ve **un solo
+origen**: no hay CORS que abrir (el pedido del mismo origen se atiende sin la cabecera), la política de seguridad sigue siendo
+`'self'` más esa dirección, y la PWA se puede instalar y abrir sin internet, que exige HTTPS. Las reglas viven en
+`frontend/src/pwa/demo.ts`; `scripts/demo/demo.mjs` solo las corre en orden. El servidor acepta únicamente el dominio de la
+demo (y localhost) como `Host`: cualquier otro recibe 403. Es una **demo con datos de prueba, no un hosting**.
+
+**1. Instala ngrok (una vez).** En Windows: `winget install ngrok.ngrok`. Cierra y abre la terminal y comprueba con `ngrok version`: tiene que ser **3.20 o más** (las cuentas gratis rechazan agentes más viejos con `ERR_NGROK_121`; se actualiza con `ngrok update`).
+
+**2. Autentícalo (una vez).** Crea una cuenta gratis en ngrok.com, copia tu *authtoken* del panel (Getting Started → Your Authtoken)
+y corre `ngrok config add-authtoken <TU_TOKEN>`. En el panel, en *Domains*, reclama tu dominio gratis (algo como
+`algo-algo.ngrok-free.app`): esa será la dirección de la demo, y no cambia entre sesiones.
+
+**3. Prepara los datos de demostración.** Con `docker compose up` y `npm run migrar --workspace backend` hechos, usa una base
+**aparte** de la de trabajo (otra `DATABASE_URL`, o `docker compose down -v` para empezar de cero) y crea una sucursal y un admin de
+demostración **con una contraseña propia, que no uses en ningún otro lado**:
+`SEED_ADMIN_PASSWORD=<contraseña-de-la-demo> SEED_SUCURSAL="Sucursal Demo" npm run seed --workspace backend`.
+Después levanta el backend (`cd backend && npm run dev`).
+
+**4. Pon la dirección en tu `.env`** (una vez): `DEMO_URL_PUBLICA=https://TU-DOMINIO.ngrok-free.app`.
+
+**5. Levanta la demo con un solo comando.** Desde la raíz: `npm run demo`. Compila la app, avisa si el backend o PowerSync no
+responden, levanta el servidor de la app (puerto 4173) **y abre el túnel de ngrok él mismo**. Sin la dirección, falla diciendo qué
+falta; sin ngrok instalado, también, y dice cómo instalarlo. Variantes: `DEMO_URL_PUBLICA=… npm run demo` (sin tocar el `.env`) y
+`npm run demo -- --sin-ngrok` (si prefieres abrir el túnel tú: `ngrok http --domain=TU-DOMINIO.ngrok-free.app 4173`).
+
+**6. Abre la dirección** `https://TU-DOMINIO.ngrok-free.app` en el navegador o en el celular del cliente, e ingresa con el admin de
+demostración. Si ngrok muestra una página de aviso antes de la app, es la del plan gratuito: toca *Visit Site*.
+
+**7. Apaga todo al terminar.** `Ctrl+C` en la terminal de `npm run demo` (cierra el servidor y el túnel), y borra la base de demostración. El
+túnel abierto es una puerta a tu computadora: no lo dejes prendido.
+
+**CORS:** no hace falta tocar `CORS_ORIGENES` con este camino, porque la app y la API comparten dirección. Si algún día la API se
+publica por separado, esa dirección va en `CORS_ORIGENES`, separada por comas. Si cambias el dominio, **vuelve a correr
+`npm run demo`**: la dirección queda compilada dentro de la app.
 
 ---
 
