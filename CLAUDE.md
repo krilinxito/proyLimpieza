@@ -924,16 +924,17 @@ demostración **con una contraseña propia, que no uses en ningún otro lado**:
 `SEED_ADMIN_PASSWORD=<contraseña-de-la-demo> SEED_SUCURSAL="Sucursal Demo" npm run seed --workspace backend`.
 Después levanta el backend (`cd backend && npm run dev`).
 
-**4. Levanta la demo.** Desde la raíz, con tu dominio:
-`DEMO_URL_PUBLICA=https://TU-DOMINIO.ngrok-free.app npm run demo` (en PowerShell: `$env:DEMO_URL_PUBLICA="https://TU-DOMINIO.ngrok-free.app"; npm run demo`).
-Compila, avisa si el backend o PowerSync no responden, y deja el servidor corriendo. Sin la dirección, falla diciendo qué falta.
+**4. Pon la dirección en tu `.env`** (una vez): `DEMO_URL_PUBLICA=https://TU-DOMINIO.ngrok-free.app`.
 
-**5. Abre el túnel.** En **otra** terminal: `ngrok http --url=TU-DOMINIO.ngrok-free.app 4173`.
+**5. Levanta la demo con un solo comando.** Desde la raíz: `npm run demo`. Compila la app, avisa si el backend o PowerSync no
+responden, levanta el servidor de la app (puerto 4173) **y abre el túnel de ngrok él mismo**. Sin la dirección, falla diciendo qué
+falta; sin ngrok instalado, también, y dice cómo instalarlo. Variantes: `DEMO_URL_PUBLICA=… npm run demo` (sin tocar el `.env`) y
+`npm run demo -- --sin-ngrok` (si prefieres abrir el túnel tú: `ngrok http --url=TU-DOMINIO.ngrok-free.app 4173`).
 
 **6. Abre la dirección** `https://TU-DOMINIO.ngrok-free.app` en el navegador o en el celular del cliente, e ingresa con el admin de
 demostración. Si ngrok muestra una página de aviso antes de la app, es la del plan gratuito: toca *Visit Site*.
 
-**7. Apaga todo al terminar.** `Ctrl+C` en la terminal de ngrok y en la de `npm run demo`, y borra la base de demostración. El
+**7. Apaga todo al terminar.** `Ctrl+C` en la terminal de `npm run demo` (cierra el servidor y el túnel), y borra la base de demostración. El
 túnel abierto es una puerta a tu computadora: no lo dejes prendido.
 
 **CORS:** no hace falta tocar `CORS_ORIGENES` con este camino, porque la app y la API comparten dirección. Si algún día la API se
