@@ -912,7 +912,7 @@ origen**: no hay CORS que abrir (el pedido del mismo origen se atiende sin la ca
 `frontend/src/pwa/demo.ts`; `scripts/demo/demo.mjs` solo las corre en orden. El servidor acepta únicamente el dominio de la
 demo (y localhost) como `Host`: cualquier otro recibe 403. Es una **demo con datos de prueba, no un hosting**.
 
-**1. Instala ngrok (una vez).** En Windows: `winget install ngrok.ngrok`. Cierra y abre la terminal y comprueba con `ngrok version`.
+**1. Instala ngrok (una vez).** En Windows: `winget install ngrok.ngrok`. Cierra y abre la terminal y comprueba con `ngrok version`: tiene que ser **3.20 o más** (las cuentas gratis rechazan agentes más viejos con `ERR_NGROK_121`; se actualiza con `ngrok update`).
 
 **2. Autentícalo (una vez).** Crea una cuenta gratis en ngrok.com, copia tu *authtoken* del panel (Getting Started → Your Authtoken)
 y corre `ngrok config add-authtoken <TU_TOKEN>`. En el panel, en *Domains*, reclama tu dominio gratis (algo como
@@ -929,7 +929,7 @@ Después levanta el backend (`cd backend && npm run dev`).
 **5. Levanta la demo con un solo comando.** Desde la raíz: `npm run demo`. Compila la app, avisa si el backend o PowerSync no
 responden, levanta el servidor de la app (puerto 4173) **y abre el túnel de ngrok él mismo**. Sin la dirección, falla diciendo qué
 falta; sin ngrok instalado, también, y dice cómo instalarlo. Variantes: `DEMO_URL_PUBLICA=… npm run demo` (sin tocar el `.env`) y
-`npm run demo -- --sin-ngrok` (si prefieres abrir el túnel tú: `ngrok http --url=TU-DOMINIO.ngrok-free.app 4173`).
+`npm run demo -- --sin-ngrok` (si prefieres abrir el túnel tú: `ngrok http --domain=TU-DOMINIO.ngrok-free.app 4173`).
 
 **6. Abre la dirección** `https://TU-DOMINIO.ngrok-free.app` en el navegador o en el celular del cliente, e ingresa con el admin de
 demostración. Si ngrok muestra una página de aviso antes de la app, es la del plan gratuito: toca *Visit Site*.

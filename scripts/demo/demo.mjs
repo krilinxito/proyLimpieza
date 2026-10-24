@@ -100,9 +100,9 @@ hijos.push(servidor);
 servidor.on('exit', (codigo) => apagar(codigo ?? 0));
 
 if (sinNgrok) {
-  console.log(`\nListo. En OTRA terminal, abre el túnel con tu dominio de ngrok:\n\n    ngrok http --url=${dominio} ${PUERTO}\n`);
+  console.log(`\nListo. En OTRA terminal, abre el túnel con tu dominio de ngrok:\n\n    ngrok http --domain=${dominio} ${PUERTO}\n`);
 } else {
-  const tunel = spawn('ngrok', ['http', `--url=${dominio}`, String(PUERTO), '--log=stdout'], { stdio: 'inherit' });
+  const tunel = spawn('ngrok', ['http', `--domain=${dominio}`, String(PUERTO), '--log=stdout'], { stdio: 'inherit' });
   hijos.push(tunel);
   tunel.on('exit', (codigo) => {
     console.error('\nngrok se cerró. Si fue por un error, mira el mensaje de arriba (lo más común: falta el authtoken o el dominio no es tuyo).');
