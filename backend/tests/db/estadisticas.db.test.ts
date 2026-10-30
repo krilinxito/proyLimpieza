@@ -175,8 +175,8 @@ describe('Estadísticas: ropa sin recoger — SPEC-ALE186-008', () => {
     const otra = await crearSucursal();
     const periodo = { desde: '2025-05-01', hasta: '2025-06-30', sucursalId: esc.sucursalId };
 
-    const nueva = await crearOrden(esc, { estado: 'LISTO', fechaEntrada: '2025-06-25T09:00:00-04:00' });
-    const vieja = await crearOrden(esc, { estado: 'EN_PROCESO', fechaEntrada: '2025-05-10T09:00:00-04:00' });
+    const nueva = await crearOrden(esc, { estado: 'RECIBIDO', fechaEntrada: '2025-06-25T09:00:00-04:00' });
+    const vieja = await crearOrden(esc, { estado: 'RECIBIDO', fechaEntrada: '2025-05-10T09:00:00-04:00' });
     const entregada = await crearOrden(esc, { fechaEntrada: '2025-06-01T09:00:00-04:00' });
     await crearEntrega(entregada, esc, { precioFinal: '45.50' });
     await crearOrden(esc, { estado: 'ANULADO', fechaEntrada: '2025-06-01T09:00:00-04:00' });

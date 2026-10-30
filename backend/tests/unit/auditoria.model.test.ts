@@ -149,7 +149,7 @@ describe('Auditoría: cada escritura anota lo suyo — SPEC-ALE186-010', () => {
     ],
     [
       'la anulación de una orden',
-      () => ordenes.actualizar(IDS.orden, { estado: 'ANULADO' }, { estadosDeOrigen: ['LISTO'], sucursalId: null }, AUTOR),
+      () => ordenes.actualizar(IDS.orden, { estado: 'ANULADO' }, { estadosDeOrigen: ['RECIBIDO'], sucursalId: null }, AUTOR),
       'EDITAR', 'ordenes', AUTOR,
     ],
     [
@@ -215,7 +215,7 @@ describe('Auditoría: cada escritura anota lo suyo — SPEC-ALE186-010', () => {
   it('una edición vacía no escribe ni anota', async () => {
     await clientes.actualizar(IDS.cliente, {}, AUTOR);
     await usuarios.actualizar(IDS.usuario, {}, AUTOR);
-    await ordenes.actualizar(IDS.orden, {}, { estadosDeOrigen: ['LISTO'], sucursalId: null }, AUTOR);
+    await ordenes.actualizar(IDS.orden, {}, { estadosDeOrigen: ['RECIBIDO'], sucursalId: null }, AUTOR);
 
     for (const [sql] of query.mock.calls as [string][]) expect(sql).not.toContain('auditoria');
   });

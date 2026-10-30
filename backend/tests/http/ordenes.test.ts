@@ -128,7 +128,7 @@ describe('POST /api/ordenes — SPEC-ALE186-004', () => {
   });
 
   it('ignora un estado que venga en el cuerpo', async () => {
-    await alta(cuerpoDeOrden({ estado: 'LISTO' }));
+    await alta(cuerpoDeOrden({ estado: 'ENTREGADO' }));
 
     expect(loQueSeCreo()).not.toHaveProperty('estado');
   });
@@ -273,7 +273,7 @@ describe('PATCH /api/ordenes/:id — SPEC-ALE186-004', () => {
       descripcion: 'Terno azul',
       precio_total: '60',
       fecha_estimada_salida: null,
-      estado: 'EN_PROCESO',
+      estado: 'ANULADO',
       // Nada de esto se puede cambiar por PATCH:
       cliente_id: IDS.cliente,
       sucursal_id: IDS.otraSucursal,
@@ -287,20 +287,20 @@ describe('PATCH /api/ordenes/:id — SPEC-ALE186-004', () => {
       descripcion: 'Terno azul',
       precioTotal: 6000,
       fechaEstimadaSalida: null,
-      estado: 'EN_PROCESO',
+      estado: 'ANULADO',
     });
   });
 
   it('pide al model que la orden esté en un estado desde el que se llega al pedido', async () => {
-    await edicion({ estado: 'LISTO' });
+    await edicion({ estado: 'ANULADO' });
 
-    expect(restricciones()?.estadosDeOrigen).toEqual(['RECIBIDO', 'EN_PROCESO', 'LISTO']);
+    expect(restricciones()?.estadosDeOrigen).toEqual(['RECIBIDO', 'ANULADO']);
   });
 
   it('no deja editar una orden cerrada, aunque el cambio no toque el estado', async () => {
     await edicion({ descripcion: 'Terno azul' });
 
-    expect(restricciones()?.estadosDeOrigen).toEqual(['RECIBIDO', 'EN_PROCESO', 'LISTO']);
+    expect(restricciones()?.estadosDeOrigen).toEqual(['RECIBIDO']);
   });
 
   it('el reintento de una anulación pasa', async () => {
@@ -313,10 +313,11 @@ describe('PATCH /api/ordenes/:id — SPEC-ALE186-004', () => {
   });
 
   it.each([
-    ['volver hacia atrás', ordenDePrueba({ estado: 'LISTO' }), { estado: 'RECIBIDO' }],
-    ['tocar una orden ANULADA', ordenDePrueba({ estado: 'ANULADO' }), { estado: 'LISTO' }],
+    ['tocar una orden ANULADA', ordenDePrueba({ estado: 'ANULADO' }), { descripcion: 'x' }],
     ['tocar una orden ENTREGADA', ordenDePrueba({ estado: 'ENTREGADO' }), { descripcion: 'x' }],
-    ['pedir ENTREGADO', ordenDePrueba({ estado: 'LISTO' }), { estado: 'ENTREGADO' }],
+    ['tocar una orden REEMBOLSADA', ordenDePrueba({ estado: 'REEMBOLSADO' }), { descripcion: 'x' }],
+    ['pedir ENTREGADO', ordenDePrueba({ estado: 'RECIBIDO' }), { estado: 'ENTREGADO' }],
+    ['pedir REEMBOLSADO', ordenDePrueba({ estado: 'RECIBIDO' }), { estado: 'REEMBOLSADO' }],
   ])('responde 409 TRANSICION_INVALIDA al %s', async (_caso, actual, cuerpo) => {
     actualizar.mockResolvedValue({ tipo: 'estado-no-admitido', orden: actual });
 
@@ -324,7 +325,7 @@ describe('PATCH /api/ordenes/:id — SPEC-ALE186-004', () => {
 
     expectApiError(res, { status: 409, codigo: 'TRANSICION_INVALIDA' });
     // El mensaje es para el mostrador: estados en palabras, nunca el ENUM.
-    expect(res.body.error.mensaje).not.toMatch(/RECIBIDO|EN_PROCESO|LISTO|ENTREGADO|ANULADO/);
+    expect(res.body.error.mensaje).not.toMatch(/RECIBIDO|REEMBOLSADO|ENTREGADO|ANULADO/);
   });
 
   it('responde 400 con un estado que no existe', async () => {
@@ -332,6 +333,22 @@ describe('PATCH /api/ordenes/:id — SPEC-ALE186-004', () => {
 
     expectApiError(res, { status: 400, codigo: 'VALIDACION' });
     expect(actualizar).not.toHaveBeenCalled();
+  });
+
+  // SPEC-KRILINXI-067: los pasos intermedios se quitaron del sistema.
+  it.each(['EN_PROCESO', 'LISTO'])('SPEC-KRILINXI-067: responde 400 al pedir %s, que ya no existe', async (estado) => {
+    const res = await edicion({ estado });
+
+    expectApiError(res, { status: 400, codigo: 'VALIDACION' });
+    expect(actualizar).not.toHaveBeenCalled();
+  });
+
+  it('SPEC-KRILINXI-067: desde RECIBIDO solo se pide ANULADO, y las cerradas no se editan', async () => {
+    await edicion({ estado: 'ANULADO' });
+    expect(restricciones()?.estadosDeOrigen).toEqual(['RECIBIDO', 'ANULADO']);
+
+    await edicion({ descripcion: 'Terno azul' });
+    expect(restricciones()?.estadosDeOrigen).toEqual(['RECIBIDO']);
   });
 
   it.each([
@@ -354,13 +371,13 @@ describe('PATCH /api/ordenes/:id — SPEC-ALE186-004', () => {
   });
 
   it('un EMPLEADO solo puede tocar las órdenes de su sucursal', async () => {
-    await edicion({ estado: 'LISTO' });
+    await edicion({ estado: 'ANULADO' });
 
     expect(restricciones()?.sucursalId).toBe(IDS.sucursal);
   });
 
   it('un ADMIN puede tocar las de cualquier sucursal', async () => {
-    await edicion({ estado: 'LISTO' }, ADMIN);
+    await edicion({ estado: 'ANULADO' }, ADMIN);
 
     expect(restricciones()?.sucursalId).toBeNull();
   });
@@ -368,20 +385,20 @@ describe('PATCH /api/ordenes/:id — SPEC-ALE186-004', () => {
   it('responde 404 cuando la orden no existe o es de otra sucursal', async () => {
     actualizar.mockResolvedValue({ tipo: 'no-encontrada' });
 
-    const res = await edicion({ estado: 'LISTO' });
+    const res = await edicion({ estado: 'ANULADO' });
 
     expectApiError(res, { status: 404, codigo: 'NO_ENCONTRADO' });
   });
 
   it('responde 400 cuando el id de la ruta no es un UUID', async () => {
-    const res = await edicion({ estado: 'LISTO' }, conSesion(), '001234');
+    const res = await edicion({ estado: 'ANULADO' }, conSesion(), '001234');
 
     expectApiError(res, { status: 400, codigo: 'VALIDACION' });
     expect(actualizar).not.toHaveBeenCalled();
   });
 
   it('responde 401 sin token', async () => {
-    const res = await testApi().patch(`/api/ordenes/${IDS.orden}`).send({ estado: 'LISTO' });
+    const res = await testApi().patch(`/api/ordenes/${IDS.orden}`).send({ estado: 'ANULADO' });
 
     expectApiError(res, { status: 401, codigo: 'NO_AUTENTICADO' });
   });

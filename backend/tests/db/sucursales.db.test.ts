@@ -82,7 +82,7 @@ describe('Sucursales contra la base real: edición y cierre — SPEC-ALE186-011'
     const adminId = await crearUsuario({ sucursalId: null, rol: 'ADMIN' });
     const admin = comoAdmin(adminId);
     const esc = await escenario();
-    const orden = await crearOrden(esc, { estado: 'EN_PROCESO' });
+    const orden = await crearOrden(esc, { estado: 'RECIBIDO' });
     await crearOrden(esc, { estado: 'ENTREGADO' }); // esta no cuenta: ya se retiró
     const cerrar = () => testApi().patch(`/api/sucursales/${esc.sucursalId}`).set(admin).send({ activa: false });
 

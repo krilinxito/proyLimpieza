@@ -155,7 +155,7 @@ describe('Auditoría de las ediciones — SPEC-ALE186-010', () => {
 
   it('anular una orden anota el estado de antes, y el reintento de la anulación no anota otra', async () => {
     const esc = await escenario();
-    const orden = await crearOrden(esc, { estado: 'EN_PROCESO' });
+    const orden = await crearOrden(esc, { estado: 'RECIBIDO' });
     const anular = () => testApi().patch(`/api/ordenes/${orden.id}`).set(sesionDe(esc)).send({ estado: 'ANULADO' });
 
     expect((await anular()).status).toBe(200);
@@ -166,7 +166,7 @@ describe('Auditoría de las ediciones — SPEC-ALE186-010', () => {
         usuarioId: esc.usuarioId,
         accion: 'EDITAR',
         tablaAfectada: 'ordenes',
-        valoresAnteriores: { estado: 'EN_PROCESO' },
+        valoresAnteriores: { estado: 'RECIBIDO' },
       },
     ]);
   });
@@ -251,7 +251,7 @@ describe('Auditoría: la escritura y su fila, las dos o ninguna — SPEC-ALE186-
     ).rejects.toThrow();
 
     expect(await auditoriaDe(id)).toEqual([]);
-    expect((await leerOrden(orden.id)).estado).toBe('LISTO');
+    expect((await leerOrden(orden.id)).estado).toBe('RECIBIDO');
   });
 });
 

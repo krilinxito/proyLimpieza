@@ -21,7 +21,7 @@ import {
 } from '../models/ordenes.model.js';
 import * as sucursales from '../models/sucursales.model.js';
 import { ApiError, CODIGOS_ERROR } from '../utils/ApiError.js';
-import { esEstadoOrden, estadosDeOrigen, type EstadoOrden } from '../utils/dominio.js';
+import { ESTADOS_CERRADOS, esEstadoOrden, estadosDeOrigen, type EstadoOrden } from '../utils/dominio.js';
 import { esNumeroDeBoleta } from '../utils/formatos.js';
 import type { Centavos } from '../utils/money.js';
 import { leerPaginacion } from '../utils/paginacion.js';
@@ -43,9 +43,8 @@ const PRECIO_MAXIMO: Centavos = 9_999_999_999; // NUMERIC(10,2) = 99.999.999,99
 // Cómo se dice cada estado en el mostrador (sección 9: el idioma del negocio).
 const ESTADO_EN_PALABRAS: Record<EstadoOrden, string> = {
   RECIBIDO: 'recibida',
-  EN_PROCESO: 'en proceso',
-  LISTO: 'lista para recoger',
   ENTREGADO: 'entregada',
+  REEMBOLSADO: 'reembolsada',
   ANULADO: 'anulada',
 };
 
@@ -197,10 +196,13 @@ function transicionInvalida(actual: Orden, pedido: EstadoOrden | undefined): Api
 
   if (pedido === 'ENTREGADO') {
     mensaje = 'Para dar la ropa por entregada, registra la entrega desde "Entregar ropa".';
-  } else if (actual.estado === 'ENTREGADO' || actual.estado === 'ANULADO') {
+  } else if (pedido === 'REEMBOLSADO') {
+    mensaje = 'El reembolso se registra al entregar la ropa, no cambiando el estado de la orden.';
+  } else if (ESTADOS_CERRADOS.includes(actual.estado)) {
     mensaje = `La orden ${boleta} ya está ${ESTADO_EN_PALABRAS[actual.estado]} y no se puede cambiar.`;
   } else {
-    // Solo queda un caso: `pedido` es un estado anterior al actual.
+    // Sin estados intermedios no queda ningún caso real (SPEC-KRILINXI-067); se deja el mensaje por si
+    // vuelve a haber un orden entre estados.
     mensaje =
       `La orden ${boleta} ya está ${ESTADO_EN_PALABRAS[actual.estado]} ` +
       `y no puede volver a "${ESTADO_EN_PALABRAS[pedido ?? actual.estado]}".`;

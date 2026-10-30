@@ -77,7 +77,7 @@ describe('Entregas contra la base real — SPEC-ALE186-007', () => {
     // Responde con la entrega que ya existía (es un reintento por id)...
     expect(resultado).toMatchObject({ tipo: 'existente', entrega: { ordenId: primera.id } });
     // ...y la otra orden quedó exactamente como estaba.
-    expect((await leerOrden(otra.id)).estado).toBe('LISTO');
+    expect((await leerOrden(otra.id)).estado).toBe('RECIBIDO');
     expect(await entregasDe(otra.id)).toBe(0);
   });
 
@@ -124,7 +124,7 @@ describe('Entregar solo con la boleta pagada — SPEC-KRILINXI-056', () => {
     const resultado = await entregas.crear(entrega, sinRestriccion);
 
     expect(resultado).toMatchObject({ tipo: 'saldo-pendiente', saldo: '25.50', orden: { id: orden.id } });
-    expect((await leerOrden(orden.id)).estado).toBe('LISTO');
+    expect((await leerOrden(orden.id)).estado).toBe('RECIBIDO');
     expect(await entregasDe(orden.id)).toBe(0);
     expect(await auditoriaDe(entrega.id)).toEqual([]);
   });
@@ -194,7 +194,7 @@ describe('Entregar solo con la boleta pagada — SPEC-KRILINXI-056', () => {
     expect(rechazada.status).toBe(409);
     expect(rechazada.body.error.codigo).toBe('SALDO_PENDIENTE');
     expect(rechazada.body.error.mensaje).toContain('Bs 35.50 sin cobrar');
-    expect((await leerOrden(orden.id)).estado).toBe('LISTO');
+    expect((await leerOrden(orden.id)).estado).toBe('RECIBIDO');
 
     await pagarOrden(orden, esc, '35.50');
     const aceptada = await testApi().post('/api/entregas').set(sesionDe(esc)).send(cuerpo);

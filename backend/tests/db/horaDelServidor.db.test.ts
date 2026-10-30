@@ -77,7 +77,7 @@ describe('La fecha del hecho en la auditoría — SPEC-ALE186-015', () => {
     // Desde SPEC-KRILINXI-056 la entrega exige la boleta pagada: el cobro cubre el precio de la orden (45.50).
     const pago = cuerpoDePago({ orden_id: orden.id, monto: '45.50', fecha_pago: '2026-02-01T09:30:00-04:00' });
     await testApi().post('/api/pagos').set(empleado).send(pago);
-    await testApi().patch(`/api/ordenes/${String(orden.id)}`).set(empleado).send({ estado: 'LISTO' });
+    await testApi().patch(`/api/ordenes/${String(orden.id)}`).set(empleado).send({ descripcion: 'Camisas y un pantalón' });
     const entrega = cuerpoDeEntrega({ orden_id: orden.id, fecha_entrega: '2026-02-03T17:45:00-04:00' });
     await testApi().post('/api/entregas').set(empleado).send(entrega);
 

@@ -89,7 +89,7 @@ describe('Sucursales model: edición — SPEC-ALE186-011', () => {
     const [sql, valores] = llamada();
     expect(sql).toMatch(/NOT EXISTS \(SELECT 1 FROM ordenes[\s\S]*ordenes\.estado = ANY\(\$2::estado_orden\[\]\)\)[\s\S]*FOR UPDATE/);
     expect(sql).toContain('activa = $3');
-    expect(valores.slice(0, 3)).toEqual([ID, ['RECIBIDO', 'EN_PROCESO', 'LISTO'], false]);
+    expect(valores.slice(0, 3)).toEqual([ID, ['RECIBIDO'], false]);
   });
 
   it('al reabrir no mira las órdenes', async () => {
@@ -139,6 +139,6 @@ describe('Sucursales model: edición — SPEC-ALE186-011', () => {
       tipo: 'con-ropa-abierta',
       cantidad: 4,
     });
-    expect(llamada(2)[1]).toEqual([ID, ['RECIBIDO', 'EN_PROCESO', 'LISTO']]);
+    expect(llamada(2)[1]).toEqual([ID, ['RECIBIDO']]);
   });
 });

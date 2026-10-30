@@ -35,7 +35,7 @@ const NUEVA = {
   fechaEntrada: '2026-09-30T14:15:00Z',
 };
 
-const ABIERTOS = ['RECIBIDO', 'EN_PROCESO', 'LISTO'] as const;
+const ABIERTOS = ['RECIBIDO'] as const;
 
 // Quien edita la orden: va a la auditoría (SPEC-ALE186-010).
 const AUTOR = '11111111-1111-1111-1111-111111111111';
@@ -126,16 +126,16 @@ describe('Ordenes model: actualizar — SPEC-ALE186-004', () => {
   const soloMiSucursal = { estadosDeOrigen: ABIERTOS, sucursalId: IDS.sucursal };
 
   it('pone las condiciones de estado y sucursal dentro de la misma sentencia que escribe', async () => {
-    query.mockResolvedValueOnce({ rows: [{ ...FILA, estado: 'LISTO' }] });
+    query.mockResolvedValueOnce({ rows: [{ ...FILA, estado: 'ANULADO' }] });
 
-    const resultado = await ordenes.actualizar(IDS.orden, { estado: 'LISTO' }, soloMiSucursal, AUTOR);
+    const resultado = await ordenes.actualizar(IDS.orden, { estado: 'ANULADO' }, soloMiSucursal, AUTOR);
 
-    expect(resultado).toMatchObject({ tipo: 'actualizada', orden: { estado: 'LISTO' } });
+    expect(resultado).toMatchObject({ tipo: 'actualizada', orden: { estado: 'ANULADO' } });
     const [sql, valores] = llamada();
     expect(sql).toMatch(/UPDATE ordenes AS c SET estado = \$4/);
     // Las condiciones, en el SELECT … FOR UPDATE que lee la fila de antes.
     expect(sql).toMatch(/FROM ordenes WHERE id = \$1 AND estado = ANY[\s\S]*sucursal_id = \$3\) FOR UPDATE/);
-    expect(valores).toEqual([IDS.orden, ABIERTOS, IDS.sucursal, 'LISTO', AUTOR, 'EDITAR', 'ordenes']);
+    expect(valores).toEqual([IDS.orden, ABIERTOS, IDS.sucursal, 'ANULADO', AUTOR, 'EDITAR', 'ordenes']);
     // Una sola consulta: no hay un SELECT previo que otra petición pueda adelantar.
     expect(query).toHaveBeenCalledTimes(1);
   });
@@ -164,7 +164,7 @@ describe('Ordenes model: actualizar — SPEC-ALE186-004', () => {
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ ...FILA, estado: 'ANULADO' }] });
 
-    const resultado = await ordenes.actualizar(IDS.orden, { estado: 'LISTO' }, soloMiSucursal, AUTOR);
+    const resultado = await ordenes.actualizar(IDS.orden, { estado: 'ANULADO' }, soloMiSucursal, AUTOR);
 
     expect(resultado).toMatchObject({ tipo: 'estado-no-admitido', orden: { estado: 'ANULADO' } });
   });
@@ -174,7 +174,7 @@ describe('Ordenes model: actualizar — SPEC-ALE186-004', () => {
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ ...FILA, sucursal_id: IDS.otraSucursal }] });
 
-    const resultado = await ordenes.actualizar(IDS.orden, { estado: 'LISTO' }, soloMiSucursal, AUTOR);
+    const resultado = await ordenes.actualizar(IDS.orden, { estado: 'ANULADO' }, soloMiSucursal, AUTOR);
 
     expect(resultado).toEqual({ tipo: 'no-encontrada' });
   });
@@ -186,7 +186,7 @@ describe('Ordenes model: actualizar — SPEC-ALE186-004', () => {
 
     const resultado = await ordenes.actualizar(
       IDS.orden,
-      { estado: 'LISTO' },
+      { estado: 'ANULADO' },
       { estadosDeOrigen: ABIERTOS, sucursalId: null },
       AUTOR,
     );
@@ -198,7 +198,7 @@ describe('Ordenes model: actualizar — SPEC-ALE186-004', () => {
   it('una orden que no existe no se encuentra', async () => {
     query.mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({ rows: [] });
 
-    const resultado = await ordenes.actualizar(IDS.orden, { estado: 'LISTO' }, soloMiSucursal, AUTOR);
+    const resultado = await ordenes.actualizar(IDS.orden, { estado: 'ANULADO' }, soloMiSucursal, AUTOR);
 
     expect(resultado).toEqual({ tipo: 'no-encontrada' });
   });

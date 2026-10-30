@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   ACCIONES_AUDITORIA,
+  ESTADOS_CERRADOS,
   ESTADOS_ORDEN,
   METODOS_PAGO,
   TIPOS_PAGO,
@@ -48,9 +49,25 @@ describe('Dominio: los ENUM del schema — SPEC-ALE186-004', () => {
   });
 
   it('reconoce un estado válido y rechaza uno mal escrito', () => {
-    expect(esEstadoOrden('EN_PROCESO')).toBe(true);
-    expect(esEstadoOrden('EN PROCESO')).toBe(false);
+    expect(esEstadoOrden('REEMBOLSADO')).toBe(true);
+    expect(esEstadoOrden('RECIBIDO ')).toBe(false);
     expect(esEstadoOrden(undefined)).toBe(false);
+  });
+});
+
+describe('Dominio: los estados de la boleta — SPEC-KRILINXI-067', () => {
+  it('la migración 006 deja estado_orden con cuatro valores y el código dice lo mismo', () => {
+    expect(enumsDelSchema().get('estado_orden')).toEqual(['RECIBIDO', 'ENTREGADO', 'REEMBOLSADO', 'ANULADO']);
+    expect([...ESTADOS_ORDEN]).toEqual(['RECIBIDO', 'ENTREGADO', 'REEMBOLSADO', 'ANULADO']);
+  });
+
+  it('EN_PROCESO y LISTO ya no existen', () => {
+    expect(esEstadoOrden('EN_PROCESO')).toBe(false);
+    expect(esEstadoOrden('LISTO')).toBe(false);
+  });
+
+  it('lo que ya salió o se anuló está cerrado, y REEMBOLSADO también', () => {
+    expect([...ESTADOS_CERRADOS]).toEqual(['ENTREGADO', 'REEMBOLSADO', 'ANULADO']);
   });
 });
 
@@ -60,26 +77,27 @@ describe('Dominio: las acciones de auditoría — SPEC-ALE186-010', () => {
   });
 });
 
-describe('Dominio: cómo avanza una orden — SPEC-ALE186-004', () => {
-  it('se avanza hacia adelante, saltando pasos si hace falta', () => {
-    expect(estadosDeOrigen('LISTO', false)).toEqual(['RECIBIDO', 'EN_PROCESO', 'LISTO']);
+describe('Dominio: cómo cambia una orden — SPEC-ALE186-004 y SPEC-KRILINXI-067', () => {
+  it('desde RECIBIDO solo se puede pasar a ANULADO', () => {
+    expect(estadosDeOrigen('ANULADO', false)).toEqual(['RECIBIDO', 'ANULADO']);
   });
 
-  it('no se vuelve hacia atrás', () => {
-    expect(estadosDeOrigen('EN_PROCESO', false)).not.toContain('LISTO');
+  it('no se vuelve a RECIBIDO desde un estado cerrado', () => {
     expect(estadosDeOrigen('RECIBIDO', false)).toEqual(['RECIBIDO']);
   });
 
-  it('se anula desde cualquier estado menos ENTREGADO', () => {
+  it('una orden entregada o reembolsada no se anula', () => {
     expect(estadosDeOrigen('ANULADO', false)).not.toContain('ENTREGADO');
+    expect(estadosDeOrigen('ANULADO', false)).not.toContain('REEMBOLSADO');
   });
 
-  it('ENTREGADO no se puede pedir: lo pone el registro de la entrega', () => {
+  it('ENTREGADO y REEMBOLSADO no se pueden pedir: los pone el registro de la entrega', () => {
     expect(estadosDeOrigen('ENTREGADO', false)).toEqual([]);
+    expect(estadosDeOrigen('REEMBOLSADO', false)).toEqual([]);
   });
 
   it('repetir el estado actual es válido: así un reintento no falla', () => {
-    expect(estadosDeOrigen('LISTO', false)).toContain('LISTO');
+    expect(estadosDeOrigen('RECIBIDO', false)).toContain('RECIBIDO');
     expect(estadosDeOrigen('ANULADO', false)).toContain('ANULADO');
   });
 
@@ -87,7 +105,7 @@ describe('Dominio: cómo avanza una orden — SPEC-ALE186-004', () => {
     // Anular de nuevo una anulada (el reintento) pasa; cambiarle además el
     // precio, no.
     expect(estadosDeOrigen('ANULADO', true)).not.toContain('ANULADO');
-    expect(estadosDeOrigen(undefined, true)).toEqual(['RECIBIDO', 'EN_PROCESO', 'LISTO']);
+    expect(estadosDeOrigen(undefined, true)).toEqual(['RECIBIDO']);
   });
 
   it('sin estado ni otros campos, cualquier estado vale (el PATCH vacío)', () => {
