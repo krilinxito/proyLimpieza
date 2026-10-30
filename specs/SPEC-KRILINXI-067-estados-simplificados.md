@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-067
 name: Estados de la boleta simplificados
 slug: estados-simplificados
-status: draft
+status: in-progress
 owner: krilinxito
 created: 2026-10-30
 scope:
