@@ -25,7 +25,7 @@ Un sistema hecho a la medida de este negocio y de las personas que lo usan: **en
 ## Operating Context
 
 - Cada orden equivale a la **boleta** física preimpresa que se le da al cliente; el empleado copia su número.
-- Flujo de la ropa: `RECIBIDO → EN_PROCESO → LISTO → ENTREGADO` (o `ANULADO` en cualquier punto). La ropa se retira en la misma sucursal donde se dejó.
+- Flujo de la ropa: `RECIBIDO → ENTREGADO` (o `REEMBOLSADO` si la ropa sale sin cobrarse, o `ANULADO`, antes de salir; sin pasos intermedios desde SPEC-KRILINXI-067). La ropa se retira en la misma sucursal donde se dejó.
 - Un cliente se identifica por su **teléfono**. Quien retira sin boleta debe dar nombre y carnet.
 - Todo el dinero está en **bolivianos (Bs)**; las fechas se miran en la hora de Bolivia.
 - Dos roles: `EMPLEADO` (atado a una sucursal) y `ADMIN` (global).

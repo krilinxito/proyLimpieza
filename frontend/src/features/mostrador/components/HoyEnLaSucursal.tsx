@@ -81,7 +81,7 @@ export function HoyEnLaSucursal() {
   const paraCorregir = useConexion()?.paraCorregir ?? 0;
 
   if (!hoy) return <p className="mt-8 text-xl text-texto-suave">Buscando lo de hoy…</p>;
-  const { paraRecoger, atrasadas, cobrado } = hoy;
+  const { porEntregar, atrasadas, cobrado } = hoy;
 
   return (
     <div className="mt-8 grid gap-6">
@@ -102,9 +102,9 @@ export function HoyEnLaSucursal() {
       )}
 
       <ListaDelDia
-        titulo="Lista para recoger"
-        ordenes={paraRecoger}
-        vacia="No hay ropa lista esperando que la recojan."
+        titulo="Ropa por entregar"
+        ordenes={porEntregar}
+        vacia="No hay ropa esperando que la recojan."
         detalle={saldo}
       />
 

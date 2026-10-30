@@ -5,7 +5,7 @@
  * CLAUDE.md §8). Sin que el admin elija nada, el panel arranca con:
  *
  *  - **los ingresos de hoy**, que es la caja del día;
- *  - **todo lo pendiente** (saldos y ropa sin recoger), sin importar cuándo entró la ropa.
+ *  - **todo lo pendiente** (saldos y ropa por entregar), sin importar cuándo entró la ropa.
  *    El backend filtra esas dos por `fecha_entrada`: con "hoy", una deuda de hace un mes no
  *    aparecería, y el tramo "más de 30 días" quedaría siempre en cero.
  *
@@ -45,7 +45,7 @@ export function parametrosIngresos(filtro: Filtro, hoy: string): Parametros {
   return conSucursal(filtro.fechas ?? { desde: hoy, hasta: hoy }, filtro.sucursalId);
 }
 
-/** Para saldos y ropa sin recoger: las fechas elegidas, o todo hasta hoy. */
+/** Para saldos y ropa por entregar: las fechas elegidas, o todo hasta hoy. */
 export function parametrosPendientes(filtro: Filtro, hoy: string): Parametros {
   return conSucursal(filtro.fechas ?? { desde: DESDE_SIEMPRE, hasta: hoy }, filtro.sucursalId);
 }

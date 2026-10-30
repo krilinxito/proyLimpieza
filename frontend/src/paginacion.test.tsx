@@ -122,19 +122,19 @@ describe('La ropa de un cliente se pagina — SPEC-KRILINXI-041', () => {
 });
 
 describe('Lo de hoy en la sucursal se pagina — SPEC-KRILINXI-041', () => {
-  it('la ropa lista para recoger se muestra de a páginas, y el título sigue diciendo cuántas hay', async () => {
+  it('la ropa por entregar se muestra de a páginas, y el título sigue diciendo cuántas hay', async () => {
     conAnchoDePantalla(500);
     tabletConRelojCorrido(0);
     simularApi(() => 'sin-conexion');
     const prueba = await baseLocalDePrueba();
     await prueba.sembrar('clientes', [ROSA]);
-    await prueba.sembrar('ordenes', ordenesDeRosa(7, { estado: 'LISTO' }));
+    await prueba.sembrar('ordenes', ordenesDeRosa(7, { estado: 'RECIBIDO' }));
     renderEnRuta(<App />, '/', { baseLocal: prueba.control });
 
-    const lista = await screen.findByRole('region', { name: 'Lista para recoger (7 boletas)' });
+    const lista = await screen.findByRole('region', { name: 'Ropa por entregar (7 boletas)' });
     expect(within(lista).getAllByRole('link')).toHaveLength(6);
 
-    siguientes('Páginas de lista para recoger');
+    siguientes('Páginas de ropa por entregar');
 
     await waitFor(() => expect(within(lista).getAllByRole('link')).toHaveLength(1));
   });

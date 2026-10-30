@@ -118,17 +118,17 @@ describe('Panel de estadísticas — SPEC-KRILINXI-015', () => {
     ]);
   });
 
-  it('muestra los saldos y la ropa sin recoger con su antigüedad en días', async () => {
+  it('muestra los saldos y la ropa por entregar con su antigüedad en días', async () => {
     simularEstadisticas();
     await abrirPanel();
     await screen.findByRole('heading', { name: '¿Cuánto falta cobrar, y desde hace cuánto?' });
 
     const saldos = seccion('Falta cobrar');
     expect(fila(saldos, 'Falta cobrar según los días', 'Más de 30 días')).toEqual(['Más de 30 días', '1 boleta', 'Bs 30,00']);
-    expect(within(saldos).getByText(/Debe Bs 30,00 de Bs 50,00 · Listo para retirar · hace 45 días/)).toBeInTheDocument();
+    expect(within(saldos).getByText(/Debe Bs 30,00 de Bs 50,00 · Recibido · hace 45 días/)).toBeInTheDocument();
 
-    const ropa = seccion('Ropa sin recoger');
-    expect(fila(ropa, 'Ropa sin recoger según los días', 'Hasta 7 días')).toEqual(['Hasta 7 días', '1 boleta']);
+    const ropa = seccion('Ropa por entregar');
+    expect(fila(ropa, 'Ropa por entregar según los días', 'Hasta 7 días')).toEqual(['Hasta 7 días', '1 boleta']);
     expect(within(ropa).getByText(/3 camisas · Centro · Bs 45,00 · hace 2 días/)).toBeInTheDocument();
     sinJerga();
   });
@@ -146,7 +146,7 @@ describe('Panel de estadísticas — SPEC-KRILINXI-015', () => {
     expect(within(seccion('Cobrado por sucursal')).getByText('No hay datos en este período.')).toBeInTheDocument();
     expect(within(seccion('Cobrado por forma de pago')).getByText('No hay datos en este período.')).toBeInTheDocument();
     expect(screen.getByText('Nadie debe nada en este período.')).toBeInTheDocument();
-    expect(screen.getByText('No hay ropa sin recoger en este período.')).toBeInTheDocument();
+    expect(screen.getByText('No hay ropa por entregar en este período.')).toBeInTheDocument();
   });
 
   it('elegir fechas y sucursal vuelve a pedir las tres secciones con ese período', async () => {
@@ -370,7 +370,7 @@ describe('El panel como tablero — SPEC-KRILINXI-026', () => {
 
     expect(indicador('Cobrado de hoy')).toHaveTextContent('Bs 999,99');
     expect(indicador('Falta cobrar hasta hoy')).toHaveTextContent('Bs 30,00En 1 boleta');
-    expect(indicador('Ropa sin recoger hasta hoy')).toHaveTextContent('1 boleta');
+    expect(indicador('Ropa por entregar hasta hoy')).toHaveTextContent('1 boleta');
     expect(indicador('Ropa recibida de los últimos 30 días')).toHaveTextContent('6 boletas');
     sinJerga();
   });
@@ -435,7 +435,7 @@ describe('El panel como tablero — SPEC-KRILINXI-026', () => {
     expect(eje).toEqual(['17/09', '23/09', '29/09', '05/10', '11/10', '16/10']);
   });
 
-  it('los saldos y la ropa sin recoger van por antigüedad, más oscuros cuanto más viejos, con lo de cada tramo rotulado', async () => {
+  it('los saldos y la ropa por entregar van por antigüedad, más oscuros cuanto más viejos, con lo de cada tramo rotulado', async () => {
     simularEstadisticas({
       saldos: {
         status: 200,
@@ -455,7 +455,7 @@ describe('El panel como tablero — SPEC-KRILINXI-026', () => {
 
     const saldos = grafico('Falta cobrar según los días');
     const tramo = (nombre: RegExp) => within(saldos).getByRole('button', { name: nombre });
-    // Lo que se debe lleva su propia rampa, de rosa (SPEC-KRILINXI-063); la ropa sin recoger, la azul de siempre.
+    // Lo que se debe lleva su propia rampa, de rosa (SPEC-KRILINXI-063); la ropa por entregar, la azul de siempre.
     expect(tramo(/^Hasta 7 días/).querySelector('rect')).toHaveClass('fill-deuda-1');
     expect(tramo(/^De 8 a 30 días/).querySelector('rect')).toHaveClass('fill-deuda-2');
     expect(tramo(/^Más de 30 días/).querySelector('rect')).toHaveClass('fill-deuda-3');
@@ -464,7 +464,7 @@ describe('El panel como tablero — SPEC-KRILINXI-026', () => {
     expect(tramo(/^De 8 a 30 días/).querySelector('[data-barra]')).toHaveAttribute('width', '100%');
 
     // La ropa, sin monto: un tramo en cero no tiene barra, pero sí su rótulo.
-    const ropa = grafico('Ropa sin recoger según los días');
+    const ropa = grafico('Ropa por entregar según los días');
     expect(within(ropa).getByRole('button', { name: /^Hasta 7 días/ }).querySelector('rect')).toHaveClass('fill-antiguedad-1');
     const vacio = within(ropa).getByRole('button', { name: /^Más de 30 días/ });
     expect(vacio.querySelector('rect')).toBeNull();
@@ -520,7 +520,7 @@ describe('El panel como tablero — SPEC-KRILINXI-026', () => {
     for (const nombre of [
       'Cobrado por sucursal y forma de pago',
       'Falta cobrar según los días',
-      'Ropa sin recoger según los días',
+      'Ropa por entregar según los días',
       'Ropa recibida por día',
       'Ropa recibida por cada persona',
     ]) {
@@ -543,7 +543,7 @@ describe('El panel como tablero — SPEC-KRILINXI-026', () => {
     expect(grafico('Falta cobrar según los días').compareDocumentPosition(within(saldos).getByRole('list', { name: 'Boletas con saldo' }))).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
-    expect(within(seccion('Ropa sin recoger')).getByRole('list', { name: 'Boletas sin recoger' })).toHaveTextContent('Boleta 004321 — Juan Mamani');
+    expect(within(seccion('Ropa por entregar')).getByRole('list', { name: 'Boletas por entregar' })).toHaveTextContent('Boleta 004321 — Juan Mamani');
   });
 
   it('un período sin datos lo dice en vez de dibujar un gráfico vacío', async () => {
@@ -588,7 +588,7 @@ describe('El panel como dashboard — SPEC-KRILINXI-042', () => {
   const PLEGADAS = [
     { region: 'Cobrado por sucursal', pregunta: '¿Cuánto se cobró en cada sucursal?', grafico: 'Cobrado por sucursal y forma de pago' },
     { region: 'Ropa recibida', pregunta: '¿Cuánta ropa entró cada día?', grafico: 'Ropa recibida por día' },
-    { region: 'Ropa sin recoger', pregunta: '¿Cuánta ropa falta recoger, y desde hace cuánto?', grafico: 'Ropa sin recoger según los días' },
+    { region: 'Ropa por entregar', pregunta: '¿Cuánta ropa falta entregar, y desde hace cuánto?', grafico: 'Ropa por entregar según los días' },
     { region: 'Lo que hizo cada persona', pregunta: '¿Cuánto atendió cada persona?', grafico: 'Ropa recibida por cada persona' },
     { region: 'Clientes atendidos', pregunta: '¿Quiénes son los clientes que más vienen?', grafico: 'Veces que vino cada cliente' },
   ] as const;
@@ -679,7 +679,7 @@ describe('El panel como dashboard — SPEC-KRILINXI-042', () => {
     await abrirPanel();
     await screen.findByRole('region', { name: 'Cobrado por forma de pago' });
 
-    for (const region of ['Falta cobrar', 'Ropa sin recoger', 'Lo que hizo cada persona', 'Clientes atendidos']) {
+    for (const region of ['Falta cobrar', 'Ropa por entregar', 'Lo que hizo cada persona', 'Clientes atendidos']) {
       const detalle = await detalleDe(seccion(region));
       expect(detalle).not.toHaveAttribute('open');
       expect(within(detalle).getByText('Ver el detalle')).toBeInTheDocument();
@@ -953,7 +953,7 @@ describe('Las tarjetas no se pisan en una pantalla media — SPEC-KRILINXI-044',
   it('cada tarjeta es una columna que puede encogerse, para que su contenido no la ensanche', async () => {
     simularEstadisticas();
     await abrirPanel();
-    const regiones = ['Cobrado por forma de pago', 'Cobrado por sucursal', 'Cobrado por día', 'Ropa recibida', 'Falta cobrar', 'Ropa sin recoger', 'Lo que hizo cada persona', 'Clientes atendidos'];
+    const regiones = ['Cobrado por forma de pago', 'Cobrado por sucursal', 'Cobrado por día', 'Ropa recibida', 'Falta cobrar', 'Ropa por entregar', 'Lo que hizo cada persona', 'Clientes atendidos'];
     await screen.findByRole('region', { name: 'Cobrado por forma de pago' });
 
     for (const region of regiones) {
@@ -974,7 +974,7 @@ describe('Las tarjetas no se pisan en una pantalla media — SPEC-KRILINXI-044',
 });
 
 describe('El tablero con una pregunta principal y el resto a pedido — SPEC-KRILINXI-050', () => {
-  const PLEGADAS_ = ['Cobrado por sucursal', 'Ropa recibida', 'Ropa sin recoger', 'Lo que hizo cada persona', 'Clientes atendidos'];
+  const PLEGADAS_ = ['Cobrado por sucursal', 'Ropa recibida', 'Ropa por entregar', 'Lo que hizo cada persona', 'Clientes atendidos'];
   const A_LA_VISTA_ = ['Cobrado por día', 'Cobrado por forma de pago', 'Falta cobrar'];
 
   it('de entrada se ven los cuatro indicadores y tres tarjetas, con la caja día a día primero; las otras cinco, plegadas', async () => {
@@ -1092,7 +1092,7 @@ describe('Estadísticas en una sola columna y con vista grande — SPEC-KRILINXI
     { region: 'Falta cobrar', pregunta: '¿Cuánto falta cobrar, y desde hace cuánto?' },
     { region: 'Cobrado por sucursal', pregunta: '¿Cuánto se cobró en cada sucursal?' },
     { region: 'Ropa recibida', pregunta: '¿Cuánta ropa entró cada día?' },
-    { region: 'Ropa sin recoger', pregunta: '¿Cuánta ropa falta recoger, y desde hace cuánto?' },
+    { region: 'Ropa por entregar', pregunta: '¿Cuánta ropa falta entregar, y desde hace cuánto?' },
     { region: 'Lo que hizo cada persona', pregunta: '¿Cuánto atendió cada persona?' },
     { region: 'Clientes atendidos', pregunta: '¿Quiénes son los clientes que más vienen?' },
   ] as const;

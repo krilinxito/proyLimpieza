@@ -15,36 +15,55 @@ async function sucursal() {
 
 const boletas = (ordenes: { numeroBoleta: string }[]) => ordenes.map((o) => o.numeroBoleta);
 
-describe('Hoy en la sucursal: la ropa — SPEC-KRILINXI-035', () => {
-  it('lista para recoger: las LISTO de la sucursal, la más vieja arriba, sin la entregada sin sincronizar', async () => {
+describe('Hoy en la sucursal: la ropa — SPEC-KRILINXI-035 y SPEC-KRILINXI-067', () => {
+  it('por entregar: toda la ropa que sigue en el local, la más vieja arriba, sin la entregada sin sincronizar', async () => {
     const { control, sembrar } = await sucursal();
-    const entregada = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000004', estado: 'LISTO', fecha_entrada: '2026-09-01T10:00:00Z' });
+    const entregada = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000004', estado: 'RECIBIDO', fecha_entrada: '2026-09-01T10:00:00Z' });
     await sembrar('ordenes', [
-      ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000002', estado: 'LISTO', fecha_entrada: '2026-10-10T10:00:00Z' }),
-      ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000001', estado: 'LISTO', fecha_entrada: '2026-10-01T10:00:00Z' }),
-      ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000003', estado: 'RECIBIDO' }),
-      ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000005', estado: 'LISTO', sucursal_id: randomUUID() }),
+      ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000002', estado: 'RECIBIDO', fecha_entrada: '2026-10-10T10:00:00Z' }),
+      ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000001', estado: 'RECIBIDO', fecha_entrada: '2026-10-01T10:00:00Z' }),
+      ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000003', estado: 'RECIBIDO', fecha_entrada: '2026-10-12T10:00:00Z' }),
+      ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000005', estado: 'RECIBIDO', sucursal_id: randomUUID() }),
+      ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000006', estado: 'ANULADO' }),
       entregada,
     ]);
     await sembrar('entregas', [entregaDePrueba({ orden_id: entregada.id })]);
 
-    const { paraRecoger } = await hoyEnLaSucursal(control.base, SUCURSAL_DE_PRUEBA, HOY);
-    expect(boletas(paraRecoger)).toEqual(['000001', '000002']);
+    const { porEntregar } = await hoyEnLaSucursal(control.base, SUCURSAL_DE_PRUEBA, HOY);
+    expect(boletas(porEntregar)).toEqual(['000001', '000002', '000003']);
   });
 
-  it('atrasada: recibida o en proceso con la fecha estimada ya pasada, la más atrasada arriba', async () => {
+  it('atrasada: la que sigue en el local con la fecha estimada ya pasada, la más atrasada arriba', async () => {
     const { control, sembrar } = await sucursal();
     await sembrar('ordenes', [
-      ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000010', estado: 'EN_PROCESO', fecha_estimada_salida: '2026-10-17' }),
+      ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000010', estado: 'RECIBIDO', fecha_estimada_salida: '2026-10-17' }),
       ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000011', estado: 'RECIBIDO', fecha_estimada_salida: '2026-10-12' }),
-      // Para hoy todavía no está atrasada; sin fecha, tampoco; lista ya no es "atrasada".
+      // Para hoy todavía no está atrasada; sin fecha, tampoco; una anulada ya no cuenta.
       ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000012', estado: 'RECIBIDO', fecha_estimada_salida: HOY }),
       ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000013', estado: 'RECIBIDO', fecha_estimada_salida: null }),
-      ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000014', estado: 'LISTO', fecha_estimada_salida: '2026-10-01' }),
+      ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000014', estado: 'ANULADO', fecha_estimada_salida: '2026-10-01' }),
     ]);
 
     const { atrasadas } = await hoyEnLaSucursal(control.base, SUCURSAL_DE_PRUEBA, HOY);
     expect(boletas(atrasadas)).toEqual(['000011', '000010']);
+  });
+
+  it('SPEC-KRILINXI-067: una tablet con boletas guardadas como LISTO o EN_PROCESO las cuenta como por entregar', async () => {
+    const { control, sembrar } = await sucursal();
+    await sembrar('ordenes', [
+      ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000020', estado: 'LISTO', fecha_entrada: '2026-10-01T10:00:00Z' }),
+      ordenDePrueba({
+        cliente_id: ROSA.id,
+        numero_boleta: '000021',
+        estado: 'EN_PROCESO',
+        fecha_entrada: '2026-10-02T10:00:00Z',
+        fecha_estimada_salida: '2026-10-10',
+      }),
+    ]);
+
+    const { porEntregar, atrasadas } = await hoyEnLaSucursal(control.base, SUCURSAL_DE_PRUEBA, HOY);
+    expect(boletas(porEntregar)).toEqual(['000020', '000021']);
+    expect(boletas(atrasadas)).toEqual(['000021']);
   });
 });
 

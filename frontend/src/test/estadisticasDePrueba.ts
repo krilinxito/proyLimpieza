@@ -92,7 +92,7 @@ export function saldosDePrueba(cambios: Record<string, unknown> = {}) {
         numeroBoleta: '001234',
         cliente: 'Rosa Quispe',
         sucursalId: SUCURSAL_CENTRO,
-        estado: 'LISTO',
+        estado: 'RECIBIDO',
         montoACobrar: '50.00',
         totalPagado: '20.00',
         saldoPendiente: '30.00',

@@ -24,12 +24,12 @@ const JUAN = clienteDePrueba({ nombre: 'Juan Mamani', telefono: '71111111', carn
 /** Una sucursal con boletas de todo tipo, para que cada test mire lo suyo. */
 async function sucursalConBoletas() {
   const prueba = await baseLocalDePrueba();
-  const reciente = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000010', estado: 'LISTO', fecha_entrada: '2026-10-15T14:00:00.000Z' });
-  const pagada = ordenDePrueba({ cliente_id: JUAN.id, numero_boleta: '000011', estado: 'EN_PROCESO', fecha_entrada: '2026-10-10T12:00:00.000Z' });
-  // Entregada en la tablet, todavía sin sincronizar: la columna sigue diciendo LISTO.
-  const entregada = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000012', estado: 'LISTO', precio_total: '60.00', fecha_entrada: '2026-10-12T12:00:00.000Z' });
+  const reciente = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000010', estado: 'RECIBIDO', fecha_entrada: '2026-10-15T14:00:00.000Z' });
+  const pagada = ordenDePrueba({ cliente_id: JUAN.id, numero_boleta: '000011', estado: 'RECIBIDO', fecha_entrada: '2026-10-10T12:00:00.000Z' });
+  // Entregada en la tablet, todavía sin sincronizar: la columna sigue diciendo RECIBIDO.
+  const entregada = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000012', estado: 'RECIBIDO', precio_total: '60.00', fecha_entrada: '2026-10-12T12:00:00.000Z' });
   const anulada = ordenDePrueba({ cliente_id: JUAN.id, numero_boleta: '000013', estado: 'ANULADO', fecha_entrada: '2026-10-05T12:00:00.000Z' });
-  const vieja = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000014', estado: 'LISTO', fecha_entrada: '2026-08-01T12:00:00.000Z' });
+  const vieja = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000014', estado: 'RECIBIDO', fecha_entrada: '2026-08-01T12:00:00.000Z' });
   const deOtraSucursal = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000015', sucursal_id: randomUUID(), fecha_entrada: '2026-10-14T12:00:00.000Z' });
 
   await prueba.sembrar('clientes', [ROSA, JUAN]);
@@ -69,15 +69,15 @@ describe('Historial de la sucursal, de la base local — SPEC-KRILINXI-041', () 
       clienteTelefono: '70123456',
       // 14:00 UTC = 10:00 en Bolivia, el mismo día.
       dia: '2026-10-15',
-      estado: 'LISTO',
+      estado: 'RECIBIDO',
       precioTotal: 5000,
       pagado: 0,
       saldo: 5000,
       sucursalNombre: null,
     });
-    // Se ve ENTREGADO aunque la columna diga LISTO, y el saldo cuenta con el precio final.
+    // Se ve ENTREGADO aunque la columna diga RECIBIDO, y el saldo cuenta con el precio final.
     expect(entregada).toMatchObject({ estado: 'ENTREGADO', precioFinal: 7000, pagado: 4000, saldo: 3000 });
-    expect(pagada).toMatchObject({ estado: 'EN_PROCESO', pagado: 5000, saldo: 0 });
+    expect(pagada).toMatchObject({ estado: 'RECIBIDO', pagado: 5000, saldo: 0 });
     expect(anulada).toMatchObject({ estado: 'ANULADO' });
   });
 
@@ -183,12 +183,12 @@ describe('Historial de la sucursal, de la base local — SPEC-KRILINXI-041', () 
   });
 
   describe('estado y saldo', () => {
-    it('filtra por el estado que se ve: ENTREGADO es la que tiene entrega, aunque la columna diga LISTO', async () => {
+    it('filtra por el estado que se ve: ENTREGADO es la que tiene entrega, aunque la columna diga RECIBIDO', async () => {
       const prueba = await sucursalConBoletas();
 
       expect(boletas(await listar(prueba, { estado: 'ENTREGADO' }))).toEqual(['000012']);
-      // La entregada ya no cuenta como LISTO: solo la reciente.
-      expect(boletas(await listar(prueba, { estado: 'LISTO' }))).toEqual(['000010']);
+      // La entregada ya no cuenta como RECIBIDO, ni la anulada: quedan la reciente y la pagada (la vieja está fuera de los 30 días).
+      expect(boletas(await listar(prueba, { estado: 'RECIBIDO' }))).toEqual(['000010', '000011']);
       expect(boletas(await listar(prueba, { estado: 'ANULADO' }))).toEqual(['000013']);
     });
 

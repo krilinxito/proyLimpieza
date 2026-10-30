@@ -9,7 +9,7 @@ describe('Filtro del historial — SPEC-KRILINXI-041', () => {
 
   it.each([
     ['un texto', { texto: 'rosa' }],
-    ['un estado', { estado: 'LISTO' as const }],
+    ['un estado', { estado: 'RECIBIDO' as const }],
     ['unas fechas', { fechas: { desde: '2026-10-01', hasta: '2026-10-05' } }],
     ['"con saldo"', { conSaldo: true }],
     ['una sucursal', { sucursalId: 'una-sucursal' }],
@@ -25,7 +25,7 @@ describe('Filtro del historial — SPEC-KRILINXI-041', () => {
     expect(
       parametrosHistorial({
         texto: ' Rosa ',
-        estado: 'LISTO',
+        estado: 'RECIBIDO',
         fechas: { desde: '2026-10-01', hasta: '2026-10-05' },
         conSaldo: true,
         sucursalId: 'una-sucursal',
@@ -34,7 +34,7 @@ describe('Filtro del historial — SPEC-KRILINXI-041', () => {
       desde: '2026-10-01',
       hasta: '2026-10-05',
       sucursal_id: 'una-sucursal',
-      estado: 'LISTO',
+      estado: 'RECIBIDO',
       texto: 'Rosa',
       con_saldo: 'true',
     });

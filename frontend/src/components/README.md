@@ -34,7 +34,7 @@ el color (los estilos viven en `estilosBoton.ts`, compartidos por `Boton` y `Enl
 
 | Variante de `Boton` | Cómo se ve | Cuándo |
 |---|---|---|
-| `primario` (por defecto) | Lleno, de todo el ancho | Lo que hay que hacer ahora. **Una sola por pantalla a la vista**: "Registrar ropa", "Guardar", "Empezar a lavar". |
+| `primario` (por defecto) | Lleno, de todo el ancho | Lo que hay que hacer ahora. **Una sola por pantalla a la vista**: "Registrar ropa", "Guardar", "Entregar la ropa". |
 | `secundario` | Con borde, sobre la superficie | Otra acción posible: "Cobrar" junto a un avance, "Cancelar". |
 | `peligro` | Lleno de rojo, siempre con el ícono de alerta | Lo que no tiene vuelta atrás ("Anular"), y su confirmación. |
 | `navegacion` | Sin caja, subrayado, con la flecha de volver | No hace nada, lleva a otro lado: "Volver a la lista", "Ver toda la ropa en el local". |
