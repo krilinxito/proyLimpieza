@@ -164,6 +164,9 @@ SPEC-KRILINXI-046 hizo que el formulario de entrega **no pida ningún monto si l
 sin "Precio final", "Cuánto paga ahora" ni "¿Cómo paga?", y en su lugar el aviso "Ya está todo pagado". La entrega se guarda con el
 precio de la boleta y sin pago final (`datosAEnviar` en `FormularioEntrega`). Consecuencia aceptada: en una boleta ya pagada no se
 puede cargar un recargo al entregar. Con saldo pendiente, el formulario es el de siempre.
+SPEC-KRILINXI-069 hizo que, con saldo pendiente, **"Cuánto paga ahora" arranque escrito con lo que falta** (`pagoSugerido`, en `FormularioEntrega`) y siga
+al saldo cuando se agrega o se quita un cargo, mientras el empleado no lo toque (`pagoEscrito`: `null` = sin tocar). Un monto propio, aunque sea vacío o menor, se
+respeta y "Entregar" sigue apagado hasta que cubra (SPEC-KRILINXI-056). "¿Cómo paga?" no se preselecciona.
 SPEC-KRILINXI-048 acortó **Registrar ropa**: el adelanto se pregunta primero ("No deja adelanto" / "Deja adelanto") y su importe y su forma de
 pago aparecen solo si deja (al volver a "No deja" se vacían, y no se guarda ningún pago); "Para cuándo estará lista" suma tres atajos
 (`atajosDeFecha`, con el día de Bolivia); y "Volver al mostrador sin guardar" pide confirmar si hay algo escrito (`FormularioRopa` avisa con
