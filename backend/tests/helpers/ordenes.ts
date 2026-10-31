@@ -38,6 +38,16 @@ export function ordenDePrueba(campos: Partial<Orden> = {}): Orden {
   };
 }
 
+/**
+ * Un número de boleta distinto en cada llamada, que la API acepta: `boletaAlAzar('C')` → `C-4f1a9e0`.
+ *
+ * Lleva siempre un número (SPEC-KRILINXI-058 exige al menos uno). Un pedazo de un UUID solo no alcanza: a veces sale
+ * todo letras (`C-abcdef`, una vez cada ~360) y la API lo rechaza con 400, así que el test fallaba de vez en cuando.
+ */
+export function boletaAlAzar(prefijo: string): string {
+  return `${prefijo}-${randomUUID().slice(0, 6)}0`;
+}
+
 export function cuerpoDeOrden(campos: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     id: randomUUID(),

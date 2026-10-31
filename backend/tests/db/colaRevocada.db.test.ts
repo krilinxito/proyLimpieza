@@ -1,8 +1,7 @@
-import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { testApi } from '../helpers/api.js';
 import { crearCliente, crearUsuario, escenario, type Escenario } from '../helpers/baseReal.js';
-import { cuerpoDeOrden } from '../helpers/ordenes.js';
+import { boletaAlAzar, cuerpoDeOrden } from '../helpers/ordenes.js';
 import { comoAdmin, conSesion, conTokenVencidoHace } from '../helpers/usuarios.js';
 
 // Contra Postgres real (sección 4): la marca de revisión se escribe dentro de la
@@ -27,7 +26,7 @@ async function local() {
 }
 
 function orden(esc: Escenario) {
-  return cuerpoDeOrden({ cliente_id: esc.clienteId, numero_boleta: `R-${randomUUID().slice(0, 6)}` });
+  return cuerpoDeOrden({ cliente_id: esc.clienteId, numero_boleta: boletaAlAzar('R') });
 }
 
 const deEmpleado = (esc: Escenario) => ({ id: esc.usuarioId, sucursalId: esc.sucursalId });

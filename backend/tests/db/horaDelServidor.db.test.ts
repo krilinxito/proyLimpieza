@@ -1,9 +1,8 @@
-import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { testApi } from '../helpers/api.js';
 import { ahoraEnLaBase, crearSucursal, crearUsuario, escenario } from '../helpers/baseReal.js';
 import { cuerpoDeEntrega } from '../helpers/entregas.js';
-import { cuerpoDeOrden } from '../helpers/ordenes.js';
+import { boletaAlAzar, cuerpoDeOrden } from '../helpers/ordenes.js';
 import { cuerpoDePago } from '../helpers/pagos.js';
 import { comoAdmin, conSesion, cuerpoDeAltaUsuario } from '../helpers/usuarios.js';
 
@@ -58,7 +57,7 @@ describe('La fecha del hecho en la auditoría — SPEC-ALE186-015', () => {
     // 18:00 de Bolivia de un día que ya pasó: la tablet la cargó sin internet y la sube hoy.
     const orden = cuerpoDeOrden({
       cliente_id: esc.clienteId,
-      numero_boleta: `H-${randomUUID().slice(0, 6)}`,
+      numero_boleta: boletaAlAzar('H'),
       fecha_entrada: '2026-01-15T18:00:00-04:00',
     });
     await testApi().post('/api/ordenes').set(empleado).send(orden);
@@ -72,7 +71,7 @@ describe('La fecha del hecho en la auditoría — SPEC-ALE186-015', () => {
   it('un cobro y una entrega muestran su propia fecha; una edición, ninguna', async () => {
     const esc = await escenario();
     const empleado = conSesion({ id: esc.usuarioId, sucursalId: esc.sucursalId });
-    const orden = cuerpoDeOrden({ cliente_id: esc.clienteId, numero_boleta: `H-${randomUUID().slice(0, 6)}` });
+    const orden = cuerpoDeOrden({ cliente_id: esc.clienteId, numero_boleta: boletaAlAzar('H') });
     await testApi().post('/api/ordenes').set(empleado).send(orden);
     // Desde SPEC-KRILINXI-056 la entrega exige la boleta pagada: el cobro cubre el precio de la orden (45.50).
     const pago = cuerpoDePago({ orden_id: orden.id, monto: '45.50', fecha_pago: '2026-02-01T09:30:00-04:00' });

@@ -17,7 +17,7 @@ import {
 } from '../helpers/baseReal.js';
 import { cuerpoDeAlta } from '../helpers/clientes.js';
 import { cuerpoDeEntrega } from '../helpers/entregas.js';
-import { cuerpoDeOrden } from '../helpers/ordenes.js';
+import { boletaAlAzar, cuerpoDeOrden } from '../helpers/ordenes.js';
 import { cuerpoDePago } from '../helpers/pagos.js';
 import { comoAdmin, conSesion, cuerpoDeAltaUsuario } from '../helpers/usuarios.js';
 
@@ -55,7 +55,7 @@ describe('Auditoría de las altas — SPEC-ALE186-010', () => {
 
   it('el alta de una orden anota CREAR a nombre de quien la recibió', async () => {
     const esc = await escenario();
-    const cuerpo = cuerpoDeOrden({ cliente_id: esc.clienteId, numero_boleta: `A-${randomUUID().slice(0, 6)}` });
+    const cuerpo = cuerpoDeOrden({ cliente_id: esc.clienteId, numero_boleta: boletaAlAzar('A') });
 
     expect((await testApi().post('/api/ordenes').set(sesionDe(esc)).send(cuerpo)).status).toBe(201);
 

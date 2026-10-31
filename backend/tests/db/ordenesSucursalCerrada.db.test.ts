@@ -1,8 +1,7 @@
-import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { testApi } from '../helpers/api.js';
 import { ahoraEnLaBase, auditoriaDe, contar, crearUsuario, escenario, type Escenario } from '../helpers/baseReal.js';
-import { cuerpoDeOrden } from '../helpers/ordenes.js';
+import { boletaAlAzar, cuerpoDeOrden } from '../helpers/ordenes.js';
 import { comoAdmin, conSesion } from '../helpers/usuarios.js';
 
 // Contra Postgres real (sección 4). La regla depende de dos fechas que pone la
@@ -26,7 +25,7 @@ async function local() {
 }
 
 function orden(esc: Escenario, campos: Record<string, unknown> = {}) {
-  return cuerpoDeOrden({ cliente_id: esc.clienteId, numero_boleta: `C-${randomUUID().slice(0, 6)}`, ...campos });
+  return cuerpoDeOrden({ cliente_id: esc.clienteId, numero_boleta: boletaAlAzar('C'), ...campos });
 }
 
 describe('Sucursal cerrada: la ropa de antes del cierre entra, la de después no — SPEC-ALE186-014', () => {
