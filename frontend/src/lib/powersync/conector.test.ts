@@ -170,3 +170,48 @@ describe('Subida: lo rechazado se guarda para corregir — SPEC-KRILINXI-007', (
     expect(await paraCorregir()).toEqual([expect.objectContaining({ codigo: 'NO_ADMITIDA' })]);
   });
 });
+
+describe('Subida: los renglones de la boleta — SPEC-KRILINXI-068', () => {
+  it('un renglón sube como POST /orden-items, después de su orden, con su momento y su posición', async () => {
+    const { control, subir, servidor } = await prepararSubida();
+    const { ejecutar } = control.base;
+    await ejecutar('INSERT INTO ordenes (id, numero_boleta, precio_total, estado) VALUES (?, ?, ?, ?)', [
+      ID_ORDEN, '001234', '30.00', 'RECIBIDO',
+    ]);
+    await ejecutar(
+      `INSERT INTO orden_items (id, orden_id, momento, posicion, descripcion, cantidad, precio_unitario)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      ['r-1', ID_ORDEN, 'INGRESO', 0, 'Camisa', '2.00', '15.00'],
+    );
+
+    await subir();
+
+    expect(servidor.pedidos.map(({ metodo, ruta, cuerpo }) => [metodo, ruta, cuerpo])).toEqual([
+      ['POST', '/ordenes', { id: ID_ORDEN, numero_boleta: '001234', precio_total: '30.00', estado: 'RECIBIDO' }],
+      [
+        'POST',
+        '/orden-items',
+        {
+          id: 'r-1',
+          orden_id: ID_ORDEN,
+          momento: 'INGRESO',
+          posicion: 0,
+          descripcion: 'Camisa',
+          cantidad: '2.00',
+          precio_unitario: '15.00',
+        },
+      ],
+    ]);
+  });
+
+  it('editar un renglón no tiene endpoint: se guarda para corregir sin llamar al servidor', async () => {
+    const { control, sembrar, subir, servidor, paraCorregir } = await prepararSubida();
+    await sembrar('orden_items', [{ id: 'r-1', orden_id: ID_ORDEN, cantidad: '1.00' }]);
+    await control.base.ejecutar('UPDATE orden_items SET cantidad = ? WHERE id = ?', ['2.00', 'r-1']);
+
+    await subir();
+
+    expect(servidor.pedidos).toEqual([]);
+    expect(await paraCorregir()).toEqual([expect.objectContaining({ tabla: 'orden_items', codigo: 'NO_ADMITIDA' })]);
+  });
+});

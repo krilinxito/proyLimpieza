@@ -383,6 +383,7 @@ const CORTAS: Record<string, string> = {
   'features/estadisticas/components/graficos/Leyenda.tsx': 'la leyenda de un gráfico: tres o cuatro series',
   'features/estadisticas/components/graficos/Grafico.tsx': 'el desglose de UN dato elegido en la vista grande: un puñado de líneas (SPEC-KRILINXI-065)',
   'components/AvisoInstalar.tsx': 'los dos pasos fijos de instalar en iPhone, escritos en el código (SPEC-KRILINXI-059)',
+  'features/ordenes/components/ListaDeRenglones.tsx': 'los renglones de UNA boleta: las prendas que dejó y sus cargos (SPEC-KRILINXI-068)',
 };
 
 describe('Las listas largas se paginan — SPEC-KRILINXI-041', () => {

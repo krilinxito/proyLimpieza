@@ -5,6 +5,7 @@ import { Tarjeta } from '../../../components/Tarjeta';
 import { TEXTO_ESTADO_ORDEN } from '../../../lib/dominio';
 import { formatearBs } from '../../../lib/money';
 import { fechaCorta } from '../../ordenes/components/fechas';
+import { ListaDeRenglones } from '../../ordenes/components/ListaDeRenglones';
 import { TONO_ESTADO } from '../../ordenes/estado';
 import { textoDelRetiro } from '../../ordenes/retiro';
 import type { BoletaListada } from '../types';
@@ -39,7 +40,8 @@ export function DetalleDeSoloLectura({ boleta, alVolver }: { boleta: BoletaLista
             ['Cliente', boleta.clienteNombre],
             ['Teléfono', boleta.clienteTelefono],
             ['Sucursal', boleta.sucursalNombre ?? ''],
-            ['Ropa', boleta.descripcion],
+            // Con renglones (SPEC-KRILINXI-068) se listan debajo; una boleta de antes muestra su descripción.
+            ...(boleta.renglones.length > 0 ? [] : ([['Ropa', boleta.descripcion]] as [string, ReactNode][])),
             ['Entró', boleta.dia ? fechaCorta(boleta.dia) : 'Sin fecha'],
             ...(boleta.retiro ? ([['Retiró', textoDelRetiro(boleta.retiro)]] as [string, ReactNode][]) : []),
             ['Precio', formatearBs(boleta.precioTotal)],
@@ -48,6 +50,7 @@ export function DetalleDeSoloLectura({ boleta, alVolver }: { boleta: BoletaLista
             ['Cuenta', textoDelSaldo(boleta)],
           ]}
         />
+        <ListaDeRenglones renglones={boleta.renglones} />
       </Tarjeta>
       <div className="mt-6">
         <Boton variante="navegacion" onClick={alVolver}>

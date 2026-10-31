@@ -4,7 +4,7 @@ import { App } from '../../../App';
 import { simularApi, type PedidoFalso, type RespuestaFalsa } from '../../../test/apiFalsa';
 import { baseLocalDePrueba } from '../../../test/baseLocalDePrueba';
 import { clienteDePrueba, entregaDePrueba, ordenDePrueba, pagoDePrueba, SUCURSAL_DE_PRUEBA } from '../../../test/filasDePrueba';
-import { boletaDePrueba, paginaDeBoletas, SUCURSAL_CENTRO, SUCURSAL_SUR } from '../../../test/historialDePrueba';
+import { boletaDePrueba, paginaDeBoletas, renglonDePrueba, SUCURSAL_CENTRO, SUCURSAL_SUR } from '../../../test/historialDePrueba';
 import { accionesPrincipales } from '../../../test/jerarquia';
 import { sinJerga } from '../../../test/jerga';
 import { tabletConRelojCorrido } from '../../../test/reloj';
@@ -331,6 +331,25 @@ describe('Historial de boletas del administrador — SPEC-KRILINXI-041', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Volver al historial' }));
     expect(await screen.findByRole('button', { name: 'Boleta 001234, Rosa Quispe' })).toBeInTheDocument();
+  });
+
+  it('el detalle lista los renglones de la boleta y sus cargos, en vez de la descripción — SPEC-KRILINXI-068', async () => {
+    const conRenglones = boletaDePrueba({
+      numeroBoleta: '000888',
+      renglones: [
+        renglonDePrueba({ descripcion: 'Camisa', cantidad: '2.00', precioUnitario: '15.00', subtotal: '30.00' }),
+        renglonDePrueba({ momento: 'ENTREGA', descripcion: 'Recargo', cantidad: '1.00', precioUnitario: '5.00', subtotal: '5.00' }),
+      ],
+    });
+    await abrirComoAdmin(() => ({ status: 200, data: paginaDeBoletas([conRenglones]) }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Boleta 000888, Rosa Quispe' }));
+
+    const detalle = await screen.findByRole('region', { name: 'Boleta 000888' });
+    expect(within(detalle).queryByText('Ropa', { selector: 'dt' })).not.toBeInTheDocument();
+    expect(within(within(detalle).getByRole('list', { name: 'Lo que dejó' })).getByRole('listitem')).toHaveTextContent(
+      '2 CamisaBs 15,00 cada unaBs 30,00',
+    );
+    expect(within(detalle).getByRole('list', { name: 'Cargos al entregar' })).toHaveTextContent('1 Recargo');
   });
 
   it('una entregada sin boleta dice quién la retiró, con su nombre y carnet — SPEC-KRILINXI-060', async () => {

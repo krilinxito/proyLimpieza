@@ -5,6 +5,7 @@ import { clienteDePrueba, ordenDePrueba, SUCURSAL_DE_PRUEBA } from '../../../tes
 import { subirAceptando, subirRechazando } from '../../../test/rechazos';
 import { telefonoDeOtro } from '../../clientes/api/clientesLocal';
 import { MENSAJES } from '../../ordenes/api/ordenesLocal';
+import { MENSAJES_RENGLON } from '../../ordenes/renglones';
 import { MENSAJES_CORRECCION, prepararCorreccion } from '../correccion';
 import { descartarRegistro, guardarCorreccion } from './corregirLocal';
 import { listarParaCorregir, type RegistroParaCorregir } from './paraCorregirLocal';
@@ -31,7 +32,7 @@ async function elRechazado(base: Parameters<typeof listarParaCorregir>[0]): Prom
 }
 
 describe('Corregir: qué formulario se abre — SPEC-KRILINXI-013', () => {
-  it('una orden rechazada abre sus datos tal como se enviaron, con el precio como se escribe', async () => {
+  it('una orden rechazada abre sus datos tal como se enviaron, sin el precio (SPEC-KRILINXI-068)', async () => {
     const { control, db } = await baseLocalDePrueba();
     await registrarOrden(control.base, { numero_boleta: '001234', descripcion: '2 sacos', precio_total: '1250.50' });
     await subirRechazando(db, 409, 'BOLETA_DUPLICADA', BOLETA_REPETIDA);
@@ -41,7 +42,8 @@ describe('Corregir: qué formulario se abre — SPEC-KRILINXI-013', () => {
     expect(correccion).toEqual({
       tipo: 'formulario',
       campos: expect.any(Array),
-      valores: { numero_boleta: '001234', descripcion: '2 sacos', precio_total: '1250,50', fecha_estimada_salida: '' },
+      // El precio de una boleta sale de sus renglones: no se corrige acá (SPEC-KRILINXI-068).
+      valores: { numero_boleta: '001234', descripcion: '2 sacos', fecha_estimada_salida: '' },
     });
   });
 
@@ -246,5 +248,123 @@ describe('Descartar — SPEC-KRILINXI-013', () => {
 
     expect(await listarParaCorregir(control.base)).toEqual([]);
     expect(await db.getCrudBatch()).toBeNull();
+  });
+});
+
+describe('Corregir los renglones de la boleta — SPEC-KRILINXI-068', () => {
+  /** Un renglón recién escrito en la tablet (en la cola, sin subir), de la orden que se le pase. */
+  async function escribirRenglon(
+    base: Awaited<ReturnType<typeof baseLocalDePrueba>>['control']['base'],
+    ordenId: string,
+    cambios: Record<string, unknown> = {},
+  ) {
+    const fila = {
+      id: randomUUID(),
+      orden_id: ordenId,
+      sucursal_id: SUCURSAL_DE_PRUEBA,
+      momento: 'INGRESO',
+      posicion: 0,
+      descripcion: 'Camisa',
+      cantidad: '2.50',
+      precio_unitario: '15.00',
+      ...cambios,
+    };
+    const columnas = Object.keys(fila);
+    await base.ejecutar(
+      `INSERT INTO orden_items (${columnas.join(', ')}) VALUES (${columnas.map(() => '?').join(', ')})`,
+      Object.values(fila),
+    );
+    return fila;
+  }
+
+  it('un renglón rechazado abre sus tres datos, con la cantidad y el precio como se escriben', async () => {
+    const { control, db, sembrar } = await baseLocalDePrueba();
+    const orden = ordenDePrueba();
+    await sembrar('ordenes', [orden]);
+    await escribirRenglon(control.base, orden.id);
+    await subirRechazando(db, 409, 'TOTAL_EXCEDIDO', 'Con ese renglón, la boleta sumaría más que su total.');
+
+    const registro = await elRechazado(control.base);
+
+    expect(registro.que).toBe('Prenda «Camisa» de una boleta');
+    expect(prepararCorreccion(registro)).toEqual({
+      tipo: 'formulario',
+      campos: [
+        { clave: 'descripcion', etiqueta: 'Qué es', tipo: 'texto' },
+        { clave: 'cantidad', etiqueta: 'Cuántas', tipo: 'cantidad' },
+        { clave: 'precio_unitario', etiqueta: 'Precio de cada una (Bs)', tipo: 'monto' },
+      ],
+      valores: { descripcion: 'Camisa', cantidad: '2,5', precio_unitario: '15,00' },
+    });
+  });
+
+  it('corregido, vuelve a subir con el mismo id y los números como texto decimal', async () => {
+    const { control, db, sembrar } = await baseLocalDePrueba();
+    const orden = ordenDePrueba();
+    await sembrar('ordenes', [orden]);
+    const renglon = await escribirRenglon(control.base, orden.id);
+    await subirRechazando(db, 409, 'TOTAL_EXCEDIDO', 'Se pasa del total.');
+
+    const resultado = await guardarCorreccion(control.base, SUCURSAL_DE_PRUEBA, await elRechazado(control.base), {
+      descripcion: 'Camisa',
+      cantidad: '2',
+      precio_unitario: '12,50',
+    });
+
+    expect(resultado).toEqual({ tipo: 'guardada' });
+    const [pedido] = await subirAceptando(db);
+    expect(pedido).toMatchObject({
+      metodo: 'POST',
+      ruta: '/orden-items',
+      cuerpo: { id: renglon.id, orden_id: orden.id, momento: 'INGRESO', cantidad: '2.00', precio_unitario: '12.50' },
+    });
+  });
+
+  it('valida con las mismas reglas que al escribirlo', async () => {
+    const { control, db, sembrar } = await baseLocalDePrueba();
+    const orden = ordenDePrueba();
+    await sembrar('ordenes', [orden]);
+    await escribirRenglon(control.base, orden.id);
+    await subirRechazando(db, 409, 'TOTAL_EXCEDIDO', 'Se pasa del total.');
+
+    expect(
+      await guardarCorreccion(control.base, SUCURSAL_DE_PRUEBA, await elRechazado(control.base), {
+        descripcion: ' ',
+        cantidad: '0',
+        precio_unitario: 'quince',
+      }),
+    ).toEqual({
+      tipo: 'invalida',
+      errores: {
+        descripcion: MENSAJES_RENGLON.sinDescripcion,
+        cantidad: MENSAJES_RENGLON.cantidad,
+        precio_unitario: MENSAJES_RENGLON.precio,
+      },
+    });
+  });
+
+  it('una entrega rechazada por el precio vuelve a subir con el precio final que da la tablet ahora', async () => {
+    const { control, db, sembrar } = await baseLocalDePrueba();
+    const orden = ordenDePrueba({ precio_total: '50.00' });
+    await sembrar('ordenes', [orden]);
+    // El cargo del servidor ya bajó (sincronizado); la entrega se había mandado con otro precio.
+    await sembrar('orden_items', [
+      { id: randomUUID(), orden_id: orden.id, momento: 'ENTREGA', descripcion: 'Recargo', cantidad: '1.00', precio_unitario: '5.00' },
+    ]);
+    await control.base.ejecutar(
+      "INSERT INTO entregas (id, orden_id, sucursal_id, tipo_retiro, precio_final) VALUES (uuid(), ?, ?, 'CON_BOLETA', '65.00')",
+      [orden.id, SUCURSAL_DE_PRUEBA],
+    );
+    await subirRechazando(db, 409, 'PRECIO_FINAL_DISTINTO', 'El precio de la boleta con sus cargos es Bs 55.00.');
+    const registro = await elRechazado(control.base);
+
+    // El precio final ya no es un campo que se corrija a mano.
+    expect(prepararCorreccion(registro)).toMatchObject({ tipo: 'formulario', valores: { tipo_retiro: 'CON_BOLETA' } });
+    const { valores } = prepararCorreccion(registro) as { valores: Record<string, string> };
+    expect(valores).not.toHaveProperty('precio_final');
+    expect(await guardarCorreccion(control.base, SUCURSAL_DE_PRUEBA, registro, valores)).toEqual({ tipo: 'guardada' });
+
+    const [pedido] = await subirAceptando(db);
+    expect(pedido).toMatchObject({ ruta: '/entregas', cuerpo: { orden_id: orden.id, precio_final: '55.00' } });
   });
 });

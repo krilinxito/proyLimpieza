@@ -101,7 +101,8 @@ describe('Corregir lo que no se pudo guardar — SPEC-KRILINXI-013', () => {
     expect(screen.getByLabelText('Qué deja')).toHaveValue('2 pantalones');
     // SPEC-KRILINXI-058: igual que al registrar, "Qué deja" admite varias líneas también al corregir.
     expect(screen.getByLabelText('Qué deja').tagName).toBe('TEXTAREA');
-    expect(screen.getByLabelText('Precio (Bs)')).toHaveValue('50,00');
+    // El precio de una boleta sale de sus renglones y no se corrige acá (SPEC-KRILINXI-068).
+    expect(screen.queryByLabelText('Precio (Bs)')).not.toBeInTheDocument();
     sinJerga();
 
     fireEvent.change(boleta, { target: { value: '001235' } });

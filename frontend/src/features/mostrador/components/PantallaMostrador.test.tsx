@@ -9,6 +9,7 @@ import { accionesPrincipales, usoDe } from '../../../test/jerarquia';
 import { sinJerga } from '../../../test/jerga';
 import { renderEnRuta } from '../../../test/render';
 import { sesionDePrueba } from '../../../test/sesion';
+import { escribirPrenda } from '../../../test/renglones';
 
 /**
  * El Mostrador sobre la App entera, con la base local de verdad y el servidor "sin internet": lo
@@ -581,8 +582,7 @@ describe('Mostrador: "Nueva boleta de este cliente" dentro de una boleta — SPE
     expect(screen.queryByRole('combobox', { name: /Buscar cliente/ })).not.toBeInTheDocument();
 
     escribir('Número de la boleta', '000050');
-    escribir('Qué deja', '1 camisa');
-    escribir('Precio (Bs)', '12');
+    escribirPrenda(1, { que: '1 camisa', precio: '12' });
     fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
     fireEvent.click(await screen.findByRole('button', { name: 'Ver la boleta en la ficha de Rosa Quispe' }));

@@ -47,6 +47,13 @@ export function describir(tabla: string, datos: Record<string, unknown>): string
     }
     case 'entregas':
       return 'Una entrega de ropa';
+    case 'orden_items': {
+      // SPEC-KRILINXI-068: un renglón de la boleta, o un cargo al entregar.
+      const que = texto(datos.descripcion);
+      const esCargo = datos.momento === 'ENTREGA';
+      if (que) return esCargo ? `Cargo «${que}» al entregar` : `Prenda «${que}» de una boleta`;
+      return esCargo ? 'Un cargo al entregar' : 'Una prenda de una boleta';
+    }
     default:
       return 'Un registro';
   }

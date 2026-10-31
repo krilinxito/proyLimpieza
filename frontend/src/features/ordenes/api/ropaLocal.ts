@@ -26,7 +26,8 @@ import { insertarPago } from '../../pagos/api/pagosLocal';
 import { calcularSaldo } from '../../pagos/saldo';
 import { estaCerrada, estadoDeLaBase, estadoEfectivo, puedePasarA } from '../estado';
 import type { Retiro } from '../retiro';
-import type { OrdenVista, PagoVisto, QuienRegistra, ResultadoAccion } from '../types';
+import type { OrdenVista, PagoVisto, QuienRegistra, RenglonVisto, ResultadoAccion } from '../types';
+import { renglonesPorOrden } from './renglonesLocal';
 
 export const MENSAJES_ACCION = {
   noEncontrada: 'No se encontró esa boleta en esta sucursal.',
@@ -99,7 +100,7 @@ function aRetiro(fila: Fila): Retiro | null {
 }
 
 /** Arma la vista de una orden. Una fila rota (sin estado que se conozca) no se muestra. */
-function aOrden(fila: Fila, pagos: PagoVisto[]): OrdenVista | null {
+function aOrden(fila: Fila, pagos: PagoVisto[], renglones: RenglonVisto[]): OrdenVista | null {
   const { id, numero_boleta } = fila;
   const estado = estadoDeLaBase(fila.estado);
   if (typeof id !== 'string' || typeof numero_boleta !== 'string' || estado === null) return null;
@@ -125,15 +126,17 @@ function aOrden(fila: Fila, pagos: PagoVisto[]): OrdenVista | null {
     pagado: sumar(...montos),
     saldo: calcularSaldo({ precioTotal, precioFinal, pagos: montos }),
     pagos,
+    renglones,
   };
 }
 
-/** De las filas de `SELECT_ORDENES` a órdenes con su estado efectivo, sus pagos y su saldo. */
+/** De las filas de `SELECT_ORDENES` a órdenes con su estado efectivo, sus pagos, sus renglones y su saldo. */
 export async function armar(base: BaseLocal, filas: Fila[]): Promise<OrdenVista[]> {
   const ids = filas.map((f) => f.id).filter((id): id is string => typeof id === 'string');
-  const pagos = await pagosPorOrden(base, ids);
+  const [pagos, renglones] = await Promise.all([pagosPorOrden(base, ids), renglonesPorOrden(base, ids)]);
   return filas.flatMap((fila) => {
-    const orden = aOrden(fila, typeof fila.id === 'string' ? (pagos.get(fila.id) ?? []) : []);
+    const id = typeof fila.id === 'string' ? fila.id : '';
+    const orden = aOrden(fila, pagos.get(id) ?? [], renglones.get(id) ?? []);
     return orden ? [orden] : [];
   });
 }

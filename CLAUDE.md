@@ -109,6 +109,18 @@ total del día y su desglose por forma de pago, para dibujar una tendencia. Mism
 las demás estadísticas (`leerPeriodo`: sin `desde`, los últimos 30 días) y la forma de `/volumen`: **todos los días
 del período, también los que quedan en `"0.00"`**. Todo lo suma Postgres, y **la suma de los días da lo mismo que
 `/ingresos`** para el mismo período y sucursal (lo comprueba un test contra la base real).
+SPEC-KRILINXI-068 agregó **los renglones de la boleta**: la tabla `orden_items` (migración 007: `momento` INGRESO o ENTREGA,
+`posicion`, `descripcion`, `cantidad` con dos decimales y `precio_unitario`, con su `sucursal_id` duplicado como pagos) y
+`POST /api/orden-items` (sin edición ni borrado, idempotente y auditado). **Los renglones de INGRESO no suman más que
+`precio_total`**: el model abre una transacción, bloquea la orden (`FOR UPDATE`) y recién después inserta, porque en una sola
+sentencia dos renglones que llegan a la vez no se verían entre sí (409 `TOTAL_EXCEDIDO`). Los de ENTREGA son **cargos al
+entregar** y se suman encima: **el precio final de una entrega lo calcula el servidor** (`precio_total` + los cargos, en el mismo
+`UPDATE` que la marca ENTREGADO) y, si la tablet manda otro, responde 409 `PRECIO_FINAL_DISTINTO` sin escribir nada. Al entregar
+**solo se puede sumar**: un precio final por debajo del total ya no existe (para no cobrar está el reembolso, SPEC-KRILINXI-070).
+Un **EMPLEADO ya no cambia `precio_total`** por `PATCH /api/ordenes` (403): eso es del admin. El subtotal es siempre
+`round(cantidad * precio_unitario, 2)` (`SUBTOTAL_SQL` en `ordenes.model.ts`, `subtotal` en `utils/money.ts` y en `lib/money`, las
+tres con la misma tabla de casos) y no se guarda. `GET /api/ordenes` trae los `renglones` de cada boleta en la misma consulta, y la
+auditoría ubica un renglón en la sucursal de su orden. `ESTADOS_ABIERTOS` (lo que no está cerrado) vive en `utils/dominio.ts`.
 
 `frontend/` tiene el scaffolding de SPEC-KRILINXI-001: Vite, Tailwind, rutas y su suite de
 tests. SPEC-KRILINXI-002 añadió las piezas que reutilizan todas las pantallas: `Boton`,
@@ -144,7 +156,7 @@ sale de `features/ordenes/estado.ts` (`estadoEfectivo`: si la orden tiene entreg
 local, figura ENTREGADO aunque no haya sincronizado), y los avances permitidos repiten la tabla
 del backend con un test que la compara. SPEC-KRILINXI-009 añadió `/entregar`: la misma
 pantalla con "Entregar la ropa" en el detalle (`accionesExtra`; hoy `entregas/components/AccionEntregar`), con o sin boleta, precio final
-y pago final (desde SPEC-KRILINXI-056 ya no se entrega con saldo pendiente). **El frontend nunca escribe `ordenes.estado = 'ENTREGADO'`**: lo hace el servidor, y
+(desde SPEC-KRILINXI-068, cargos que se suman en vez de un precio escrito) y pago final (desde SPEC-KRILINXI-056 ya no se entrega con saldo pendiente). **El frontend nunca escribe `ordenes.estado = 'ENTREGADO'`**: lo hace el servidor, y
 en la tablet se ve por `estadoEfectivo`. Con eso, el flujo del mostrador está completo
 (registrar → avanzar → cobrar → entregar). Las pantallas del mostrador piden una sucursal de
 trabajo: la del EMPLEADO, o la que eligió el ADMIN (SPEC-KRILINXI-029).
@@ -416,7 +428,7 @@ SPEC-KRILINXI-058 hizo que **el visto sea de verdad**: cada campo de Registrar r
 algún campo ya mostró un error, nada si está vacía o a medio llenar). Sale de `revisarRopa` (`useRevisionEnVivo`), que por dentro es **la misma validación del guardado**, y un error recién se muestra al salir del campo o al intentar guardar. Para eso se
 endurecieron las reglas de contenido, **en el formulario y en el servidor** (`lib/formatos.ts` y `backend/src/utils/formatos.ts`, probados con la misma tabla `context/formatos.casos.json`): el **número de boleta** lleva letras, números y guion, con al menos un
 número; el **teléfono**, solo números (con espacios o guiones al escribir), 7 u 8; el **carnet** (opcional), el número con su extensión si la tiene (`1234567 LP`); y el nombre y el carnet no pasan de lo que entra en la base (150 y 30). Un cliente de antes con
-un teléfono de otro formato puede cambiar su nombre sin tocar el teléfono. "Qué deja" admite **varias líneas** (`CampoTextoLargo`) y los saltos se respetan donde se muestra. Una tablet con una versión vieja que suba un formato que ahora no vale ve ese registro en "Para corregir".
+un teléfono de otro formato puede cambiar su nombre sin tocar el teléfono. "Qué deja" admite **varias líneas** (`CampoTextoLargo`) y los saltos se respetan donde se muestra (desde SPEC-KRILINXI-068, en Registrar ropa son renglones; el campo largo queda en Para corregir). Una tablet con una versión vieja que suba un formato que ahora no vale ve ese registro en "Para corregir".
 El **anillo de foco** (`foco`) pasó de naranja a **índigo** en los dos temas: el naranja se leía como un error en el campo donde estaba el cursor; un test vigila que su matiz no caiga en la zona del rojo/naranja.
 SPEC-KRILINXI-059 mejoró la **PWA instalable**: el Inicio ofrece instalarla (`AvisoInstalar`): un botón "Instalar en este celular" donde el navegador lo permite (Chrome y Edge), y los dos pasos de Safari en iPhone, donde no existe el botón. Solo aparece si hay algo que ofrecer. El
 navegador avisa una sola vez y temprano (`beforeinstallprompt`), antes de que monte React, así que lo escucha `pwa/instalacion.ts` desde `main.tsx` y guarda el evento hasta que alguien toque el botón. El manifest ahora tiene `id` y los dos colores en el turquesa de la marca
@@ -459,6 +471,18 @@ ediciones) y sobre sus órdenes, pagos y entregas. Se resuelve en la misma consu
 "Buscar con más detalle" suma "¿De qué cliente?" (el buscador vivo sobre la base local, con "Quitar el cliente"), y con uno elegido cada ropa, cobro o
 entrega dice "— de <nombre>" (la tablet del admin no tiene esos registros para nombrarlos; el nombre sale del filtro).
 
+SPEC-KRILINXI-068 cambió **Registrar ropa**: "Qué deja" y "Precio (Bs)" se volvieron **renglones** ("Prenda 1", "Prenda 2"…, cada uno
+un grupo con "Qué es", "Cuántas" —que arranca en 1— y "Precio de cada una (Bs)"), con su subtotal y el **total calculado**; ya no se
+escribe el total a mano. La descripción de la boleta se arma sola ("2 Camisa, 1 Edredón"), así el buscador y el historial no cambiaron.
+La orden, sus renglones y el adelanto se guardan en la misma transacción, la orden primero. **Al entregar** ya no hay "Precio final":
+"Agregar un cargo" suma renglones de ENTREGA y el precio final es el de la boleta más ellos; la tablet guarda **cargos, pago y entrega,
+en ese orden**. La parte pura vive en `features/ordenes/renglones.ts` (validar, sumar, describir; los errores de cada campo van por la
+clave del renglón, `renglon:<clave>:cantidad`), el SQL en `ordenes/api/renglonesLocal.ts`, y la pieza que los escribe es
+`CamposDeRenglones` (la usan Registrar ropa y la entrega); `ListaDeRenglones` los muestra en el detalle del Mostrador y en el del
+historial (una boleta de antes, sin renglones, muestra su descripción). En **Para corregir** ya no se corrige un precio: un renglón
+rechazado se corrige con sus tres datos, y una entrega se vuelve a guardar con el precio final que da la tablet en ese momento. Para
+los tests, `test/renglones.ts` (`escribirPrenda(1, { que: 'Camisa', precio: '10' })`, `agregarCargo(…)`).
+
 SPEC-KRILINXI-012 corrige el reloj de la tablet: `lib/reloj` guarda el desfase con la hora
 del servidor que traen `login` y `renovar`, y `horaOficial()` es de donde salen
 `fecha_entrada`, `fecha_pago` y `fecha_entrega`, también sin internet. Ningún archivo de
@@ -493,7 +517,9 @@ El cliente llega con ropa
   └─ se lo busca por teléfono; si no existe, se lo da de alta en el momento
   └─ se crea la ORDEN
        · numero_boleta: el empleado lo copia de la boleta física preimpresa
-       · descripcion, precio_total, fecha_estimada_salida
+       · sus renglones (qué prenda, cuántas, a qué precio cada una): precio_total es su suma,
+         y descripcion, su resumen (SPEC-KRILINXI-068)
+       · fecha_estimada_salida
        · estado inicial: RECIBIDO
   └─ opcionalmente un PAGO de tipo ADELANTO
 
@@ -504,7 +530,8 @@ El cliente vuelve a recoger, a la misma sucursal donde dejó la ropa
   └─ se registra la ENTREGA
        · CON_BOLETA: trae el papel
        · SIN_BOLETA: no lo trae → nombre y carnet de quien retira son OBLIGATORIOS
-       · precio_final puede diferir del precio_total (recargo por almacenamiento, etc.)
+       · precio_final = precio_total + los cargos al entregar (renglones de ENTREGA: un recargo
+         por almacenamiento, etc.). Solo se suma: nunca se entrega por menos del total
   └─ PAGO de tipo PAGO_FINAL, cobrado ANTES de entregar: la ropa solo sale con la boleta pagada por completo
 
 Saldo de una orden = (precio_final o, si aún no hay entrega, precio_total) − suma de pagos
@@ -772,7 +799,8 @@ dispositivo sí reconecta y recibe el rechazo, la app borra la base local.
 Definidas en `docker/powersync/sync-rules.yaml`. No son una optimización: son **control
 de acceso**. Lo que no está ahí no llega nunca al dispositivo.
 
-- **Bucket `sucursal`** — las `ordenes`, `entregas` y `pagos` de la sucursal del usuario.
+- **Bucket `sucursal`** — las `ordenes`, `entregas`, `pagos` y `orden_items` (los renglones de la boleta, con lista
+  explícita de columnas, SPEC-KRILINXI-068) de la sucursal del usuario.
 - **Bucket `atencion_admin`** (SPEC-KRILINXI-028) — lo mismo, para el ADMIN que atiende el
   mostrador: la sucursal sale del parámetro de cliente `sucursal_id` (`request.parameters()`), que
   la tablet manda al conectarse. Ese parámetro lo controla la tablet, así que **no autoriza nada**:
@@ -799,7 +827,7 @@ de acceso**. Lo que no está ahí no llega nunca al dispositivo.
   excepción es cuando atiende el mostrador: baja la ropa de esa sucursal (`atencion_admin`).
 
 Una limitación de PowerSync que explica una rareza del schema: las consultas de datos
-**no admiten JOINs ni subconsultas**. Por eso `entregas` y `pagos` llevan su propio
+**no admiten JOINs ni subconsultas**. Por eso `entregas`, `pagos` y `orden_items` llevan su propio
 `sucursal_id` duplicado, aunque se podría deducir desde `ordenes`. El backend es
 responsable de mantenerlo igual al de la orden.
 
@@ -1109,6 +1137,10 @@ implemente una spec de las de abajo actualiza su línea cuando la mergee.
 
 - **Después de cada `git pull`, `npm run migrar --workspace backend`** (SPEC-ALE186-019, hecho).
   Si a la base le falta una migración, el backend no arranca.
+- **Los renglones de la boleta** (SPEC-KRILINXI-068, hecho): la migración 007 crea `orden_items` y las sync rules la bajan en
+  los buckets `sucursal` y `atencion_admin`. **Después del pull, `npm run migrar --workspace backend` y `docker compose restart
+  powersync`**. Una tablet con la versión anterior que entregue con un "Precio final" escrito a mano distinto del total más los
+  cargos ve esa entrega en Para corregir (409 `PRECIO_FINAL_DISTINTO`); y un EMPLEADO ya no puede cambiar `precio_total` (403).
 - **El reloj de la tablet** (SPEC-ALE186-015 en el backend, SPEC-KRILINXI-012 en el frontend,
   hecho): la tablet mide su desfase con el `ahora` de `login` y `renovar` y lo aplica a las
   fechas que registra. Si se cambia el nombre o el formato de `ahora`, hay que avisar al

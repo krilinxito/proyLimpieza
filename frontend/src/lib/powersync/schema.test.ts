@@ -55,7 +55,15 @@ describe('Schema local igual a lo que bajan las sync rules — SPEC-KRILINXI-004
   const locales = columnasLocales();
 
   it('lee las sync rules y el schema SQL (si falla, cambió el formato de alguno)', () => {
-    expect([...bajan.keys()].sort()).toEqual(['clientes', 'entregas', 'ordenes', 'pagos', 'sucursales', 'usuarios']);
+    expect([...bajan.keys()].sort()).toEqual([
+      'clientes',
+      'entregas',
+      'orden_items',
+      'ordenes',
+      'pagos',
+      'sucursales',
+      'usuarios',
+    ]);
     expect(columnasDelSql().get('ordenes')).toContain('precio_total');
   });
 
@@ -63,7 +71,7 @@ describe('Schema local igual a lo que bajan las sync rules — SPEC-KRILINXI-004
     expect([...locales.keys()].sort()).toEqual([...bajan.keys()].sort());
   });
 
-  it.each(['clientes', 'sucursales', 'usuarios', 'ordenes', 'entregas', 'pagos'])(
+  it.each(['clientes', 'sucursales', 'usuarios', 'ordenes', 'entregas', 'pagos', 'orden_items'])(
     '%s tiene las mismas columnas que baja su sync rule',
     (tabla) => {
       expect([...(locales.get(tabla) ?? [])].sort()).toEqual([...(bajan.get(tabla) ?? [])].sort());
@@ -86,6 +94,9 @@ describe('Schema local igual a lo que bajan las sync rules — SPEC-KRILINXI-004
     expect(tipoDe('ordenes', 'precio_total')).toBe('TEXT');
     expect(tipoDe('entregas', 'precio_final')).toBe('TEXT');
     expect(tipoDe('pagos', 'monto')).toBe('TEXT');
+    // SPEC-KRILINXI-068: el precio de cada renglón y su cantidad (que tiene decimales), también.
+    expect(tipoDe('orden_items', 'precio_unitario')).toBe('TEXT');
+    expect(tipoDe('orden_items', 'cantidad')).toBe('TEXT');
   });
 });
 

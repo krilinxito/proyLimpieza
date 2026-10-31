@@ -9,6 +9,7 @@ import { hoyEnBolivia } from '../../../lib/diaDelNegocio';
 import { CARNET_INVALIDO, TELEFONO_INVALIDO } from '../../clientes/api/clientesLocal';
 import { MENSAJES } from '../../ordenes/api/ordenesLocal';
 import { sumarDias } from '../../ordenes/components/atajosDeFecha';
+import { escribirPrenda, escribirPrendas, renglon } from '../../../test/renglones';
 import { sinJerga } from '../../../test/jerga';
 import { renderEnRuta } from '../../../test/render';
 import { sesionDePrueba } from '../../../test/sesion';
@@ -53,8 +54,7 @@ async function elegirARosa() {
 
 function cargarRopa(boleta: string) {
   escribir('Número de la boleta', boleta);
-  escribir('Qué deja', 'Camisa');
-  escribir('Precio (Bs)', '10');
+  escribirPrenda(1, { que: 'Camisa', precio: '10' });
 }
 
 async function guardar() {
@@ -84,8 +84,10 @@ describe('Registrar ropa: el recorrido — SPEC-KRILINXI-006 y SPEC-KRILINXI-034
     expect(within(formulario).getByText('Rosa Quispe')).toBeInTheDocument();
 
     escribir('Número de la boleta', '001234');
-    escribir('Qué deja', '2 pantalones, 1 saco');
-    escribir('Precio (Bs)', '50');
+    escribirPrendas([
+      { que: 'pantalones', cuantas: '2', precio: '15' },
+      { que: 'saco', precio: '20' },
+    ]);
     escribir('Para cuándo estará lista (si se sabe)', '2026-10-10');
     dejaAdelanto();
     escribir('Cuánto deja de adelanto (Bs)', '20,50');
@@ -104,6 +106,8 @@ describe('Registrar ropa: el recorrido — SPEC-KRILINXI-006 y SPEC-KRILINXI-034
     });
     expect(await cola(db)).toEqual([
       ['PUT', 'ordenes'],
+      ['PUT', 'orden_items'],
+      ['PUT', 'orden_items'],
       ['PUT', 'pagos'],
     ]);
     expect(servidor.pedidos).toEqual([]);
@@ -113,8 +117,7 @@ describe('Registrar ropa: el recorrido — SPEC-KRILINXI-006 y SPEC-KRILINXI-034
     await abrir();
     await elegirARosa();
     escribir('Número de la boleta', '001235');
-    escribir('Qué deja', 'Un vestido');
-    escribir('Precio (Bs)', '30');
+    escribirPrenda(1, { que: 'Un vestido', precio: '30' });
     await guardar();
 
     expect(await resumen()).toMatchObject({ Adelanto: 'No dejó', 'Falta pagar': 'Bs 30,00', 'Estará lista': 'Sin fecha' });
@@ -154,7 +157,7 @@ describe('Registrar ropa: el recorrido — SPEC-KRILINXI-006 y SPEC-KRILINXI-034
     await guardar();
 
     expect(await resumen()).toMatchObject({ Adelanto: 'No dejó', 'Falta pagar': 'Bs 10,00' });
-    expect(await cola(db)).toEqual([['PUT', 'ordenes']]);
+    expect(await cola(db)).toEqual([['PUT', 'ordenes'], ['PUT', 'orden_items']]);
   });
 
   it('si elige "Deja adelanto" y no escribe el importe, lo dice y no guarda nada — SPEC-KRILINXI-048', async () => {
@@ -187,15 +190,15 @@ describe('Registrar ropa: el recorrido — SPEC-KRILINXI-006 y SPEC-KRILINXI-034
   it('"Cambiar de cliente" vuelve al buscador, y al elegir de nuevo la ropa escrita sigue ahí — SPEC-KRILINXI-057', async () => {
     await abrir();
     await elegirARosa();
-    escribir('Qué deja', 'Camisa');
+    fireEvent.change(within(renglon(1)).getByLabelText('Qué es'), { target: { value: 'Camisa' } });
     fireEvent.click(screen.getByRole('button', { name: 'Cambiar de cliente' }));
     expect(await screen.findByRole('combobox', { name: /Buscar cliente/ })).toHaveValue('');
     // Mientras se elige cliente no se ve la boleta (ni se puede guardar)…
-    expect(screen.queryByLabelText('Qué deja')).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Prenda 1' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Guardar' })).not.toBeInTheDocument();
     // …pero lo escrito no se pierde.
     await elegirARosa();
-    expect(screen.getByLabelText('Qué deja')).toHaveValue('Camisa');
+    expect(within(renglon(1)).getByLabelText('Qué es')).toHaveValue('Camisa');
   });
 });
 
@@ -220,11 +223,12 @@ describe('Registrar ropa: lo que se corrige en pantalla — SPEC-KRILINXI-006 y 
 
     expect(await screen.findByText('Escribe el número de teléfono del cliente.')).toBeInTheDocument();
     expect(screen.getByText('Escribe el número de la boleta.')).toBeInTheDocument();
-    expect(screen.getByText('Escribe qué ropa deja el cliente.')).toBeInTheDocument();
-    expect(screen.getByText('Escribe el precio con números, por ejemplo 25 o 25,50.')).toBeInTheDocument();
+    // Lo que deja, en su prenda (SPEC-KRILINXI-068): la cantidad ya viene en 1, así que faltan qué es y su precio.
+    expect(screen.getByText('Escribe qué es, por ejemplo «Camisa» o «Edredón».')).toBeInTheDocument();
+    expect(screen.getByText('Escribe el precio de cada una con números, por ejemplo 15 o 15,50.')).toBeInTheDocument();
   });
 
-  it('con un adelanto mayor que el precio no guarda nada', async () => {
+  it('con un adelanto mayor que el total no guarda nada', async () => {
     const { db } = await abrir();
     await elegirARosa();
     cargarRopa('001237');
@@ -233,7 +237,7 @@ describe('Registrar ropa: lo que se corrige en pantalla — SPEC-KRILINXI-006 y 
     fireEvent.click(screen.getByLabelText('Efectivo'));
     await guardar();
 
-    expect(await screen.findByText('El adelanto no puede ser mayor que el precio.')).toBeInTheDocument();
+    expect(await screen.findByText('El adelanto no puede ser mayor que el total.')).toBeInTheDocument();
     expect(await db.getCrudBatch()).toBeNull();
   });
 });
@@ -251,10 +255,12 @@ describe('Registrar ropa con un cliente nuevo — SPEC-KRILINXI-034', () => {
     await guardar();
 
     expect(await resumen()).toMatchObject({ Boleta: '001240', Cliente: 'Juan Mamani' });
-    // El alta antes que la orden: el servidor no puede recibir ropa de un cliente que no conoce.
+    // El alta antes que la orden, y la orden antes que su renglón (SPEC-KRILINXI-068): el servidor no puede recibir
+    // ropa de un cliente que no conoce, ni un renglón de una boleta que no tiene.
     expect(await cola(db)).toEqual([
       ['PUT', 'clientes'],
       ['PUT', 'ordenes'],
+      ['PUT', 'orden_items'],
     ]);
   });
 
@@ -290,7 +296,7 @@ describe('Registrar ropa con un cliente nuevo — SPEC-KRILINXI-034', () => {
     expect(screen.getByLabelText('Número de la boleta')).toHaveValue('001241');
     await guardar();
     expect(await resumen()).toMatchObject({ Cliente: 'Rosa Quispe' });
-    expect(await cola(db)).toEqual([['PUT', 'ordenes']]);
+    expect(await cola(db)).toEqual([['PUT', 'ordenes'], ['PUT', 'orden_items']]);
   });
 
   it('el botón de la tarjeta del cliente nuevo dice "Atrás" (y no "Buscar un cliente que ya existe") y vuelve a elegir sin guardar nada — SPEC-KRILINXI-057', async () => {
@@ -368,7 +374,7 @@ describe('Registrar ropa desde el Mostrador — SPEC-KRILINXI-034', () => {
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Número de la boleta')).toHaveValue('001244');
-    expect(screen.getByLabelText('Qué deja')).toHaveValue('Camisa');
+    expect(within(renglon(1)).getByLabelText('Qué es')).toHaveValue('Camisa');
   });
 
   it('con el formulario vacío, volver no pregunta nada — SPEC-KRILINXI-048', async () => {
@@ -453,7 +459,7 @@ describe('Registrar ropa: elegir al cliente primero y guardar al final — SPEC-
     await guardar();
 
     expect(await resumen()).toMatchObject({ Cliente: 'Beto Mamani' });
-    expect(await cola(db)).toEqual([['PUT', 'clientes'], ['PUT', 'ordenes'], ['PUT', 'pagos']]);
+    expect(await cola(db)).toEqual([['PUT', 'clientes'], ['PUT', 'ordenes'], ['PUT', 'orden_items'], ['PUT', 'pagos']]);
   });
 
   it('salir pregunta solo si ya se eligió o escribió algo: en el primer paso, vuelve directo', async () => {
@@ -531,7 +537,7 @@ describe('Registrar ropa: el visto de cada campo y de cada tarjeta — SPEC-KRIL
     cargarRopa('001301');
     expect(await tarjeta('La ropa').findByText('Completo')).toBeInTheDocument();
 
-    escribir('Precio (Bs)', 'mucho');
+    fireEvent.change(within(renglon(1)).getByLabelText('Precio de cada una (Bs)'), { target: { value: 'mucho' } });
     await waitFor(() => expect(tarjeta('La ropa').queryByText('Completo')).not.toBeInTheDocument());
   });
 
@@ -630,34 +636,91 @@ describe('Registrar ropa: el visto de cada campo y de cada tarjeta — SPEC-KRIL
   });
 });
 
-describe('Registrar ropa: "Qué deja" en varias líneas — SPEC-KRILINXI-058', () => {
-  it('es un área de texto de al menos dos renglones, y lo escrito con saltos se guarda tal cual', async () => {
-    const { db } = await abrir();
-    await elegirARosa();
-    const area = screen.getByLabelText('Qué deja');
-    expect(area.tagName).toBe('TEXTAREA');
-    expect(area).toHaveAttribute('rows', '2');
-
-    escribir('Número de la boleta', '001305');
-    escribir('Qué deja', '2 camisas\n1 pantalón azul\n  \n3 pañuelos');
-    escribir('Precio (Bs)', '30');
-    await guardar();
-
-    await resumen();
-    const orden = (await db.getCrudBatch(100))?.crud.find((c) => c.table === 'ordenes');
-    // Se recortan los bordes, no los saltos del medio.
-    expect(orden?.opData?.descripcion).toBe('2 camisas\n1 pantalón azul\n  \n3 pañuelos');
-  });
-
-  it('el resumen respeta los saltos de línea', async () => {
+describe('Registrar ropa renglón por renglón — SPEC-KRILINXI-068', () => {
+  it('arranca con una prenda, suma el subtotal de cada una y el total, y ya no deja escribir el total a mano', async () => {
     await abrir();
     await elegirARosa();
-    escribir('Número de la boleta', '001306');
-    escribir('Qué deja', 'camisa\npantalón');
-    escribir('Precio (Bs)', '30');
-    await guardar();
-    await resumen();
+    expect(screen.queryByLabelText('Precio (Bs)')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('group', { name: /^Prenda \d+$/ })).toHaveLength(1);
+    // La cantidad ya viene en 1: casi siempre es una.
+    expect(within(renglon(1)).getByLabelText('Cuántas')).toHaveValue('1');
 
-    expect(screen.getByText(/camisa/).closest('dd')).toHaveClass('whitespace-pre-line');
+    escribirPrendas([
+      { que: 'Camisa', cuantas: '2', precio: '15' },
+      { que: 'Ropa por kilo', cuantas: '2,5', precio: '3,33' },
+    ]);
+
+    expect(within(renglon(1)).getByText('Bs 30,00')).toBeInTheDocument();
+    // 2,5 × 3,33 = 8,325: se redondea al centavo, como en el servidor.
+    expect(within(renglon(2)).getByText('Bs 8,33')).toBeInTheDocument();
+    expect(screen.getByText(/^Total:/)).toHaveTextContent('Total: Bs 38,33');
+  });
+
+  it('guarda la orden con el total y la descripción armada, y sus renglones después, en una sola vez', async () => {
+    const { db } = await abrir();
+    await elegirARosa();
+    escribir('Número de la boleta', '001305');
+    escribirPrendas([
+      { que: 'Camisa', cuantas: '2', precio: '15' },
+      { que: 'Edredón king', precio: '35,50' },
+    ]);
+    await guardar();
+
+    expect(await resumen()).toMatchObject({ Ropa: '2 Camisa, 1 Edredón king', Precio: 'Bs 65,50' });
+    const operaciones = (await db.getCrudBatch(100))?.crud ?? [];
+    expect(operaciones.map((c) => c.table)).toEqual(['ordenes', 'orden_items', 'orden_items']);
+    expect(operaciones[0]?.opData).toMatchObject({ precio_total: '65.50', descripcion: '2 Camisa, 1 Edredón king' });
+    expect(operaciones[2]?.opData).toMatchObject({ momento: 'INGRESO', posicion: 1, descripcion: 'Edredón king' });
+  });
+
+  it('una prenda se puede quitar, pero la última no: siempre hay al menos una', async () => {
+    await abrir();
+    await elegirARosa();
+    expect(within(renglon(1)).queryByRole('button', { name: 'Quitar' })).not.toBeInTheDocument();
+
+    escribirPrendas([
+      { que: 'Camisa', precio: '10' },
+      { que: 'Saco', precio: '20' },
+    ]);
+    fireEvent.click(within(renglon(1)).getByRole('button', { name: 'Quitar' }));
+
+    expect(screen.getAllByRole('group', { name: /^Prenda \d+$/ })).toHaveLength(1);
+    expect(within(renglon(1)).getByLabelText('Qué es')).toHaveValue('Saco');
+    expect(screen.getByText(/^Total:/)).toHaveTextContent('Total: Bs 20,00');
+  });
+
+  it('cada campo mal escrito dice qué hacer, en su prenda, al intentar guardar', async () => {
+    const { db } = await abrir();
+    await elegirARosa();
+    escribir('Número de la boleta', '001306');
+    escribirPrenda(1, { que: '', cuantas: '0', precio: 'quince' });
+    await guardar();
+
+    const prenda = within(renglon(1));
+    expect(await prenda.findByText('Escribe qué es, por ejemplo «Camisa» o «Edredón».')).toBeInTheDocument();
+    expect(prenda.getByText('Escribe cuántas son, con números mayores que cero, por ejemplo 2 o 2,5.')).toBeInTheDocument();
+    expect(prenda.getByText('Escribe el precio de cada una con números, por ejemplo 15 o 15,50.')).toBeInTheDocument();
+    expect((await db.getCrudBatch(100))?.crud ?? []).toEqual([]);
+  });
+
+  it('el adelanto no puede pasar del total de las prendas', async () => {
+    await abrir();
+    await elegirARosa();
+    cargarRopa('001307');
+    dejaAdelanto();
+    escribir('Cuánto deja de adelanto (Bs)', '10,01');
+    fireEvent.click(screen.getByLabelText('Efectivo'));
+    await guardar();
+
+    expect(await screen.findByText(MENSAJES.adelantoMayor)).toBeInTheDocument();
+  });
+
+  it('una prenda escrita cuenta como algo escrito: volver sin guardar pregunta antes', async () => {
+    await abrir();
+    await elegirARosa();
+    fireEvent.change(within(renglon(1)).getByLabelText('Qué es'), { target: { value: 'Camisa' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Volver al mostrador sin guardar' }));
+
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
   });
 });

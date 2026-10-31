@@ -18,6 +18,8 @@ export const TIPOS_RETIRO = ['CON_BOLETA', 'SIN_BOLETA'] as const;
 export const TIPOS_PAGO = ['ADELANTO', 'PAGO_FINAL'] as const;
 export const METODOS_PAGO = ['EFECTIVO', 'QR', 'TARJETA'] as const;
 export const ROLES = ['ADMIN', 'EMPLEADO'] as const;
+/** Cuándo se agregó un renglón de la boleta: al registrarla o, como cargo, al entregarla — SPEC-KRILINXI-068. */
+export const MOMENTOS_ITEM = ['INGRESO', 'ENTREGA'] as const;
 
 // `(typeof LISTA)[number]` es "el tipo de cualquier elemento de la lista": la unión
 // 'RECIBIDO' | 'ENTREGADO' | … Añadir un valor a la lista lo añade al tipo.
@@ -26,6 +28,7 @@ export type TipoRetiro = (typeof TIPOS_RETIRO)[number];
 export type TipoPago = (typeof TIPOS_PAGO)[number];
 export type MetodoPago = (typeof METODOS_PAGO)[number];
 export type Rol = (typeof ROLES)[number];
+export type MomentoItem = (typeof MOMENTOS_ITEM)[number];
 
 /**
  * Fabrica un "type guard": una función que devuelve boolean y, cuando da `true`, le dice a
@@ -41,6 +44,7 @@ export const esTipoRetiro = crearValidador(TIPOS_RETIRO);
 export const esTipoPago = crearValidador(TIPOS_PAGO);
 export const esMetodoPago = crearValidador(METODOS_PAGO);
 export const esRol = crearValidador(ROLES);
+export const esMomentoItem = crearValidador(MOMENTOS_ITEM);
 
 // Lo que ve el empleado: nunca el código (CLAUDE.md §9). `Record<EstadoOrden, string>`
 // obliga a que estén todos: si se añade un estado y falta su texto, no compila.

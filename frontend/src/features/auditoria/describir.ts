@@ -28,6 +28,8 @@ export function queHizo({ accion, tablaAfectada, valoresAnteriores }: RegistroAu
       sucursales: 'Dio de alta una sucursal',
       pagos: 'Cobró',
       entregas: 'Entregó ropa',
+      // SPEC-KRILINXI-068: un renglón de la boleta, o un cargo al entregar (la auditoría no dice cuál).
+      orden_items: 'Anotó una prenda o un cargo de una boleta',
     };
     return altas[tablaAfectada];
   }
@@ -43,6 +45,7 @@ export function queHizo({ accion, tablaAfectada, valoresAnteriores }: RegistroAu
     sucursales: 'Cambió los datos de una sucursal',
     pagos: 'Cambió un cobro',
     entregas: 'Cambió una entrega',
+    orden_items: 'Cambió una prenda de una boleta',
   };
   return cambios[tablaAfectada];
 }
@@ -82,6 +85,9 @@ const ETIQUETAS: Record<string, string> = {
   numero_boleta: 'Número de boleta',
   descripcion: 'Qué ropa',
   precio_total: 'Precio',
+  // De un renglón de la boleta (SPEC-KRILINXI-068).
+  cantidad: 'Cuántas',
+  precio_unitario: 'Precio de cada una',
   fecha_estimada_salida: 'Para cuándo',
   estado: 'Estado',
   direccion: 'Dirección',
@@ -151,6 +157,7 @@ export const QUE_BUSCAR: readonly { clave: string; texto: string; accion?: Accio
   { clave: 'boletas', texto: 'Cambios en boletas', accion: 'EDITAR', tabla: 'ordenes' },
   { clave: 'cobros', texto: 'Cobros', tabla: 'pagos' },
   { clave: 'entregas', texto: 'Entregas', tabla: 'entregas' },
+  { clave: 'prendas', texto: 'Prendas y cargos de las boletas', tabla: 'orden_items' },
   { clave: 'clientes', texto: 'Clientes', tabla: 'clientes' },
   { clave: 'personal', texto: 'Personal', tabla: 'usuarios' },
   { clave: 'sucursales', texto: 'Sucursales', tabla: 'sucursales' },

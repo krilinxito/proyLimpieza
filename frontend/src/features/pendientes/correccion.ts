@@ -6,11 +6,11 @@
  * escribir). Está fuera de `api/` por lo mismo que `features/ordenes/estado.ts`: un
  * componente no importa de `api/` (lo vigila `test/arquitectura.test.ts`).
  */
-import { aDecimal, desdeDecimal } from '../../lib/money';
+import { aDecimal, desdeDecimal, formatearCantidad } from '../../lib/money';
 import type { RegistroParaCorregir } from './types';
 
 /** Cómo se escribe cada dato en el formulario. */
-export type TipoCampo = 'texto' | 'texto-largo' | 'monto' | 'fecha' | 'metodo' | 'retiro';
+export type TipoCampo = 'texto' | 'texto-largo' | 'monto' | 'cantidad' | 'fecha' | 'metodo' | 'retiro';
 
 /** Un dato que el empleado puede corregir. `clave` es la columna de la base. */
 export type Campo = { clave: string; etiqueta: string; tipo: TipoCampo };
@@ -33,13 +33,23 @@ export const MENSAJES_CORRECCION = {
   yaNoEsta: 'Ese registro ya no está en esta tablet. Descártalo y, si hace falta, vuelve a hacerlo.',
 } as const;
 
-/** Los datos que se corrigen de cada tabla, con las mismas etiquetas que su pantalla de origen. */
+/**
+ * Los datos que se corrigen de cada tabla, con las mismas etiquetas que su pantalla de origen.
+ *
+ * Desde SPEC-KRILINXI-068 el precio no se corrige acá: el de una boleta es la suma de sus renglones (y el mostrador no lo
+ * cambia), y el precio final de una entrega lo calcula la tablet con los cargos al volver a guardarla. Lo que se corrige
+ * de un renglón son sus tres datos.
+ */
 export const CAMPOS: Record<string, readonly Campo[]> = {
   ordenes: [
     { clave: 'numero_boleta', etiqueta: 'Número de la boleta', tipo: 'texto' },
     { clave: 'descripcion', etiqueta: 'Qué deja', tipo: 'texto-largo' },
-    { clave: 'precio_total', etiqueta: 'Precio (Bs)', tipo: 'monto' },
     { clave: 'fecha_estimada_salida', etiqueta: 'Para cuándo estará lista (si se sabe)', tipo: 'fecha' },
+  ],
+  orden_items: [
+    { clave: 'descripcion', etiqueta: 'Qué es', tipo: 'texto' },
+    { clave: 'cantidad', etiqueta: 'Cuántas', tipo: 'cantidad' },
+    { clave: 'precio_unitario', etiqueta: 'Precio de cada una (Bs)', tipo: 'monto' },
   ],
   clientes: [
     { clave: 'nombre', etiqueta: 'Nombre completo', tipo: 'texto' },
@@ -54,7 +64,6 @@ export const CAMPOS: Record<string, readonly Campo[]> = {
     { clave: 'tipo_retiro', etiqueta: '¿El cliente trae la boleta?', tipo: 'retiro' },
     { clave: 'retirado_por_nombre', etiqueta: 'Nombre de quien retira', tipo: 'texto' },
     { clave: 'retirado_por_carnet', etiqueta: 'Carnet de quien retira', tipo: 'texto' },
-    { clave: 'precio_final', etiqueta: 'Precio final (Bs)', tipo: 'monto' },
   ],
 };
 
@@ -66,6 +75,14 @@ export function paraFormulario(tipo: TipoCampo, valor: unknown): string {
       // "25.50" → "25,50": como lo escribe el empleado, sin punto de miles para que
       // `parsearMonto` lo vuelva a aceptar tal cual.
       return aDecimal(desdeDecimal(valor)).replace('.', ',');
+    } catch {
+      return valor;
+    }
+  }
+  if (tipo === 'cantidad') {
+    try {
+      // "2.50" → "2,5": una cantidad se lee sin ceros de más (SPEC-KRILINXI-068).
+      return formatearCantidad(desdeDecimal(valor));
     } catch {
       return valor;
     }

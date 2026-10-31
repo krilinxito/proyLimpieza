@@ -1,14 +1,16 @@
 import { useEffect, useId, useState, type FormEvent } from 'react';
 import { Aviso } from '../../../components/Aviso';
 import { Boton } from '../../../components/Boton';
-import { CampoTexto, CampoTextoLargo } from '../../../components/CampoTexto';
+import { CampoTexto } from '../../../components/CampoTexto';
 import { Tarjeta, type EstadoDeTarjeta } from '../../../components/Tarjeta';
 import { hoyEnBolivia } from '../../../lib/diaDelNegocio';
 import { ElegirClienteDeLaRopa } from '../../clientes/components/ElegirClienteDeLaRopa';
+import { claveCampo, renglonNuevo, tieneAlgoEscrito, type CampoRenglon, type ClaveCampoRenglon } from '../renglones';
 import type { Cliente, ClienteElegido } from '../../clientes/types';
 import { useRevisionEnVivo } from '../hooks/useRevisionEnVivo';
 import type { DatosRopa, ErroresRopa, ResultadoRegistro, RevisionDeRopa, RopaRegistrada } from '../types';
 import { atajosDeFecha } from './atajosDeFecha';
+import { CamposDeRenglones } from './CamposDeRenglones';
 import { ElegirMetodo } from './ElegirMetodo';
 
 const NO_SE_GUARDO = 'No se pudo guardar la ropa. Prueba de nuevo y, si sigue pasando, avísale al encargado.';
@@ -17,8 +19,8 @@ const FALTA_ADELANTO = 'Escribe cuánto deja de adelanto, o elige «No deja adel
 /** Los datos que se escriben en este formulario, uno por uno: de cada uno se sabe si ya se tocó y si está bien. */
 type Campo =
   | 'numeroBoleta'
-  | 'descripcion'
-  | 'precio'
+  | 'renglones'
+  | ClaveCampoRenglon
   | 'fechaEstimada'
   | 'adelanto'
   | 'metodoAdelanto'
@@ -63,14 +65,15 @@ export function FormularioRopa({ clienteInicial, registrar, revisar, alRegistrar
   );
   // El cliente nuevo tenía el teléfono de uno que ya existe: se ofrece elegir a ese.
   const [ocupadoPor, setOcupadoPor] = useState<Cliente | null>(null);
-  const [datos, setDatos] = useState<Omit<DatosRopa, 'cliente'>>({
+  // Con una función: el renglón nuevo genera su clave una sola vez, no en cada render.
+  const [datos, setDatos] = useState<Omit<DatosRopa, 'cliente'>>(() => ({
     numeroBoleta: '',
-    descripcion: '',
-    precio: '',
+    // Qué deja, renglón por renglón (SPEC-KRILINXI-068): arranca con uno, de una prenda.
+    renglones: [renglonNuevo()],
     fechaEstimada: '',
     adelanto: '',
     metodoAdelanto: null,
-  });
+  }));
   // El adelanto se pregunta primero (SPEC-KRILINXI-048): sus campos aparecen solo si deja.
   const [dejaAdelanto, setDejaAdelanto] = useState(false);
   const grupoAdelanto = useId();
@@ -82,16 +85,16 @@ export function FormularioRopa({ clienteInicial, registrar, revisar, alRegistrar
   // Lo que dijo el guardado la última vez: sirve mientras la revisión en vivo todavía no alcanzó a lo escrito.
   const [erroresDelGuardado, setErroresDelGuardado] = useState<ErroresRopa>({});
 
-  const cambiar =
-    (campo: 'numeroBoleta' | 'descripcion' | 'precio' | 'fechaEstimada' | 'adelanto') => (valor: string) =>
-      setDatos((d) => ({ ...d, [campo]: valor }));
+  const cambiar = (campo: 'numeroBoleta' | 'fechaEstimada' | 'adelanto') => (valor: string) =>
+    setDatos((d) => ({ ...d, [campo]: valor }));
   const alSalirDe = (campo: Campo) => () => setTocados((t) => (t[campo] ? t : { ...t, [campo]: true }));
 
   const elClienteViene =
     clienteInicial !== null && cliente?.tipo === 'existente' && cliente.cliente.id === clienteInicial.id;
   const hayEscrito =
     (cliente !== null && !elClienteViene) ||
-    [datos.numeroBoleta, datos.descripcion, datos.precio, datos.fechaEstimada, datos.adelanto].some((t) => t.trim() !== '');
+    [datos.numeroBoleta, datos.fechaEstimada, datos.adelanto].some((t) => t.trim() !== '') ||
+    datos.renglones.some(tieneAlgoEscrito);
   useEffect(() => {
     alCambiarEscrito?.(hayEscrito);
     return () => alCambiarEscrito?.(false);
@@ -117,12 +120,20 @@ export function FormularioRopa({ clienteInicial, registrar, revisar, alRegistrar
     escrito && alDia && revision !== null && revision.errores[campo] === undefined && !(campo === 'adelanto' && faltaElAdelanto);
 
   const hayDatos = (texto: string) => texto.trim() !== '';
+  const valorDe = (clave: string, campo: CampoRenglon) => datos.renglones.find((r) => r.clave === clave)?.[campo] ?? '';
   const clienteNuevo = cliente?.tipo === 'nuevo' ? cliente.datos : null;
 
+  /** Los campos de los renglones, cada uno con lo escrito en él: para el visto de cada campo y de la tarjeta. */
+  const camposDeRenglones = datos.renglones.flatMap((r) =>
+    (['descripcion', 'cantidad', 'precioUnitario'] as const).map((campo) => ({
+      clave: claveCampo(r.clave, campo),
+      escrito: hayDatos(r[campo]),
+    })),
+  );
   const bienLaRopa =
     estaBien('numeroBoleta', hayDatos(datos.numeroBoleta)) &&
-    estaBien('descripcion', hayDatos(datos.descripcion)) &&
-    estaBien('precio', hayDatos(datos.precio)) &&
+    camposDeRenglones.every(({ clave, escrito }) => estaBien(clave, escrito)) &&
+    estaBien('renglones', true) &&
     estaBien('fechaEstimada', true);
   const bienElAdelanto =
     dejaAdelanto && estaBien('adelanto', hayDatos(datos.adelanto)) && datos.metodoAdelanto !== null && estaBien('metodoAdelanto', true);
@@ -136,7 +147,12 @@ export function FormularioRopa({ clienteInicial, registrar, revisar, alRegistrar
   /** Una tarjeta marca el visto si todo lo suyo está bien, la equis si algún campo suyo ya muestra un error, y nada si no. */
   const estadoDe = (bien: boolean, campos: Campo[], extra = false): EstadoDeTarjeta =>
     bien ? 'completo' : extra || campos.some((c) => errorDe(c) !== undefined) ? 'con-errores' : null;
-  const estadoLaRopa = estadoDe(bienLaRopa, ['numeroBoleta', 'descripcion', 'precio', 'fechaEstimada']);
+  const estadoLaRopa = estadoDe(bienLaRopa, [
+    'numeroBoleta',
+    ...camposDeRenglones.map(({ clave }) => clave),
+    'renglones',
+    'fechaEstimada',
+  ]);
   const estadoElAdelanto = dejaAdelanto ? estadoDe(bienElAdelanto, ['adelanto', 'metodoAdelanto']) : null;
   // Un teléfono que ya es de otro cliente no es un error de escritura, pero tampoco está bien: tras intentar guardar, es una equis.
   const estadoElClienteNuevo = estadoDe(bienElClienteNuevo, ['clienteNombre', 'clienteTelefono', 'clienteCarnet'], intento && revision?.telefonoOcupado === true);
@@ -257,26 +273,26 @@ export function FormularioRopa({ clienteInicial, registrar, revisar, alRegistrar
             // Con un cliente que ya existe se empieza por la boleta; con uno nuevo, por su nombre.
             autoFocus={cliente.tipo === 'existente'}
           />
-          {/* Varias líneas (SPEC-KRILINXI-058): una boleta suele listar varias prendas. */}
-          <CampoTextoLargo
-            etiqueta="Qué deja"
-            value={datos.descripcion}
-            onChange={cambiar('descripcion')}
-            onBlur={alSalirDe('descripcion')}
-            error={errorDe('descripcion')}
-            correcto={estaBien('descripcion', hayDatos(datos.descripcion))}
-            autoComplete="off"
-          />
-          <CampoTexto
-            etiqueta="Precio (Bs)"
-            value={datos.precio}
-            onChange={cambiar('precio')}
-            onBlur={alSalirDe('precio')}
-            error={errorDe('precio')}
-            correcto={estaBien('precio', hayDatos(datos.precio))}
-            inputMode="decimal"
-            autoComplete="off"
-          />
+          {/* Qué deja, renglón por renglón (SPEC-KRILINXI-068): el total se calcula, ya no se escribe. */}
+          <h3 className="mt-4 text-xl font-semibold text-texto">Qué deja</h3>
+          <div className="mt-2">
+            <CamposDeRenglones
+              renglones={datos.renglones}
+              alCambiar={(renglones) => setDatos((d) => ({ ...d, renglones }))}
+              nombre="Prenda"
+              textoAgregar="Agregar otra prenda"
+              textoTotal="Total"
+              errorDe={(clave, campo) => errorDe(claveCampo(clave, campo))}
+              correcto={(clave, campo) => estaBien(claveCampo(clave, campo), hayDatos(valorDe(clave, campo)))}
+              alSalirDe={(clave, campo) => alSalirDe(claveCampo(clave, campo))()}
+              deshabilitado={guardando}
+            />
+          </div>
+          {errorDe('renglones') && (
+            <div className="mt-3">
+              <Aviso tipo="error">{errorDe('renglones')}</Aviso>
+            </div>
+          )}
           <div role="group" aria-label="Para cuándo, en un toque" className="mt-4 flex flex-wrap gap-3">
             {atajosDeFecha(hoyEnBolivia()).map(({ texto, fecha }) => (
               <Boton key={texto} variante="secundario" tamano="compacto" onClick={() => cambiar('fechaEstimada')(fecha)}>

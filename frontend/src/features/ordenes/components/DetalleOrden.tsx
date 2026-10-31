@@ -12,6 +12,7 @@ import type { OrdenVista } from '../types';
 import { textoDelRetiro } from '../retiro';
 import { diaDe, fechaCorta } from './fechas';
 import { FormularioCobro } from './FormularioCobro';
+import { ListaDeRenglones } from './ListaDeRenglones';
 
 type Props = {
   ordenId: string;
@@ -98,9 +99,12 @@ export function DetalleOrden({ ordenId, alVolver, accionesExtra, textoVolver = '
 
   // Dos grupos: qué ropa es y cómo va, y las cuentas. Cada dato es un par <dt>/<dd>: así se lee
   // de a pares con un lector de pantalla, y así lo buscan los tests.
+  // Con renglones (SPEC-KRILINXI-068), lo que dejó se lista renglón por renglón debajo; una boleta de antes, sin ellos,
+  // sigue mostrando su descripción.
+  const conRenglones = orden.renglones.length > 0;
   const laRopa: [string, ReactNode][] = [
     ['Cliente', `${orden.clienteNombre}${orden.clienteTelefono ? ` (${orden.clienteTelefono})` : ''}`],
-    ['Ropa', orden.descripcion],
+    ...(conRenglones ? [] : ([['Ropa', orden.descripcion]] as [string, ReactNode][])),
     ['Cómo va', <Insignia tono={TONO_ESTADO[orden.estado]}>{TEXTO_ESTADO_ORDEN[orden.estado]}</Insignia>],
     ['Entró', orden.fechaEntrada ? diaDe(orden.fechaEntrada) : '—'],
     ['Estará lista', orden.fechaEstimada ? fechaCorta(orden.fechaEstimada) : 'Sin fecha'],
@@ -120,6 +124,7 @@ export function DetalleOrden({ ordenId, alVolver, accionesExtra, textoVolver = '
 
       <Tarjeta titulo="La ropa" nivel={3}>
         <Datos pares={laRopa} />
+        <ListaDeRenglones renglones={orden.renglones} />
       </Tarjeta>
 
       <Tarjeta titulo="Cuentas" nivel={3}>

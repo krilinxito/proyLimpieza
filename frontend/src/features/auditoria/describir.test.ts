@@ -126,3 +126,15 @@ describe('Auditoría: el contrato y el filtro — SPEC-KRILINXI-018', () => {
     ).toEqual({ desde: '2026-10-01', hasta: '2026-10-15', usuario_id: 'u', sucursal_id: 's', accion: 'EDITAR', tabla: 'ordenes', revisar: 'true' });
   });
 });
+
+describe('Auditoría: los renglones de la boleta — SPEC-KRILINXI-068', () => {
+  it('una prenda o un cargo anotado se dice en palabras, y la API puede mandar la tabla nueva', () => {
+    expect(TABLAS).toContain('orden_items');
+    expect(queHizo(registro({ accion: 'CREAR', tablaAfectada: 'orden_items' }))).toBe('Anotó una prenda o un cargo de una boleta');
+  });
+
+  it('con un cliente elegido en el filtro, el renglón también dice de quién es', () => {
+    const conCliente = { ...NOMBRES, clienteDelFiltro: 'Rosa Quispe' };
+    expect(sobreQue(registro({ accion: 'CREAR', tablaAfectada: 'orden_items' }), conCliente)).toBe('de Rosa Quispe');
+  });
+});

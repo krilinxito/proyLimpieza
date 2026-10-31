@@ -1,6 +1,7 @@
 import type { EstadoOrden } from '../../lib/dominio';
 import type { Centavos } from '../../lib/money';
 import type { Retiro } from '../ordenes/retiro';
+import type { RenglonVisto } from '../ordenes/types';
 
 /**
  * Una boleta en la lista del historial — SPEC-KRILINXI-041. Es una sola forma para las dos
@@ -28,6 +29,8 @@ export type BoletaListada = {
   retiro: Retiro | null;
   pagado: Centavos;
   saldo: Centavos;
+  /** Sus renglones (SPEC-KRILINXI-068): los de la boleta y los cargos al entregar. Vacío en una boleta de antes. */
+  renglones: RenglonVisto[];
 };
 
 /** Una página de la lista completa del admin — `GET /api/ordenes` (SPEC-KRILINXI-040). */

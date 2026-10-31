@@ -5,19 +5,32 @@ import { baseLocalDePrueba } from '../../../test/baseLocalDePrueba';
 import { HORA_DEL_SERVIDOR_ISO, tabletConRelojCorrido } from '../../../test/reloj';
 import type { DatosRopa, QuienRegistra } from '../types';
 import { FALTA_NOMBRE, FALTA_TELEFONO } from '../../clientes/api/clientesLocal';
-import { MENSAJES, registrarRopa, validarRopa } from './ordenesLocal';
+import { MENSAJES_RENGLON, type RenglonEscrito } from '../renglones';
+import { MENSAJES, registrarRopa, validarBoleta } from './ordenesLocal';
 
 const ROSA = { id: randomUUID(), nombre: 'Rosa Quispe', telefono: '70123456', carnet: null };
 const QUIEN: QuienRegistra = { usuarioId: randomUUID(), sucursalId: randomUUID() };
 const OTRA_SUCURSAL = randomUUID();
 
-/** Una ropa válida; cada test cambia solo lo que le importa. */
+/** Un renglón de la boleta (SPEC-KRILINXI-068): una camisa de Bs 10, salvo lo que el test cambie. */
+function prenda(campos: Partial<RenglonEscrito> = {}): RenglonEscrito {
+  return { clave: randomUUID(), descripcion: 'Camisa', cantidad: '1', precioUnitario: '10', ...campos };
+}
+
+/** Una boleta de un solo renglón con ese precio: para los tests a los que solo les importa el total. */
+function conPrecio(precioUnitario: string, clave: string = randomUUID()): Partial<DatosRopa> {
+  return { renglones: [prenda({ clave, precioUnitario })] };
+}
+
+/** Una ropa válida (2 pantalones a Bs 15 y 1 saco de Bs 20: Bs 50); cada test cambia solo lo que le importa. */
 function datosRopa(cambios: Partial<DatosRopa> = {}): DatosRopa {
   return {
     cliente: { tipo: 'existente', cliente: ROSA },
     numeroBoleta: '001234',
-    descripcion: '2 pantalones, 1 saco',
-    precio: '50',
+    renglones: [
+      prenda({ descripcion: 'pantalones', cantidad: '2', precioUnitario: '15' }),
+      prenda({ descripcion: 'saco', cantidad: '1', precioUnitario: '20' }),
+    ],
     fechaEstimada: '',
     adelanto: '',
     metodoAdelanto: null,
@@ -37,7 +50,7 @@ describe('Registrar ropa en la base local — SPEC-KRILINXI-006', () => {
     const resultado = await registrarRopa(
       control.base,
       QUIEN,
-      datosRopa({ numeroBoleta: ' 001234 ', precio: '25,50', fechaEstimada: '2026-10-10' }),
+      datosRopa({ numeroBoleta: ' 001234 ', fechaEstimada: '2026-10-10' }),
     );
 
     expect(resultado.tipo).toBe('registrada');
@@ -53,11 +66,12 @@ describe('Registrar ropa en la base local — SPEC-KRILINXI-006', () => {
         cliente_id: ROSA.id,
         sucursal_id: QUIEN.sucursalId,
         usuario_recepcion_id: QUIEN.usuarioId,
+        // Desde SPEC-KRILINXI-068, el resumen de los renglones y su suma.
         descripcion: '2 pantalones, 1 saco',
         fecha_entrada: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/),
         fecha_estimada_salida: '2026-10-10',
         // Texto decimal, nunca un float (CLAUDE.md §6).
-        precio_total: '25.50',
+        precio_total: '50.00',
         estado: 'RECIBIDO',
       },
     ]);
@@ -73,7 +87,7 @@ describe('Registrar ropa en la base local — SPEC-KRILINXI-006', () => {
 
   it('un precio de cero se acepta: un trabajo de cortesía', async () => {
     const { control } = await baseLocalDePrueba();
-    expect(await registrarRopa(control.base, QUIEN, datosRopa({ precio: '0' }))).toMatchObject({
+    expect(await registrarRopa(control.base, QUIEN, datosRopa(conPrecio('0')))).toMatchObject({
       tipo: 'registrada',
       ropa: { precioTotal: 0, saldo: 0 },
     });
@@ -84,7 +98,7 @@ describe('Registrar ropa en la base local — SPEC-KRILINXI-006', () => {
     const resultado = await registrarRopa(
       control.base,
       QUIEN,
-      datosRopa({ precio: '50', adelanto: '20,50', metodoAdelanto: 'QR' }),
+      datosRopa({ adelanto: '20,50', metodoAdelanto: 'QR' }),
     );
 
     expect(resultado).toMatchObject({ tipo: 'registrada', ropa: { precioTotal: 5000, adelanto: 2050, saldo: 2950 } });
@@ -93,9 +107,11 @@ describe('Registrar ropa en la base local — SPEC-KRILINXI-006', () => {
     const operaciones = await cola(db);
     expect(operaciones.map(([op, tabla]) => [op, tabla])).toEqual([
       ['PUT', 'ordenes'],
+      ['PUT', 'orden_items'],
+      ['PUT', 'orden_items'],
       ['PUT', 'pagos'],
     ]);
-    expect(operaciones[1]?.[2]).toEqual({
+    expect(operaciones[3]?.[2]).toEqual({
       orden_id: resultado.ropa.ordenId,
       sucursal_id: QUIEN.sucursalId,
       usuario_id: QUIEN.usuarioId,
@@ -109,7 +125,7 @@ describe('Registrar ropa en la base local — SPEC-KRILINXI-006', () => {
   it('un adelanto igual al precio está bien: el cliente paga todo por adelantado', async () => {
     const { control } = await baseLocalDePrueba();
     expect(
-      await registrarRopa(control.base, QUIEN, datosRopa({ precio: '50', adelanto: '50', metodoAdelanto: 'EFECTIVO' })),
+      await registrarRopa(control.base, QUIEN, datosRopa({ adelanto: '50', metodoAdelanto: 'EFECTIVO' })),
     ).toMatchObject({ tipo: 'registrada', ropa: { saldo: 0 } });
   });
 });
@@ -119,10 +135,6 @@ describe('Registrar ropa: lo que no se guarda — SPEC-KRILINXI-006', () => {
     ['sin cliente', { cliente: null }, 'cliente', MENSAJES.sinCliente],
     ['sin boleta', { numeroBoleta: '  ' }, 'numeroBoleta', MENSAJES.sinBoleta],
     ['con boleta de 31 caracteres', { numeroBoleta: '1'.repeat(31) }, 'numeroBoleta', MENSAJES.boletaLarga],
-    ['sin descripción', { descripcion: ' ' }, 'descripcion', MENSAJES.sinDescripcion],
-    ['sin precio', { precio: '' }, 'precio', MENSAJES.precio],
-    ['con precio negativo', { precio: '-5' }, 'precio', MENSAJES.precio],
-    ['con tres decimales', { precio: '25.505' }, 'precio', MENSAJES.precio],
     ['con fecha que no existe', { fechaEstimada: '2026-02-30' }, 'fechaEstimada', MENSAJES.fecha],
   ])('%s', async (_caso, cambios, campo, mensaje) => {
     const { control, db } = await baseLocalDePrueba();
@@ -160,11 +172,11 @@ describe('Registrar ropa: lo que no se guarda — SPEC-KRILINXI-006', () => {
   it.each<[string, Partial<DatosRopa>, Partial<Record<keyof DatosRopa, string>>]>([
     ['adelanto de cero', { adelanto: '0', metodoAdelanto: 'EFECTIVO' }, { adelanto: MENSAJES.adelanto }],
     ['adelanto que no es un número', { adelanto: 'veinte', metodoAdelanto: 'EFECTIVO' }, { adelanto: MENSAJES.adelanto }],
-    ['adelanto mayor que el precio', { adelanto: '50,01', metodoAdelanto: 'EFECTIVO' }, { adelanto: MENSAJES.adelantoMayor }],
+    ['adelanto mayor que el total', { adelanto: '50,01', metodoAdelanto: 'EFECTIVO' }, { adelanto: MENSAJES.adelantoMayor }],
     ['adelanto sin método', { adelanto: '10' }, { metodoAdelanto: MENSAJES.sinMetodo }],
   ])('con %s no guarda NADA, ni siquiera la orden', async (_caso, cambios, errores) => {
     const { control, db } = await baseLocalDePrueba();
-    expect(await registrarRopa(control.base, QUIEN, datosRopa({ precio: '50', ...cambios }))).toEqual({
+    expect(await registrarRopa(control.base, QUIEN, datosRopa(cambios))).toEqual({
       tipo: 'invalida',
       errores,
     });
@@ -174,11 +186,15 @@ describe('Registrar ropa: lo que no se guarda — SPEC-KRILINXI-006', () => {
 
   it('junta todos los errores a la vez, para corregirlos de una pasada', async () => {
     const { control } = await baseLocalDePrueba();
-    const resultado = await registrarRopa(control.base, QUIEN, datosRopa({ cliente: null, numeroBoleta: '', precio: 'x' }));
+    const resultado = await registrarRopa(
+      control.base,
+      QUIEN,
+      datosRopa({ cliente: null, numeroBoleta: '', ...conPrecio('x', 'r1') }),
+    );
     expect(resultado.tipo === 'invalida' && Object.keys(resultado.errores).sort()).toEqual([
       'cliente',
       'numeroBoleta',
-      'precio',
+      'renglon:r1:precioUnitario',
     ]);
   });
 });
@@ -230,14 +246,16 @@ describe('Registrar ropa con un cliente nuevo, todo junto — SPEC-KRILINXI-034'
     expect((await cola(db)).map(([op, tabla]) => [op, tabla])).toEqual([
       ['PUT', 'clientes'],
       ['PUT', 'ordenes'],
+      ['PUT', 'orden_items'],
+      ['PUT', 'orden_items'],
       ['PUT', 'pagos'],
     ]);
   });
 
   it('con la ropa mal, no guarda nada: ni la orden ni el cliente nuevo', async () => {
     const { control, db } = await baseLocalDePrueba();
-    const resultado = await registrarRopa(control.base, QUIEN, datosRopa({ cliente: JUAN, precio: '' }));
-    expect(resultado).toEqual({ tipo: 'invalida', errores: { precio: MENSAJES.precio } });
+    const resultado = await registrarRopa(control.base, QUIEN, datosRopa({ cliente: JUAN, ...conPrecio('', 'r1') }));
+    expect(resultado).toEqual({ tipo: 'invalida', errores: { 'renglon:r1:precioUnitario': MENSAJES_RENGLON.precio } });
     expect(await control.base.consultar('SELECT id FROM clientes')).toEqual([]);
     expect(await cola(db)).toEqual([]);
   });
@@ -273,23 +291,109 @@ describe('Registrar ropa con un cliente nuevo, todo junto — SPEC-KRILINXI-034'
 });
 
 describe('El contenido del número de boleta — SPEC-KRILINXI-058', () => {
-  const datos = (numeroBoleta: string) => ({ numeroBoleta, descripcion: 'Camisa', precio: '10', fechaEstimada: '' });
+  const datos = (numeroBoleta: string) => ({ numeroBoleta, fechaEstimada: '' });
 
   it.each(['001003', 'B-1003', 'A001003', ' 001003 '])('%j es un número de boleta', async (boleta) => {
     const { control } = await baseLocalDePrueba();
-    const { errores } = await validarRopa(control.base, 'sucursal-1', datos(boleta));
+    const { errores } = await validarBoleta(control.base, 'sucursal-1', datos(boleta));
     expect(errores.numeroBoleta).toBeUndefined();
   });
 
   it.each(['abc', '12 34', '12/34', '12.5', '---'])('%j no lo es: dice qué hacer', async (boleta) => {
     const { control } = await baseLocalDePrueba();
-    const { errores } = await validarRopa(control.base, 'sucursal-1', datos(boleta));
+    const { errores } = await validarBoleta(control.base, 'sucursal-1', datos(boleta));
     expect(errores.numeroBoleta).toBe(MENSAJES.boletaInvalida);
   });
 
   it('el largo se revisa antes que la forma: una boleta muy larga dice que es larga', async () => {
     const { control } = await baseLocalDePrueba();
-    const { errores } = await validarRopa(control.base, 'sucursal-1', datos('a'.repeat(31)));
+    const { errores } = await validarBoleta(control.base, 'sucursal-1', datos('a'.repeat(31)));
     expect(errores.numeroBoleta).toBe(MENSAJES.boletaLarga);
+  });
+});
+
+describe('Registrar ropa renglón por renglón — SPEC-KRILINXI-068', () => {
+  it('guarda cada renglón después de su orden, con su lugar, su momento y los números como texto decimal', async () => {
+    const { control, db } = await baseLocalDePrueba();
+    const resultado = await registrarRopa(
+      control.base,
+      QUIEN,
+      datosRopa({
+        renglones: [
+          prenda({ clave: 'r1', descripcion: ' Camisa ', cantidad: '2', precioUnitario: '15' }),
+          prenda({ clave: 'r2', descripcion: 'Ropa por kilo', cantidad: '2,5', precioUnitario: '3,33' }),
+        ],
+      }),
+    );
+
+    // 2 × 15 + 2,5 × 3,33 = 30 + 8,33 (8,325 redondeado, como Postgres).
+    expect(resultado).toMatchObject({
+      tipo: 'registrada',
+      ropa: { precioTotal: 3833, descripcion: '2 Camisa, 2,5 Ropa por kilo' },
+    });
+    if (resultado.tipo !== 'registrada') return;
+    const operaciones = await cola(db);
+    expect(operaciones.map(([op, tabla]) => [op, tabla])).toEqual([
+      ['PUT', 'ordenes'],
+      ['PUT', 'orden_items'],
+      ['PUT', 'orden_items'],
+    ]);
+    expect(operaciones[0]?.[2]).toMatchObject({ precio_total: '38.33', descripcion: '2 Camisa, 2,5 Ropa por kilo' });
+    expect(operaciones[1]?.[2]).toEqual({
+      orden_id: resultado.ropa.ordenId,
+      sucursal_id: QUIEN.sucursalId,
+      momento: 'INGRESO',
+      posicion: 0,
+      descripcion: 'Camisa',
+      cantidad: '2.00',
+      precio_unitario: '15.00',
+    });
+    expect(operaciones[2]?.[2]).toMatchObject({ posicion: 1, cantidad: '2.50', precio_unitario: '3.33' });
+    // El id del renglón es la clave con la que se escribió: lo generó la tablet.
+    expect(await control.base.consultar('SELECT id FROM orden_items ORDER BY posicion')).toEqual([{ id: 'r1' }, { id: 'r2' }]);
+  });
+
+  it.each<[string, Partial<RenglonEscrito>, string, string]>([
+    ['sin descripción', { descripcion: ' ' }, 'descripcion', MENSAJES_RENGLON.sinDescripcion],
+    ['con una descripción de 151 caracteres', { descripcion: 'x'.repeat(151) }, 'descripcion', MENSAJES_RENGLON.descripcionLarga],
+    ['sin cantidad', { cantidad: '' }, 'cantidad', MENSAJES_RENGLON.cantidad],
+    ['con cantidad cero', { cantidad: '0' }, 'cantidad', MENSAJES_RENGLON.cantidad],
+    ['con una cantidad de mil', { cantidad: '1000' }, 'cantidad', MENSAJES_RENGLON.cantidadAlta],
+    ['sin precio', { precioUnitario: '' }, 'precioUnitario', MENSAJES_RENGLON.precio],
+    ['con precio negativo', { precioUnitario: '-5' }, 'precioUnitario', MENSAJES_RENGLON.precio],
+    ['con tres decimales', { precioUnitario: '25.505' }, 'precioUnitario', MENSAJES_RENGLON.precio],
+  ])('un renglón %s no se guarda, y el error va a su campo', async (_caso, cambios, campo, mensaje) => {
+    const { control, db } = await baseLocalDePrueba();
+    const resultado = await registrarRopa(control.base, QUIEN, datosRopa({ renglones: [prenda({ clave: 'r1', ...cambios })] }));
+    expect(resultado).toEqual({ tipo: 'invalida', errores: { [`renglon:r1:${campo}`]: mensaje } });
+    expect(await cola(db)).toEqual([]);
+  });
+
+  it('sin ningún renglón no hay boleta', async () => {
+    const { control } = await baseLocalDePrueba();
+    expect(await registrarRopa(control.base, QUIEN, datosRopa({ renglones: [] }))).toEqual({
+      tipo: 'invalida',
+      errores: { renglones: MENSAJES.sinRenglones },
+    });
+  });
+
+  it('el adelanto se compara con el total de los renglones', async () => {
+    const { control } = await baseLocalDePrueba();
+    expect(
+      await registrarRopa(control.base, QUIEN, datosRopa({ ...conPrecio('10'), adelanto: '10,01', metodoAdelanto: 'QR' })),
+    ).toEqual({ tipo: 'invalida', errores: { adelanto: MENSAJES.adelantoMayor } });
+  });
+
+  it('un total que no entra en la base se avisa para todos los renglones juntos', async () => {
+    const { control } = await baseLocalDePrueba();
+    const caro = { cantidad: '100', precioUnitario: '99999999' };
+    const resultado = await registrarRopa(
+      control.base,
+      QUIEN,
+      datosRopa({ renglones: [prenda({ clave: 'r1', ...caro }), prenda({ clave: 'r2', ...caro })] }),
+    );
+    expect(resultado).toMatchObject({ tipo: 'invalida' });
+    if (resultado.tipo !== 'invalida') return;
+    expect(Object.values(resultado.errores)).toContain(MENSAJES_RENGLON.subtotalAlto);
   });
 });

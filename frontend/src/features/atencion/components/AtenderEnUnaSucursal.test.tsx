@@ -9,6 +9,7 @@ import { elegirEnBuscador } from '../../../test/buscador';
 import { sinJerga } from '../../../test/jerga';
 import { renderEnRuta } from '../../../test/render';
 import { sesionDePrueba } from '../../../test/sesion';
+import { escribirPrenda } from '../../../test/renglones';
 
 /**
  * El ADMIN atiende el mostrador — SPEC-KRILINXI-029. La App entera con la base local de verdad
@@ -133,8 +134,7 @@ describe('Atender en una sucursal: el mostrador con la sucursal elegida — SPEC
     await elegirEnBuscador('70123456', /Rosa Quispe/);
     await screen.findByRole('form', { name: 'Datos de la ropa' });
     escribir('Número de la boleta', boleta);
-    escribir('Qué deja', '1 saco');
-    escribir('Precio (Bs)', '30');
+    escribirPrenda(1, { que: '1 saco', precio: '30' });
     fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
   }
 
