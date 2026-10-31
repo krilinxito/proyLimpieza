@@ -9,7 +9,7 @@ import { formatearBs } from '../../../lib/money';
 import { estaCerrada, TONO_ESTADO } from '../estado';
 import { useRopa } from '../hooks/useRopa';
 import type { OrdenVista } from '../types';
-import { textoDelRetiro } from '../retiro';
+import { paresDelReembolso, textoDelRetiro } from '../retiro';
 import { diaDe, fechaCorta } from './fechas';
 import { FormularioCobro } from './FormularioCobro';
 import { ListaDeRenglones } from './ListaDeRenglones';
@@ -109,6 +109,7 @@ export function DetalleOrden({ ordenId, alVolver, accionesExtra, textoVolver = '
     ['Entró', orden.fechaEntrada ? diaDe(orden.fechaEntrada) : '—'],
     ['Estará lista', orden.fechaEstimada ? fechaCorta(orden.fechaEstimada) : 'Sin fecha'],
     ...(orden.retiro ? ([['Retiró', textoDelRetiro(orden.retiro)]] as [string, ReactNode][]) : []),
+    ...paresDelReembolso(orden.reembolso),
   ];
   const cuentas: [string, ReactNode][] = [
     ['Precio', formatearBs(orden.precioTotal)],

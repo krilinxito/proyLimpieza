@@ -64,6 +64,8 @@ export const TABLAS = {
     retirado_por_carnet: text,
     usuario_entrega_id: text,
     precio_final: text,
+    // El porqué de la entrega sin cobrar (SPEC-KRILINXI-070): con motivo, la entrega es un reembolso. Vacío en una común.
+    motivo_reembolso: text,
   }),
 
   pagos: new Table({

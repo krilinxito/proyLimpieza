@@ -1,6 +1,6 @@
 import type { Centavos } from '../../lib/money';
 import type { EstadoOrden, MetodoPago, MomentoItem, TipoPago } from '../../lib/dominio';
-import type { Retiro } from './retiro';
+import type { Reembolso, Retiro } from './retiro';
 import type { Cliente, ClienteElegido } from '../clientes/types';
 import type { ClaveCampoRenglon, RenglonEscrito } from './renglones';
 
@@ -104,6 +104,8 @@ export type OrdenVista = {
   precioFinal: Centavos | null;
   /** Quién retiró la ropa (SPEC-KRILINXI-060); null si todavía no se entregó. */
   retiro: Retiro | null;
+  /** Si la ropa salió sin cobrar lo que faltaba (SPEC-KRILINXI-070); null en cualquier otra boleta. */
+  reembolso: Reembolso | null;
   pagado: Centavos;
   saldo: Centavos;
   pagos: PagoVisto[];

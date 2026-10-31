@@ -34,6 +34,7 @@ function nuevaEntrega(ordenId: string, usuarioId: string, id: string = randomUUI
     usuarioEntregaId: usuarioId,
     precioFinal: null,
     fechaEntrega: null,
+    motivoReembolso: null,
   } as const;
 }
 

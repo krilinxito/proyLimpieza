@@ -23,6 +23,11 @@ export type RegistroAuditoria = {
   fechaDelHecho: string | null;
   /** Si el admin tiene que revisarlo, y por qué. */
   revision: string | null;
+  /**
+   * El motivo de una entrega sin cobrar (SPEC-KRILINXI-070); null en cualquier otro registro. Viaja aquí porque el admin no
+   * tiene las entregas en su tablet.
+   */
+  motivoReembolso: string | null;
   /** En una edición, lo que había antes de lo que cambió. De una contraseña, solo `contrasena_cambiada`. */
   valoresAnteriores: Record<string, unknown> | null;
   usuario: { id: string; nombreCompleto: string; username: string };

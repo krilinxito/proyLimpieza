@@ -22,6 +22,7 @@ const FILA_ENTREGA = {
   retirado_por_carnet: null,
   usuario_entrega_id: IDS.usuario,
   precio_final: '45.50',
+  motivo_reembolso: null,
 };
 
 const FILA_ORDEN = {
@@ -46,6 +47,7 @@ const NUEVA = {
   usuarioEntregaId: IDS.usuario,
   precioFinal: null,
   fechaEntrega: null,
+  motivoReembolso: null,
 } as const;
 
 const SIN_RESTRICCION = { sucursalId: null };
@@ -86,7 +88,7 @@ describe('Entregas model: crear — SPEC-ALE186-006', () => {
     const [sql] = llamada();
     // Un CTE: el UPDATE de la orden y el INSERT de la entrega viajan juntos, y
     // la entrega se arma con lo que devolvió el UPDATE (FROM orden).
-    expect(sql).toMatch(/WITH orden AS \(\s*UPDATE ordenes\s+SET estado = 'ENTREGADO'/);
+    expect(sql).toMatch(/WITH orden AS \(\s*UPDATE ordenes\s+SET estado = CASE WHEN \$11::text IS NULL THEN 'ENTREGADO'/);
     expect(sql).toMatch(/INSERT INTO entregas[\s\S]*FROM orden/);
     // Sin ON CONFLICT: un id repetido tiene que hacer fallar todo, UPDATE incluido.
     expect(sql).not.toContain('ON CONFLICT');
@@ -214,7 +216,7 @@ describe('Entregas model: solo con la boleta pagada — SPEC-KRILINXI-056', () =
     // Del UPDATE de la orden hasta su RETURNING: ahí, y no en otra parte, tiene que estar la condición.
     const update = /UPDATE ordenes[\s\S]*?RETURNING/.exec(sql)?.[0] ?? '';
     expect(update.replace(/\s+/g, ' ')).toMatch(
-      /AND \(ordenes\.precio_total \+ .*\) <= COALESCE\(\(SELECT SUM\(p\.monto\) FROM pagos p WHERE p\.orden_id = ordenes\.id\), 0\)/,
+      /AND \(\$11::text IS NOT NULL OR \(ordenes\.precio_total \+ .*\) <= COALESCE\(\(SELECT SUM\(p\.monto\) FROM pagos p WHERE p\.orden_id = ordenes\.id\), 0\)\)/,
     );
   });
 
@@ -256,7 +258,7 @@ describe('Entregas model: el precio final son el total y los cargos — SPEC-KRI
     const update = (/UPDATE ordenes[\s\S]*?\)\s*,\s*escrita/.exec(llamada()[0])?.[0] ?? '').replace(/\s+/g, ' ');
     expect(update).toContain("FROM orden_items i WHERE i.orden_id = ordenes.id AND i.momento = 'ENTREGA'");
     expect(update).toContain('round(i.cantidad * i.precio_unitario, 2)');
-    expect(update).toMatch(/RETURNING id, sucursal_id, \(ordenes\.precio_total \+ .*\) AS precio_final/);
+    expect(update).toMatch(/RETURNING id, sucursal_id, CASE WHEN \$11::text IS NULL THEN \(ordenes\.precio_total \+ .*\) ELSE .* END AS precio_final/);
   });
 
   it('si la tablet manda un precio final, es una condición más: tiene que ser el calculado', async () => {
@@ -265,7 +267,7 @@ describe('Entregas model: el precio final son el total y los cargos — SPEC-KRI
     await entregas.crear({ ...NUEVA, precioFinal: 6050 }, SIN_RESTRICCION);
 
     const [sql, valores] = llamada();
-    expect(sql.replace(/\s+/g, ' ')).toMatch(/AND \(\$7::numeric IS NULL OR \$7::numeric = \(ordenes\.precio_total \+/);
+    expect(sql.replace(/\s+/g, ' ')).toMatch(/AND \(\$11::text IS NOT NULL OR \$7::numeric IS NULL OR \$7::numeric = \(ordenes\.precio_total \+/);
     // Como decimal exacto, nunca como float.
     expect(valores[6]).toBe('60.50');
   });
@@ -292,5 +294,81 @@ describe('Entregas model: el precio final son el total y los cargos — SPEC-KRI
     laBaseDevuelve([], [], [FILA_ORDEN], [{ precio_final: '60.50', saldo: '15.00' }]);
 
     expect(await entregas.crear(NUEVA, SIN_RESTRICCION)).toMatchObject({ tipo: 'saldo-pendiente', saldo: '15.00' });
+  });
+});
+
+describe('Entregas model: entregar sin cobrar (reembolso) — SPEC-KRILINXI-070', () => {
+  const REEMBOLSO = { ...NUEVA, motivoReembolso: 'Reclamó por una mancha' };
+
+  it('el motivo viaja como parámetro $11 y se guarda en la columna motivo_reembolso', async () => {
+    laBaseDevuelve([{ ...FILA_ENTREGA, precio_final: '20.00', motivo_reembolso: 'Reclamó por una mancha' }]);
+
+    const resultado = await entregas.crear(REEMBOLSO, SIN_RESTRICCION, 'reembolso');
+
+    expect(resultado).toMatchObject({ tipo: 'creada', entrega: { motivoReembolso: 'Reclamó por una mancha' } });
+    const [sql, valores] = llamada();
+    expect(valores[10]).toBe('Reclamó por una mancha');
+    expect(sql).toContain('motivo_reembolso');
+    expect(sql).toContain("'REEMBOLSADO'::estado_orden");
+  });
+
+  it('el precio final de un reembolso es lo ya cobrado, en la misma sentencia que deja la orden REEMBOLSADO', async () => {
+    laBaseDevuelve([FILA_ENTREGA]);
+
+    await entregas.crear(REEMBOLSO, SIN_RESTRICCION, 'reembolso');
+
+    const update = (/UPDATE ordenes[\s\S]*?\)\s*,\s*escrita/.exec(llamada()[0])?.[0] ?? '').replace(/\s+/g, ' ');
+    expect(update).toContain(
+      'ELSE COALESCE((SELECT SUM(p.monto) FROM pagos p WHERE p.orden_id = ordenes.id), 0) END AS precio_final',
+    );
+  });
+
+  it('la marca de revisión llega a la fila de auditoría', async () => {
+    laBaseDevuelve([FILA_ENTREGA]);
+
+    await entregas.crear(REEMBOLSO, SIN_RESTRICCION, 'reembolso');
+
+    const [sql, valores] = llamada();
+    expect(sql).toContain(', revision');
+    expect(valores.at(-1)).toBe('reembolso');
+  });
+
+  it('la entrega común sigue sin motivo: $11 es null y el SQL conserva la comprobación del saldo y del precio', async () => {
+    laBaseDevuelve([FILA_ENTREGA]);
+
+    await entregas.crear(NUEVA, SIN_RESTRICCION);
+
+    const [sql, valores] = llamada();
+    expect(valores[10]).toBeNull();
+    expect(sql.replace(/\s+/g, ' ')).toContain('AND ($11::text IS NOT NULL OR $7::numeric IS NULL');
+  });
+
+  it('un reintento con el mismo id responde existente, también siendo reembolso', async () => {
+    laBaseDevuelve([], [{ ...FILA_ENTREGA, motivo_reembolso: 'Reclamó por una mancha' }]);
+
+    expect(await entregas.crear(REEMBOLSO, SIN_RESTRICCION)).toMatchObject({ tipo: 'existente' });
+  });
+
+  it('una orden anulada rechaza el reembolso, y no se explica por precio ni por saldo', async () => {
+    laBaseDevuelve([], [], [{ ...FILA_ORDEN, estado: 'ANULADO' }]);
+
+    expect(await entregas.crear(REEMBOLSO, SIN_RESTRICCION)).toMatchObject({ tipo: 'orden-anulada' });
+    expect(query).toHaveBeenCalledTimes(3);
+  });
+
+  it('una orden ya entregada o ya reembolsada rechaza el reembolso', async () => {
+    for (const estado of ['ENTREGADO', 'REEMBOLSADO']) {
+      query.mockReset();
+      laBaseDevuelve([], [], [{ ...FILA_ORDEN, estado }]);
+      expect(await entregas.crear(REEMBOLSO, SIN_RESTRICCION)).toMatchObject({ tipo: 'orden-ya-entregada' });
+    }
+  });
+
+  it('un reembolso no consulta el precio ni el saldo: si no se insertó y no hay otro motivo, es un error', async () => {
+    laBaseDevuelve([], [], [FILA_ORDEN]);
+
+    await expect(entregas.crear(REEMBOLSO, SIN_RESTRICCION)).rejects.toThrow('no se insertó');
+    // La entrega, el reintento por id y la orden: sin la consulta de cuentas (precio/saldo).
+    expect(query).toHaveBeenCalledTimes(3);
   });
 });

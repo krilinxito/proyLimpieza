@@ -167,7 +167,7 @@ describe('Auditoría: cada escritura anota lo suyo — SPEC-ALE186-010', () => {
         entregas.crear(
           {
             id: IDS.orden, ordenId: IDS.orden, tipoRetiro: 'CON_BOLETA', retiradoPorNombre: null,
-            retiradoPorCarnet: null, usuarioEntregaId: IDS.usuario, precioFinal: null, fechaEntrega: null,
+            retiradoPorCarnet: null, usuarioEntregaId: IDS.usuario, precioFinal: null, fechaEntrega: null, motivoReembolso: null,
           },
           { sucursalId: null },
         ),

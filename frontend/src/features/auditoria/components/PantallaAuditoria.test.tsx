@@ -201,3 +201,26 @@ describe('¿Quién hizo qué? con el tema — SPEC-KRILINXI-027', () => {
     expect(aviso).toHaveClass('bg-advertencia-fondo');
   });
 });
+
+describe('¿Quién hizo qué? con una entrega sin cobrar — SPEC-KRILINXI-070', () => {
+  it('se ve como "Entregó sin cobrar", con su motivo, marcada para revisar y entre lo que hay que revisar', async () => {
+    const reembolso = registroDePrueba({
+      accion: 'ENTREGAR',
+      tablaAfectada: 'entregas',
+      revision: 'reembolso',
+      motivoReembolso: 'Reclamó por una mancha',
+    });
+    const { servidor } = await abrir(() => ({ status: 200, data: paginaDePrueba([reembolso, ROPA]) }));
+
+    const [tarjeta] = within(await screen.findByRole('region', { name: 'Lo que se hizo' })).getAllByRole('listitem');
+    expect(tarjeta).toHaveTextContent('Elena Choque: Entregó sin cobrar');
+    expect(tarjeta).toHaveTextContent('Motivo: Reclamó por una mancha');
+    expect(tarjeta).toHaveTextContent('Para revisar: se entregó la ropa sin cobrar.');
+    expect(within(tarjeta as HTMLElement).getByText('Hay que revisar')).toBeInTheDocument();
+    sinJerga();
+
+    // Está entre lo que "Solo lo que hay que revisar" pide a la API.
+    fireEvent.click(screen.getByLabelText('Solo lo que hay que revisar'));
+    await waitFor(() => expect(servidor.pedidos.at(-1)?.parametros).toEqual(expect.objectContaining({ revisar: 'true' })));
+  });
+});

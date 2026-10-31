@@ -61,6 +61,7 @@ describe('POST /api/entregas — SPEC-ALE186-006', () => {
       precioFinal: 5000,
       fechaEntrega: '2026-10-03T13:30:00-04:00',
       usuarioEntregaId: IDS.usuario,
+      motivoReembolso: null,
     });
   });
 
@@ -305,5 +306,84 @@ describe('POST /api/entregas: el precio final son el total y los cargos — SPEC
     await retiro(cuerpoDeEntrega({ precio_final: '60.50' }));
 
     expect(loQueSeCreo()?.precioFinal).toBe(6050);
+  });
+});
+
+describe('POST /api/entregas sin cobrar (reembolso) — SPEC-KRILINXI-070', () => {
+  const MOTIVO = 'El cliente reclamó por una mancha y no quiso pagar el saldo.';
+
+  it('con motivo es un reembolso: lo pasa al model, queda marcado para el admin y responde 201', async () => {
+    const res = await retiro(cuerpoDeEntrega({ motivo_reembolso: `  ${MOTIVO}  ` }));
+
+    expect(res.status).toBe(201);
+    expect(loQueSeCreo()).toMatchObject({ motivoReembolso: MOTIVO });
+    // La marca para el admin: el tercer argumento del model.
+    expect(crear.mock.calls.at(-1)?.[2]).toBe('reembolso');
+  });
+
+  it('una entrega común no es un reembolso ni queda marcada', async () => {
+    await retiro(cuerpoDeEntrega());
+
+    expect(loQueSeCreo()).toMatchObject({ motivoReembolso: null });
+    expect(crear.mock.calls.at(-1)?.[2]).toBeNull();
+  });
+
+  it.each([
+    ['en blanco', '   '],
+    ['vacío', ''],
+    ['de más de 300 caracteres', 'a'.repeat(301)],
+    ['que no es un texto', 42],
+  ])('responde 400 si el motivo viene %s, y no escribe nada', async (_caso, motivo) => {
+    const res = await retiro(cuerpoDeEntrega({ motivo_reembolso: motivo }));
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.codigo).toBe('VALIDACION');
+    expect(crear).not.toHaveBeenCalled();
+  });
+
+  it('300 caracteres justos todavía valen', async () => {
+    const res = await retiro(cuerpoDeEntrega({ motivo_reembolso: 'a'.repeat(300) }));
+
+    expect(res.status).toBe(201);
+  });
+
+  it('no admite cargos: un reembolso con cargos responde 400 y no escribe nada', async () => {
+    const res = await retiro(cuerpoDeEntrega({ motivo_reembolso: MOTIVO, cargos: [{ descripcion: 'Recargo' }] }));
+
+    expect(res.status).toBe(400);
+    expect(crear).not.toHaveBeenCalled();
+  });
+
+  it('no exige saldo cero: el precio final que mande la tablet no se compara (el model lo ignora con motivo)', async () => {
+    await retiro(cuerpoDeEntrega({ motivo_reembolso: MOTIVO, precio_final: '10.00' }));
+
+    // El controller pasa los dos; que con motivo no se compare lo prueban el test del model y el de la base real.
+    expect(loQueSeCreo()).toMatchObject({ motivoReembolso: MOTIVO, precioFinal: 1000 });
+  });
+
+  it('quién lo registró sale de la sesión, nunca del cuerpo', async () => {
+    await retiro(cuerpoDeEntrega({ motivo_reembolso: MOTIVO, usuario_entrega_id: 'otra-persona' }));
+
+    expect(loQueSeCreo()).toMatchObject({ usuarioEntregaId: IDS.usuario });
+  });
+
+  it('cualquiera lo registra: un EMPLEADO, limitado a su sucursal, y un ADMIN, sin límite', async () => {
+    await retiro(cuerpoDeEntrega({ motivo_reembolso: MOTIVO }));
+    expect(restricciones()).toEqual({ sucursalId: IDS.sucursal });
+
+    await retiro(cuerpoDeEntrega({ motivo_reembolso: MOTIVO }), ADMIN);
+    expect(restricciones()).toEqual({ sucursalId: null });
+  });
+
+  it.each([
+    ['orden-anulada', 'ORDEN_ANULADA'],
+    ['orden-ya-entregada', 'ORDEN_YA_ENTREGADA'],
+  ] as const)('una orden %s rechaza el reembolso con 409, como rechaza una entrega', async (tipo, codigo) => {
+    crear.mockResolvedValue({ tipo, orden: ordenDePrueba() });
+
+    const res = await retiro(cuerpoDeEntrega({ motivo_reembolso: MOTIVO }));
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.codigo).toBe(codigo);
   });
 });

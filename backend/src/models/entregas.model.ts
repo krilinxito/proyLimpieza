@@ -14,6 +14,11 @@
 // igual, y si no coincide se rechaza: así una entrega cuyo cargo no llegó (o una de una versión anterior, con un precio
 // libre) no se guarda con un precio que nadie eligió. Los cargos suben antes que la entrega, como el pago final.
 //
+// Desde SPEC-KRILINXI-070 una entrega puede ser un **reembolso** (`motivoReembolso`): la ropa sale sin cobrar lo que falta, la
+// orden pasa a REEMBOLSADO y el `precio_final` es lo ya cobrado, así que el saldo queda en 0 sin tocar `vw_saldos`. Es la
+// misma sentencia de siempre con dos condiciones menos (el precio y el saldo), y solo cuando viene el motivo: la entrega
+// común las sigue aplicando igual.
+//
 // Lo nuevo es que registrar una entrega escribe en DOS tablas: la entrega, y la
 // orden, que pasa a ENTREGADO. Tienen que ocurrir las dos o ninguna — ver `crear`.
 import pg from 'pg';
@@ -35,6 +40,8 @@ export interface Entrega {
   usuarioEntregaId: string;
   /** Como lo entrega Postgres: `"45.50"`. Para operar, `money.parse`. */
   precioFinal: string;
+  /** El porqué de la entrega sin cobrar; `null` en una entrega común — SPEC-KRILINXI-070. */
+  motivoReembolso: string | null;
 }
 
 interface FilaEntrega {
@@ -47,6 +54,7 @@ interface FilaEntrega {
   retirado_por_carnet: string | null;
   usuario_entrega_id: string;
   precio_final: string;
+  motivo_reembolso: string | null;
 }
 
 function aEntrega(fila: FilaEntrega): Entrega {
@@ -60,12 +68,13 @@ function aEntrega(fila: FilaEntrega): Entrega {
     retiradoPorCarnet: fila.retirado_por_carnet,
     usuarioEntregaId: fila.usuario_entrega_id,
     precioFinal: fila.precio_final,
+    motivoReembolso: fila.motivo_reembolso,
   };
 }
 
 const COLUMNAS =
   'id, orden_id, sucursal_id, fecha_entrega, tipo_retiro, retirado_por_nombre, ' +
-  'retirado_por_carnet, usuario_entrega_id, precio_final';
+  'retirado_por_carnet, usuario_entrega_id, precio_final, motivo_reembolso';
 
 /**
  * Desde qué estados se puede entregar: todos los que no están cerrados.
@@ -100,6 +109,11 @@ function precioFinalSql(alias: string): string {
                                            WHERE i.orden_id = ${alias}.id AND i.momento = 'ENTREGA'), 0))`;
 }
 
+/** Lo ya cobrado de una orden en SQL: la suma de sus pagos (0 si no tiene). `alias` es su tabla `ordenes`. */
+function cobradoSql(alias: string): string {
+  return `COALESCE((SELECT SUM(p.monto) FROM pagos p WHERE p.orden_id = ${alias}.id), 0)`;
+}
+
 /**
  * El precio final que le corresponde a la orden y lo que faltaría cobrar con él, como texto de Postgres (`"25.50"`).
  * Solo sirve para explicar por qué la sentencia de `crear` no insertó nada.
@@ -131,6 +145,11 @@ export interface EntregaNueva {
   precioFinal: Centavos | null;
   /** ISO 8601 con zona, tal como lo manda el dispositivo; `null` = ahora. */
   fechaEntrega: string | null;
+  /**
+   * Si viene, es un reembolso (SPEC-KRILINXI-070): ya validado, con contenido y sin pasarse de largo. `null` = una entrega
+   * común. Con reembolso, `precioFinal` no se compara con nada: el precio final es lo ya cobrado.
+   */
+  motivoReembolso: string | null;
   // No hay `sucursalId`: no lo decide quien llama, sale de la orden.
 }
 
@@ -194,20 +213,21 @@ export async function crear(
       {
         ctesPrevios: `orden AS (
            UPDATE ordenes
-              SET estado = 'ENTREGADO'
+              SET estado = CASE WHEN $11::text IS NULL THEN 'ENTREGADO'::estado_orden ELSE 'REEMBOLSADO'::estado_orden END
             WHERE id = $2
               AND estado = ANY($9::estado_orden[])
               AND ($10::uuid IS NULL OR sucursal_id = $10)
-              AND ($7::numeric IS NULL OR $7::numeric = ${precioFinalSql('ordenes')})
-              AND ${precioFinalSql('ordenes')}
-                  <= COALESCE((SELECT SUM(p.monto) FROM pagos p WHERE p.orden_id = ordenes.id), 0)
-           RETURNING id, sucursal_id, ${precioFinalSql('ordenes')} AS precio_final
+              AND ($11::text IS NOT NULL OR $7::numeric IS NULL OR $7::numeric = ${precioFinalSql('ordenes')})
+              AND ($11::text IS NOT NULL OR ${precioFinalSql('ordenes')} <= ${cobradoSql('ordenes')})
+           RETURNING id, sucursal_id,
+                     CASE WHEN $11::text IS NULL THEN ${precioFinalSql('ordenes')} ELSE ${cobradoSql('ordenes')} END AS precio_final
          )`,
         sql: `INSERT INTO entregas (id, orden_id, sucursal_id, tipo_retiro, retirado_por_nombre,
-                                    retirado_por_carnet, usuario_entrega_id, precio_final, fecha_entrega)
+                                    retirado_por_carnet, usuario_entrega_id, precio_final, fecha_entrega, motivo_reembolso)
               SELECT $1, orden.id, orden.sucursal_id, $3, $4, $5, $6,
                      orden.precio_final,
-                     COALESCE($8::timestamptz::timestamp, LOCALTIMESTAMP)
+                     COALESCE($8::timestamptz::timestamp, LOCALTIMESTAMP),
+                     $11::text
                 FROM orden
               RETURNING ${COLUMNAS}`,
         valores: [
@@ -222,6 +242,7 @@ export async function crear(
           entrega.fechaEntrega,
           ESTADOS_ENTREGABLES,
           restricciones.sucursalId,
+          entrega.motivoReembolso,
         ],
         columnas: COLUMNAS,
       },
@@ -258,7 +279,8 @@ export async function crear(
 
   // Entregable y sin choques: queda el precio (SPEC-KRILINXI-068) y la regla del saldo (SPEC-KRILINXI-056). El precio
   // va primero: si la tablet calculó con otros cargos, lo que "falta" según ella no es lo que falta de verdad.
-  const cuentas = await cuentasAlEntregar(entrega.ordenId);
+  // Un reembolso no pasa por ninguna de las dos (SPEC-KRILINXI-070): no tiene precio que comparar ni saldo que cubrir.
+  const cuentas = entrega.motivoReembolso === null ? await cuentasAlEntregar(entrega.ordenId) : null;
   if (cuentas !== null) {
     if (entrega.precioFinal !== null && formatear(entrega.precioFinal) !== cuentas.precioFinal) {
       return { tipo: 'precio-distinto', orden, precioFinal: cuentas.precioFinal };

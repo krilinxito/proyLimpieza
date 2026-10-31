@@ -25,6 +25,7 @@ const REGISTRO = {
   sucursalId: null,
   fechaDelHecho: null,
   revision: null,
+  motivoReembolso: null,
   valoresAnteriores: { contrasena_cambiada: true },
   usuario: { id: '33333333-3333-3333-3333-333333333333', nombreCompleto: 'Admin', username: 'admin' },
 };

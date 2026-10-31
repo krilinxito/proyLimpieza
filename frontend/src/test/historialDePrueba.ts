@@ -25,6 +25,7 @@ export function boletaDePrueba(cambios: Record<string, unknown> = {}) {
     precioTotal: '50.00',
     precioFinal: null,
     retiro: null,
+    reembolso: null,
     pagado: '20.00',
     saldo: '30.00',
     // Sin renglones, como una boleta de antes de SPEC-KRILINXI-068. Con ellos: `renglones: [renglonDePrueba()]`.

@@ -210,7 +210,9 @@ export async function guardarCorreccion(
   // Solo las columnas del formulario: el resto del alta (cliente, sucursal, fechas) va tal cual. Una entrega, además, con
   // el precio final que da la tablet ahora (SPEC-KRILINXI-068): el que se había mandado puede ser justo lo que se rechazó.
   const corregidos: Record<string, unknown> = Object.fromEntries(claves.map((c) => [c, datos[c]]));
-  if (registro.tabla === 'entregas' && esAlta && typeof registro.datos.orden_id === 'string') {
+  // Una entrega sin cobrar (SPEC-KRILINXI-070) no lo recalcula: su precio final es lo ya cobrado, no el total más los cargos.
+  const esReembolso = typeof registro.datos.motivo_reembolso === 'string' && registro.datos.motivo_reembolso !== '';
+  if (registro.tabla === 'entregas' && esAlta && !esReembolso && typeof registro.datos.orden_id === 'string') {
     const precioFinal = await precioFinalLocal(base, registro.datos.orden_id);
     if (precioFinal !== null) corregidos.precio_final = aDecimal(precioFinal);
   }

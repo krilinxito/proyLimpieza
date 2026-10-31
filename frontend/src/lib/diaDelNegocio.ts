@@ -17,6 +17,24 @@ export function diaEnBolivia(instanteMs: number): string {
   );
 }
 
+/**
+ * El día y la hora de Bolivia de un instante, escritos para leer: `31/10/2026 14:30` — SPEC-KRILINXI-070. Para mostrar
+ * cuándo pasó algo (la hora no se usa para decidir nada).
+ */
+export function fechaYHoraEnBolivia(instanteMs: number): string {
+  const partes = new Intl.DateTimeFormat('en-GB', {
+    timeZone: ZONA_NEGOCIO,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(new Date(instanteMs));
+  const de = (tipo: string) => partes.find((p) => p.type === tipo)?.value ?? '';
+  return `${de('day')}/${de('month')}/${de('year')} ${de('hour')}:${de('minute')}`;
+}
+
 /** Hoy en Bolivia, como `YYYY-MM-DD`, con la hora corregida de la tablet. */
 export function hoyEnBolivia(ahoraMs: number = ahoraOficialMs()): string {
   return diaEnBolivia(ahoraMs);

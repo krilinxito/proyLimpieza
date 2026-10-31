@@ -1,6 +1,6 @@
 import { Insignia } from '../../../components/Insignia';
 import { Tarjeta } from '../../../components/Tarjeta';
-import { antes, cuando, queHizo, sobreQue, textoRevision } from '../describir';
+import { antes, cuando, motivoDelReembolso, queHizo, sobreQue, textoRevision } from '../describir';
 import type { NombresConocidos, RegistroAuditoria } from '../types';
 
 /**
@@ -14,6 +14,7 @@ export function TarjetaRegistro({ registro, nombres }: { registro: RegistroAudit
   const { paso, llego } = cuando(registro);
   const cambios = antes(registro, nombres);
   const revision = textoRevision(registro.revision);
+  const motivo = motivoDelReembolso(registro);
 
   return (
     <li>
@@ -36,6 +37,7 @@ export function TarjetaRegistro({ registro, nombres }: { registro: RegistroAudit
             Se guardó en el sistema el {llego} (la tablet estaba sin internet).
           </p>
         )}
+        {motivo && <p className="mt-2 text-xl text-texto">{motivo}</p>}
         {cambios.length > 0 && (
           <ul className="mt-2 grid gap-1 text-lg text-texto-suave">
             {cambios.map((c, i) => (

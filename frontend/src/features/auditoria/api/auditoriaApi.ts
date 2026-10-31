@@ -23,6 +23,9 @@ const esTabla = (v: unknown): v is Tabla => TABLAS.some((t) => t === v);
 function leerRegistro(r: unknown): RegistroAuditoria | null {
   if (!esObjeto(r) || !esTexto(r.id) || !esTexto(r.fecha) || !esAccion(r.accion) || !esTabla(r.tablaAfectada)) return null;
   if (!textoONulo(r.registroId) || !textoONulo(r.sucursalId) || !textoONulo(r.fechaDelHecho) || !textoONulo(r.revision)) return null;
+  // Un servidor que todavía no manda el motivo (SPEC-KRILINXI-070) es como uno que no tiene reembolsos.
+  const motivoReembolso = r.motivoReembolso ?? null;
+  if (!textoONulo(motivoReembolso)) return null;
   const { usuario, valoresAnteriores } = r;
   if (!esObjeto(usuario) || !esTexto(usuario.id) || !esTexto(usuario.nombreCompleto) || !esTexto(usuario.username)) return null;
   if (valoresAnteriores !== null && !esObjeto(valoresAnteriores)) return null;
@@ -35,6 +38,7 @@ function leerRegistro(r: unknown): RegistroAuditoria | null {
     sucursalId: r.sucursalId,
     fechaDelHecho: r.fechaDelHecho,
     revision: r.revision,
+    motivoReembolso,
     valoresAnteriores,
     usuario: { id: usuario.id, nombreCompleto: usuario.nombreCompleto, username: usuario.username },
   };

@@ -503,3 +503,58 @@ describe('Historial de boletas del administrador — SPEC-KRILINXI-041', () => {
     expect(await screen.findByRole('button', { name: 'Boleta 001234, Rosa Quispe' })).toBeInTheDocument();
   });
 });
+
+describe('Historial del admin: el reembolso de una boleta — SPEC-KRILINXI-070', () => {
+  const REEMBOLSADA = boletaDePrueba({
+    numeroBoleta: '000666',
+    estado: 'REEMBOLSADO',
+    precioTotal: '50.00',
+    precioFinal: '20.00',
+    pagado: '20.00',
+    saldo: '0.00',
+    retiro: { tipo: 'CON_BOLETA', nombre: null, carnet: null },
+    reembolso: { motivo: 'Reclamó por una mancha', hechoPor: 'Elena Choque', fecha: '2026-10-02 16:30:00' },
+  });
+
+  async function abrirComoAdmin(boletas: unknown[] = [REEMBOLSADA]) {
+    tabletConRelojCorrido(0);
+    const servidor = simularApi(() => ({ status: 200, data: paginaDeBoletas(boletas) }));
+    const { control, sembrar } = await baseLocalDePrueba();
+    await sembrar('sucursales', [{ id: SUCURSAL_CENTRO, nombre: 'Centro', activa: 1 }]);
+    renderEnRuta(<App />, '/boletas', { sesion: sesionDePrueba({ rol: 'ADMIN' }), baseLocal: control });
+    return { servidor };
+  }
+
+  it('el detalle de solo lectura dice el motivo, quién lo registró y cuándo, y la boleta va en rojo', async () => {
+    await abrirComoAdmin();
+    const tarjeta = await screen.findByRole('button', { name: 'Boleta 000666, Rosa Quispe' });
+    expect(within(tarjeta).getByText('Reembolsado').className).toContain('peligro');
+    fireEvent.click(tarjeta);
+
+    const detalle = await screen.findByRole('region', { name: 'Boleta 000666' });
+    const dato = (nombre: string) => within(detalle).getByText(nombre, { selector: 'dt' }).nextElementSibling?.textContent;
+    expect(dato('Motivo')).toBe('Reclamó por una mancha');
+    expect(dato('Lo registró')).toBe('Elena Choque');
+    expect(dato('Cuándo')).toBe('02/10/2026 16:30');
+    expect(dato('Precio final')).toBe('Bs 20,00');
+    sinJerga();
+  });
+
+  it('una boleta que no es un reembolso no habla de motivo', async () => {
+    await abrirComoAdmin([boletaDePrueba({ numeroBoleta: '000667' })]);
+    fireEvent.click(await screen.findByRole('button', { name: 'Boleta 000667, Rosa Quispe' }));
+
+    const detalle = await screen.findByRole('region', { name: 'Boleta 000667' });
+    expect(within(detalle).queryByText('Motivo', { selector: 'dt' })).not.toBeInTheDocument();
+  });
+
+  it('se puede filtrar por Reembolsado, y el filtro viaja a la API', async () => {
+    const { servidor } = await abrirComoAdmin();
+    await screen.findByRole('button', { name: 'Boleta 000666, Rosa Quispe' });
+    fireEvent.click(screen.getByText('Buscar con más detalle'));
+
+    fireEvent.click(await screen.findByRole('radio', { name: 'Reembolsado' }));
+
+    await waitFor(() => expect(servidor.pedidos.at(-1)?.parametros).toEqual(expect.objectContaining({ estado: 'REEMBOLSADO' })));
+  });
+});

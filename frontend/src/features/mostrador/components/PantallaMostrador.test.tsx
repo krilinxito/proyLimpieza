@@ -447,8 +447,8 @@ describe('Mostrador: las acciones de la boleta en fila, con su símbolo — SPEC
   it('cada acción lleva su ícono, decorativo: el nombre sigue siendo su palabra', async () => {
     await abrirConRopaLista();
     await abrirDetalle('000001');
-    // Sin pasos intermedios (SPEC-KRILINXI-067): solo cobrar y entregar.
-    expect(nombres(fila())).toEqual(['Cobrar', 'Entregar la ropa']);
+    // Sin pasos intermedios (SPEC-KRILINXI-067): cobrar y entregar, y con deuda, entregar sin cobrar (SPEC-KRILINXI-070).
+    expect(nombres(fila())).toEqual(['Cobrar', 'Entregar la ropa', 'Entregar sin cobrar']);
     for (const accion of within(fila()).getAllByRole('button')) {
       expect(accion.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
     }

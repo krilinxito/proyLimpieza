@@ -47,9 +47,14 @@ export function estadoDeLaBase(valor: unknown): EstadoOrden | null {
   return esEstadoOrden(valor) ? valor : null;
 }
 
-/** El estado que ve el empleado: ENTREGADO si ya tiene entrega, aunque no haya sincronizado. */
-export function estadoEfectivo(estado: EstadoOrden, tieneEntrega: boolean): EstadoOrden {
-  return tieneEntrega ? 'ENTREGADO' : estado;
+/**
+ * El estado que ve el empleado: ENTREGADO si ya tiene entrega, aunque no haya sincronizado; REEMBOLSADO si esa entrega
+ * tiene motivo de reembolso (SPEC-KRILINXI-070). Mira `motivo_reembolso` y no el estado guardado, que sigue diciendo
+ * RECIBIDO hasta que el servidor reciba la entrega.
+ */
+export function estadoEfectivo(estado: EstadoOrden, tieneEntrega: boolean, reembolsada = false): EstadoOrden {
+  if (!tieneEntrega) return estado;
+  return reembolsada ? 'REEMBOLSADO' : 'ENTREGADO';
 }
 
 /**

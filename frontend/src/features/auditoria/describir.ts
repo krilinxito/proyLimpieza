@@ -14,11 +14,12 @@ import { fechaParaLeer } from '../estadisticas/periodo';
 import type { Accion, NombresConocidos, RegistroAuditoria, Tabla } from './types';
 
 /** Qué hizo, sin el "sobre qué". */
-export function queHizo({ accion, tablaAfectada, valoresAnteriores }: RegistroAuditoria): string {
+export function queHizo({ accion, tablaAfectada, valoresAnteriores, motivoReembolso }: RegistroAuditoria): string {
   const antes = valoresAnteriores ?? {};
   if (accion === 'LOGIN') return 'Entró al sistema';
   if (accion === 'COBRAR') return 'Cobró';
-  if (accion === 'ENTREGAR') return 'Entregó ropa';
+  // Con motivo, la entrega salió sin cobrar lo que faltaba (SPEC-KRILINXI-070).
+  if (accion === 'ENTREGAR') return motivoReembolso === null ? 'Entregó ropa' : 'Entregó sin cobrar';
   if (accion === 'ELIMINAR') return 'Borró un registro';
   if (accion === 'CREAR') {
     const altas: Record<Tabla, string> = {
@@ -141,7 +142,13 @@ export function antes(registro: RegistroAuditoria, nombres: NombresConocidos): s
 
 export const TEXTO_REVISION: Record<string, string> = {
   cuenta_dada_de_baja: 'Para revisar: lo hizo una cuenta que ya estaba dada de baja.',
+  reembolso: 'Para revisar: se entregó la ropa sin cobrar.',
 };
+
+/** El motivo escrito de una entrega sin cobrar (SPEC-KRILINXI-070), para mostrarlo en el registro; null si no es una. */
+export function motivoDelReembolso({ motivoReembolso }: RegistroAuditoria): string | null {
+  return motivoReembolso === null ? null : `Motivo: ${motivoReembolso}`;
+}
 
 export function textoRevision(revision: string | null): string | null {
   if (!revision) return null;

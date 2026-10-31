@@ -54,6 +54,7 @@ function entregaDe(orden: OrdenCreada, esc: Escenario, precioFinal: number | nul
     usuarioEntregaId: esc.usuarioId,
     precioFinal,
     fechaEntrega: null,
+    motivoReembolso: null,
   } as const;
 }
 

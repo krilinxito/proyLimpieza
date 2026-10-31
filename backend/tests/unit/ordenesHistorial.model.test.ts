@@ -136,6 +136,9 @@ describe('Historial de boletas: el SQL que arma el model — SPEC-KRILINXI-040',
             tipo_retiro: null,
             retirado_por_nombre: null,
             retirado_por_carnet: null,
+            motivo_reembolso: null,
+            reembolso_por: null,
+            reembolso_fecha: null,
             pagado: '10.00',
             saldo: '35.50',
           },
@@ -159,6 +162,7 @@ describe('Historial de boletas: el SQL que arma el model — SPEC-KRILINXI-040',
           precioTotal: '45.50',
           precioFinal: null,
           retiro: null,
+          reembolso: null,
           pagado: '10.00',
           saldo: '35.50',
         },
@@ -172,6 +176,7 @@ describe('Historial de boletas: el SQL que arma el model — SPEC-KRILINXI-040',
       cliente_nombre: 'Rosa', cliente_telefono: '7', descripcion: '', estado: 'ENTREGADO',
       fecha_entrada: '2026-09-30 10:15:00', fecha_estimada_salida: null, precio_total: '1.00',
       precio_final: '1.00', pagado: '1.00', saldo: '0.00',
+      motivo_reembolso: null, reembolso_por: null, reembolso_fecha: null,
     };
     query.mockReset();
     query.mockResolvedValueOnce({ rows: [{ total: 2 }] }).mockResolvedValueOnce({
@@ -187,5 +192,48 @@ describe('Historial de boletas: el SQL que arma el model — SPEC-KRILINXI-040',
       { tipo: 'SIN_BOLETA', nombre: 'Luis', carnet: '123 LP' },
       { tipo: 'CON_BOLETA', nombre: null, carnet: null },
     ]);
+  });
+});
+
+describe('Historial de boletas: el reembolso de cada boleta — SPEC-KRILINXI-070', () => {
+  it('una boleta reembolsada trae su motivo, quién lo hizo y cuándo; las demás, null', async () => {
+    const base = {
+      id: 'o', numero_boleta: '1', sucursal_id: 's', sucursal_nombre: 'Centro', cliente_id: 'c',
+      cliente_nombre: 'Rosa', cliente_telefono: '7', descripcion: '', fecha_entrada: '2026-09-30 10:15:00',
+      fecha_estimada_salida: null, precio_total: '50.00', tipo_retiro: 'CON_BOLETA', retirado_por_nombre: null,
+      retirado_por_carnet: null,
+    };
+    query.mockReset();
+    query.mockResolvedValueOnce({ rows: [{ total: 2 }] }).mockResolvedValueOnce({
+      rows: [
+        {
+          ...base, estado: 'REEMBOLSADO', precio_final: '20.00', pagado: '20.00', saldo: '0.00',
+          motivo_reembolso: 'Reclamó por una mancha', reembolso_por: 'Ana Pérez', reembolso_fecha: '2026-10-02 16:30:00',
+        },
+        {
+          ...base, estado: 'ENTREGADO', precio_final: '50.00', pagado: '50.00', saldo: '0.00',
+          motivo_reembolso: null, reembolso_por: null, reembolso_fecha: null,
+        },
+      ],
+    });
+
+    const { boletas } = await ordenes.listar(SIN_FILTROS, PAGINA);
+
+    expect(boletas.map((b) => b.reembolso)).toEqual([
+      { motivo: 'Reclamó por una mancha', hechoPor: 'Ana Pérez', fecha: '2026-10-02 16:30:00' },
+      null,
+    ]);
+  });
+
+  it('el SQL junta a quien entregó y pasa la fecha por la hora de Bolivia', async () => {
+    query.mockReset();
+    query.mockResolvedValue({ rows: [{ total: 0 }] });
+
+    await ordenes.listar(SIN_FILTROS, PAGINA);
+
+    const sql = String(query.mock.calls.at(-1)?.[0]).replace(/\s+/g, ' ');
+    expect(sql).toContain('LEFT JOIN usuarios ue ON ue.id = e.usuario_entrega_id');
+    expect(sql).toContain('e.motivo_reembolso');
+    expect(sql).toMatch(/AS reembolso_fecha/);
   });
 });
