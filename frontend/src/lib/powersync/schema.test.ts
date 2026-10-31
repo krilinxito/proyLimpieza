@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { TABLAS, TABLAS_SOLO_LOCALES } from './schema';
 
@@ -7,7 +7,9 @@ import { TABLAS, TABLAS_SOLO_LOCALES } from './schema';
  * El schema local tiene que coincidir con dos archivos que mandan sobre él:
  *
  *  - `docker/powersync/sync-rules.yaml`: qué tablas y columnas BAJAN al dispositivo.
- *  - `context/lavanderia_schema.sql`: qué columnas existen, para las reglas con `SELECT *`.
+ *  - `context/lavanderia_schema.sql` más las migraciones: qué columnas existen, para las reglas con `SELECT *`. La
+ *    línea base no se edita (SPEC-ALE186-019), así que una columna nueva (`motivo_reembolso`, SPEC-KRILINXI-070) vive en
+ *    un `ALTER TABLE … ADD COLUMN` de `backend/migraciones/`.
  *
  * Se leen de verdad en vez de copiar las columnas aquí: una copia no se entera cuando
  * alguien cambia la sync rule.
@@ -17,6 +19,12 @@ const leer = (ruta: string) => readFileSync(resolve(RAIZ, ruta), 'utf8');
 
 const SYNC_RULES = leer('docker/powersync/sync-rules.yaml');
 const SCHEMA_SQL = leer('context/lavanderia_schema.sql');
+// Todas las migraciones, en orden, como un solo texto.
+const MIGRACIONES = readdirSync(resolve(RAIZ, 'backend/migraciones'))
+  .filter((archivo) => archivo.endsWith('.sql'))
+  .sort()
+  .map((archivo) => leer(`backend/migraciones/${archivo}`))
+  .join('\n');
 
 /** Columnas de cada CREATE TABLE del SQL, sin las líneas de CONSTRAINT. */
 function columnasDelSql(): Map<string, string[]> {
@@ -30,6 +38,10 @@ function columnasDelSql(): Map<string, string[]> {
       .filter((linea) => /^[a-z_]+\s+[A-Za-z_]/.test(linea))
       .map((linea) => linea.split(/\s+/)[0] ?? '');
     tablas.set(nombre, columnas);
+  }
+  // Las columnas que agregó una migración después de la línea base.
+  for (const [, tabla = '', columna = ''] of MIGRACIONES.matchAll(/ALTER TABLE (\w+)\s+ADD COLUMN (\w+)/g)) {
+    tablas.get(tabla)?.push(columna);
   }
   return tablas;
 }

@@ -40,13 +40,14 @@ export function esTablaAuditada(valor: unknown): valor is TablaAuditada {
 
 /**
  * Por qué una escritura queda marcada para que el admin la revise —
- * SPEC-ALE186-018. Hoy hay un solo motivo: la hizo una cuenta dada de baja.
+ * SPEC-ALE186-018. Hay dos motivos: la hizo una cuenta dada de baja, o es una entrega sin cobrar
+ * (`reembolso`, SPEC-KRILINXI-070).
  *
  * Vive en la columna `auditoria.revision` (SPEC-ALE186-020, migración 001). Antes
  * iba dentro de `valores_anteriores`, porque no había migraciones; la migración
  * movió las que ya existían.
  */
-export type Revision = 'cuenta_dada_de_baja';
+export type Revision = 'cuenta_dada_de_baja' | 'reembolso';
 
 export interface Registro {
   /** Quién lo hizo. Siempre el de la sesión, nunca uno que venga en el cuerpo. */
@@ -236,6 +237,11 @@ export interface RegistroAuditoria {
    * dentro de `valores_anteriores`, y la respuesta ya la daba aparte.
    */
   revision: Revision | null;
+  /**
+   * El motivo de una entrega sin cobrar, si esta acción es una (`tabla_afectada = 'entregas'`) — SPEC-KRILINXI-070. El admin
+   * no tiene las entregas en su tablet, así que el motivo viaja aquí. `null` en cualquier otra acción.
+   */
+  motivoReembolso: string | null;
   valoresAnteriores: Record<string, unknown> | null;
   usuario: { id: string; nombreCompleto: string; username: string };
 }
@@ -249,6 +255,7 @@ interface FilaAuditoria {
   sucursal_id: string | null;
   fecha_del_hecho: string | null;
   revision: Revision | null;
+  motivo_reembolso: string | null;
   valores_anteriores: Record<string, unknown> | null;
   usuario_id: string;
   nombre_completo: string;
@@ -326,6 +333,9 @@ filtradas AS (
     SELECT a.id, a.fecha, a.accion, a.tabla_afectada, a.registro_id,
            a.revision,
            a.valores_anteriores,
+           CASE WHEN a.tabla_afectada = 'entregas'
+                THEN (SELECT e.motivo_reembolso FROM entregas e WHERE e.id = a.registro_id)
+           END AS motivo_reembolso,
            u.id AS usuario_id, u.nombre_completo, u.username,
            ${SUCURSAL_DE_LA_ACCION} AS sucursal_id,
            ${FECHA_DEL_HECHO} AS fecha_del_hecho
@@ -380,7 +390,7 @@ export async function consultar(
      SELECT id,
             to_char(${horaDelNegocio('fecha', '$3')}, 'YYYY-MM-DD HH24:MI:SS') AS fecha,
             to_char(${horaDelNegocio('fecha_del_hecho', '$3')}, 'YYYY-MM-DD HH24:MI:SS') AS fecha_del_hecho,
-            accion, tabla_afectada, registro_id, sucursal_id, revision, valores_anteriores,
+            accion, tabla_afectada, registro_id, sucursal_id, revision, motivo_reembolso, valores_anteriores,
             usuario_id, nombre_completo, username
        FROM filtradas
       ORDER BY filtradas.fecha DESC, id DESC
@@ -399,6 +409,7 @@ export async function consultar(
       sucursalId: fila.sucursal_id,
       fechaDelHecho: fila.fecha_del_hecho,
       revision: fila.revision,
+      motivoReembolso: fila.motivo_reembolso,
       valoresAnteriores: fila.valores_anteriores,
       usuario: { id: fila.usuario_id, nombreCompleto: fila.nombre_completo, username: fila.username },
     })),

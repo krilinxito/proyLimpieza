@@ -27,6 +27,7 @@ export function entregaDePrueba(campos: Partial<Entrega> = {}): Entrega {
     retiradoPorCarnet: null,
     usuarioEntregaId: IDS.usuario,
     precioFinal: '45.50',
+    motivoReembolso: null,
     ...campos,
   };
 }

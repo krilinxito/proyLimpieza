@@ -8,6 +8,9 @@
 // El cobro final NO va acá: se registra aparte, por POST /api/pagos. Desde SPEC-KRILINXI-056 tiene que estar registrado
 // ANTES de la entrega: la ropa solo sale con la boleta pagada por completo (409 SALDO_PENDIENTE si no).
 //
+// Desde SPEC-KRILINXI-070 el cuerpo puede traer `motivo_reembolso`: es una entrega sin cobrar. Cualquiera la registra (un
+// EMPLEADO de la sucursal de la orden, o un ADMIN), sin pedir permiso, y queda marcada para que el admin la revise.
+//
 // Los cargos al entregar tampoco (SPEC-KRILINXI-068): son renglones de la boleta, por POST /api/orden-items, y suben
 // antes que la entrega. El precio final lo calcula el model con ellos; el que manda la tablet solo se compara.
 import type { Request, Response } from 'express';
@@ -30,6 +33,7 @@ import {
 // que acabaría en 500, así que se corta antes.
 const LARGO_MAXIMO_NOMBRE = 150; // VARCHAR(150)
 const LARGO_MAXIMO_CARNET = 30; // VARCHAR(30)
+const LARGO_MAXIMO_MOTIVO = 300; // TEXT en la base; el tope es de la API (SPEC-KRILINXI-070)
 
 function invalido(mensaje: string): ApiError {
   return new ApiError(400, CODIGOS_ERROR.VALIDACION, mensaje);
@@ -56,6 +60,20 @@ function leerPrecioFinal(valor: unknown): Centavos | null {
     throw invalido('Escribe el precio final con números, por ejemplo 45 o 45.50.');
   }
   return precio;
+}
+
+/**
+ * El motivo de una entrega sin cobrar — SPEC-KRILINXI-070. Ausente (o `null`) es una entrega común. Si la clave viene, tiene
+ * que traer un motivo con contenido y de hasta 300 caracteres: un reembolso sin motivo es justo lo que no se quiere guardar.
+ */
+function leerMotivoReembolso(valor: unknown): string | null {
+  if (valor === undefined || valor === null) return null;
+  const motivo = textoConContenido(valor);
+  if (motivo === null) throw invalido('Escribe por qué se entrega la ropa sin cobrar.');
+  if (motivo.length > LARGO_MAXIMO_MOTIVO) {
+    throw invalido(`El motivo es demasiado largo: escríbelo en menos de ${LARGO_MAXIMO_MOTIVO} letras.`);
+  }
+  return motivo;
 }
 
 /** Opcional: si no viene, la pone el servidor al guardar. */
@@ -115,6 +133,13 @@ export async function postEntrega(req: Request, res: Response): Promise<void> {
     throw invalido('Si el cliente no trae la boleta, escribe el nombre y el carnet de quien retira la ropa.');
   }
 
+  const motivoReembolso = leerMotivoReembolso(cuerpo.motivo_reembolso);
+  // Sin cobrar no hay cargos que sumar: el precio final es lo ya cobrado. Los cargos son renglones (`/api/orden-items`) y
+  // no viajan en este cuerpo; si llegaran aquí junto con un reembolso, es un cuerpo que no se entiende.
+  if (motivoReembolso !== null && (cuerpo.cargos !== undefined || cuerpo.renglones !== undefined)) {
+    throw invalido('Una entrega sin cobrar no lleva cargos. Quita los cargos o cobra la ropa.');
+  }
+
   const datos: entregas.EntregaNueva = {
     id: cuerpo.id,
     ordenId: cuerpo.orden_id,
@@ -123,12 +148,16 @@ export async function postEntrega(req: Request, res: Response): Promise<void> {
     retiradoPorCarnet,
     precioFinal: leerPrecioFinal(cuerpo.precio_final),
     fechaEntrega: leerFechaEntrega(cuerpo.fecha_entrega),
+    motivoReembolso,
     // De la sesión, NUNCA del cuerpo: queda registrado quién entregó de verdad.
     usuarioEntregaId: sesion.id,
     // `sucursal_id` no se lee: el model la copia de la orden.
   };
 
-  const resultado = await entregas.crear(datos, { sucursalId: sucursalPermitida(sesion) }, revisionDe(req));
+  // Marcada para el admin (SPEC-KRILINXI-070). Si además la hizo una cuenta dada de baja, esa marca va primero: es la más
+  // grave, y el reembolso igual se ve por su motivo.
+  const revision = revisionDe(req) ?? (motivoReembolso === null ? null : 'reembolso');
+  const resultado = await entregas.crear(datos, { sucursalId: sucursalPermitida(sesion) }, revision);
 
   switch (resultado.tipo) {
     case 'creada':

@@ -55,7 +55,7 @@ export const esAccionAuditoria = crearValidador(ACCIONES_AUDITORIA);
 // ------------------------------------------------------------------
 //
 //   RECIBIDO → ENTREGADO     (lo pone el registro de la entrega)
-//   RECIBIDO → REEMBOLSADO   (lo pondrá la entrega sin cobrar, SPEC-KRILINXI-070)
+//   RECIBIDO → REEMBOLSADO   (lo pone la entrega sin cobrar, SPEC-KRILINXI-070)
 //   RECIBIDO → ANULADO       (el único cambio que pide un empleado, por PATCH)
 //
 // Desde SPEC-KRILINXI-067 no hay pasos intermedios (EN_PROCESO y LISTO se

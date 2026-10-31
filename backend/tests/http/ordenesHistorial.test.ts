@@ -26,6 +26,7 @@ const BOLETA = {
   precioTotal: '45.50',
   precioFinal: '50.00',
   retiro: { tipo: 'SIN_BOLETA' as const, nombre: 'Luis Mamani', carnet: '1234567 LP' },
+  reembolso: null,
   pagado: '20.00',
   saldo: '30.00',
   // SPEC-KRILINXI-068: los renglones de la boleta, con los números como texto.

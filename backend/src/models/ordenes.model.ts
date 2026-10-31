@@ -166,6 +166,8 @@ export interface BoletaDelHistorial {
   precioFinal: string | null;
   /** Quién se llevó la ropa — SPEC-KRILINXI-060. `null` mientras no se entregó. */
   retiro: Retiro | null;
+  /** Si la ropa salió sin cobrar lo que faltaba — SPEC-KRILINXI-070. `null` en cualquier otra boleta. */
+  reembolso: Reembolso | null;
   pagado: string;
   saldo: string;
   /**
@@ -184,6 +186,15 @@ export interface RenglonDelHistorial {
   precioUnitario: string;
   /** `round(cantidad × precio unitario, 2)`, calculado por Postgres. */
   subtotal: string;
+}
+
+/** La entrega sin cobrar de una boleta REEMBOLSADA: por qué, quién la hizo y cuándo. */
+export interface Reembolso {
+  motivo: string;
+  /** El nombre completo de quien lo registró (siempre el de la sesión, no el que mande la tablet). */
+  hechoPor: string;
+  /** Cuándo salió la ropa, en la hora de Bolivia: `YYYY-MM-DD HH:MM:SS`. */
+  fecha: string;
 }
 
 /** Cómo se retiró la ropa. Nombre y carnet solo vienen si fue SIN_BOLETA (el schema los exige). */
@@ -210,6 +221,9 @@ interface FilaHistorial {
   tipo_retiro: 'CON_BOLETA' | 'SIN_BOLETA' | null;
   retirado_por_nombre: string | null;
   retirado_por_carnet: string | null;
+  motivo_reembolso: string | null;
+  reembolso_por: string | null;
+  reembolso_fecha: string | null;
   pagado: string;
   saldo: string;
   renglones: RenglonDelHistorial[];
@@ -234,6 +248,7 @@ const HISTORIAL = `
            o.descripcion, o.estado, o.fecha_entrada, o.fecha_estimada_salida,
            o.precio_total, e.precio_final,
            e.tipo_retiro, e.retirado_por_nombre, e.retirado_por_carnet,
+           e.motivo_reembolso, ue.nombre_completo AS reembolso_por, e.fecha_entrega AS reembolso_fecha,
            v.total_pagado::numeric(14,2)    AS pagado,
            v.saldo_pendiente::numeric(14,2) AS saldo
       FROM vw_saldos v
@@ -241,6 +256,7 @@ const HISTORIAL = `
       JOIN sucursales s ON s.id = o.sucursal_id
       JOIN clientes c   ON c.id = o.cliente_id
       LEFT JOIN entregas e ON e.orden_id = o.id
+      LEFT JOIN usuarios ue ON ue.id = e.usuario_entrega_id
      WHERE ($1::date IS NULL AND $2::date IS NULL
             OR ${enElPeriodo('o.fecha_entrada', {
               desde: `COALESCE($1::date, ${DESDE_SIEMPRE})`,
@@ -318,7 +334,10 @@ export async function listar(
             descripcion, estado,
             to_char(${horaDelNegocio('fecha_entrada', '$3')}, 'YYYY-MM-DD HH24:MI:SS') AS fecha_entrada,
             to_char(fecha_estimada_salida, 'YYYY-MM-DD') AS fecha_estimada_salida,
-            precio_total, precio_final, tipo_retiro, retirado_por_nombre, retirado_por_carnet, pagado, saldo,
+            precio_total, precio_final, tipo_retiro, retirado_por_nombre, retirado_por_carnet, motivo_reembolso,
+            reembolso_por,
+            to_char(${horaDelNegocio('reembolso_fecha', '$3')}, 'YYYY-MM-DD HH24:MI:SS') AS reembolso_fecha,
+            pagado, saldo,
             ${RENGLONES}
        FROM historial
       ORDER BY historial.fecha_entrada DESC, id DESC
@@ -343,6 +362,14 @@ export async function listar(
         fila.tipo_retiro === null
           ? null
           : { tipo: fila.tipo_retiro, nombre: fila.retirado_por_nombre, carnet: fila.retirado_por_carnet },
+      reembolso:
+        fila.motivo_reembolso === null
+          ? null
+          : {
+              motivo: fila.motivo_reembolso,
+              hechoPor: fila.reembolso_por ?? '',
+              fecha: fila.reembolso_fecha ?? '',
+            },
       pagado: fila.pagado,
       saldo: fila.saldo,
       renglones: fila.renglones,
