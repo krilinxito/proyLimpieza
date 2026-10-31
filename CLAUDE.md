@@ -54,7 +54,7 @@ guarda en `valores_anteriores` solo lo que cambió de verdad, y de la contraseñ
 escritura nueva tiene que pasar por `conAuditoria`. SPEC-ALE186-011 añadió las sucursales
 (`POST` y `PATCH /api/sucursales`, solo ADMIN): el nombre es único sin distinguir
 mayúsculas ni espacios (desde SPEC-ALE186-020, un índice único de la base), y una sucursal no
-se cierra (`activa: false`) mientras tenga ropa en RECIBIDO, EN_PROCESO o LISTO (condición
+se cierra (`activa: false`) mientras tenga ropa en RECIBIDO (hasta SPEC-KRILINXI-067, también EN_PROCESO o LISTO; condición
 dentro de la sentencia que escribe). Una sucursal cerrada no recibe personal nuevo.
 SPEC-ALE186-012 añadió la consulta de la auditoría (`GET /api/auditoria`, solo ADMIN), paginada y
 con filtros por fechas, persona, acción, tabla, registro y sucursal. **La sucursal de una acción
@@ -277,7 +277,7 @@ tarjetas de formas de pago siguen con `serie-1…3`, y la ropa sin recoger, con 
 y en el DESIGN.md; los matices de tarjetas vecinas se validaron para daltonismo (ver la bitácora). Un gráfico nuevo con Recharts va en `graficos/`, y animar solo si
 `animar()` lo dice (no con `prefers-reduced-motion`, ni en los tests).
 SPEC-KRILINXI-050 puso orden en el tablero: a la vista, los cuatro indicadores y **tres tarjetas** (la caja día a día, con qué se pagó y lo
-que falta cobrar); las otras cinco (por sucursal, ropa recibida, sin recoger, productividad y clientes) están bajo **"Ver más estadísticas"**
+que falta cobrar); las otras cinco (por sucursal, ropa recibida, por entregar, productividad y clientes) están bajo **"Ver más estadísticas"**
 (`VerMas`, un `<details>` controlado que no monta sus hijos cerrado). La productividad salió de `usePanel` a `useProductividad`: como los clientes, no se
 pide hasta que se despliega; lo que alimenta los indicadores se pide siempre. Mientras llegan los datos hay un **esqueleto** (`Esqueleto`,
 `EsqueletoDelTablero`) y nunca un número; una tarjeta con su propio pedido que falla lo dice ella (`AvisoDeTarjeta`), pero si falla una de las cuatro
@@ -291,6 +291,15 @@ pantalla, a la vista); `Lineas` y `Columnas` son más altas; `Detalle` (las list
 (`useRangoDeDias`, `RangoDeDias`: unas fechas al revés se avisan en palabras y no cambian el gráfico, y "Ver todos los días" vuelve al período), y en la caja por forma de pago la **leyenda apaga y prende** cada serie
 (botones con `aria-pressed`; una apagada dice "(apagada)" y va tachada). Toda `Seccion…` nueva declara `ampliable` (un test lo exige): en `false` mientras no haya gráfico que mostrar. Acercar un rango o apagar una serie
 nunca cambia la tarjeta.
+SPEC-KRILINXI-067 simplificó los **estados de la boleta**: `estado_orden` pasó a RECIBIDO, ENTREGADO, REEMBOLSADO y ANULADO (migración
+`006_estados_simplificados.sql`: pasa a RECIBIDO la ropa en EN_PROCESO o LISTO, recrea el tipo y las vistas `vw_saldos` y `vw_pendientes_recoger`, que
+Postgres obliga a soltar mientras cambia el tipo de la columna). Desde RECIBIDO solo se pide ANULADO por PATCH (EN_PROCESO y LISTO responden 400; POST sigue
+ignorando `estado`: toda orden nace RECIBIDO); ENTREGADO y REEMBOLSADO los pone la entrega. REEMBOLSADO está declarado y pintado en rojo (`TONO_ESTADO`),
+pero nada lo escribe todavía: lo hará la spec `reembolso-entrega`. El Mostrador ya no ofrece "Empezar a lavar" ni "Marcar como lista" (se borraron `AVANCES` y
+`avancesDesde`): la acción principal de una boleta abierta es siempre entregar. El Inicio y el tablero hablan de "Ropa por entregar" (`porEntregar` en
+`hoyEnLaSucursal`, que ahora incluye toda la ropa en el local; la atrasada sigue siendo un subconjunto; los totales de las estadísticas no cambian). Una tablet
+sin sincronizar que tenga boletas guardadas como EN_PROCESO o LISTO las lee como RECIBIDO (`estadoDeLaBase`, en `features/ordenes/estado.ts`), y la auditoría vieja
+las sigue diciendo en palabras (`describir.ts`). **Después del pull, `npm run migrar --workspace backend`.**
 SPEC-KRILINXI-027 cerró la ola con las pantallas de gestión: Personal, Sucursales, ¿Quién hizo qué? y
 Registros para corregir. Cada cuenta, sucursal, registro de la auditoría y rechazo es una `Tarjeta`; su
 estado, una `Insignia` (qué tono lleva cada estado lo decide la feature, como `TONO_ESTADO`), y el
@@ -342,7 +351,7 @@ la ficha de un cliente, viene elegido; al guardar, del resumen se va a su ficha 
 
 SPEC-KRILINXI-035 cambió el **Inicio**: ya no repite el menú, dice qué hay que hacer hoy. Quien atiende ve "Hoy en
 la sucursal" (`features/mostrador/components/HoyEnLaSucursal`, de la base local con `hoyEnLaSucursal`): la ropa
-lista para recoger, la atrasada (fecha estimada vencida), lo cobrado hoy por forma de pago y lo que hay para
+por entregar (desde SPEC-KRILINXI-067; antes "lista para recoger"), la atrasada (fecha estimada vencida), lo cobrado hoy por forma de pago y lo que hay para
 corregir; cada boleta lleva al Mostrador (`enlaceABoleta`: `/mostrador?cliente=…&boleta=…`). El ADMIN que no
 atiende ve "Atender en una sucursal" y los cuatro indicadores del tablero (`ResumenDelInicio`, online). **El día
 del negocio vive en `lib/diaDelNegocio.ts`** (`hoyEnBolivia`, `diaEnBolivia`), e `instanteGuardado` lee las fechas
@@ -488,8 +497,8 @@ El cliente llega con ropa
        · estado inicial: RECIBIDO
   └─ opcionalmente un PAGO de tipo ADELANTO
 
-La ropa avanza:  RECIBIDO → EN_PROCESO → LISTO → ENTREGADO
-                 (o ANULADO en cualquier punto)
+La ropa sale:    RECIBIDO → ENTREGADO
+                 (o REEMBOLSADO si sale sin cobrarse, o ANULADO, antes de salir; desde SPEC-KRILINXI-067 no hay pasos intermedios)
 
 El cliente vuelve a recoger, a la misma sucursal donde dejó la ropa
   └─ se registra la ENTREGA

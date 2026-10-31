@@ -52,7 +52,7 @@ const ids = (pagina: Pagina) => pagina.boletas.map((b) => b.id);
 describe('Historial de boletas: el saldo se calcula en Postgres — SPEC-KRILINXI-040', () => {
   it('suma los pagos sin dejar que cruzar con entregas duplique filas ni montos', async () => {
     const esc = await escenario();
-    const orden = await crearOrden(esc, { estado: 'LISTO', precioTotal: '45.50' });
+    const orden = await crearOrden(esc, { estado: 'RECIBIDO', precioTotal: '45.50' });
     await crearPago(orden, esc, { monto: '10.00' });
     await crearPago(orden, esc, { monto: '5.25' });
 
@@ -63,7 +63,7 @@ describe('Historial de boletas: el saldo se calcula en Postgres — SPEC-KRILINX
     expect(boletas[0]).toMatchObject({
       id: orden.id,
       numeroBoleta: orden.numeroBoleta,
-      estado: 'LISTO',
+      estado: 'RECIBIDO',
       precioTotal: '45.50',
       precioFinal: null,
       pagado: '15.25',
@@ -82,7 +82,7 @@ describe('Historial de boletas: el saldo se calcula en Postgres — SPEC-KRILINX
 
   it('una boleta entregada es ENTREGADO y su saldo cuenta con el precio final, no con el total', async () => {
     const esc = await escenario();
-    const orden = await crearOrden(esc, { estado: 'LISTO', precioTotal: '45.50' });
+    const orden = await crearOrden(esc, { estado: 'RECIBIDO', precioTotal: '45.50' });
     await crearPago(orden, esc, { monto: '15.25' });
     await crearEntrega(orden, esc, { precioFinal: '50.00' });
 
@@ -112,7 +112,7 @@ describe('Historial de boletas: el saldo se calcula en Postgres — SPEC-KRILINX
 describe('Historial de boletas: quién retiró la ropa — SPEC-KRILINXI-060', () => {
   it('una boleta entregada sin boleta trae el nombre y el carnet de quien retiró', async () => {
     const esc = await escenario();
-    const orden = await crearOrden(esc, { estado: 'LISTO', precioTotal: '20.00' });
+    const orden = await crearOrden(esc, { estado: 'RECIBIDO', precioTotal: '20.00' });
     await crearPago(orden, esc, { monto: '20.00' });
     await crearEntrega(orden, esc, { precioFinal: '20.00', sinBoleta: { nombre: 'Luis Mamani', carnet: '1234567 LP' } });
 
@@ -123,7 +123,7 @@ describe('Historial de boletas: quién retiró la ropa — SPEC-KRILINXI-060', (
 
   it('una entregada con boleta dice solo el tipo', async () => {
     const esc = await escenario();
-    const orden = await crearOrden(esc, { estado: 'LISTO', precioTotal: '20.00' });
+    const orden = await crearOrden(esc, { estado: 'RECIBIDO', precioTotal: '20.00' });
     await crearEntrega(orden, esc, { precioFinal: '20.00' });
 
     const { boletas } = await historial(esc);
@@ -133,7 +133,7 @@ describe('Historial de boletas: quién retiró la ropa — SPEC-KRILINXI-060', (
 
   it('una boleta sin entregar no trae retiro', async () => {
     const esc = await escenario();
-    await crearOrden(esc, { estado: 'LISTO' });
+    await crearOrden(esc, { estado: 'RECIBIDO' });
 
     const { boletas } = await historial(esc);
 
@@ -215,12 +215,13 @@ describe('Historial de boletas: filtros — SPEC-KRILINXI-040', () => {
 
   it('filtra por estado', async () => {
     const esc = await escenario();
-    const lista = await crearOrden(esc, { estado: 'LISTO' });
-    await crearOrden(esc, { estado: 'RECIBIDO' });
-    const entregada = await crearOrden(esc, { estado: 'LISTO' });
+    const recibida = await crearOrden(esc, { estado: 'RECIBIDO' });
+    const anulada = await crearOrden(esc, { estado: 'ANULADO' });
+    const entregada = await crearOrden(esc, { estado: 'RECIBIDO' });
     await crearEntrega(entregada, esc, { precioFinal: '45.50' });
 
-    expect(ids(await historial(esc, { estado: 'LISTO' }))).toEqual([lista.id]);
+    expect(ids(await historial(esc, { estado: 'RECIBIDO' }))).toEqual([recibida.id]);
+    expect(ids(await historial(esc, { estado: 'ANULADO' }))).toEqual([anulada.id]);
     expect(ids(await historial(esc, { estado: 'ENTREGADO' }))).toEqual([entregada.id]);
   });
 
@@ -286,22 +287,22 @@ describe('Historial de boletas: filtros — SPEC-KRILINXI-040', () => {
     const rosa = await crearCliente({ nombre: 'Rosa Combinada' });
     const justa = await crearOrden(
       { ...esc, clienteId: rosa },
-      { estado: 'LISTO', fechaEntrada: '2026-06-15T12:00:00-04:00', precioTotal: '40.00' },
+      { estado: 'RECIBIDO', fechaEntrada: '2026-06-15T12:00:00-04:00', precioTotal: '40.00' },
     );
     // Cada una incumple UNA condición.
-    await crearOrden({ ...esc, clienteId: rosa }, { estado: 'RECIBIDO', fechaEntrada: '2026-06-15T12:00:00-04:00' });
-    await crearOrden({ ...esc, clienteId: rosa }, { estado: 'LISTO', fechaEntrada: '2026-08-15T12:00:00-04:00' });
-    await crearOrden(esc, { estado: 'LISTO', fechaEntrada: '2026-06-15T12:00:00-04:00' });
+    await crearOrden({ ...esc, clienteId: rosa }, { estado: 'ANULADO', fechaEntrada: '2026-06-15T12:00:00-04:00' });
+    await crearOrden({ ...esc, clienteId: rosa }, { estado: 'RECIBIDO', fechaEntrada: '2026-08-15T12:00:00-04:00' });
+    await crearOrden(esc, { estado: 'RECIBIDO', fechaEntrada: '2026-06-15T12:00:00-04:00' });
     const pagadaDelTodo = await crearOrden(
       { ...esc, clienteId: rosa },
-      { estado: 'LISTO', fechaEntrada: '2026-06-15T12:00:00-04:00', precioTotal: '10.00' },
+      { estado: 'RECIBIDO', fechaEntrada: '2026-06-15T12:00:00-04:00', precioTotal: '10.00' },
     );
     await crearPago(pagadaDelTodo, esc, { monto: '10.00' });
 
     const pagina = await historial(esc, {
       desde: '2026-06-01',
       hasta: '2026-06-30',
-      estado: 'LISTO',
+      estado: 'RECIBIDO',
       texto: 'combinada',
       con_saldo: 'true',
     });

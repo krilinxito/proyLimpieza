@@ -77,7 +77,7 @@ describe('dominio: valores iguales a los del schema — SPEC-KRILINXI-002', () =
 
 describe('dominio: validar lo que llega de SQLite — SPEC-KRILINXI-002', () => {
   it.each([
-    ['estado de orden', esEstadoOrden, 'EN_PROCESO'],
+    ['estado de orden', esEstadoOrden, 'REEMBOLSADO'],
     ['tipo de retiro', esTipoRetiro, 'SIN_BOLETA'],
     ['tipo de pago', esTipoPago, 'ADELANTO'],
     ['método de pago', esMetodoPago, 'QR'],
@@ -97,19 +97,19 @@ describe('dominio: validar lo que llega de SQLite — SPEC-KRILINXI-002', () => 
   });
 
   it('estrecha el tipo: después del if, TypeScript sabe que es un EstadoOrden', () => {
-    const deSqlite: unknown = 'LISTO';
+    const deSqlite: unknown = 'REEMBOLSADO';
     if (esEstadoOrden(deSqlite)) {
       // Sin el type guard, esta indexación no compilaría: `unknown` no sirve de clave.
-      expect(TEXTO_ESTADO_ORDEN[deSqlite]).toBe('Listo para retirar');
+      expect(TEXTO_ESTADO_ORDEN[deSqlite]).toBe('Reembolsado');
     } else {
-      expect.unreachable('LISTO es un estado válido');
+      expect.unreachable('REEMBOLSADO es un estado válido');
     }
   });
 });
 
 describe('dominio: textos del mostrador — SPEC-KRILINXI-002', () => {
-  it('EN_PROCESO se muestra "En proceso", no el código', () => {
-    expect(TEXTO_ESTADO_ORDEN.EN_PROCESO).toBe('En proceso');
+  it('REEMBOLSADO se muestra "Reembolsado", no el código (SPEC-KRILINXI-067)', () => {
+    expect(TEXTO_ESTADO_ORDEN.REEMBOLSADO).toBe('Reembolsado');
   });
 
   it.each([

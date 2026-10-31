@@ -4,7 +4,7 @@
 // retoca solo en lo que le importa.
 //
 //   const orden = ordenDePrueba();
-//   const lista = ordenDePrueba({ estado: 'LISTO' });
+//   const lista = ordenDePrueba({ estado: 'ANULADO' });
 //
 // `cuerpoDeOrden` es lo que sube la cola de PowerSync al registrar una orden:
 // columnas en snake_case y un id nuevo en cada llamada, porque lo genera el

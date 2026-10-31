@@ -13,14 +13,14 @@
 
 // `as const` convierte la lista en una tupla de literales: TypeScript sabe que el primer
 // valor es exactamente 'RECIBIDO', no un `string` cualquiera. De ahí sale el tipo.
-export const ESTADOS_ORDEN = ['RECIBIDO', 'EN_PROCESO', 'LISTO', 'ENTREGADO', 'ANULADO'] as const;
+export const ESTADOS_ORDEN = ['RECIBIDO', 'ENTREGADO', 'REEMBOLSADO', 'ANULADO'] as const;
 export const TIPOS_RETIRO = ['CON_BOLETA', 'SIN_BOLETA'] as const;
 export const TIPOS_PAGO = ['ADELANTO', 'PAGO_FINAL'] as const;
 export const METODOS_PAGO = ['EFECTIVO', 'QR', 'TARJETA'] as const;
 export const ROLES = ['ADMIN', 'EMPLEADO'] as const;
 
 // `(typeof LISTA)[number]` es "el tipo de cualquier elemento de la lista": la unión
-// 'RECIBIDO' | 'EN_PROCESO' | … Añadir un valor a la lista lo añade al tipo.
+// 'RECIBIDO' | 'ENTREGADO' | … Añadir un valor a la lista lo añade al tipo.
 export type EstadoOrden = (typeof ESTADOS_ORDEN)[number];
 export type TipoRetiro = (typeof TIPOS_RETIRO)[number];
 export type TipoPago = (typeof TIPOS_PAGO)[number];
@@ -46,9 +46,8 @@ export const esRol = crearValidador(ROLES);
 // obliga a que estén todos: si se añade un estado y falta su texto, no compila.
 export const TEXTO_ESTADO_ORDEN: Record<EstadoOrden, string> = {
   RECIBIDO: 'Recibido',
-  EN_PROCESO: 'En proceso',
-  LISTO: 'Listo para retirar',
   ENTREGADO: 'Entregado',
+  REEMBOLSADO: 'Reembolsado',
   ANULADO: 'Anulado',
 };
 

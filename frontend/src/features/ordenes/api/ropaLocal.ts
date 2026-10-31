@@ -11,7 +11,6 @@
  */
 import type { BaseLocal, Fila } from '../../../lib/powersync';
 import {
-  esEstadoOrden,
   esMetodoPago,
   esTipoPago,
   esTipoRetiro,
@@ -25,7 +24,7 @@ import { condicionCliente } from '../../clientes/api/busqueda';
 import { normalizarTelefono } from '../../clientes/telefono';
 import { insertarPago } from '../../pagos/api/pagosLocal';
 import { calcularSaldo } from '../../pagos/saldo';
-import { estaCerrada, estadoEfectivo, puedePasarA } from '../estado';
+import { estaCerrada, estadoDeLaBase, estadoEfectivo, puedePasarA } from '../estado';
 import type { Retiro } from '../retiro';
 import type { OrdenVista, PagoVisto, QuienRegistra, ResultadoAccion } from '../types';
 
@@ -99,10 +98,11 @@ function aRetiro(fila: Fila): Retiro | null {
   };
 }
 
-/** Arma la vista de una orden. Una fila rota (sin estado válido) no se muestra. */
+/** Arma la vista de una orden. Una fila rota (sin estado que se conozca) no se muestra. */
 function aOrden(fila: Fila, pagos: PagoVisto[]): OrdenVista | null {
-  const { id, numero_boleta, estado } = fila;
-  if (typeof id !== 'string' || typeof numero_boleta !== 'string' || !esEstadoOrden(estado)) return null;
+  const { id, numero_boleta } = fila;
+  const estado = estadoDeLaBase(fila.estado);
+  if (typeof id !== 'string' || typeof numero_boleta !== 'string' || estado === null) return null;
 
   const precioTotal = monto(fila.precio_total);
   const tieneEntrega = typeof fila.entrega_id === 'string';

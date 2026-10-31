@@ -65,6 +65,13 @@ describe('Auditoría: cuándo y qué había antes — SPEC-KRILINXI-018', () => 
     expect(antes(edicion, NOMBRES)).toEqual(['Estado antes: Listo para retirar', 'Precio antes: Bs 50,00']);
   });
 
+  it('SPEC-KRILINXI-067: los estados que se quitaron siguen diciéndose en palabras en lo que ya quedó anotado', () => {
+    const viejo = registro({ accion: 'EDITAR', valoresAnteriores: { estado: 'EN_PROCESO' } });
+    expect(antes(viejo, NOMBRES)).toEqual(['Estado antes: En proceso']);
+    const nuevo = registro({ accion: 'EDITAR', valoresAnteriores: { estado: 'REEMBOLSADO' } });
+    expect(antes(nuevo, NOMBRES)).toEqual(['Estado antes: Reembolsado']);
+  });
+
   it('la marca de revisión se dice en palabras', () => {
     expect(textoRevision('cuenta_dada_de_baja')).toBe('Para revisar: lo hizo una cuenta que ya estaba dada de baja.');
     expect(textoRevision(null)).toBeNull();

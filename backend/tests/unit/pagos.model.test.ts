@@ -33,7 +33,7 @@ const FILA_ORDEN = {
   fecha_entrada: '2026-09-30 10:15:00',
   fecha_estimada_salida: null,
   precio_total: '45.50',
-  estado: 'LISTO',
+  estado: 'RECIBIDO',
 };
 
 const NUEVO = {

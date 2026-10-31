@@ -36,7 +36,7 @@ export const COLOR_TARJETA = {
 
 type ColorDeBarra = { marca: string; muestra: string };
 
-/** La antigüedad de la ropa sin recoger es un orden, no una lista de cosas distintas: un solo tono azul que se oscurece. */
+/** La antigüedad de la ropa por entregar es un orden, no una lista de cosas distintas: un solo tono azul que se oscurece. */
 export const COLOR_TRAMO: Record<Tramo, ColorDeBarra> = {
   HASTA_7_DIAS: { marca: 'fill-antiguedad-1', muestra: 'bg-antiguedad-1' },
   DE_8_A_30_DIAS: { marca: 'fill-antiguedad-2', muestra: 'bg-antiguedad-2' },

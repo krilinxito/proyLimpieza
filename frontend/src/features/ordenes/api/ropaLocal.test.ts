@@ -20,10 +20,11 @@ const QUIEN = { usuarioId: randomUUID(), sucursalId: SUCURSAL_DE_PRUEBA };
 async function sucursalConRopa() {
   const prueba = await baseLocalDePrueba();
   const recibida = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000001', fecha_entrada: '2026-10-01T09:00:00Z' });
+  // Guardada como LISTO por una versión anterior a SPEC-KRILINXI-067 y todavía sin sincronizar: se lee como RECIBIDO.
   const lista = ordenDePrueba({ cliente_id: JUAN.id, numero_boleta: '000002', estado: 'LISTO', fecha_entrada: '2026-09-30T09:00:00Z' });
   const anulada = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000003', estado: 'ANULADO' });
-  // Entregada en la tablet, todavía sin sincronizar: la columna sigue diciendo LISTO.
-  const entregada = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000004', estado: 'LISTO', precio_total: '60.00' });
+  // Entregada en la tablet, todavía sin sincronizar: la columna sigue diciendo RECIBIDO.
+  const entregada = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000004', estado: 'RECIBIDO', precio_total: '60.00' });
   const deOtraSucursal = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000001', sucursal_id: randomUUID() });
 
   await prueba.sembrar('clientes', [ROSA, JUAN]);
@@ -45,7 +46,7 @@ describe('La ropa en el local — SPEC-KRILINXI-008', () => {
     const { control } = await sucursalConRopa();
     const abiertas = await listarAbiertas(control.base, SUCURSAL_DE_PRUEBA);
     expect(abiertas.map((o) => [o.numeroBoleta, o.estado, o.clienteNombre])).toEqual([
-      ['000002', 'LISTO', 'Juan Mamani'],
+      ['000002', 'RECIBIDO', 'Juan Mamani'],
       ['000001', 'RECIBIDO', 'Rosa Quispe'],
     ]);
   });
@@ -64,7 +65,7 @@ describe('La ropa en el local — SPEC-KRILINXI-008', () => {
     });
   });
 
-  it('una orden con entrega en la tablet figura ENTREGADO aunque la columna diga LISTO, y su saldo usa el precio final', async () => {
+  it('una orden con entrega en la tablet figura ENTREGADO aunque la columna diga RECIBIDO, y su saldo usa el precio final', async () => {
     const { control, entregada } = await sucursalConRopa();
     expect(await obtenerOrden(control.base, SUCURSAL_DE_PRUEBA, entregada.id)).toMatchObject({
       estado: 'ENTREGADO',
@@ -98,21 +99,22 @@ describe('Buscar ropa — SPEC-KRILINXI-008', () => {
 });
 
 describe('Avanzar y anular — SPEC-KRILINXI-008', () => {
-  it('avanzar escribe solo el estado, y queda en la cola como PATCH', async () => {
+  it('anular escribe solo el estado, y queda en la cola como PATCH', async () => {
     const { control, db, recibida } = await sucursalConRopa();
-    expect(await cambiarEstado(control.base, SUCURSAL_DE_PRUEBA, recibida.id, 'EN_PROCESO')).toEqual({ tipo: 'hecho' });
-    expect(await cola(db)).toEqual([['PATCH', 'ordenes', { estado: 'EN_PROCESO' }]]);
+    expect(await cambiarEstado(control.base, SUCURSAL_DE_PRUEBA, recibida.id, 'ANULADO')).toEqual({ tipo: 'hecho' });
+    expect(await cola(db)).toEqual([['PATCH', 'ordenes', { estado: 'ANULADO' }]]);
   });
 
-  it('se puede saltar un paso (RECIBIDO → LISTO), como en el backend', async () => {
-    const { control, recibida } = await sucursalConRopa();
-    expect(await cambiarEstado(control.base, SUCURSAL_DE_PRUEBA, recibida.id, 'LISTO')).toEqual({ tipo: 'hecho' });
+  it('SPEC-KRILINXI-067: una boleta guardada como LISTO por una versión anterior figura RECIBIDO y se puede anular', async () => {
+    const { control, lista } = await sucursalConRopa();
+    expect(await obtenerOrden(control.base, SUCURSAL_DE_PRUEBA, lista.id)).toMatchObject({ estado: 'RECIBIDO' });
+    expect(await cambiarEstado(control.base, SUCURSAL_DE_PRUEBA, lista.id, 'ANULADO')).toEqual({ tipo: 'hecho' });
   });
 
   it.each([
-    ['retroceder', 'lista', 'EN_PROCESO', MENSAJES_ACCION.avance],
-    ['pasar a ENTREGADO', 'lista', 'ENTREGADO', MENSAJES_ACCION.avance],
-    ['tocar una anulada', 'anulada', 'LISTO', MENSAJES_ACCION.cerrada],
+    ['pasar a ENTREGADO', 'recibida', 'ENTREGADO', MENSAJES_ACCION.avance],
+    ['pasar a REEMBOLSADO', 'recibida', 'REEMBOLSADO', MENSAJES_ACCION.avance],
+    ['tocar una anulada', 'anulada', 'RECIBIDO', MENSAJES_ACCION.cerrada],
     ['tocar una entregada sin sincronizar', 'entregada', 'ANULADO', MENSAJES_ACCION.cerrada],
   ] as const)('no deja %s, y no escribe nada', async (_caso, cual, destino, mensaje) => {
     const prueba = await sucursalConRopa();
@@ -131,7 +133,7 @@ describe('Avanzar y anular — SPEC-KRILINXI-008', () => {
 
   it('una orden de otra sucursal no se encuentra', async () => {
     const { control, recibida } = await sucursalConRopa();
-    expect(await cambiarEstado(control.base, randomUUID(), recibida.id, 'LISTO')).toEqual({
+    expect(await cambiarEstado(control.base, randomUUID(), recibida.id, 'ANULADO')).toEqual({
       tipo: 'no-se-puede',
       mensaje: MENSAJES_ACCION.noEncontrada,
     });
@@ -179,12 +181,12 @@ describe('Cobrar — SPEC-KRILINXI-008', () => {
 });
 
 describe('La ropa sin conexión — SPEC-KRILINXI-008', () => {
-  it('lista, busca, avanza y cobra sin una sola petición a la API', async () => {
+  it('lista, busca, anula y cobra sin una sola petición a la API', async () => {
     const servidor = simularApi(() => 'sin-conexion');
     const { control, recibida } = await sucursalConRopa();
     await listarAbiertas(control.base, SUCURSAL_DE_PRUEBA);
     await buscarOrdenes(control.base, SUCURSAL_DE_PRUEBA, '000001');
-    await cambiarEstado(control.base, SUCURSAL_DE_PRUEBA, recibida.id, 'EN_PROCESO');
+    await cambiarEstado(control.base, SUCURSAL_DE_PRUEBA, recibida.id, 'ANULADO');
     await cobrar(control.base, QUIEN, recibida.id, { monto: '1', metodo: 'QR' });
     expect(servidor.pedidos).toEqual([]);
   });

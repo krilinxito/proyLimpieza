@@ -27,7 +27,7 @@ function consultas(): { conteo: [string, unknown[]]; pagina: [string, unknown[]]
 
 describe('Historial de boletas: el SQL que arma el model — SPEC-KRILINXI-040', () => {
   it('hace dos consultas con los mismos filtros: el total y la página', async () => {
-    await ordenes.listar({ ...SIN_FILTROS, sucursalId: 'una-sucursal', estado: 'LISTO' }, PAGINA);
+    await ordenes.listar({ ...SIN_FILTROS, sucursalId: 'una-sucursal', estado: 'RECIBIDO' }, PAGINA);
 
     const { conteo, pagina } = consultas();
     expect(query).toHaveBeenCalledTimes(2);
@@ -63,7 +63,7 @@ describe('Historial de boletas: el SQL que arma el model — SPEC-KRILINXI-040',
 
   it('manda los filtros como parámetros, nunca escritos dentro del SQL', async () => {
     await ordenes.listar(
-      { desde: '2026-09-01', hasta: '2026-09-30', sucursalId: 'sucursal-x', estado: 'LISTO', texto: 'Rosa', conSaldo: true },
+      { desde: '2026-09-01', hasta: '2026-09-30', sucursalId: 'sucursal-x', estado: 'RECIBIDO', texto: 'Rosa', conSaldo: true },
       PAGINA,
     );
 
@@ -73,7 +73,7 @@ describe('Historial de boletas: el SQL que arma el model — SPEC-KRILINXI-040',
       '2026-09-30',
       'America/La_Paz',
       'sucursal-x',
-      'LISTO',
+      'RECIBIDO',
       '%Rosa%',
     ]);
     expect(valores[7]).toBe(true);
@@ -128,7 +128,7 @@ describe('Historial de boletas: el SQL que arma el model — SPEC-KRILINXI-040',
             cliente_nombre: 'Rosa Quispe',
             cliente_telefono: '70123456',
             descripcion: '2 camisas',
-            estado: 'LISTO',
+            estado: 'RECIBIDO',
             fecha_entrada: '2026-09-30 10:15:00',
             fecha_estimada_salida: null,
             precio_total: '45.50',
@@ -153,7 +153,7 @@ describe('Historial de boletas: el SQL que arma el model — SPEC-KRILINXI-040',
           sucursal: { id: 's1', nombre: 'Centro' },
           cliente: { id: 'c1', nombre: 'Rosa Quispe', telefono: '70123456' },
           descripcion: '2 camisas',
-          estado: 'LISTO',
+          estado: 'RECIBIDO',
           fechaEntrada: '2026-09-30 10:15:00',
           fechaEstimadaSalida: null,
           precioTotal: '45.50',

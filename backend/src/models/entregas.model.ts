@@ -65,9 +65,9 @@ const COLUMNAS =
 /**
  * Desde qué estados se puede entregar: todos los que no están cerrados.
  *
- * No solo LISTO, a propósito: si el cliente se llevó la ropa y nadie la había
- * marcado lista, rechazar la entrega al sincronizar perdería el registro de algo
- * que ya pasó en el mostrador.
+ * Desde SPEC-KRILINXI-067 solo queda RECIBIDO. Se sigue derivando de "no cerrado" y no de
+ * un estado fijo: si algún día vuelve a haber pasos intermedios, rechazar una entrega
+ * porque nadie los marcó perdería el registro de algo que ya pasó en el mostrador.
  */
 export const ESTADOS_ENTREGABLES = ESTADOS_ORDEN.filter((estado) => !ESTADOS_CERRADOS.includes(estado));
 
@@ -227,7 +227,9 @@ export async function crear(
     orden !== null && (restricciones.sucursalId === null || orden.sucursalId === restricciones.sucursalId);
   if (!visible) return { tipo: 'orden-no-encontrada' };
   if (orden.estado === 'ANULADO') return { tipo: 'orden-anulada', orden };
-  if (orden.estado === 'ENTREGADO' || ordenConOtraEntrega) return { tipo: 'orden-ya-entregada', orden };
+  if (orden.estado === 'ENTREGADO' || orden.estado === 'REEMBOLSADO' || ordenConOtraEntrega) {
+    return { tipo: 'orden-ya-entregada', orden };
+  }
 
   // Entregable y sin choques: queda la regla del saldo (SPEC-KRILINXI-056).
   const saldo = await saldoAlEntregar(entrega.ordenId, entrega.precioFinal);

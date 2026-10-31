@@ -76,7 +76,7 @@ describe('Pagos contra la base real — SPEC-ALE186-007', () => {
 
   it('con una anulación sin confirmar, el cobro espera y al final no se guarda', async () => {
     // Es la garantía del FOR SHARE (SPEC-ALE186-005): sin él, el cobro leería la
-    // orden como LISTO, no esperaría, y quedaría un pago sobre una orden anulada.
+    // orden como RECIBIDO, no esperaría, y quedaría un pago sobre una orden anulada.
     const esc = await escenario();
     const orden = await crearOrden(esc);
 

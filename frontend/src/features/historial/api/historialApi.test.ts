@@ -18,7 +18,7 @@ describe('Historial completo, pedido a la API — SPEC-KRILINXI-041', () => {
       clienteNombre: 'Rosa Quispe',
       clienteTelefono: '70123456',
       sucursalNombre: 'Centro',
-      estado: 'LISTO',
+      estado: 'RECIBIDO',
       dia: '2026-10-15',
       precioTotal: 4550,
       precioFinal: 5000,
@@ -67,12 +67,12 @@ describe('Historial completo, pedido a la API — SPEC-KRILINXI-041', () => {
   it('pide a /ordenes los filtros que están puestos, con la página y cuántas por página', async () => {
     const servidor = simularApi(() => ({ status: 200, data: paginaDeBoletas([boletaDePrueba()]) }));
 
-    await pedirHistorial({ estado: 'LISTO', con_saldo: 'true' }, 3);
+    await pedirHistorial({ estado: 'RECIBIDO', con_saldo: 'true' }, 3);
 
     expect(servidor.pedidos[0]).toMatchObject({
       metodo: 'GET',
       ruta: '/ordenes',
-      parametros: { estado: 'LISTO', con_saldo: 'true', pagina: 3, por_pagina: 20 },
+      parametros: { estado: 'RECIBIDO', con_saldo: 'true', pagina: 3, por_pagina: 20 },
     });
   });
 

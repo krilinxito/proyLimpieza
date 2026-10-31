@@ -9,7 +9,7 @@
 //   escenario()             Una sucursal, un empleado de esa sucursal y un
 //                           cliente, en una línea. Es el punto de partida de
 //                           casi todo test: una orden necesita los tres.
-//   crearOrden(esc, {...})  Una orden de ese escenario (por defecto LISTO, de
+//   crearOrden(esc, {...})  Una orden de ese escenario (por defecto RECIBIDO, de
 //                           Bs 45,50). Se retoca solo lo que el test necesita.
 //   crearPago(orden, esc, {...}) / crearEntrega(orden, esc, {...})
 //                           (devuelven el id de lo que crean: SPEC-KRILINXI-062, para anotarle auditoría)
@@ -130,7 +130,7 @@ export async function crearOrden(
       campos.sucursalId ?? esc.sucursalId,
       esc.usuarioId,
       campos.precioTotal ?? '45.50',
-      campos.estado ?? 'LISTO',
+      campos.estado ?? 'RECIBIDO',
       campos.fechaEntrada ?? null,
     ],
   );

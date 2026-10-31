@@ -20,7 +20,7 @@ import { sesionDePrueba } from '../../../test/sesion';
  */
 const ROSA = clienteDePrueba({ nombre: 'Rosa Quispe', telefono: '70123456' });
 const RECIBIDA = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000001', descripcion: '2 pantalones' });
-const ENTREGADA = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000004', estado: 'LISTO' });
+const ENTREGADA = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000004', estado: 'RECIBIDO' });
 
 async function abrir(ruta = '/mostrador') {
   const servidor = simularApi(() => 'sin-conexion');
@@ -47,8 +47,8 @@ async function buscarBoleta(boleta: string) {
 }
 
 /**
- * Una boleta RECIBIDA y otra LISTA sin entregar, de Rosa: para ver cómo cambian las acciones con el
- * estado (SPEC-KRILINXI-037 y SPEC-KRILINXI-038).
+ * Una boleta RECIBIDA y otra guardada como LISTO por una versión anterior a SPEC-KRILINXI-067 (todavía sin
+ * sincronizar, se lee como recibida), las dos de Rosa y sin entregar (SPEC-KRILINXI-037 y SPEC-KRILINXI-038).
  */
 const LISTA = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000007', estado: 'LISTO' });
 
@@ -171,15 +171,19 @@ describe('Mostrador: la boleta — SPEC-KRILINXI-008 y SPEC-KRILINXI-033', () =>
     sinJerga();
   });
 
-  it('avanza paso a paso, y cada paso ofrece solo lo que sigue', async () => {
+  it('SPEC-KRILINXI-067: la ropa recibida no tiene pasos intermedios: no ofrece lavar ni marcar como lista', async () => {
     const { db } = await abrir();
     const detalle = await abrirDetalle();
-    fireEvent.click(within(detalle).getByRole('button', { name: 'Empezar a lavar' }));
 
-    await waitFor(() => expect(datoDelDetalle(detalle, 'Cómo va')).toBe('En proceso'));
-    expect(within(detalle).queryByRole('button', { name: 'Empezar a lavar' })).not.toBeInTheDocument();
-    expect(within(detalle).getByRole('button', { name: 'Marcar como lista' })).toBeInTheDocument();
-    expect((await db.getCrudBatch())?.crud.map((c) => c.opData)).toEqual([{ estado: 'EN_PROCESO' }]);
+    expect(datoDelDetalle(detalle, 'Cómo va')).toBe('Recibido');
+    for (const nombre of ['Empezar a lavar', 'Marcar como lista']) {
+      expect(within(detalle).queryByRole('button', { name: nombre })).not.toBeInTheDocument();
+    }
+    // Lo que sí ofrece: cobrar, entregar y, aparte, anular.
+    for (const nombre of ['Cobrar', 'Entregar la ropa', 'Anular']) {
+      expect(within(detalle).getByRole('button', { name: nombre })).toBeInTheDocument();
+    }
+    expect(await db.getCrudBatch()).toBeNull();
   });
 
   it('anular pide confirmación; cancelar no cambia nada y confirmar la cierra', async () => {
@@ -202,7 +206,7 @@ describe('Mostrador: la boleta — SPEC-KRILINXI-008 y SPEC-KRILINXI-033', () =>
 
     await waitFor(() => expect(datoDelDetalle(detalle, 'Cómo va')).toBe('Anulado'));
     // Cerrada: ya no ofrece nada.
-    for (const nombre of ['Anular', 'Cobrar', 'Marcar como lista', 'Empezar a lavar', 'Entregar la ropa']) {
+    for (const nombre of ['Anular', 'Cobrar', 'Entregar la ropa']) {
       expect(within(detalle).queryByRole('button', { name: nombre })).not.toBeInTheDocument();
     }
   });
@@ -233,18 +237,18 @@ describe('Mostrador: la boleta — SPEC-KRILINXI-008 y SPEC-KRILINXI-033', () =>
     expect(await db.getCrudBatch()).toBeNull();
   });
 
-  it('una ropa entregada no ofrece avanzar, anular, cobrar ni entregar', async () => {
+  it('una ropa entregada no ofrece anular, cobrar ni entregar', async () => {
     await abrir();
     const detalle = await buscarBoleta('000004');
 
     expect(datoDelDetalle(detalle, 'Cómo va')).toBe('Entregado');
-    for (const nombre of ['Anular', 'Cobrar', 'Marcar como lista', 'Entregar la ropa']) {
+    for (const nombre of ['Anular', 'Cobrar', 'Entregar la ropa']) {
       expect(within(detalle).queryByRole('button', { name: nombre })).not.toBeInTheDocument();
     }
   });
 
   it('una entregada sin boleta dice quién la retiró, leído de la base local y sin internet — SPEC-KRILINXI-060', async () => {
-    const sinBoleta = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000005', estado: 'LISTO' });
+    const sinBoleta = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000005', estado: 'RECIBIDO' });
     const { sembrar } = await abrir();
     await sembrar('ordenes', [sinBoleta]);
     await sembrar('entregas', [
@@ -286,7 +290,7 @@ describe('Mostrador: una lectura vieja no pisa la búsqueda — SPEC-KRILINXI-01
     simularApi(() => 'sin-conexion');
     const prueba = await baseLocalDePrueba();
     const rosa = clienteDePrueba({ nombre: 'Rosa Quispe', telefono: '70123456' });
-    const entregada = ordenDePrueba({ cliente_id: rosa.id, numero_boleta: '001234', estado: 'LISTO' });
+    const entregada = ordenDePrueba({ cliente_id: rosa.id, numero_boleta: '001234', estado: 'RECIBIDO' });
     await prueba.sembrar('clientes', [rosa]);
     await prueba.sembrar('ordenes', [entregada]);
     await prueba.sembrar('entregas', [entregaDePrueba({ orden_id: entregada.id })]);
@@ -378,22 +382,23 @@ describe('Mostrador: una sola acción principal a la vista — SPEC-KRILINXI-037
     expect(boton('Boleta 000001, Rosa Quispe').querySelectorAll('svg')).toHaveLength(1);
   });
 
-  it('con una boleta recibida abierta, la principal es su avance; cobrar y anular van chicos, en una fila', async () => {
+  it('con una boleta recibida abierta, la principal es entregarla; cobrar y anular van chicos, en una fila', async () => {
     await abrirConRopaLista();
     await abrirDetalle('000001');
-    expect(accionesPrincipales()).toEqual(['Empezar a lavar']);
+    expect(accionesPrincipales()).toEqual(['Entregar la ropa']);
     // Dentro de una boleta no se está en el mostrador (SPEC-KRILINXI-057): ni "Registrar ropa" ni el buscador.
     expect(within(screen.getByRole('main')).queryByRole('button', { name: 'Registrar ropa' })).not.toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: /Buscar cliente o boleta/ })).not.toBeInTheDocument();
-    expect(usoDe(boton('Entregar la ropa'))).toBe('secundario');
+    expect(usoDe(boton('Entregar la ropa'))).toBe('primario');
     expect(boton('Cobrar')).toHaveClass('min-h-12');
     expect(usoDe(boton('Anular'))).toBe('peligro');
     expect(usoDe(boton('Ver toda la ropa de Rosa Quispe'))).toBe('navegacion');
   });
 
-  it('con la ropa ya lista, la principal es entregarla', async () => {
+  it('SPEC-KRILINXI-067: una boleta guardada como LISTO por una versión anterior se abre como recibida, con entregar de principal', async () => {
     await abrirConRopaLista();
-    await abrirDetalle('000007');
+    const detalle = await abrirDetalle('000007');
+    expect(datoDelDetalle(detalle, 'Cómo va')).toBe('Recibido');
     expect(accionesPrincipales()).toEqual(['Entregar la ropa']);
   });
 
@@ -441,19 +446,19 @@ describe('Mostrador: las acciones de la boleta en fila, con su símbolo — SPEC
   it('cada acción lleva su ícono, decorativo: el nombre sigue siendo su palabra', async () => {
     await abrirConRopaLista();
     await abrirDetalle('000001');
-    // Desde RECIBIDO también se puede marcar como lista de una: es otro avance, secundario.
-    expect(nombres(fila())).toEqual(['Empezar a lavar', 'Marcar como lista', 'Cobrar', 'Entregar la ropa']);
+    // Sin pasos intermedios (SPEC-KRILINXI-067): solo cobrar y entregar.
+    expect(nombres(fila())).toEqual(['Cobrar', 'Entregar la ropa']);
     for (const accion of within(fila()).getAllByRole('button')) {
       expect(accion.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
     }
   });
 
-  it('la que sigue es la principal, cobrar y entregar secundarias, y anular de peligro, fuera de la fila', async () => {
+  it('entregar es la principal, cobrar es secundaria, y anular de peligro, fuera de la fila', async () => {
     await abrirConRopaLista();
     await abrirDetalle('000001');
-    expect(accionesPrincipales(fila())).toEqual(['Empezar a lavar']);
+    expect(accionesPrincipales(fila())).toEqual(['Entregar la ropa']);
     expect(usoDe(boton('Cobrar'))).toBe('secundario');
-    expect(usoDe(boton('Entregar la ropa'))).toBe('secundario');
+    expect(usoDe(boton('Entregar la ropa'))).toBe('primario');
     expect(usoDe(boton('Anular'))).toBe('peligro');
     // Desde SPEC-KRILINXI-049 anular ya no comparte fila con las acciones de todos los días.
     expect(fila()).not.toContainElement(boton('Anular'));
@@ -551,7 +556,7 @@ describe('Mostrador: las acciones de la boleta suben y anular queda aparte — S
   it('sigue habiendo una sola acción principal, la misma de antes', async () => {
     await abrirConRopaLista();
     await abrirDetalle('000001');
-    expect(accionesPrincipales()).toEqual(['Empezar a lavar']);
+    expect(accionesPrincipales()).toEqual(['Entregar la ropa']);
   });
 });
 
@@ -594,7 +599,7 @@ describe('Mostrador: "Nueva boleta de este cliente" dentro de una boleta — SPE
     expect(fila).not.toContainElement(boton(NUEVA));
     // La fila sigue con sus cuatro botones como mucho (SPEC-KRILINXI-049).
     expect(within(fila).getAllByRole('button').length).toBeLessThanOrEqual(4);
-    expect(accionesPrincipales()).toEqual(['Empezar a lavar']);
+    expect(accionesPrincipales()).toEqual(['Entregar la ropa']);
     expect(boton(NUEVA).querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
     sinJerga();
   });

@@ -7,7 +7,7 @@
  *
  *     const { sembrar } = await baseLocalDePrueba();
  *     const rosa = clienteDePrueba({ nombre: 'Rosa Quispe' });
- *     const orden = ordenDePrueba({ cliente_id: rosa.id, numero_boleta: '001234', estado: 'LISTO' });
+ *     const orden = ordenDePrueba({ cliente_id: rosa.id, numero_boleta: '001234', estado: 'RECIBIDO' });
  *     await sembrar('clientes', [rosa]);
  *     await sembrar('ordenes', [orden]);
  *     await sembrar('pagos', [pagoDePrueba({ orden_id: orden.id, monto: '20.00' })]);

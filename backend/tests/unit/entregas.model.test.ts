@@ -34,7 +34,7 @@ const FILA_ORDEN = {
   fecha_entrada: '2026-09-30 10:15:00',
   fecha_estimada_salida: null,
   precio_total: '45.50',
-  estado: 'LISTO',
+  estado: 'RECIBIDO',
 };
 
 const NUEVA = {
@@ -102,13 +102,13 @@ describe('Entregas model: crear — SPEC-ALE186-006', () => {
     expect(valores).not.toContain(IDS.sucursal);
   });
 
-  it('solo entrega desde estados abiertos: RECIBIDO, EN_PROCESO o LISTO', async () => {
+  it('solo entrega desde estados abiertos: RECIBIDO (SPEC-KRILINXI-067)', async () => {
     laBaseDevuelve([FILA_ENTREGA]);
 
     await entregas.crear(NUEVA, SIN_RESTRICCION);
 
-    expect(entregas.ESTADOS_ENTREGABLES).toEqual(['RECIBIDO', 'EN_PROCESO', 'LISTO']);
-    expect(llamada()[1]).toContainEqual(['RECIBIDO', 'EN_PROCESO', 'LISTO']);
+    expect(entregas.ESTADOS_ENTREGABLES).toEqual(['RECIBIDO']);
+    expect(llamada()[1]).toContainEqual(['RECIBIDO']);
   });
 
   it('sin precio final, deja que Postgres use el precio_total de la orden', async () => {

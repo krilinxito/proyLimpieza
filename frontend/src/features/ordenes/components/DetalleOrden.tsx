@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Aviso } from '../../../components/Aviso';
 import { Boton } from '../../../components/Boton';
-import type { NombreIcono } from '../../../components/iconos';
 import { Insignia } from '../../../components/Insignia';
 import { Tarjeta } from '../../../components/Tarjeta';
 import { ModalConfirmacion } from '../../../components/ModalConfirmacion';
 import { TEXTO_ESTADO_ORDEN, TEXTO_METODO_PAGO, TEXTO_TIPO_PAGO, type EstadoOrden } from '../../../lib/dominio';
 import { formatearBs } from '../../../lib/money';
-import { avancesDesde, estaCerrada, TONO_ESTADO, type Avance } from '../estado';
+import { estaCerrada, TONO_ESTADO } from '../estado';
 import { useRopa } from '../hooks/useRopa';
 import type { OrdenVista } from '../types';
 import { textoDelRetiro } from '../retiro';
@@ -20,15 +19,13 @@ type Props = {
   /**
    * Para que otra tarea agregue su acción al detalle, como entregar (SPEC-KRILINXI-009).
    * Recibe la orden, una función para volver a leerla después de cambiarla, y si su acción es la
-   * principal de la boleta (SPEC-KRILINXI-037): lo es cuando ya no queda ningún avance.
+   * principal de la boleta (SPEC-KRILINXI-037): desde SPEC-KRILINXI-067 la ropa no tiene pasos
+   * intermedios, así que lo es siempre.
    */
   accionesExtra?: (orden: OrdenVista, recargar: () => Promise<void>, como: { principal: boolean }) => ReactNode;
   /** Lo que dice el botón de volver: "Volver a la lista", o adónde vuelve (SPEC-KRILINXI-033). */
   textoVolver?: string;
 };
-
-/** El ícono de cada avance, al lado de su palabra (SPEC-KRILINXI-038). */
-const ICONO_AVANCE: Record<Avance['destino'], NombreIcono> = { EN_PROCESO: 'lavar', LISTO: 'listo' };
 
 /**
  * La fila de acciones de una boleta — SPEC-KRILINXI-038. En pantalla angosta, dos columnas; desde
@@ -90,9 +87,6 @@ export function DetalleOrden({ ordenId, alVolver, accionesExtra, textoVolver = '
   }
 
   const cerrada = estaCerrada(orden.estado);
-  // Una sola acción principal a la vista (SPEC-KRILINXI-037): el próximo avance, o lo que agregue
-  // quien usa el detalle (entregar) cuando la ropa ya no tiene a dónde avanzar.
-  const [siguiente, ...otrosAvances] = avancesDesde(orden.estado);
 
   async function pasarA(destino: EstadoOrden) {
     if (!ropa.lista || !orden) return;
@@ -148,28 +142,14 @@ export function DetalleOrden({ ordenId, alVolver, accionesExtra, textoVolver = '
         <Aviso tipo="informacion">
           {orden.estado === 'ANULADO'
             ? 'Esta ropa fue anulada: no se puede entregar ni cobrar.'
-            : 'Esta ropa ya fue entregada.'}
+            : orden.estado === 'REEMBOLSADO'
+              ? 'Esta ropa fue reembolsada: ya no se puede entregar ni cobrar.'
+              : 'Esta ropa ya fue entregada.'}
         </Aviso>
       )}
 
       {!cerrada && !cobrando && (
         <div role="group" aria-label="Qué hacer con esta ropa" className={CLASE_FILA}>
-          {siguiente && (
-            <Boton tamano="compacto" icono={ICONO_AVANCE[siguiente.destino]} onClick={() => pasarA(siguiente.destino)}>
-              {siguiente.texto}
-            </Boton>
-          )}
-          {otrosAvances.map(({ destino, texto }) => (
-            <Boton
-              key={destino}
-              variante="secundario"
-              tamano="compacto"
-              icono={ICONO_AVANCE[destino]}
-              onClick={() => pasarA(destino)}
-            >
-              {texto}
-            </Boton>
-          ))}
           {orden.saldo > 0 && (
             <Boton
               variante="secundario"
@@ -183,7 +163,7 @@ export function DetalleOrden({ ordenId, alVolver, accionesExtra, textoVolver = '
               Cobrar
             </Boton>
           )}
-          {accionesExtra?.(orden, recargar, { principal: !siguiente })}
+          {accionesExtra?.(orden, recargar, { principal: true })}
         </div>
       )}
 

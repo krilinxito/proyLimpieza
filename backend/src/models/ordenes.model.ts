@@ -488,7 +488,7 @@ export type ResultadoActualizar =
  *
  * Las condiciones van dentro de la misma sentencia que escribe, no en una
  * consulta previa. Si se leyera primero el estado y se escribiera después, entre
- * las dos otra petición podría anular la orden, y esta la pasaría a LISTO igual.
+ * las dos otra petición podría anular la orden, y esta la dejaría en otro estado igual.
  * En una sola sentencia, Postgres bloquea la fila mientras la evalúa y la
  * escribe: o cumple y se aplica, o no se aplica. Desde SPEC-ALE186-010 esas
  * condiciones viven en el `SELECT … FOR UPDATE` que lee la fila de antes (ver

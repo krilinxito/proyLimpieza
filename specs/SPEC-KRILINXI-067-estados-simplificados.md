@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-067
 name: Estados de la boleta simplificados
 slug: estados-simplificados
-status: draft
+status: finished
 owner: krilinxito
 created: 2026-10-30
 scope:
@@ -19,7 +19,17 @@ scope:
   - frontend/src/features/mostrador/**
 priority: high
 depends_on: []
-tests: []
+tests:
+  - backend\tests\db\estadosSimplificados.db.test.ts
+  - backend\tests\http\ordenes.test.ts
+  - backend\tests\unit\dominio.test.ts
+  - backend\tests\unit\entregas.model.test.ts
+  - frontend\src\features\auditoria\describir.test.ts
+  - frontend\src\features\mostrador\api\hoyLocal.test.ts
+  - frontend\src\features\mostrador\components\PantallaMostrador.test.tsx
+  - frontend\src\features\ordenes\api\ropaLocal.test.ts
+  - frontend\src\features\ordenes\estado.test.ts
+  - frontend\src\lib\dominio.test.ts
 ---
 
 ## Descripción

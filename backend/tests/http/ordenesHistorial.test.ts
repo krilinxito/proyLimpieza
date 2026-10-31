@@ -77,7 +77,7 @@ describe('GET /api/ordenes — SPEC-KRILINXI-040', () => {
       desde: '2026-09-01',
       hasta: '2026-09-30',
       sucursal_id: SUCURSAL,
-      estado: 'LISTO',
+      estado: 'RECIBIDO',
       texto: '  Rosa  ',
       con_saldo: 'true',
       pagina: '3',
@@ -89,7 +89,7 @@ describe('GET /api/ordenes — SPEC-KRILINXI-040', () => {
         desde: '2026-09-01',
         hasta: '2026-09-30',
         sucursalId: SUCURSAL,
-        estado: 'LISTO',
+        estado: 'RECIBIDO',
         texto: 'Rosa',
         conSaldo: true,
       },
@@ -136,7 +136,7 @@ describe('GET /api/ordenes — SPEC-KRILINXI-040', () => {
   });
 
   it('responde 400 si un filtro viene repetido (llega como lista)', async () => {
-    const res = await testApi().get('/api/ordenes?estado=LISTO&estado=ANULADO').set(comoAdmin());
+    const res = await testApi().get('/api/ordenes?estado=RECIBIDO&estado=ANULADO').set(comoAdmin());
 
     expectApiError(res, { status: 400, codigo: 'VALIDACION' });
     expect(listar).not.toHaveBeenCalled();

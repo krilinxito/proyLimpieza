@@ -6,7 +6,7 @@
  * atender hoy, con lo que ya está en su tablet.
  *
  * Se apoya en lo que ya existe: la ropa en el local es `listarAbiertas` (con el estado efectivo:
- * una entregada sin sincronizar no figura lista para recoger), y las sumas son de `lib/money`.
+ * una entregada sin sincronizar no figura por entregar), y las sumas son de `lib/money`.
  */
 import type { BaseLocal } from '../../../lib/powersync';
 import { diaEnBolivia, instanteGuardado } from '../../../lib/diaDelNegocio';
@@ -22,17 +22,17 @@ export type CobradoHoy = {
 };
 
 export type Hoy = {
-  /** En LISTO, esperando que la recojan: la que lleva más tiempo, arriba. */
-  paraRecoger: OrdenVista[];
-  /** RECIBIDO o EN_PROCESO con la fecha estimada ya pasada: la más atrasada, arriba. */
+  /** Toda la ropa que sigue en el local, esperando que la entreguen: la que lleva más tiempo, arriba. */
+  porEntregar: OrdenVista[];
+  /** La que sigue en el local con la fecha estimada ya pasada (también está en `porEntregar`): la más atrasada, arriba. */
   atrasadas: OrdenVista[];
   cobrado: CobradoHoy;
 };
 
 /** La fecha estimada es de calendario (DATE): se comparan los `YYYY-MM-DD` tal cual. */
 function estaAtrasada(orden: OrdenVista, hoy: string): boolean {
-  const enCamino = orden.estado === 'RECIBIDO' || orden.estado === 'EN_PROCESO';
-  return enCamino && orden.fechaEstimada !== null && orden.fechaEstimada.slice(0, 10) < hoy;
+  const enElLocal = orden.estado === 'RECIBIDO';
+  return enElLocal && orden.fechaEstimada !== null && orden.fechaEstimada.slice(0, 10) < hoy;
 }
 
 /**
@@ -63,10 +63,11 @@ async function cobradoHoy(base: BaseLocal, sucursalId: string, hoy: string): Pro
 
 export async function hoyEnLaSucursal(base: BaseLocal, sucursalId: string, hoy: string): Promise<Hoy> {
   const [enElLocal, cobrado] = await Promise.all([listarAbiertas(base, sucursalId), cobradoHoy(base, sucursalId, hoy)]);
-  // `listarAbiertas` ya viene de la más vieja a la más nueva: es el orden de "lista para recoger".
-  const paraRecoger = enElLocal.filter((orden) => orden.estado === 'LISTO');
+  // `listarAbiertas` ya viene de la más vieja a la más nueva: es el orden de "por entregar". Desde SPEC-KRILINXI-067
+  // no hay pasos intermedios: toda la ropa abierta está RECIBIDA, y es la que falta entregar.
+  const porEntregar = enElLocal.filter((orden) => orden.estado === 'RECIBIDO');
   const atrasadas = enElLocal
     .filter((orden) => estaAtrasada(orden, hoy))
     .sort((a, b) => (a.fechaEstimada ?? '').localeCompare(b.fechaEstimada ?? ''));
-  return { paraRecoger, atrasadas, cobrado };
+  return { porEntregar, atrasadas, cobrado };
 }

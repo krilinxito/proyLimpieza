@@ -19,8 +19,8 @@ async function sucursalConRopaDelDia() {
   tabletConRelojCorrido(0);
   const prueba = await baseLocalDePrueba();
   const rosa = clienteDePrueba({ nombre: 'Rosa Quispe' });
-  const lista = ordenDePrueba({ cliente_id: rosa.id, numero_boleta: '000001', estado: 'LISTO', precio_total: '50.00' });
-  const atrasada = ordenDePrueba({ cliente_id: rosa.id, numero_boleta: '000002', estado: 'EN_PROCESO', fecha_estimada_salida: '2026-10-14' });
+  const lista = ordenDePrueba({ cliente_id: rosa.id, numero_boleta: '000001', estado: 'RECIBIDO', precio_total: '50.00' });
+  const atrasada = ordenDePrueba({ cliente_id: rosa.id, numero_boleta: '000002', estado: 'RECIBIDO', fecha_estimada_salida: '2026-10-14' });
   await prueba.sembrar('clientes', [rosa]);
   await prueba.sembrar('ordenes', [lista, atrasada]);
   await prueba.sembrar('pagos', [
@@ -49,13 +49,14 @@ describe('Inicio: el saludo — SPEC-KRILINXI-024', () => {
 });
 
 describe('Inicio: hoy en la sucursal — SPEC-KRILINXI-035', () => {
-  it('muestra la ropa lista para recoger y la atrasada, cada una con su número', async () => {
+  it('muestra la ropa por entregar y la atrasada (que también está entre las por entregar), cada una con su número', async () => {
     const { control } = await sucursalConRopaDelDia();
     renderEnRuta(<App />, '/', { baseLocal: control });
 
     expect(await principal().findByRole('heading', { name: 'Hoy en la sucursal' })).toBeInTheDocument();
-    const lista = seccion(/^Lista para recoger \(1 boleta\)/);
+    const lista = seccion(/^Ropa por entregar \(2 boletas\)/);
     expect(within(lista).getByRole('link', { name: 'Boleta 000001, Rosa Quispe' })).toHaveTextContent('Falta pagar Bs 30,00');
+    expect(within(lista).getByRole('link', { name: 'Boleta 000002, Rosa Quispe' })).toBeInTheDocument();
     const atrasada = seccion(/^Atrasada \(1 boleta\)/);
     expect(within(atrasada).getByRole('link', { name: 'Boleta 000002, Rosa Quispe' })).toHaveTextContent('Era para el 14/10/2026');
     sinJerga();
@@ -75,7 +76,8 @@ describe('Inicio: hoy en la sucursal — SPEC-KRILINXI-035', () => {
     const { control } = await sucursalConRopaDelDia();
     renderEnRuta(<App />, '/', { baseLocal: control });
 
-    fireEvent.click(await principal().findByRole('link', { name: 'Boleta 000002, Rosa Quispe' }));
+    // La atrasada también figura entre las por entregar: está en las dos listas, y cualquiera lleva a su ficha.
+    fireEvent.click((await principal().findAllByRole('link', { name: 'Boleta 000002, Rosa Quispe' }))[0] as HTMLElement);
     expect(await screen.findByRole('heading', { name: 'Mostrador', level: 1 })).toBeInTheDocument();
     const ficha = await screen.findByRole('region', { name: 'Ficha de Rosa Quispe' });
     expect(await within(ficha).findByRole('region', { name: 'Boleta 000002' })).toBeInTheDocument();
@@ -86,7 +88,7 @@ describe('Inicio: hoy en la sucursal — SPEC-KRILINXI-035', () => {
     const { control } = await baseLocalDePrueba();
     renderEnRuta(<App />, '/', { baseLocal: control });
 
-    expect(await principal().findByText('No hay ropa lista esperando que la recojan.')).toBeInTheDocument();
+    expect(await principal().findByText('No hay ropa esperando que la recojan.')).toBeInTheDocument();
     expect(principal().getByText('No hay ropa atrasada.')).toBeInTheDocument();
     expect(principal().getByText('Todavía no se cobró nada hoy.')).toBeInTheDocument();
   });

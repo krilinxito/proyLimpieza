@@ -13,7 +13,7 @@
 // Las listas son las mismas que las del frontend, y `tests/unit/dominio.test.ts`
 // las compara con el schema: si uno cambia sin el otro, falla.
 
-export const ESTADOS_ORDEN = ['RECIBIDO', 'EN_PROCESO', 'LISTO', 'ENTREGADO', 'ANULADO'] as const;
+export const ESTADOS_ORDEN = ['RECIBIDO', 'ENTREGADO', 'REEMBOLSADO', 'ANULADO'] as const;
 export const TIPOS_RETIRO = ['CON_BOLETA', 'SIN_BOLETA'] as const;
 export const TIPOS_PAGO = ['ADELANTO', 'PAGO_FINAL'] as const;
 export const METODOS_PAGO = ['EFECTIVO', 'QR', 'TARJETA'] as const;
@@ -47,35 +47,35 @@ export const esMetodoPago = crearValidador(METODOS_PAGO);
 export const esAccionAuditoria = crearValidador(ACCIONES_AUDITORIA);
 
 // ------------------------------------------------------------------
-//  Cómo avanza una orden
+//  Cómo cambia una orden
 // ------------------------------------------------------------------
 //
-//   RECIBIDO → EN_PROCESO → LISTO → ENTREGADO
-//   (o ANULADO desde cualquiera que no sea ENTREGADO)
+//   RECIBIDO → ENTREGADO     (lo pone el registro de la entrega)
+//   RECIBIDO → REEMBOLSADO   (lo pondrá la entrega sin cobrar, SPEC-KRILINXI-070)
+//   RECIBIDO → ANULADO       (el único cambio que pide un empleado, por PATCH)
 //
-// Hacia adelante se pueden saltar pasos: si la ropa se lavó en el acto, pasa
-// de RECIBIDO a LISTO sin fingir un EN_PROCESO. Hacia atrás no se vuelve.
-// ENTREGADO no está en la tabla como destino a propósito: no lo pone un
-// empleado cambiando un estado, lo pone el registro de la entrega.
+// Desde SPEC-KRILINXI-067 no hay pasos intermedios (EN_PROCESO y LISTO se
+// quitaron): la ropa está recibida hasta que sale. ENTREGADO y REEMBOLSADO no
+// están en la tabla como destino a propósito: no los pone un empleado cambiando
+// un estado, los pone el registro de la entrega.
 
 /** Los estados de los que ya no se sale. */
-export const ESTADOS_CERRADOS: readonly EstadoOrden[] = ['ENTREGADO', 'ANULADO'];
+export const ESTADOS_CERRADOS: readonly EstadoOrden[] = ['ENTREGADO', 'REEMBOLSADO', 'ANULADO'];
 
 /**
  * Desde qué estados se puede llegar a cada uno.
  *
  * Cada destino se incluye a sí mismo, y no es un descuido: es lo que hace
- * idempotente un reintento. Si "pasar a LISTO" se aplica pero la respuesta se
- * pierde por el camino, PowerSync reenvía el mismo cambio sobre una orden que
- * ya está en LISTO. Rechazarlo con un 409 convertiría un reintento normal en un
+ * idempotente un reintento. Si "anular" se aplica pero la respuesta se pierde
+ * por el camino, PowerSync reenvía el mismo cambio sobre una orden que ya está
+ * en ANULADO. Rechazarlo con un 409 convertiría un reintento normal en un
  * error que el empleado tendría que atender.
  */
 const ORIGENES: Record<EstadoOrden, readonly EstadoOrden[]> = {
   RECIBIDO: ['RECIBIDO'],
-  EN_PROCESO: ['RECIBIDO', 'EN_PROCESO'],
-  LISTO: ['RECIBIDO', 'EN_PROCESO', 'LISTO'],
-  ANULADO: ['RECIBIDO', 'EN_PROCESO', 'LISTO', 'ANULADO'],
+  ANULADO: ['RECIBIDO', 'ANULADO'],
   ENTREGADO: [],
+  REEMBOLSADO: [],
 };
 
 /**

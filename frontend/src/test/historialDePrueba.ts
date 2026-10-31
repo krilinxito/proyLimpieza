@@ -19,7 +19,7 @@ export function boletaDePrueba(cambios: Record<string, unknown> = {}) {
     sucursal: { id: SUCURSAL_CENTRO, nombre: 'Centro' },
     cliente: { id: crypto.randomUUID(), nombre: 'Rosa Quispe', telefono: '70123456' },
     descripcion: '2 camisas, 1 terno',
-    estado: 'LISTO',
+    estado: 'RECIBIDO',
     fechaEntrada: '2026-10-15 18:30:00',
     fechaEstimadaSalida: '2026-10-18',
     precioTotal: '50.00',

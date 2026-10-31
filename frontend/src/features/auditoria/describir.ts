@@ -90,9 +90,19 @@ const ETIQUETAS: Record<string, string> = {
   activa: 'Sucursal',
 };
 
+/**
+ * Los dos estados que existieron hasta SPEC-KRILINXI-067. Ya no son del dominio, pero la auditoría es
+ * historia y sus filas viejas los siguen nombrando en `valores_anteriores`: se dicen como siempre, no
+ * como el código.
+ */
+const TEXTO_ESTADO_QUE_YA_NO_EXISTE: Record<string, string> = { EN_PROCESO: 'En proceso', LISTO: 'Listo para retirar' };
+
 function valorParaLeer(clave: string, valor: unknown, nombres: NombresConocidos): string {
   if (valor === null || valor === undefined || valor === '') return '(vacío)';
   if (clave === 'estado' && esEstadoOrden(valor)) return TEXTO_ESTADO_ORDEN[valor];
+  if (clave === 'estado' && typeof valor === 'string' && valor in TEXTO_ESTADO_QUE_YA_NO_EXISTE) {
+    return TEXTO_ESTADO_QUE_YA_NO_EXISTE[valor] ?? valor;
+  }
   if (clave === 'precio_total' && typeof valor === 'string') {
     try {
       return formatearBs(desdeDecimal(valor));

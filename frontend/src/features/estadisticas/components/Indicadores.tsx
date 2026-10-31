@@ -17,7 +17,7 @@ export function Indicadores({ panel, periodos }: { panel: Panel; periodos: Perio
   const indicadores = [
     { nombre: `Cobrado ${periodos.ingresos}`, valor: bs(panel.ingresos.total) },
     { nombre: `Falta cobrar ${periodos.pendientes}`, valor: bs(panel.saldos.total), extra: `En ${boletas(panel.saldos.cantidad)}` },
-    { nombre: `Ropa sin recoger ${periodos.pendientes}`, valor: boletas(panel.sinRecoger.cantidad) },
+    { nombre: `Ropa por entregar ${periodos.pendientes}`, valor: boletas(panel.sinRecoger.cantidad) },
     { nombre: `Ropa recibida ${periodos.historia}`, valor: boletas(panel.volumen.total) },
   ];
   return (

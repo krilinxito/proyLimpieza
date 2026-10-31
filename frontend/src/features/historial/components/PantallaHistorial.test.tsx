@@ -21,11 +21,11 @@ import { guardarAtencion } from '../../atencion/api/almacen';
 const ROSA = clienteDePrueba({ nombre: 'Rosa Quispe', telefono: '70123456' });
 const JUAN = clienteDePrueba({ nombre: 'Juan Mamani', telefono: '71111111' });
 
-const RECIENTE = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000010', estado: 'LISTO', fecha_entrada: '2026-10-15T14:00:00.000Z' });
-const PAGADA = ordenDePrueba({ cliente_id: JUAN.id, numero_boleta: '000011', estado: 'EN_PROCESO', fecha_entrada: '2026-10-10T12:00:00.000Z' });
-const ENTREGADA = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000012', estado: 'LISTO', precio_total: '60.00', fecha_entrada: '2026-10-12T12:00:00.000Z' });
+const RECIENTE = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000010', estado: 'RECIBIDO', fecha_entrada: '2026-10-15T14:00:00.000Z' });
+const PAGADA = ordenDePrueba({ cliente_id: JUAN.id, numero_boleta: '000011', estado: 'RECIBIDO', fecha_entrada: '2026-10-10T12:00:00.000Z' });
+const ENTREGADA = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000012', estado: 'RECIBIDO', precio_total: '60.00', fecha_entrada: '2026-10-12T12:00:00.000Z' });
 const ANULADA = ordenDePrueba({ cliente_id: JUAN.id, numero_boleta: '000013', estado: 'ANULADO', fecha_entrada: '2026-10-05T12:00:00.000Z' });
-const VIEJA = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000014', estado: 'LISTO', fecha_entrada: '2026-08-01T12:00:00.000Z' });
+const VIEJA = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000014', estado: 'RECIBIDO', fecha_entrada: '2026-08-01T12:00:00.000Z' });
 
 async function sembrarBoletas() {
   const prueba = await baseLocalDePrueba();
@@ -79,12 +79,12 @@ describe('Historial de boletas de quien atiende — SPEC-KRILINXI-041', () => {
     expect(reciente).toHaveTextContent('Boleta 000010');
     expect(reciente).toHaveTextContent('Rosa Quispe');
     expect(reciente).toHaveTextContent('Entró el 15/10/2026');
-    expect(within(reciente).getByText('Listo para retirar')).toBeInTheDocument();
+    expect(within(reciente).getByText('Recibido')).toBeInTheDocument();
     expect(reciente).toHaveTextContent('Falta pagar Bs 50,00');
 
     const pagada = screen.getByRole('link', { name: 'Boleta 000011, Juan Mamani' });
     expect(pagada).toHaveTextContent('Pagado');
-    // Entregada en la tablet aunque la columna diga LISTO; y una anulada no se cobra.
+    // Entregada en la tablet aunque la columna diga RECIBIDO; y una anulada no se cobra.
     expect(within(screen.getByRole('link', { name: 'Boleta 000012, Rosa Quispe' })).getByText('Entregado')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Boleta 000013, Juan Mamani' })).toHaveTextContent('Anulada: no se cobra');
   });
@@ -170,7 +170,7 @@ describe('Historial de boletas de quien atiende — SPEC-KRILINXI-041', () => {
       masDetalle();
 
       fireEvent.change(buscador(), { target: { value: 'rosa' } });
-      fireEvent.click(screen.getByRole('radio', { name: 'Listo para retirar' }));
+      fireEvent.click(screen.getByRole('radio', { name: 'Recibido' }));
 
       await waitFor(() => expect(numerosEnLista()).toEqual(['000010']));
     });
