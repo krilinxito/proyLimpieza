@@ -120,7 +120,7 @@ entregar** y se suman encima: **el precio final de una entrega lo calcula el ser
 Un **EMPLEADO ya no cambia `precio_total`** por `PATCH /api/ordenes` (403): eso es del admin. El subtotal es siempre
 `round(cantidad * precio_unitario, 2)` (`SUBTOTAL_SQL` en `ordenes.model.ts`, `subtotal` en `utils/money.ts` y en `lib/money`, las
 tres con la misma tabla de casos) y no se guarda. `GET /api/ordenes` trae los `renglones` de cada boleta en la misma consulta, y la
-auditoría ubica un renglón en la sucursal de su orden. `ESTADOS_ABIERTOS` (lo que no está cerrado) vive en `utils/dominio.ts`.
+auditoría ubica un renglón en la sucursal de su orden. `ESTADOS_ABIERTOS` (las boletas que no están cerradas: su ropa sigue en el local) vive en `utils/dominio.ts`, y la usan entregas, renglones y el cierre de una sucursal.
 
 `frontend/` tiene el scaffolding de SPEC-KRILINXI-001: Vite, Tailwind, rutas y su suite de
 tests. SPEC-KRILINXI-002 añadió las piezas que reutilizan todas las pantallas: `Boton`,
