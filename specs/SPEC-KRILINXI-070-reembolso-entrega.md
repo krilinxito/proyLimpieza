@@ -44,6 +44,8 @@ Hoy la ropa solo sale con la boleta pagada por completo (SPEC-KRILINXI-056). Si 
 
 ## Notas
 
+- **Aviso de SPEC-KRILINXI-068 (2026-10-30):** el precio final ya no se escribe libre: el servidor lo calcula como `precio_total` + los renglones de cargo (`orden_items` con `momento = 'ENTREGA'`) y rechaza con 409 una entrega cuyo `precio_final` no coincida. El reembolso es la excepción a ese cálculo (guarda como `precio_final` lo ya cobrado), así que esta spec tiene que decir si una entrega sin cobrar admite cargos y cómo se salta esa comprobación sin abrirla para las entregas comunes. Además, desde la 068 ya no se puede entregar por menos del total: rebajar el precio solo es posible con un reembolso.
+
 <!--
 Convención de trazabilidad: todo test relacionado con esta spec debe llevar su id
 en el nombre del describe/bloque, por ejemplo:
