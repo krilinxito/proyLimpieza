@@ -175,7 +175,9 @@ describe('Auditoría de las ediciones — SPEC-ALE186-010', () => {
     const esc = await escenario();
     const orden = await crearOrden(esc, { precioTotal: '45.50' });
 
-    await testApi().patch(`/api/ordenes/${orden.id}`).set(sesionDe(esc)).send({ precio_total: '60.00' });
+    // Lo cambia el ADMIN: desde SPEC-KRILINXI-068 el mostrador no edita el precio.
+    const adminId = await crearUsuario({ sucursalId: null, rol: 'ADMIN' });
+    await testApi().patch(`/api/ordenes/${orden.id}`).set(comoAdmin(adminId)).send({ precio_total: '60.00' });
 
     expect((await auditoriaDe(orden.id))[0]?.valoresAnteriores).toEqual({ precio_total: '45.50' });
   });

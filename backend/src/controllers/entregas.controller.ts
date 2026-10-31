@@ -7,6 +7,9 @@
 //
 // El cobro final NO va acá: se registra aparte, por POST /api/pagos. Desde SPEC-KRILINXI-056 tiene que estar registrado
 // ANTES de la entrega: la ropa solo sale con la boleta pagada por completo (409 SALDO_PENDIENTE si no).
+//
+// Los cargos al entregar tampoco (SPEC-KRILINXI-068): son renglones de la boleta, por POST /api/orden-items, y suben
+// antes que la entrega. El precio final lo calcula el model con ellos; el que manda la tablet solo se compara.
 import type { Request, Response } from 'express';
 import { revisionDe, sesionDe } from '../middleware/auth.js';
 import * as entregas from '../models/entregas.model.js';
@@ -44,7 +47,7 @@ function leerTextoOpcional(valor: unknown, largoMaximo: number, mensajeLargo: st
   return texto;
 }
 
-/** Opcional: si no viene, se cobra el precio con que se recibió la orden. */
+/** Opcional: si viene, tiene que ser el que calcula el servidor (el total más los cargos, SPEC-KRILINXI-068). */
 function leerPrecioFinal(valor: unknown): Centavos | null {
   if (valor === undefined || valor === null) return null;
   const precio = montoEnCentavos(valor);
@@ -152,6 +155,15 @@ export async function postEntrega(req: Request, res: Response): Promise<void> {
         CODIGOS_ERROR.ORDEN_YA_ENTREGADA,
         `La ropa de la orden ${resultado.orden.numeroBoleta} ya fue entregada. ` +
           'Revisa el número de boleta.',
+      );
+    case 'precio-distinto':
+      // Un cargo que no llegó (rechazado o todavía sin subir) o una versión anterior de la app, que dejaba escribir el
+      // precio libre. Va a "Para corregir" en la tablet, con este mensaje.
+      throw new ApiError(
+        409,
+        CODIGOS_ERROR.PRECIO_FINAL_DISTINTO,
+        `El precio de la boleta ${resultado.orden.numeroBoleta} con sus cargos es Bs ${resultado.precioFinal}, ` +
+          'y no coincide con el que se anotó al entregar. Revisa los cargos y vuelve a registrar la entrega.',
       );
     case 'saldo-pendiente':
       throw new ApiError(

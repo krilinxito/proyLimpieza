@@ -225,7 +225,19 @@ export async function patchOrden(req: Request, res: Response): Promise<void> {
   const cambios: CambiosOrden = {};
   if ('numero_boleta' in cuerpo) cambios.numeroBoleta = leerBoleta(cuerpo.numero_boleta);
   if ('descripcion' in cuerpo) cambios.descripcion = leerDescripcion(cuerpo.descripcion);
-  if ('precio_total' in cuerpo) cambios.precioTotal = leerPrecio(cuerpo.precio_total);
+  if ('precio_total' in cuerpo) {
+    // Desde SPEC-KRILINXI-068 el total de una boleta es la suma de sus renglones, y el mostrador no lo cambia: lo
+    // único que puede hacer después es agregar cargos al entregar. Corregirlo es del admin (SPEC-KRILINXI-071).
+    if (sesion.rol !== 'ADMIN') {
+      throw new ApiError(
+        403,
+        CODIGOS_ERROR.SIN_PERMISO,
+        'El precio de una boleta sale de sus renglones y no se cambia desde el mostrador. ' +
+          'Si hay que corregirlo, avísale al administrador.',
+      );
+    }
+    cambios.precioTotal = leerPrecio(cuerpo.precio_total);
+  }
   if ('fecha_estimada_salida' in cuerpo) {
     cambios.fechaEstimadaSalida = leerFechaEstimada(cuerpo.fecha_estimada_salida);
   }

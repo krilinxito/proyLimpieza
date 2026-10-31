@@ -17,8 +17,9 @@
 #      sucursal, igual que un empleado (`atencion_admin`).
 #
 #  Limitación a tener presente: las consultas de `data` no admiten
-#  JOINs ni subconsultas. Por eso `entregas` y `pagos` cargan su
-#  propio `sucursal_id` duplicado — ver el comentario en el schema.
+#  JOINs ni subconsultas. Por eso `entregas`, `pagos` y
+#  `orden_items` cargan su propio `sucursal_id` duplicado — ver el
+#  comentario en el schema y en la migración 007.
 # ============================================================
 
 bucket_definitions:
@@ -42,6 +43,8 @@ bucket_definitions:
       - SELECT * FROM ordenes  WHERE sucursal_id = bucket.sucursal_id
       - SELECT * FROM entregas WHERE sucursal_id = bucket.sucursal_id
       - SELECT * FROM pagos    WHERE sucursal_id = bucket.sucursal_id
+      # Los renglones de la boleta (SPEC-KRILINXI-068), con lista explícita de columnas.
+      - SELECT id, orden_id, sucursal_id, momento, posicion, descripcion, cantidad, precio_unitario FROM orden_items WHERE sucursal_id = bucket.sucursal_id
 
   # ----------------------------------------------------------
   #  El ADMIN que atiende el mostrador — SPEC-KRILINXI-028.
@@ -80,6 +83,8 @@ bucket_definitions:
       - SELECT * FROM ordenes  WHERE sucursal_id = bucket.sucursal_id
       - SELECT * FROM entregas WHERE sucursal_id = bucket.sucursal_id
       - SELECT * FROM pagos    WHERE sucursal_id = bucket.sucursal_id
+      # Los renglones de la boleta (SPEC-KRILINXI-068), con lista explícita de columnas.
+      - SELECT id, orden_id, sucursal_id, momento, posicion, descripcion, cantidad, precio_unitario FROM orden_items WHERE sucursal_id = bucket.sucursal_id
 
   # ----------------------------------------------------------
   #  Catálogos que todo dispositivo necesita.

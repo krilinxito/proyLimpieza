@@ -134,6 +134,7 @@ describe('Las migraciones llevan los datos de antes — SPEC-ALE186-020', () => 
       '004_auditoria_registro_id.sql',
       '005_quitar_transferencia.sql',
       '006_estados_simplificados.sql',
+      '007_orden_items.sql',
     ]);
   });
 

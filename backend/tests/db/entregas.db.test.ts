@@ -2,7 +2,16 @@ import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import * as entregas from '../../src/models/entregas.model.js';
 import { testApi } from '../helpers/api.js';
-import { auditoriaDe, contar, crearOrden, escenario, leerOrden, mientrasSeAnula, pagarOrden } from '../helpers/baseReal.js';
+import {
+  auditoriaDe,
+  contar,
+  crearOrden,
+  crearRenglon,
+  escenario,
+  leerOrden,
+  mientrasSeAnula,
+  pagarOrden,
+} from '../helpers/baseReal.js';
 import { cuerpoDeEntrega } from '../helpers/entregas.js';
 import { conSesion } from '../helpers/usuarios.js';
 
@@ -154,6 +163,8 @@ describe('Entregar solo con la boleta pagada — SPEC-KRILINXI-056', () => {
   it('el recargo cuenta: con un precio final mayor, lo cobrado tiene que cubrirlo', async () => {
     const esc = await escenario();
     const orden = await crearOrden(esc, { precioTotal: '45.50' });
+    // Desde SPEC-KRILINXI-068 el recargo es un renglón de cargo, y el precio final se calcula con él.
+    await crearRenglon(orden, { momento: 'ENTREGA', precioUnitario: '4.50', descripcion: 'Recargo por almacenamiento' });
     await pagarOrden(orden, esc);
 
     const sinCobrarElRecargo = await entregas.crear({ ...nuevaEntrega(orden.id, esc.usuarioId), precioFinal: 5000 }, sinRestriccion);
@@ -164,13 +175,15 @@ describe('Entregar solo con la boleta pagada — SPEC-KRILINXI-056', () => {
     expect(cobrado).toMatchObject({ tipo: 'creada', entrega: { precioFinal: '50.00' } });
   });
 
-  it('perdonar el cobro (precio final 0) no exige nada, y cobrar de más tampoco molesta', async () => {
+  it('cobrar de más no molesta; perdonar el cobro con un precio final 0 ya no existe (SPEC-KRILINXI-068)', async () => {
     const esc = await escenario();
     const perdonada = await crearOrden(esc, { precioTotal: '45.50' });
     const conDemas = await crearOrden(esc, { precioTotal: '45.50' });
     await pagarOrden(conDemas, esc, '50.00');
 
-    expect((await entregas.crear({ ...nuevaEntrega(perdonada.id, esc.usuarioId), precioFinal: 0 }, sinRestriccion)).tipo).toBe('creada');
+    // Al entregar solo se suma: un precio final por debajo del total no es el calculado. Para no cobrar lo que falta
+    // está el reembolso (SPEC-KRILINXI-070).
+    expect((await entregas.crear({ ...nuevaEntrega(perdonada.id, esc.usuarioId), precioFinal: 0 }, sinRestriccion)).tipo).toBe('precio-distinto');
     expect((await entregas.crear(nuevaEntrega(conDemas.id, esc.usuarioId), sinRestriccion)).tipo).toBe('creada');
   });
 

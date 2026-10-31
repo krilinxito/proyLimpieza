@@ -58,6 +58,25 @@ export function restar(a: Centavos, b: Centavos): Centavos {
 }
 
 /**
+ * El subtotal de un renglón de la boleta: cantidad por precio unitario, redondeado al centavo — SPEC-KRILINXI-068.
+ *
+ * La cantidad tiene dos decimales (2,5 kilos), así que llega igual que un monto: en centésimas (`250`). El producto
+ * puede tener cuatro decimales (2,5 × 3,33 = 8,325), y un renglón se cobra en centavos: se redondea la mitad hacia
+ * arriba (8,33). Es la misma cuenta que hace Postgres con `round(cantidad * precio_unitario, 2)` y la tablet en
+ * `lib/money`; si las tres no dieran lo mismo, la suma de los renglones no cuadraría con el total.
+ *
+ * Todo en enteros: `cantidad * precio` es exacto mientras no pase de 2^53 (unos 9 × 10^15). Por eso el controller
+ * acota la cantidad a 999,99 (`CANTIDAD_MAXIMA`): por el precio unitario más alto (10^10 centavos), el producto
+ * queda en 10^15.
+ */
+export function subtotal(cantidadEnCentesimas: number, precioUnitario: Centavos): Centavos {
+  if (!Number.isInteger(cantidadEnCentesimas) || !Number.isInteger(precioUnitario)) {
+    throw new Error('La cantidad y el precio unitario tienen que ser enteros (centésimas y centavos).');
+  }
+  return Math.floor((cantidadEnCentesimas * precioUnitario + 50) / 100);
+}
+
+/**
  * Centavos -> el string decimal que entiende Postgres ("1250" -> "12.50").
  *
  * Sirve para las dos direcciones: es lo que se le pasa a una columna NUMERIC
