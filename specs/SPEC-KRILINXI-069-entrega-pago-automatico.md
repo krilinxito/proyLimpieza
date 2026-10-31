@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-069
 name: Al entregar, el pago arranca con lo que falta
 slug: entrega-pago-automatico
-status: draft
+status: finished
 owner: krilinxito
 created: 2026-10-30
 scope:
@@ -10,7 +10,8 @@ scope:
   - frontend/src/features/pagos/**
 priority: medium
 depends_on: []
-tests: []
+tests:
+  - frontend\src\features\mostrador\components\EntregarEnMostrador.test.tsx
 ---
 
 ## Descripción

@@ -74,7 +74,7 @@ describe('Entregar en el Mostrador: el recorrido — SPEC-KRILINXI-009 y SPEC-KR
     const formulario = await abrirEntrega();
     // Sin cargos, el precio final es el de la boleta (SPEC-KRILINXI-068): se lee, no se escribe.
     expect(within(formulario).getByText(/^Precio final:/)).toHaveTextContent('Precio final: Bs 50,00');
-    expect(within(formulario).getByText('Falta pagar Bs 30,00.')).toBeInTheDocument();
+    expect(within(formulario).getByText('Con este cobro queda todo pagado.')).toBeInTheDocument();
 
     fireEvent.click(within(formulario).getByLabelText('Trae la boleta'));
     pagarLoQueFalta(formulario);
@@ -108,7 +108,8 @@ describe('Entregar en el Mostrador: el recorrido — SPEC-KRILINXI-009 y SPEC-KR
     fireEvent.click(within(formulario).getByLabelText('Trae la boleta'));
     const entregar = within(formulario).getByRole('button', { name: 'Entregar' });
 
-    // Sin escribir nada: falta todo lo que debe.
+    // Con el monto que arranca solo (SPEC-KRILINXI-069) alcanza, pero falta elegir cómo paga; si se borra, falta todo lo que debe.
+    escribir(formulario, 'Cuánto paga ahora (Bs, si paga)', '');
     expect(entregar).toBeDisabled();
     expect(within(formulario).getByText('Falta pagar Bs 30,00.')).toBeInTheDocument();
 
@@ -132,7 +133,9 @@ describe('Entregar en el Mostrador: el recorrido — SPEC-KRILINXI-009 y SPEC-KR
     const formulario = await abrirEntrega();
     agregarCargo({ que: 'Recargo por almacenamiento', precio: '10' }, formulario);
     expect(within(formulario).getByText(/^Precio final:/)).toHaveTextContent('Precio final: Bs 60,00');
-    expect(within(formulario).getByText('Falta pagar Bs 40,00.')).toBeInTheDocument();
+    // El monto sin tocar sigue al saldo (SPEC-KRILINXI-069): con el recargo, ya cubre lo que falta.
+    expect(within(formulario).getByLabelText('Cuánto paga ahora (Bs, si paga)')).toHaveValue('40.00');
+    expect(within(formulario).getByText('Con este cobro queda todo pagado.')).toBeInTheDocument();
   });
 
   it('sin boleta pide nombre y carnet, y los muestra en el resumen', async () => {
@@ -328,11 +331,10 @@ describe('Entregar una boleta ya pagada: sin pedir montos — SPEC-KRILINXI-046'
 
     expect(within(formulario).getByRole('button', { name: 'Agregar un cargo' })).toBeInTheDocument();
     expect(within(formulario).getByText(/^Precio final:/)).toHaveTextContent('Precio final: Bs 50,00');
-    expect(within(formulario).getByText('Falta pagar Bs 30,00.')).toBeInTheDocument();
+    expect(within(formulario).getByText('Con este cobro queda todo pagado.')).toBeInTheDocument();
     expect(within(formulario).getByLabelText('Cuánto paga ahora (Bs, si paga)')).toBeInTheDocument();
     expect(within(formulario).queryByText('Ya está todo pagado')).not.toBeInTheDocument();
-    // Al escribir un pago, aparece cómo paga.
-    escribir(formulario, 'Cuánto paga ahora (Bs, si paga)', '30');
+    // Con el pago ya escrito (SPEC-KRILINXI-069), aparece cómo paga.
     expect(within(formulario).getByText('¿Cómo paga?')).toBeInTheDocument();
     // Y ya no ofrece transferencia (SPEC-KRILINXI-055): solo efectivo, QR y tarjeta.
     expect(within(formulario).queryByLabelText('Transferencia')).not.toBeInTheDocument();
@@ -423,5 +425,87 @@ describe('Entregar con cargos al entregar — SPEC-KRILINXI-068', () => {
     expect(await within(renglon(1, 'Cargo')).findByText('Escribe qué es, por ejemplo «Camisa» o «Edredón».')).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(await db.getCrudBatch()).toBeNull();
+  });
+});
+
+describe('Entregar: "Cuánto paga ahora" arranca con lo que falta — SPEC-KRILINXI-069', () => {
+  const PAGO = 'Cuánto paga ahora (Bs, si paga)';
+  const campoPago = (formulario: HTMLElement) => within(formulario).getByLabelText(PAGO) as HTMLInputElement;
+
+  it('aparece ya escrito con el saldo completo, sin elegir la forma de pago, y se entrega con solo elegirla', async () => {
+    const { db } = await abrir();
+    const formulario = await abrirEntrega();
+    fireEvent.click(within(formulario).getByLabelText('Trae la boleta'));
+
+    expect(campoPago(formulario).value).toBe('30.00');
+    expect(within(formulario).getByText('Con este cobro queda todo pagado.')).toBeInTheDocument();
+    // "¿Cómo paga?" se pregunta, pero ninguna forma viene elegida.
+    expect(within(formulario).getByText('¿Cómo paga?')).toBeInTheDocument();
+    for (const forma of ['Efectivo', 'Pago con QR', 'Tarjeta']) expect(within(formulario).getByLabelText(forma)).not.toBeChecked();
+
+    fireEvent.click(within(formulario).getByLabelText('Efectivo'));
+    expect(within(formulario).getByRole('button', { name: 'Entregar' })).toBeEnabled();
+    await pedirConfirmacion(formulario);
+    fireEvent.click(screen.getByRole('button', { name: 'Sí, entregar' }));
+
+    expect(await resumen()).toMatchObject({ 'Cobrado ahora': 'Bs 30,00' });
+    expect((await db.getCrudBatch(100))?.crud.map((c) => c.table)).toEqual(['pagos', 'entregas']);
+  });
+
+  it('sin elegir cómo paga no se entrega: lo pide en palabras, sin confirmar nada', async () => {
+    await abrir();
+    const formulario = await abrirEntrega();
+    fireEvent.click(within(formulario).getByLabelText('Trae la boleta'));
+    fireEvent.click(within(formulario).getByRole('button', { name: 'Entregar' }));
+
+    expect(await within(formulario).findByText('Elige cómo paga: efectivo, QR o tarjeta.')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('sigue al nuevo saldo cuando se agrega o se quita un cargo, mientras no lo haya tocado', async () => {
+    await abrir();
+    const formulario = await abrirEntrega();
+
+    agregarCargo({ que: 'Recargo por almacenamiento', cuantas: '2', precio: '7,50' }, formulario);
+    expect(campoPago(formulario).value).toBe('45.00');
+    fireEvent.click(within(renglon(1, 'Cargo')).getByRole('button', { name: 'Quitar' }));
+    expect(campoPago(formulario).value).toBe('30.00');
+  });
+
+  it('un monto propio se respeta: si ya lo escribió, un cargo nuevo no lo pisa', async () => {
+    await abrir();
+    const formulario = await abrirEntrega();
+
+    escribir(formulario, PAGO, '10');
+    agregarCargo({ que: 'Recargo', precio: '5' }, formulario);
+    expect(campoPago(formulario).value).toBe('10');
+    expect(within(formulario).getByText('Con este cobro todavía falta pagar Bs 25,00.')).toBeInTheDocument();
+  });
+
+  it('borrar el monto o escribir uno menor no se corrige solo, y Entregar sigue apagado hasta que cubra', async () => {
+    await abrir();
+    const formulario = await abrirEntrega();
+    const entregar = () => within(formulario).getByRole('button', { name: 'Entregar' });
+
+    escribir(formulario, PAGO, '29,99');
+    expect(campoPago(formulario).value).toBe('29,99');
+    expect(entregar()).toBeDisabled();
+
+    escribir(formulario, PAGO, '');
+    expect(campoPago(formulario).value).toBe('');
+    expect(entregar()).toBeDisabled();
+    expect(within(formulario).getByText('Falta pagar Bs 30,00.')).toBeInTheDocument();
+
+    // Volver a escribir el monto completo lo habilita.
+    escribir(formulario, PAGO, '30');
+    expect(entregar()).toBeEnabled();
+  });
+
+  it('con la boleta ya pagada no pide ningún monto ni forma de pago', async () => {
+    await abrirConPagadas();
+    const formulario = await abrirEntrega('001240');
+
+    expect(within(formulario).queryByLabelText(PAGO)).not.toBeInTheDocument();
+    expect(within(formulario).queryByText('¿Cómo paga?')).not.toBeInTheDocument();
   });
 });

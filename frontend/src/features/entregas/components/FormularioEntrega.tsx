@@ -3,7 +3,7 @@ import { Aviso } from '../../../components/Aviso';
 import { Boton } from '../../../components/Boton';
 import { CampoTexto } from '../../../components/CampoTexto';
 import { ModalConfirmacion } from '../../../components/ModalConfirmacion';
-import { formatearBs, parsearMonto } from '../../../lib/money';
+import { aDecimal, formatearBs, parsearMonto } from '../../../lib/money';
 import { CamposDeRenglones } from '../../ordenes/components/CamposDeRenglones';
 import { ElegirMetodo } from '../../ordenes/components/ElegirMetodo';
 import { claveCampo, sumaDeCargos, totalEscrito, type RenglonEscrito } from '../../ordenes/renglones';
@@ -50,6 +50,11 @@ function montoOCero(texto: string): number {
   }
 }
 
+/** Lo que arranca escrito en "Cuánto paga ahora": todo el saldo, en el formato de siempre ("30.00"); vacío si no falta nada. */
+function pagoSugerido(saldo: number): string {
+  return saldo > 0 ? aDecimal(saldo) : '';
+}
+
 /**
  * Entregar la ropa — SPEC-KRILINXI-009. Valida quien guarda (`api/entregasLocal`); esto
  * muestra lo que le contesta y, antes de escribir, pide confirmación.
@@ -60,6 +65,10 @@ function montoOCero(texto: string): number {
  * Desde SPEC-KRILINXI-068 el precio final no se escribe: "Agregar un cargo" suma renglones (un recargo por
  * almacenamiento, con la descripción que el empleado quiera), y el precio final es el de la boleta más ellos. Al
  * entregar solo se puede sumar: para no cobrar lo que falta está el reembolso (SPEC-KRILINXI-070).
+ *
+ * Desde SPEC-KRILINXI-069 "Cuánto paga ahora" arranca con lo que falta (`pagoSugerido`) y sigue al saldo cuando se agrega o
+ * se quita un cargo, mientras el empleado no lo haya tocado. Apenas escribe (o borra) algo, ese texto es suyo y no se pisa:
+ * el formulario no lo corrige, y "Entregar" sigue apagado hasta que cubra lo que falta. "¿Cómo paga?" no se preselecciona.
  *
  * Si la boleta **ya está pagada** (lo pagado cubre su precio) no pide ningún monto — SPEC-KRILINXI-046:
  * ni cargos ni cuánto paga ahora ni cómo paga. Un campo de dinero en una boleta sin deuda da a
@@ -77,19 +86,23 @@ export function FormularioEntrega({ orden, alEntregar, alCancelar }: Props) {
     pagoFinal: '',
     metodoPago: null,
   });
+  // Lo que el empleado escribió en "Cuánto paga ahora"; `null` mientras no lo tocó (y entonces vale el saldo).
+  const [pagoEscrito, setPagoEscrito] = useState<string | null>(null);
   const [errores, setErrores] = useState<ErroresEntrega>({});
   const [aviso, setAviso] = useState<string | null>(null);
   const [confirmar, setConfirmar] = useState<EntregaLista | null>(null);
 
-  const cambiar = (campo: 'retiradoPorNombre' | 'retiradoPorCarnet' | 'pagoFinal') => (valor: string) =>
+  const cambiar = (campo: 'retiradoPorNombre' | 'retiradoPorCarnet') => (valor: string) =>
     setDatos((d) => ({ ...d, [campo]: valor }));
 
   // `orden.saldo` ya es precio de la boleta − pagos (la ropa todavía no tiene entrega): cero o menos, no hay nada que cobrar.
   const yaPagada = orden.saldo <= 0;
   const precioFinal = precioConCargos(orden, datos.cargos);
   const saldo = saldoConPrecio(orden, precioFinal);
+  // Lo que muestra "Cuánto paga ahora": lo escrito, o mientras no se tocó, todo lo que falta (SPEC-KRILINXI-069).
+  const pagoFinal = pagoEscrito ?? pagoSugerido(saldo);
   // Lo que falta cobrar después del pago escrito (SPEC-KRILINXI-056). Un pago vacío o mal escrito cuenta como cero.
-  const pagoAhora = montoOCero(datos.pagoFinal);
+  const pagoAhora = montoOCero(pagoFinal);
   // En una boleta ya pagada no hay nada que cobrar; si no, hasta que lo escrito no cubra lo que falta, no se entrega.
   const faltaCobrar = !yaPagada && saldo - pagoAhora > 0;
 
@@ -98,7 +111,7 @@ export function FormularioEntrega({ orden, alEntregar, alCancelar }: Props) {
    * del formulario diga otra cosa**: si algo se había escrito antes de que la boleta quedara pagada (por ejemplo, un
    * cobro que bajó de otra tablet), esos campos ya no se ven y no pueden contar.
    */
-  const datosAEnviar: DatosEntrega = yaPagada ? { ...datos, cargos: [], pagoFinal: '', metodoPago: null } : datos;
+  const datosAEnviar: DatosEntrega = yaPagada ? { ...datos, cargos: [], pagoFinal: '', metodoPago: null } : { ...datos, pagoFinal };
 
   async function revisar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
@@ -217,13 +230,13 @@ export function FormularioEntrega({ orden, alEntregar, alCancelar }: Props) {
 
           <CampoTexto
             etiqueta="Cuánto paga ahora (Bs, si paga)"
-            value={datos.pagoFinal}
-            onChange={cambiar('pagoFinal')}
+            value={pagoFinal}
+            onChange={setPagoEscrito}
             error={errores.pagoFinal}
             inputMode="decimal"
             autoComplete="off"
           />
-          {datos.pagoFinal.trim() !== '' && (
+          {pagoFinal.trim() !== '' && (
             <ElegirMetodo
               value={datos.metodoPago}
               onChange={(metodo) => setDatos((d) => ({ ...d, metodoPago: metodo }))}
