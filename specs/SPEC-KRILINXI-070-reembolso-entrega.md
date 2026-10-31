@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-070
 name: Entregar sin cobrar (reembolso)
 slug: reembolso-entrega
-status: in-progress
+status: finished
 owner: krilinxito
 created: 2026-10-30
 scope:
@@ -22,7 +22,21 @@ priority: high
 depends_on:
   - SPEC-KRILINXI-067
   - SPEC-KRILINXI-069
-tests: []
+tests:
+  - backend\tests\db\entregas.db.test.ts
+  - backend\tests\db\reembolso.db.test.ts
+  - backend\tests\http\entregas.test.ts
+  - backend\tests\unit\entregas.model.test.ts
+  - backend\tests\unit\ordenesHistorial.model.test.ts
+  - frontend\src\features\auditoria\components\PantallaAuditoria.test.tsx
+  - frontend\src\features\auditoria\describir.test.ts
+  - frontend\src\features\entregas\api\entregasLocal.test.ts
+  - frontend\src\features\historial\components\PantallaHistorial.test.tsx
+  - frontend\src\features\mostrador\components\EntregarEnMostrador.test.tsx
+  - frontend\src\features\mostrador\components\PantallaMostrador.test.tsx
+  - frontend\src\features\ordenes\estado.test.ts
+  - frontend\src\features\pendientes\api\corregirLocal.test.ts
+  - frontend\src\lib\powersync\schema.test.ts
 ---
 
 ## Descripción
