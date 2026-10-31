@@ -8,6 +8,7 @@ import { clienteDePrueba, ordenDePrueba, pagoDePrueba } from '../../../test/fila
 import { accionesPrincipales } from '../../../test/jerarquia';
 import { sinJerga } from '../../../test/jerga';
 import { subirRechazandoPorRuta } from '../../../test/rechazos';
+import { agregarCargo, renglon } from '../../../test/renglones';
 import { renderEnRuta } from '../../../test/render';
 import { sesionDePrueba } from '../../../test/sesion';
 
@@ -71,7 +72,8 @@ describe('Entregar en el Mostrador: el recorrido — SPEC-KRILINXI-009 y SPEC-KR
   it('con boleta y pagando lo que falta: confirma, guarda entrega y pago, y muestra el resumen', async () => {
     const { db, servidor } = await abrir();
     const formulario = await abrirEntrega();
-    expect(within(formulario).getByLabelText('Precio final (Bs)')).toHaveValue('50.00');
+    // Sin cargos, el precio final es el de la boleta (SPEC-KRILINXI-068): se lee, no se escribe.
+    expect(within(formulario).getByText(/^Precio final:/)).toHaveTextContent('Precio final: Bs 50,00');
     expect(within(formulario).getByText('Falta pagar Bs 30,00.')).toBeInTheDocument();
 
     fireEvent.click(within(formulario).getByLabelText('Trae la boleta'));
@@ -125,10 +127,11 @@ describe('Entregar en el Mostrador: el recorrido — SPEC-KRILINXI-009 y SPEC-KR
     expect(entregar).toBeEnabled();
   });
 
-  it('el saldo se recalcula al cambiar el precio final (recargo)', async () => {
+  it('el saldo se recalcula al agregar un cargo (un recargo) — SPEC-KRILINXI-068', async () => {
     await abrir();
     const formulario = await abrirEntrega();
-    escribir(formulario, 'Precio final (Bs)', '60');
+    agregarCargo({ que: 'Recargo por almacenamiento', precio: '10' }, formulario);
+    expect(within(formulario).getByText(/^Precio final:/)).toHaveTextContent('Precio final: Bs 60,00');
     expect(within(formulario).getByText('Falta pagar Bs 40,00.')).toBeInTheDocument();
   });
 
@@ -252,7 +255,8 @@ async function confirmacionDe(formulario: HTMLElement, boleta: string) {
   return screen.findByRole('dialog', { name: `¿Entregar la ropa de la boleta ${boleta}?` });
 }
 
-const CAMPOS_DE_DINERO = ['Precio final (Bs)', 'Cuánto paga ahora (Bs, si paga)'];
+// "Precio de cada una (Bs)" es el de un cargo (SPEC-KRILINXI-068): en una boleta pagada no se ofrecen cargos.
+const CAMPOS_DE_DINERO = ['Precio de cada una (Bs)', 'Cuánto paga ahora (Bs, si paga)'];
 
 describe('Entregar una boleta ya pagada: sin pedir montos — SPEC-KRILINXI-046', () => {
   it('no muestra ningún campo de dinero: dice que ya está todo pagado, en palabras', async () => {
@@ -311,18 +315,19 @@ describe('Entregar una boleta ya pagada: sin pedir montos — SPEC-KRILINXI-046'
     for (const boleta of ['001240', '001241']) {
       const formulario = await abrirEntrega(boleta);
       expect(within(formulario).getByRole('status')).toHaveTextContent('Ya está todo pagado');
-      expect(within(formulario).queryByLabelText('Precio final (Bs)')).not.toBeInTheDocument();
+      expect(within(formulario).queryByRole('button', { name: 'Agregar un cargo' })).not.toBeInTheDocument();
       fireEvent.click(within(formulario).getByRole('button', { name: 'Cancelar' }));
       // Dentro de una boleta no hay buscador (SPEC-KRILINXI-057): para buscar otra se vuelve a la ficha.
       fireEvent.click(screen.getByRole('button', { name: 'Ver toda la ropa de Rosa Quispe' }));
     }
   });
 
-  it('si falta pagar algo, el formulario es el de siempre: precio final, lo que falta y cuánto paga ahora', async () => {
+  it('si falta pagar algo, el formulario es el de siempre: cargos, precio final, lo que falta y cuánto paga ahora', async () => {
     await abrirConPagadas();
     const formulario = await abrirEntrega('001234');
 
-    expect(within(formulario).getByLabelText('Precio final (Bs)')).toHaveValue('50.00');
+    expect(within(formulario).getByRole('button', { name: 'Agregar un cargo' })).toBeInTheDocument();
+    expect(within(formulario).getByText(/^Precio final:/)).toHaveTextContent('Precio final: Bs 50,00');
     expect(within(formulario).getByText('Falta pagar Bs 30,00.')).toBeInTheDocument();
     expect(within(formulario).getByLabelText('Cuánto paga ahora (Bs, si paga)')).toBeInTheDocument();
     expect(within(formulario).queryByText('Ya está todo pagado')).not.toBeInTheDocument();
@@ -362,5 +367,61 @@ describe('Una entrega rechazada por falta de cobro llega a Para corregir — SPE
     expect(await screen.findByText(MENSAJE)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Corregir/ })).toBeInTheDocument();
     sinJerga();
+  });
+});
+
+describe('Entregar con cargos al entregar — SPEC-KRILINXI-068', () => {
+  it('ya no hay un precio final que escribir: los cargos son renglones, y arrancan sin ninguno', async () => {
+    await abrir();
+    const formulario = await abrirEntrega();
+
+    expect(within(formulario).queryByLabelText('Precio final (Bs)')).not.toBeInTheDocument();
+    expect(within(formulario).queryByRole('group', { name: /^Cargo \d+$/ })).not.toBeInTheDocument();
+  });
+
+  it('un recargo se cobra en el mismo acto y se guarda antes que el pago y la entrega', async () => {
+    const { db } = await abrir();
+    const formulario = await abrirEntrega();
+    fireEvent.click(within(formulario).getByLabelText('Trae la boleta'));
+    agregarCargo({ que: 'Recargo por almacenamiento', cuantas: '2', precio: '7,50' }, formulario);
+    expect(within(renglon(1, 'Cargo')).getByText('Bs 15,00')).toBeInTheDocument();
+
+    // Lo de antes (30) ya no alcanza: con el recargo faltan 45.
+    escribir(formulario, 'Cuánto paga ahora (Bs, si paga)', '30');
+    fireEvent.click(within(formulario).getByLabelText('Efectivo'));
+    expect(within(formulario).getByRole('button', { name: 'Entregar' })).toBeDisabled();
+    escribir(formulario, 'Cuánto paga ahora (Bs, si paga)', '45');
+    await pedirConfirmacion(formulario);
+    fireEvent.click(screen.getByRole('button', { name: 'Sí, entregar' }));
+
+    expect(await resumen()).toMatchObject({ 'Precio final': 'Bs 65,00', 'Cobrado ahora': 'Bs 45,00' });
+    const operaciones = (await db.getCrudBatch(100))?.crud ?? [];
+    expect(operaciones.map((c) => c.table)).toEqual(['orden_items', 'pagos', 'entregas']);
+    expect(operaciones[0]?.opData).toMatchObject({ momento: 'ENTREGA', descripcion: 'Recargo por almacenamiento', cantidad: '2.00' });
+    expect(operaciones[2]?.opData).toMatchObject({ precio_final: '65.00' });
+  });
+
+  it('un cargo se puede quitar antes de entregar, y el precio vuelve a ser el de la boleta', async () => {
+    await abrir();
+    const formulario = await abrirEntrega();
+    agregarCargo({ que: 'Recargo', precio: '10' }, formulario);
+    fireEvent.click(within(renglon(1, 'Cargo')).getByRole('button', { name: 'Quitar' }));
+
+    expect(within(formulario).queryByRole('group', { name: 'Cargo 1' })).not.toBeInTheDocument();
+    expect(within(formulario).getByText(/^Precio final:/)).toHaveTextContent('Precio final: Bs 50,00');
+  });
+
+  it('un cargo mal escrito dice qué hacer en su renglón y no deja entregar', async () => {
+    const { db } = await abrir();
+    const formulario = await abrirEntrega();
+    fireEvent.click(within(formulario).getByLabelText('Trae la boleta'));
+    agregarCargo({ que: '', precio: '5' }, formulario);
+    pagarLoQueFalta(formulario);
+    escribir(formulario, 'Cuánto paga ahora (Bs, si paga)', '35');
+    fireEvent.click(within(formulario).getByRole('button', { name: 'Entregar' }));
+
+    expect(await within(renglon(1, 'Cargo')).findByText('Escribe qué es, por ejemplo «Camisa» o «Edredón».')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(await db.getCrudBatch()).toBeNull();
   });
 });

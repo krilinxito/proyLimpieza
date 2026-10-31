@@ -6,7 +6,8 @@
 export const ACCIONES = ['CREAR', 'EDITAR', 'ELIMINAR', 'LOGIN', 'ENTREGAR', 'COBRAR'] as const;
 export type Accion = (typeof ACCIONES)[number];
 
-export const TABLAS = ['clientes', 'ordenes', 'pagos', 'entregas', 'usuarios', 'sucursales'] as const;
+// `orden_items`, los renglones de la boleta, desde SPEC-KRILINXI-068.
+export const TABLAS = ['clientes', 'ordenes', 'pagos', 'entregas', 'usuarios', 'sucursales', 'orden_items'] as const;
 export type Tabla = (typeof TABLAS)[number];
 
 export type RegistroAuditoria = {

@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { aDecimal, desdeDecimal, formatearBs, formatearMonto, parsearMonto, restar, sumar } from './money';
+import {
+  aDecimal,
+  desdeDecimal,
+  formatearBs,
+  formatearCantidad,
+  formatearMonto,
+  parsearCantidad,
+  parsearMonto,
+  restar,
+  subtotal,
+  sumar,
+} from './money';
 
 /**
  * Tests de tabla: `it.each` corre el mismo test una vez por fila. Para funciones puras como
@@ -106,5 +117,37 @@ describe('money: en bolivianos — SPEC-KRILINXI-006', () => {
   it('pone el símbolo de la moneda delante del monto formateado', () => {
     expect(formatearBs(123456)).toBe('Bs 1.234,56');
     expect(formatearBs(0)).toBe('Bs 0,00');
+  });
+});
+
+describe('money: el subtotal de un renglón de la boleta — SPEC-KRILINXI-068', () => {
+  // Los mismos casos que `backend/tests/unit/money.test.ts`: las dos puntas tienen que dar lo mismo que Postgres.
+  it.each([
+    [200, 1500, 3000],
+    [250, 333, 833], // 8,325 → 8,33: la mitad, hacia arriba
+    [150, 333, 500], // 4,995 → 5,00
+    [133, 101, 134], // 1,3433 → 1,34
+    [100, 0, 0],
+    [99_999, 9_999_999_999, 9_999_899_999_000], // lo más alto que acepta: todavía exacto en enteros
+  ])('%i centésimas × %i centavos = %i centavos', (cantidad, precio, esperado) => {
+    expect(subtotal(cantidad, precio)).toBe(esperado);
+  });
+
+  it('se niega a operar con algo que no sea entero', () => {
+    expect(() => subtotal(2.5, 100)).toThrow();
+  });
+
+  it('lee la cantidad como un monto: con coma o punto y hasta dos decimales', () => {
+    expect(parsearCantidad('2')).toBe(200);
+    expect(parsearCantidad('2,5')).toBe(250);
+    expect(parsearCantidad('2.25')).toBe(225);
+    expect(() => parsearCantidad('2,555')).toThrow();
+  });
+
+  it('muestra la cantidad sin ceros de más', () => {
+    expect(formatearCantidad(200)).toBe('2');
+    expect(formatearCantidad(250)).toBe('2,5');
+    expect(formatearCantidad(225)).toBe('2,25');
+    expect(formatearCantidad(5)).toBe('0,05');
   });
 });

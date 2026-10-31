@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import {
   ESTADOS_ORDEN,
   METODOS_PAGO,
+  MOMENTOS_ITEM,
   ROLES,
   TEXTO_ESTADO_ORDEN,
   TEXTO_METODO_PAGO,
@@ -51,6 +52,8 @@ const EN_EL_CODIGO: Record<string, readonly string[]> = {
   tipo_pago: TIPOS_PAGO,
   metodo_pago: METODOS_PAGO,
   rol_usuario: ROLES,
+  // Los renglones de la boleta (SPEC-KRILINXI-068).
+  momento_item: MOMENTOS_ITEM,
 };
 
 // La auditoría no llega nunca al dispositivo (CLAUDE.md §7), así que su ENUM no hace falta

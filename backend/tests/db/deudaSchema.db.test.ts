@@ -6,7 +6,7 @@ import { CARPETA_DE_MIGRACIONES, MigracionFallidaError, migrar } from '../../src
 import { testApi } from '../helpers/api.js';
 import { baseDescartable, type BaseDescartable } from '../helpers/baseDescartable.js';
 import { contar, crearUsuario, escenario } from '../helpers/baseReal.js';
-import { cuerpoDeOrden } from '../helpers/ordenes.js';
+import { boletaAlAzar, cuerpoDeOrden } from '../helpers/ordenes.js';
 import { cuerpoDeSucursal } from '../helpers/sucursales.js';
 import { comoAdmin, conSesion } from '../helpers/usuarios.js';
 
@@ -134,6 +134,7 @@ describe('Las migraciones llevan los datos de antes — SPEC-ALE186-020', () => 
       '004_auditoria_registro_id.sql',
       '005_quitar_transferencia.sql',
       '006_estados_simplificados.sql',
+      '007_orden_items.sql',
     ]);
   });
 
@@ -229,7 +230,7 @@ describe('cerrada_en la pone la misma sentencia que cierra — SPEC-ALE186-020',
     const res = await testApi()
       .post('/api/ordenes')
       .set(conSesion({ id: esc.usuarioId, sucursalId: esc.sucursalId }))
-      .send(cuerpoDeOrden({ cliente_id: esc.clienteId, numero_boleta: `N-${randomUUID().slice(0, 6)}`, fecha_entrada: haceUnAnio }));
+      .send(cuerpoDeOrden({ cliente_id: esc.clienteId, numero_boleta: boletaAlAzar('N'), fecha_entrada: haceUnAnio }));
 
     expect(res.status).toBe(409);
     expect(res.body.error.codigo).toBe('SUCURSAL_CERRADA');

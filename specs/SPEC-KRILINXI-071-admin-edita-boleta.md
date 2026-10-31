@@ -39,6 +39,8 @@ Hoy el admin puede cambiar el estado y los datos de una orden en estados abierto
 
 ## Notas
 
+- **Aviso de SPEC-KRILINXI-068 (2026-10-30):** cada renglón tiene un `momento`: `INGRESO` (los de la boleta, cuya suma no pasa de `precio_total`) o `ENTREGA` (los cargos agregados al entregar, que se suman encima y forman `precio_final`). Donde esta spec dice "la suma de los renglones queda igual a precio_total", vale para los de `INGRESO`. Si el admin cambia un cargo de una boleta ya entregada, hay que decidir si recalcula `precio_final` de la entrega (la descripción de esta spec hoy dice que no). Desde la 068 el EMPLEADO no edita `precio_total` (403), y corregir un renglón mal escrito queda solo en manos del admin, en esta spec.
+
 <!--
 Convención de trazabilidad: todo test relacionado con esta spec debe llevar su id
 en el nombre del describe/bloque, por ejemplo:

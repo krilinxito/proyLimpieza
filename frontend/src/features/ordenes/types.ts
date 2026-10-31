@@ -1,7 +1,8 @@
 import type { Centavos } from '../../lib/money';
-import type { EstadoOrden, MetodoPago, TipoPago } from '../../lib/dominio';
+import type { EstadoOrden, MetodoPago, MomentoItem, TipoPago } from '../../lib/dominio';
 import type { Retiro } from './retiro';
 import type { Cliente, ClienteElegido } from '../clientes/types';
+import type { ClaveCampoRenglon, RenglonEscrito } from './renglones';
 
 /** Lo que escribe el empleado al registrar ropa, tal cual, sin limpiar. */
 export type DatosRopa = {
@@ -11,9 +12,11 @@ export type DatosRopa = {
    */
   cliente: ClienteElegido | null;
   numeroBoleta: string;
-  descripcion: string;
-  /** Como lo escribió: "25", "25,50" o "25.50". */
-  precio: string;
+  /**
+   * Qué deja, renglón por renglón (SPEC-KRILINXI-068): descripción, cantidad y precio de cada una. El total y la
+   * descripción de la boleta salen de acá; ya no se escriben a mano.
+   */
+  renglones: RenglonEscrito[];
   /** AAAA-MM-DD, del selector de fecha; vacío si no se sabe. */
   fechaEstimada: string;
   /** Vacío si no deja adelanto. */
@@ -22,8 +25,13 @@ export type DatosRopa = {
   metodoAdelanto: MetodoPago | null;
 };
 
-/** Qué está mal en cada campo, en palabras del mostrador. */
-export type ErroresRopa = Partial<Record<keyof DatosRopa | 'clienteNombre' | 'clienteTelefono' | 'clienteCarnet', string>>;
+/**
+ * Qué está mal en cada campo, en palabras del mostrador. Los de cada renglón van por su clave (`renglon:<clave>:cantidad`,
+ * SPEC-KRILINXI-068), y `renglones` es lo que se dice de todos juntos (un total demasiado alto).
+ */
+export type ErroresRopa = Partial<
+  Record<keyof DatosRopa | 'clienteNombre' | 'clienteTelefono' | 'clienteCarnet' | ClaveCampoRenglon, string>
+>;
 
 /**
  * Cómo va lo escrito, sin guardar nada — SPEC-KRILINXI-058: lo que el formulario usa para mostrar el visto de cada campo y
@@ -57,6 +65,18 @@ export type ResultadoRegistro =
   /** El cliente nuevo tiene el teléfono de otro que ya existe (SPEC-KRILINXI-034): no se guardó nada. */
   | { tipo: 'telefono-ocupado'; cliente: Cliente };
 
+/** Un renglón de la boleta tal como se muestra — SPEC-KRILINXI-068. */
+export type RenglonVisto = {
+  id: string;
+  /** INGRESO, de la boleta; ENTREGA, un cargo al entregar. */
+  momento: MomentoItem;
+  descripcion: string;
+  /** En centésimas: 2,5 son 250. */
+  cantidad: number;
+  precioUnitario: Centavos;
+  subtotal: Centavos;
+};
+
 /** Un pago tal como se muestra en el detalle — SPEC-KRILINXI-008. */
 export type PagoVisto = {
   id: string;
@@ -87,6 +107,8 @@ export type OrdenVista = {
   pagado: Centavos;
   saldo: Centavos;
   pagos: PagoVisto[];
+  /** Sus renglones (SPEC-KRILINXI-068): los de la boleta y, después, los cargos. Vacío en una boleta de antes. */
+  renglones: RenglonVisto[];
 };
 
 /** Cómo terminó una acción sobre una orden (avanzar, anular, cobrar). */

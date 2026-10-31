@@ -6,7 +6,7 @@
 // dispositivo, reintento idempotente y auditoría en la misma sentencia.
 import pg from 'pg';
 import { pool } from '../db/pool.js';
-import { ESTADOS_CERRADOS, ESTADOS_ORDEN } from '../utils/dominio.js';
+import { ESTADOS_ABIERTOS } from '../utils/dominio.js';
 import { conAuditoria, updateConAntes } from './auditoria.model.js';
 
 export interface Sucursal {
@@ -61,12 +61,8 @@ export async function crear(nombre: string): Promise<Sucursal> {
 //  Alta y edición desde la API — SPEC-ALE186-011
 // ------------------------------------------------------------------
 
-/**
- * Los estados de una orden cuya ropa todavía está en el local. Una sucursal con
- * órdenes así no se cierra: el cliente vuelve a retirarla a esa misma sucursal
- * (CLAUDE.md, sección 3).
- */
-export const ESTADOS_ABIERTOS = ESTADOS_ORDEN.filter((estado) => !ESTADOS_CERRADOS.includes(estado));
+// Una sucursal con órdenes en ESTADOS_ABIERTOS (su ropa todavía está en el local) no se cierra: el
+// cliente vuelve a retirarla a esa misma sucursal (CLAUDE.md, sección 3).
 
 // El índice único sobre `lower(btrim(nombre))` (SPEC-ALE186-020, migración 003).
 // Hasta esa spec la regla vivía en el código, como condición dentro de cada

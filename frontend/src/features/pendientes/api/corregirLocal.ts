@@ -21,7 +21,10 @@
  *    mira y se rehace desde el Mostrador.
  *
  * Qué campos se corrigen de cada tabla está en `../correccion.ts`. Las validaciones son las mismas que en la pantalla de origen, con sus mismos textos
- * (`validarRopa`, los mensajes de clientes, cobros y entregas).
+ * (`validarBoleta`, `validarRenglon`, los mensajes de clientes, cobros y entregas).
+ *
+ * Una entrega se vuelve a guardar con el precio final que da la tablet en ese momento (el total más los cargos que tiene,
+ * SPEC-KRILINXI-068): si se rechazó porque un cargo no llegó, después de corregirlo (o descartarlo) el precio cuadra.
  */
 import type { BaseLocal, Fila, Sentencia } from '../../../lib/powersync';
 import { aDecimal, parsearMonto, type Centavos } from '../../../lib/money';
@@ -31,7 +34,9 @@ import type { Cliente } from '../../clientes/types';
 import { listarParaCorregir } from './paraCorregirLocal';
 import { MENSAJES_ENTREGA } from '../../entregas/api/entregasLocal';
 import { MENSAJES_ACCION } from '../../ordenes/api/ropaLocal';
-import { validarRopa } from '../../ordenes/api/ordenesLocal';
+import { MENSAJES, validarBoleta } from '../../ordenes/api/ordenesLocal';
+import { precioFinalLocal } from '../../ordenes/api/renglonesLocal';
+import { validarRenglon } from '../../ordenes/renglones';
 import { CAMPOS, MENSAJES_CORRECCION, paraFormulario, prepararCorreccion, type ResultadoCorreccion } from '../correccion';
 import type { RegistroParaCorregir } from '../types';
 
@@ -57,28 +62,22 @@ async function validarOrden(
   ordenId: string,
   v: Record<string, string>,
 ): Promise<Validacion> {
-  const { errores, valores } = await validarRopa(
+  const { errores, valores } = await validarBoleta(
     base,
     sucursalId,
-    {
-      numeroBoleta: v.numero_boleta ?? '',
-      descripcion: v.descripcion ?? '',
-      precio: v.precio_total ?? '',
-      fechaEstimada: v.fecha_estimada_salida ?? '',
-    },
+    { numeroBoleta: v.numero_boleta ?? '', fechaEstimada: v.fecha_estimada_salida ?? '' },
     ordenId,
   );
+  const descripcion = (v.descripcion ?? '').trim();
   const porColumna: Record<string, string> = {};
   if (errores.numeroBoleta) porColumna.numero_boleta = errores.numeroBoleta;
-  if (errores.descripcion) porColumna.descripcion = errores.descripcion;
-  if (errores.precio) porColumna.precio_total = errores.precio;
+  if (descripcion === '') porColumna.descripcion = MENSAJES.sinDescripcion;
   if (errores.fechaEstimada) porColumna.fecha_estimada_salida = errores.fechaEstimada;
   return {
     errores: porColumna,
     datos: {
       numero_boleta: valores.numeroBoleta,
-      descripcion: valores.descripcion,
-      precio_total: valores.precio === null ? null : aDecimal(valores.precio),
+      descripcion,
       fecha_estimada_salida: valores.fechaEstimada,
     },
   };
@@ -101,11 +100,34 @@ function validarPago(v: Record<string, string>): Validacion {
   return { errores, datos: { monto: monto === null || monto <= 0 ? null : aDecimal(monto), metodo } };
 }
 
+/** Un renglón de la boleta (o un cargo) — SPEC-KRILINXI-068: las mismas reglas que al escribirlo. */
+function validarDatosRenglon(registroId: string, v: Record<string, string>): Validacion {
+  const { errores, valido } = validarRenglon({
+    clave: registroId,
+    descripcion: v.descripcion ?? '',
+    cantidad: v.cantidad ?? '',
+    precioUnitario: v.precio_unitario ?? '',
+  });
+  const porColumna: Record<string, string> = {};
+  if (errores.descripcion) porColumna.descripcion = errores.descripcion;
+  if (errores.cantidad) porColumna.cantidad = errores.cantidad;
+  if (errores.precioUnitario) porColumna.precio_unitario = errores.precioUnitario;
+  return {
+    errores: porColumna,
+    datos: valido
+      ? {
+          descripcion: valido.descripcion,
+          cantidad: aDecimal(valido.cantidad),
+          precio_unitario: aDecimal(valido.precioUnitario),
+        }
+      : {},
+  };
+}
+
 function validarEntrega(v: Record<string, string>): Validacion {
   const tipo = v.tipo_retiro ?? '';
   const nombre = (v.retirado_por_nombre ?? '').trim();
   const carnet = (v.retirado_por_carnet ?? '').trim();
-  const precioFinal = leerMonto(v.precio_final ?? '');
   const errores: Record<string, string> = {};
   if (!esTipoRetiro(tipo)) errores.tipo_retiro = MENSAJES_ENTREGA.sinBoletaElegida;
   if (tipo === 'SIN_BOLETA') {
@@ -113,7 +135,6 @@ function validarEntrega(v: Record<string, string>): Validacion {
     if (nombre === '') errores.retirado_por_nombre = MENSAJES_ENTREGA.sinNombre;
     if (carnet === '') errores.retirado_por_carnet = MENSAJES_ENTREGA.sinCarnet;
   }
-  if (precioFinal === null) errores.precio_final = MENSAJES_ENTREGA.precioFinal;
   const conBoleta = tipo === 'CON_BOLETA';
   return {
     errores,
@@ -122,7 +143,6 @@ function validarEntrega(v: Record<string, string>): Validacion {
       // Con boleta no se pide a nadie: se guarda vacío, igual que al entregar.
       retirado_por_nombre: conBoleta ? null : nombre,
       retirado_por_carnet: conBoleta ? null : carnet,
-      precio_final: precioFinal === null ? null : aDecimal(precioFinal),
     },
   };
 }
@@ -140,6 +160,8 @@ function validar(
       return validarDatosCliente(base, registro.registroId, valores);
     case 'pagos':
       return validarPago(valores);
+    case 'orden_items':
+      return validarDatosRenglon(registro.registroId, valores);
     default:
       return validarEntrega(valores);
   }
@@ -185,8 +207,13 @@ export async function guardarCorreccion(
   const { errores, datos } = await validar(base, sucursalId, registro, completos);
   if (Object.keys(errores).length > 0) return { tipo: 'invalida', errores };
 
-  // Solo las columnas del formulario: el resto del alta (cliente, sucursal, fechas) va tal cual.
-  const corregidos = Object.fromEntries(claves.map((c) => [c, datos[c]]));
+  // Solo las columnas del formulario: el resto del alta (cliente, sucursal, fechas) va tal cual. Una entrega, además, con
+  // el precio final que da la tablet ahora (SPEC-KRILINXI-068): el que se había mandado puede ser justo lo que se rechazó.
+  const corregidos: Record<string, unknown> = Object.fromEntries(claves.map((c) => [c, datos[c]]));
+  if (registro.tabla === 'entregas' && esAlta && typeof registro.datos.orden_id === 'string') {
+    const precioFinal = await precioFinalLocal(base, registro.datos.orden_id);
+    if (precioFinal !== null) corregidos.precio_final = aDecimal(precioFinal);
+  }
 
   if (esAlta) {
     await base.ejecutarJuntas([reescribirAlta(registro, corregidos), borrarDeLaLista(registro.id)]);
@@ -252,8 +279,11 @@ export async function usarMismoCliente(
   const altas = todos.filter((r) => r.operacion === 'PUT' && r.id !== registro.id);
   const ordenes = altas.filter((r) => r.tabla === 'ordenes' && r.datos.cliente_id === registro.registroId);
   const idsDeOrdenes = new Set(ordenes.map((o) => o.registroId));
+  // Los renglones también le apuntan a la orden (SPEC-KRILINXI-068), y se rechazaron con ella.
   const loQueLesApunta = altas.filter(
-    (r) => (r.tabla === 'pagos' || r.tabla === 'entregas') && idsDeOrdenes.has(String(r.datos.orden_id)),
+    (r) =>
+      (r.tabla === 'pagos' || r.tabla === 'entregas' || r.tabla === 'orden_items') &&
+      idsDeOrdenes.has(String(r.datos.orden_id)),
   );
 
   const sentencias: Sentencia[] = [

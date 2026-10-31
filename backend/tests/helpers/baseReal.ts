@@ -19,6 +19,8 @@
 //                           SPEC-ALE186-008, para las estadísticas.
 //   pagarOrden(orden, esc, monto?) Cobra la orden por completo (o por `monto`): desde SPEC-KRILINXI-056 la ropa solo se entrega con la
 //                           boleta pagada, así que un test que entrega por el model paga antes.
+//   crearRenglon(orden, {...}) Un renglón de la boleta escrito directo, sin la regla del total — SPEC-KRILINXI-068
+//                           (devuelve su id). Para preparar una orden con renglones; lo que prueba la regla va por el model.
 //   crearSucursal() / crearUsuario() / crearCliente()
 //                           Las piezas sueltas, para armar casos con dos
 //                           sucursales o un ADMIN.
@@ -45,7 +47,7 @@
 //   const resultado = await pagos.crear({ ...}, { sucursalId: esc.sucursalId });
 import { randomUUID } from 'node:crypto';
 import { pool } from '../../src/db/pool.js';
-import type { EstadoOrden, MetodoPago, TipoPago } from '../../src/utils/dominio.js';
+import type { EstadoOrden, MetodoPago, MomentoItem, TipoPago } from '../../src/utils/dominio.js';
 
 /** Un sufijo corto y único, para los campos que la base exige únicos. */
 function unico(): string {
@@ -169,6 +171,31 @@ export async function pagarOrden(orden: OrdenCreada, esc: Escenario, monto?: str
        FROM ordenes o WHERE o.id = $2`,
     [randomUUID(), orden.id, monto ?? null, esc.usuarioId],
   );
+}
+
+/**
+ * Un renglón de la boleta, en la sucursal de la orden — SPEC-KRILINXI-068. Va directo a la tabla, sin la regla del
+ * total que aplica el model: sirve para preparar el caso, no para probar la regla.
+ */
+export async function crearRenglon(
+  orden: OrdenCreada,
+  campos: { cantidad?: string; precioUnitario: string; momento?: MomentoItem; posicion?: number; descripcion?: string },
+): Promise<string> {
+  const id = randomUUID();
+  await pool.query(
+    `INSERT INTO orden_items (id, orden_id, sucursal_id, momento, posicion, descripcion, cantidad, precio_unitario)
+     SELECT $1, o.id, o.sucursal_id, $3, $4, $5, $6, $7 FROM ordenes o WHERE o.id = $2`,
+    [
+      id,
+      orden.id,
+      campos.momento ?? 'INGRESO',
+      campos.posicion ?? 0,
+      campos.descripcion ?? 'Camisa',
+      campos.cantidad ?? '1',
+      campos.precioUnitario,
+    ],
+  );
+  return id;
 }
 
 /** El retiro de la orden: la deja ENTREGADO, como hace el model de entregas. */

@@ -268,6 +268,7 @@ describe('PATCH /api/ordenes/:id — SPEC-ALE186-004', () => {
   }
 
   it('aplica solo los cinco campos editables y responde 200 con la orden', async () => {
+    // Un ADMIN: desde SPEC-KRILINXI-068 el precio solo lo cambia él.
     const res = await edicion({
       numero_boleta: '009999',
       descripcion: 'Terno azul',
@@ -279,7 +280,7 @@ describe('PATCH /api/ordenes/:id — SPEC-ALE186-004', () => {
       sucursal_id: IDS.otraSucursal,
       usuario_recepcion_id: IDS.cliente,
       fecha_entrada: '2020-01-01T00:00:00Z',
-    });
+    }, ADMIN);
 
     expect(res.status).toBe(200);
     expect(actualizar.mock.calls[0]?.[1]).toEqual({
@@ -354,10 +355,15 @@ describe('PATCH /api/ordenes/:id — SPEC-ALE186-004', () => {
   it.each([
     ['la boleta en blanco', { numero_boleta: ' ' }],
     ['la descripción en blanco', { descripcion: '' }],
-    ['un precio negativo', { precio_total: -1 }],
     ['una fecha estimada inválida', { fecha_estimada_salida: 'mañana' }],
   ])('responde 400 con %s', async (_caso, cuerpo) => {
     const res = await edicion(cuerpo);
+
+    expectApiError(res, { status: 400, codigo: 'VALIDACION' });
+  });
+
+  it('responde 400 con un precio negativo (el que puede cambiarlo es el ADMIN, SPEC-KRILINXI-068)', async () => {
+    const res = await edicion({ precio_total: -1 }, ADMIN);
 
     expectApiError(res, { status: 400, codigo: 'VALIDACION' });
   });
@@ -421,5 +427,36 @@ describe('POST /api/ordenes: sucursal cerrada y fecha futura — SPEC-ALE186-014
 
     expectApiError(res, { status: 400, codigo: 'FECHA_FUTURA' });
     expect(res.body.error.mensaje).toMatch(/hora de la tablet/);
+  });
+});
+
+describe('PATCH /api/ordenes/:id: el precio sale de los renglones — SPEC-KRILINXI-068', () => {
+  it('un EMPLEADO no cambia el precio_total: 403, sin llegar al model', async () => {
+    const res = await edicion({ precio_total: '60' });
+
+    expectApiError(res, { status: 403, codigo: 'SIN_PERMISO' });
+    expect(res.body.error.mensaje).toMatch(/administrador/);
+    expect(actualizar).not.toHaveBeenCalled();
+  });
+
+  it('tampoco junto con otros campos: el PATCH entero se rechaza, no se aplica a medias', async () => {
+    const res = await edicion({ descripcion: 'Terno azul', precio_total: '45.50' });
+
+    expectApiError(res, { status: 403, codigo: 'SIN_PERMISO' });
+    expect(actualizar).not.toHaveBeenCalled();
+  });
+
+  it('el EMPLEADO sigue pudiendo anular y cambiar la fecha estimada', async () => {
+    const res = await edicion({ estado: 'ANULADO', fecha_estimada_salida: '2026-11-05' });
+
+    expect(res.status).toBe(200);
+    expect(actualizar).toHaveBeenCalledTimes(1);
+  });
+
+  it('el ADMIN sí cambia el precio_total', async () => {
+    const res = await edicion({ precio_total: '60' }, ADMIN);
+
+    expect(res.status).toBe(200);
+    expect(actualizar.mock.calls[0]?.[1]).toEqual({ precioTotal: 6000 });
   });
 });

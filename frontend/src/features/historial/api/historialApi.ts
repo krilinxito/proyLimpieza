@@ -9,8 +9,9 @@
  * solo se pasan a centavos para mostrarlos, no se suma nada.
  */
 import { api, RespuestaRara } from '../../../lib/api';
-import { esEstadoOrden, esTipoRetiro } from '../../../lib/dominio';
+import { esEstadoOrden, esMomentoItem, esTipoRetiro } from '../../../lib/dominio';
 import { desdeDecimal } from '../../../lib/money';
+import type { RenglonVisto } from '../../ordenes/types';
 import { POR_PAGINA_ANCHA } from '../../../lib/tamanoDePagina';
 import type { Retiro } from '../../ordenes/retiro';
 import type { ParametrosHistorial } from '../filtro';
@@ -42,6 +43,19 @@ function leerRetiro(r: unknown): Retiro | null | undefined {
   return { tipo: r.tipo, nombre: r.nombre, carnet: r.carnet };
 }
 
+/**
+ * Un renglón de la boleta (SPEC-KRILINXI-068); null si no encaja. La cantidad también llega como texto decimal
+ * (`"2.50"`) y se lee igual que un monto, en centésimas. El subtotal lo calculó Postgres: se muestra, no se recalcula.
+ */
+function leerRenglon(r: unknown): RenglonVisto | null {
+  if (!esObjeto(r) || !esTexto(r.id) || !esMomentoItem(r.momento) || !esTexto(r.descripcion)) return null;
+  const cantidad = leerMonto(r.cantidad);
+  const precioUnitario = leerMonto(r.precioUnitario);
+  const subtotal = leerMonto(r.subtotal);
+  if (cantidad === null || precioUnitario === null || subtotal === null) return null;
+  return { id: r.id, momento: r.momento, descripcion: r.descripcion, cantidad, precioUnitario, subtotal };
+}
+
 function leerBoleta(b: unknown): BoletaListada | null {
   if (!esObjeto(b) || !esTexto(b.id) || !esTexto(b.numeroBoleta) || !esTexto(b.descripcion)) return null;
   if (!esEstadoOrden(b.estado) || !esTexto(b.fechaEntrada) || !textoONulo(b.fechaEstimadaSalida)) return null;
@@ -57,6 +71,9 @@ function leerBoleta(b: unknown): BoletaListada | null {
   if (b.precioFinal !== null && precioFinal === null) return null;
   const retiro = leerRetiro(b.retiro);
   if (retiro === undefined) return null;
+  if (!Array.isArray(b.renglones)) return null;
+  const renglones = b.renglones.map(leerRenglon);
+  if (renglones.some((r) => r === null)) return null;
 
   return {
     id: b.id,
@@ -74,6 +91,7 @@ function leerBoleta(b: unknown): BoletaListada | null {
     retiro,
     pagado,
     saldo,
+    renglones: renglones.filter((r): r is RenglonVisto => r !== null),
   };
 }
 

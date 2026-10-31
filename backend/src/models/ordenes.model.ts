@@ -7,7 +7,7 @@
 // que la aplica, no en una consulta aparte (ver `actualizar`).
 import pg from 'pg';
 import { pool } from '../db/pool.js';
-import type { EstadoOrden } from '../utils/dominio.js';
+import type { EstadoOrden, MomentoItem } from '../utils/dominio.js';
 import { formatear, type Centavos } from '../utils/money.js';
 import { salteo, type Paginacion } from '../utils/paginacion.js';
 import { ZONA_NEGOCIO, enElPeriodo, horaDelNegocio } from '../utils/periodo.js';
@@ -63,6 +63,14 @@ function aOrden(fila: FilaOrden): Orden {
 const COLUMNAS =
   'id, numero_boleta, cliente_id, sucursal_id, usuario_recepcion_id, descripcion, ' +
   'fecha_entrada, fecha_estimada_salida, precio_total, estado';
+
+/**
+ * El subtotal de un renglón de la boleta (`orden_items`), en SQL — SPEC-KRILINXI-068. Es la misma cuenta que `subtotal`
+ * de `utils/money.ts` y de `lib/money` en la tablet: `round` de Postgres redondea la mitad hacia arriba (para positivos,
+ * igual que el `+ 50` de las otras dos). Vive acá, y no en el model de los renglones, porque lo usan los tres (órdenes,
+ * renglones y entregas) y los otros dos ya importan este: así no se importan en círculo.
+ */
+export const SUBTOTAL_SQL = (alias: string): string => `round(${alias}.cantidad * ${alias}.precio_unitario, 2)`;
 
 // ------------------------------------------------------------------
 //  Errores de dominio (el controller decide qué HTTP son)
@@ -160,6 +168,22 @@ export interface BoletaDelHistorial {
   retiro: Retiro | null;
   pagado: string;
   saldo: string;
+  /**
+   * Sus renglones — SPEC-KRILINXI-068: primero los de la boleta y después los cargos al entregar, cada grupo en el
+   * orden en que se escribieron. Vacío en una boleta de antes de los renglones.
+   */
+  renglones: RenglonDelHistorial[];
+}
+
+/** Un renglón de una boleta del historial. Los números, como texto de Postgres (`"2.50"`). */
+export interface RenglonDelHistorial {
+  id: string;
+  momento: MomentoItem;
+  descripcion: string;
+  cantidad: string;
+  precioUnitario: string;
+  /** `round(cantidad × precio unitario, 2)`, calculado por Postgres. */
+  subtotal: string;
 }
 
 /** Cómo se retiró la ropa. Nombre y carnet solo vienen si fue SIN_BOLETA (el schema los exige). */
@@ -188,6 +212,7 @@ interface FilaHistorial {
   retirado_por_carnet: string | null;
   pagado: string;
   saldo: string;
+  renglones: RenglonDelHistorial[];
 }
 
 // Los extremos de "todo el historial" cuando falta uno de los dos bordes. Así se
@@ -231,6 +256,26 @@ const HISTORIAL = `
        AND (NOT $8::boolean OR (o.estado <> 'ANULADO' AND v.saldo_pendiente > 0))
   )`;
 
+/**
+ * Los renglones de cada boleta de la página, como un arreglo JSON — SPEC-KRILINXI-068.
+ *
+ * Es una subconsulta por fila del `SELECT` de la página, no una consulta aparte por boleta: Postgres la resuelve en la
+ * misma consulta, con `idx_orden_items_orden`, y solo para las boletas de la página (el `LIMIT` ya se aplicó). Los
+ * números salen con `::text`: dentro de un JSON, un NUMERIC sería un número, y al leerlo en JavaScript, un float.
+ */
+const RENGLONES = `COALESCE((
+              SELECT json_agg(json_build_object(
+                       'id', i.id,
+                       'momento', i.momento,
+                       'descripcion', i.descripcion,
+                       'cantidad', i.cantidad::text,
+                       'precioUnitario', i.precio_unitario::text,
+                       'subtotal', ${SUBTOTAL_SQL('i')}::text
+                     ) ORDER BY i.momento, i.posicion, i.id)
+                FROM orden_items i
+               WHERE i.orden_id = historial.id
+            ), '[]'::json) AS renglones`;
+
 /** Un texto escrito por una persona, como patrón de `LIKE`: `%`, `_` y `\` valen por sí mismos. */
 function contiene(texto: string): string {
   return `%${texto.replace(/[\\%_]/g, '\\$&')}%`;
@@ -273,7 +318,8 @@ export async function listar(
             descripcion, estado,
             to_char(${horaDelNegocio('fecha_entrada', '$3')}, 'YYYY-MM-DD HH24:MI:SS') AS fecha_entrada,
             to_char(fecha_estimada_salida, 'YYYY-MM-DD') AS fecha_estimada_salida,
-            precio_total, precio_final, tipo_retiro, retirado_por_nombre, retirado_por_carnet, pagado, saldo
+            precio_total, precio_final, tipo_retiro, retirado_por_nombre, retirado_por_carnet, pagado, saldo,
+            ${RENGLONES}
        FROM historial
       ORDER BY historial.fecha_entrada DESC, id DESC
       LIMIT $9 OFFSET $10`,
@@ -299,6 +345,7 @@ export async function listar(
           : { tipo: fila.tipo_retiro, nombre: fila.retirado_por_nombre, carnet: fila.retirado_por_carnet },
       pagado: fila.pagado,
       saldo: fila.saldo,
+      renglones: fila.renglones,
     })),
   };
 }

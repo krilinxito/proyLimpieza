@@ -3,9 +3,11 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   ACCIONES_AUDITORIA,
+  ESTADOS_ABIERTOS,
   ESTADOS_CERRADOS,
   ESTADOS_ORDEN,
   METODOS_PAGO,
+  MOMENTOS_ITEM,
   TIPOS_PAGO,
   TIPOS_RETIRO,
   esEstadoOrden,
@@ -44,6 +46,7 @@ describe('Dominio: los ENUM del schema — SPEC-ALE186-004', () => {
     ['tipo_retiro', TIPOS_RETIRO],
     ['tipo_pago', TIPOS_PAGO],
     ['metodo_pago', METODOS_PAGO],
+    ['momento_item', MOMENTOS_ITEM],
   ])('%s tiene exactamente los mismos valores que el código', (nombre, lista) => {
     expect(enums.get(nombre)).toEqual([...lista]);
   });
@@ -110,5 +113,15 @@ describe('Dominio: cómo cambia una orden — SPEC-ALE186-004 y SPEC-KRILINXI-06
 
   it('sin estado ni otros campos, cualquier estado vale (el PATCH vacío)', () => {
     expect(estadosDeOrigen(undefined, false)).toEqual([...ESTADOS_ORDEN]);
+  });
+});
+
+describe('Dominio: los renglones de la boleta — SPEC-KRILINXI-068', () => {
+  it('la migración 007 crea momento_item con INGRESO y ENTREGA, y el código dice lo mismo', () => {
+    expect(enumsDelSchema().get('momento_item')).toEqual(['INGRESO', 'ENTREGA']);
+  });
+
+  it('una orden abierta es la que no está cerrada: hoy, solo RECIBIDO', () => {
+    expect([...ESTADOS_ABIERTOS]).toEqual(['RECIBIDO']);
   });
 });

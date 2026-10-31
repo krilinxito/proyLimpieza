@@ -27,6 +27,21 @@ export function boletaDePrueba(cambios: Record<string, unknown> = {}) {
     retiro: null,
     pagado: '20.00',
     saldo: '30.00',
+    // Sin renglones, como una boleta de antes de SPEC-KRILINXI-068. Con ellos: `renglones: [renglonDePrueba()]`.
+    renglones: [],
+    ...cambios,
+  };
+}
+
+/** Un renglón de una boleta del historial (SPEC-KRILINXI-068), con los números como texto, como los serializa el backend. */
+export function renglonDePrueba(cambios: Record<string, unknown> = {}) {
+  return {
+    id: crypto.randomUUID(),
+    momento: 'INGRESO',
+    descripcion: 'Camisa',
+    cantidad: '2.00',
+    precioUnitario: '15.00',
+    subtotal: '30.00',
     ...cambios,
   };
 }

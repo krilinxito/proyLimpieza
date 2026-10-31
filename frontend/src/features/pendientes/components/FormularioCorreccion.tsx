@@ -116,7 +116,7 @@ export function FormularioCorreccion({ registro, guardar, alGuardar, alVolver, a
         onChange={cambiar(clave)}
         error={errores[clave]}
         type={tipo === 'fecha' ? 'date' : 'text'}
-        inputMode={tipo === 'monto' ? 'decimal' : undefined}
+        inputMode={tipo === 'monto' || tipo === 'cantidad' ? 'decimal' : undefined}
         autoComplete="off"
       />
     );

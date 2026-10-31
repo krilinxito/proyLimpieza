@@ -3,8 +3,10 @@ import { Aviso } from '../../../components/Aviso';
 import { Boton } from '../../../components/Boton';
 import { CampoTexto } from '../../../components/CampoTexto';
 import { ModalConfirmacion } from '../../../components/ModalConfirmacion';
-import { aDecimal, formatearBs, parsearMonto } from '../../../lib/money';
+import { formatearBs, parsearMonto } from '../../../lib/money';
+import { CamposDeRenglones } from '../../ordenes/components/CamposDeRenglones';
 import { ElegirMetodo } from '../../ordenes/components/ElegirMetodo';
+import { claveCampo, sumaDeCargos, totalEscrito, type RenglonEscrito } from '../../ordenes/renglones';
 import type { OrdenVista } from '../../ordenes/types';
 import { calcularSaldo } from '../../pagos/saldo';
 import { useEntregar } from '../hooks/useEntregar';
@@ -18,23 +20,21 @@ type Props = {
   alCancelar: () => void;
 };
 
-/** Lo que falta pagar con el precio final escrito, mientras se escribe. Null si no es un monto. */
-function saldoConPrecio(orden: OrdenVista, precioFinal: string): number | null {
-  try {
-    const precio = parsearMonto(precioFinal);
-    return calcularSaldo({
-      precioTotal: orden.precioTotal,
-      precioFinal: precio,
-      pagos: orden.pagos.map((p) => p.monto),
-    });
-  } catch {
-    return null;
-  }
+/**
+ * El precio final con los cargos que se van escribiendo — SPEC-KRILINXI-068: el de la boleta, más los cargos que ya tenga y
+ * los nuevos que ya tienen cantidad y precio. Es lo que muestra el formulario; el que se guarda lo calcula `entregasLocal`.
+ */
+function precioConCargos(orden: OrdenVista, cargos: readonly RenglonEscrito[]): number {
+  return orden.precioTotal + sumaDeCargos(orden.renglones) + totalEscrito(cargos);
+}
+
+/** Lo que falta pagar con ese precio final. */
+function saldoConPrecio(orden: OrdenVista, precioFinal: number): number {
+  return calcularSaldo({ precioTotal: orden.precioTotal, precioFinal, pagos: orden.pagos.map((p) => p.monto) });
 }
 
 /** Lo que dice el renglón del saldo: cuánto falta, y cuánto faltaría después de lo que se escribió en "Cuánto paga ahora". */
-function mensajeDeSaldo(saldo: number | null, pagoAhora: number): string {
-  if (saldo === null) return ' ';
+function mensajeDeSaldo(saldo: number, pagoAhora: number): string {
   if (saldo <= 0) return 'No falta pagar nada.';
   if (pagoAhora <= 0) return `Falta pagar ${formatearBs(saldo)}.`;
   const despues = saldo - pagoAhora;
@@ -57,8 +57,12 @@ function montoOCero(texto: string): number {
  * Desde SPEC-KRILINXI-056 la ropa solo sale con la boleta pagada por completo: el botón "Entregar" se
  * habilita cuando lo que se paga ahora cubre lo que falta, y el texto de arriba dice cuánto falta todavía.
  *
+ * Desde SPEC-KRILINXI-068 el precio final no se escribe: "Agregar un cargo" suma renglones (un recargo por
+ * almacenamiento, con la descripción que el empleado quiera), y el precio final es el de la boleta más ellos. Al
+ * entregar solo se puede sumar: para no cobrar lo que falta está el reembolso (SPEC-KRILINXI-070).
+ *
  * Si la boleta **ya está pagada** (lo pagado cubre su precio) no pide ningún monto — SPEC-KRILINXI-046:
- * ni el precio final ni cuánto paga ahora ni cómo paga. Un campo de dinero en una boleta sin deuda da a
+ * ni cargos ni cuánto paga ahora ni cómo paga. Un campo de dinero en una boleta sin deuda da a
  * entender que hay que escribir algo, y no hay nada que cobrar. En su lugar dice "Ya está todo pagado", y
  * la entrega se guarda con el precio de la boleta y sin pago final (ver `datosAEnviar`).
  */
@@ -68,8 +72,8 @@ export function FormularioEntrega({ orden, alEntregar, alCancelar }: Props) {
     traeBoleta: null,
     retiradoPorNombre: '',
     retiradoPorCarnet: '',
-    // El precio de la orden, en el formato que se puede volver a leer ("50.00").
-    precioFinal: aDecimal(orden.precioTotal),
+    // Sin cargos: el precio final arranca siendo el de la boleta.
+    cargos: [],
     pagoFinal: '',
     metodoPago: null,
   });
@@ -77,26 +81,24 @@ export function FormularioEntrega({ orden, alEntregar, alCancelar }: Props) {
   const [aviso, setAviso] = useState<string | null>(null);
   const [confirmar, setConfirmar] = useState<EntregaLista | null>(null);
 
-  const cambiar = (campo: 'retiradoPorNombre' | 'retiradoPorCarnet' | 'precioFinal' | 'pagoFinal') => (valor: string) =>
+  const cambiar = (campo: 'retiradoPorNombre' | 'retiradoPorCarnet' | 'pagoFinal') => (valor: string) =>
     setDatos((d) => ({ ...d, [campo]: valor }));
 
   // `orden.saldo` ya es precio de la boleta − pagos (la ropa todavía no tiene entrega): cero o menos, no hay nada que cobrar.
   const yaPagada = orden.saldo <= 0;
-  const saldo = saldoConPrecio(orden, datos.precioFinal);
+  const precioFinal = precioConCargos(orden, datos.cargos);
+  const saldo = saldoConPrecio(orden, precioFinal);
   // Lo que falta cobrar después del pago escrito (SPEC-KRILINXI-056). Un pago vacío o mal escrito cuenta como cero.
   const pagoAhora = montoOCero(datos.pagoFinal);
-  const faltaDespues = saldo === null ? null : saldo - pagoAhora;
   // En una boleta ya pagada no hay nada que cobrar; si no, hasta que lo escrito no cubra lo que falta, no se entrega.
-  const faltaCobrar = !yaPagada && (faltaDespues === null || faltaDespues > 0);
+  const faltaCobrar = !yaPagada && saldo - pagoAhora > 0;
 
   /**
-   * Lo que se manda a validar y guardar. En una boleta ya pagada, el precio final es el de la boleta y no hay pago
-   * ni método, **aunque el estado del formulario diga otra cosa**: si algo se había escrito antes de que la boleta
-   * quedara pagada (por ejemplo, un cobro que bajó de otra tablet), esos campos ya no se ven y no pueden contar.
+   * Lo que se manda a validar y guardar. En una boleta ya pagada no hay cargos, ni pago ni método, **aunque el estado
+   * del formulario diga otra cosa**: si algo se había escrito antes de que la boleta quedara pagada (por ejemplo, un
+   * cobro que bajó de otra tablet), esos campos ya no se ven y no pueden contar.
    */
-  const datosAEnviar: DatosEntrega = yaPagada
-    ? { ...datos, precioFinal: aDecimal(orden.precioTotal), pagoFinal: '', metodoPago: null }
-    : datos;
+  const datosAEnviar: DatosEntrega = yaPagada ? { ...datos, cargos: [], pagoFinal: '', metodoPago: null } : datos;
 
   async function revisar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
@@ -194,14 +196,21 @@ export function FormularioEntrega({ orden, alEntregar, alCancelar }: Props) {
         </div>
       ) : (
         <>
-          <CampoTexto
-            etiqueta="Precio final (Bs)"
-            value={datos.precioFinal}
-            onChange={cambiar('precioFinal')}
-            error={errores.precioFinal}
-            inputMode="decimal"
-            autoComplete="off"
+          {/* Los cargos al entregar (SPEC-KRILINXI-068): renglones que se suman al precio de la boleta. */}
+          <h3 className="mt-4 text-xl font-semibold text-texto">Cargos al entregar (si hay)</h3>
+          <CamposDeRenglones
+            renglones={datos.cargos}
+            alCambiar={(cargos) => setDatos((d) => ({ ...d, cargos }))}
+            nombre="Cargo"
+            textoAgregar="Agregar un cargo"
+            textoTotal="Cargos"
+            puedeQuedarVacia
+            errorDe={(clave, campo) => errores[claveCampo(clave, campo)]}
           />
+          {errores.cargos && <Aviso tipo="error">{errores.cargos}</Aviso>}
+          <p className="mt-2 text-xl text-texto">
+            Precio final: <span className="font-semibold">{formatearBs(precioFinal)}</span>
+          </p>
           <p className="text-xl text-texto" aria-live="polite">
             {mensajeDeSaldo(saldo, pagoAhora)}
           </p>

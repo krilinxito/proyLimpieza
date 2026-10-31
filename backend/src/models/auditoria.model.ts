@@ -21,7 +21,16 @@ import { salteo, type Paginacion } from '../utils/paginacion.js';
 import { ZONA_NEGOCIO, enElPeriodo, horaDelNegocio, type Periodo } from '../utils/periodo.js';
 
 /** Las tablas que se auditan. Es el valor de `tabla_afectada`. */
-export const TABLAS_AUDITADAS = ['clientes', 'ordenes', 'pagos', 'entregas', 'usuarios', 'sucursales'] as const;
+// `orden_items`, los renglones de la boleta, desde SPEC-KRILINXI-068.
+export const TABLAS_AUDITADAS = [
+  'clientes',
+  'ordenes',
+  'pagos',
+  'entregas',
+  'usuarios',
+  'sucursales',
+  'orden_items',
+] as const;
 export type TablaAuditada = (typeof TABLAS_AUDITADAS)[number];
 
 /** Para el filtro `?tabla=` de la consulta — SPEC-ALE186-012. */
@@ -252,7 +261,7 @@ interface FilaAuditoria {
  * `auditoria` no tiene `sucursal_id`, y la sucursal NO sale de la persona: si a
  * alguien lo mueven de sucursal, lo que hizo antes tiene que seguir en la
  * anterior. Sale del registro que tocó, que no cambia nunca de sucursal: la
- * orden, el pago y la entrega tienen la suya, y el cliente, la de su alta. Es el
+ * orden, el pago, la entrega y el renglón de la boleta (SPEC-KRILINXI-068) tienen la suya, y el cliente, la de su alta. Es el
  * mismo criterio que las estadísticas, que suman por la sucursal del pago o de
  * la orden y no por la de quien lo registró.
  *
@@ -264,6 +273,7 @@ const SUCURSAL_DE_LA_ACCION = `CASE a.tabla_afectada
     WHEN 'ordenes'  THEN (SELECT o.sucursal_id FROM ordenes  o WHERE o.id = a.registro_id)
     WHEN 'pagos'    THEN (SELECT p.sucursal_id FROM pagos    p WHERE p.id = a.registro_id)
     WHEN 'entregas' THEN (SELECT e.sucursal_id FROM entregas e WHERE e.id = a.registro_id)
+    WHEN 'orden_items' THEN (SELECT i.sucursal_id FROM orden_items i WHERE i.id = a.registro_id)
     WHEN 'clientes' THEN CASE WHEN a.accion = 'CREAR'
                               THEN (SELECT c.sucursal_registro_id FROM clientes c WHERE c.id = a.registro_id)
                          END
@@ -295,8 +305,8 @@ const FECHA_DEL_HECHO = `CASE a.tabla_afectada
  * en NULL (o `false`, el $9) no filtra.
  *
  * El filtro por cliente (SPEC-KRILINXI-062) se resuelve en la misma consulta: `ids_del_cliente`
- * junta el id del cliente y los de sus órdenes, pagos y entregas (cada uno entra por su índice:
- * `idx_ordenes_cliente`, `idx_pagos_orden` y el único de `entregas.orden_id`), y la auditoría se
+ * junta el id del cliente y los de sus órdenes, pagos, entregas y renglones (cada uno entra por su índice:
+ * `idx_ordenes_cliente`, `idx_pagos_orden`, el único de `entregas.orden_id` e `idx_orden_items_orden`), y la auditoría se
  * cruza con ese conjunto por `registro_id`, que tiene índice desde SPEC-ALE186-020. Los ids son
  * UUID, únicos entre tablas, así que no hace falta mirar también `tabla_afectada`. Con el
  * filtro en NULL el conjunto ni se consulta.
@@ -309,6 +319,7 @@ const FILTRADAS = `ids_del_cliente AS (
   UNION ALL SELECT o.id FROM ordenes o WHERE o.cliente_id = $10::uuid
   UNION ALL SELECT p.id FROM pagos p JOIN ordenes o ON o.id = p.orden_id WHERE o.cliente_id = $10::uuid
   UNION ALL SELECT e.id FROM entregas e JOIN ordenes o ON o.id = e.orden_id WHERE o.cliente_id = $10::uuid
+  UNION ALL SELECT i.id FROM orden_items i JOIN ordenes o ON o.id = i.orden_id WHERE o.cliente_id = $10::uuid
 ),
 filtradas AS (
   SELECT * FROM (

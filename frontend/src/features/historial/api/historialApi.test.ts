@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { simularApi } from '../../../test/apiFalsa';
-import { boletaDePrueba, paginaDeBoletas } from '../../../test/historialDePrueba';
+import { boletaDePrueba, paginaDeBoletas, renglonDePrueba } from '../../../test/historialDePrueba';
 import { RespuestaRara } from '../../../lib/api';
 import { leerPagina, pedirHistorial } from './historialApi';
 
@@ -56,6 +56,9 @@ describe('Historial completo, pedido a la API — SPEC-KRILINXI-041', () => {
     ['trae un precio final roto', paginaDeBoletas([boletaDePrueba({ precioFinal: 'x' })])],
     ['trae una boleta sin cliente', paginaDeBoletas([boletaDePrueba({ cliente: null })])],
     ['trae una boleta sin sucursal', paginaDeBoletas([boletaDePrueba({ sucursal: { id: 'x' } })])],
+    ['no trae los renglones (SPEC-KRILINXI-068)', paginaDeBoletas([boletaDePrueba({ renglones: undefined })])],
+    ['trae un renglón con un momento que no existe', paginaDeBoletas([boletaDePrueba({ renglones: [renglonDePrueba({ momento: 'DESPUES' })] })])],
+    ['trae un renglón con la cantidad como número', paginaDeBoletas([boletaDePrueba({ renglones: [renglonDePrueba({ cantidad: 2 })] })])],
   ])('no se fía de una respuesta que %s', (_caso, datos) => {
     expect(leerPagina(datos)).toBeNull();
   });
@@ -80,5 +83,29 @@ describe('Historial completo, pedido a la API — SPEC-KRILINXI-041', () => {
     simularApi(() => ({ status: 200, data: { cualquier: 'cosa' } }));
 
     await expect(pedirHistorial({}, 1)).rejects.toBeInstanceOf(RespuestaRara);
+  });
+});
+
+describe('Historial completo: los renglones de cada boleta — SPEC-KRILINXI-068', () => {
+  it('lee cada renglón con su cantidad en centésimas y sus montos en centavos, sin recalcular el subtotal', () => {
+    const pagina = leerPagina(
+      paginaDeBoletas([
+        boletaDePrueba({
+          renglones: [
+            renglonDePrueba({ id: 'r1', descripcion: 'Ropa por kilo', cantidad: '2.50', precioUnitario: '3.33', subtotal: '8.33' }),
+            renglonDePrueba({ id: 'r2', momento: 'ENTREGA', descripcion: 'Recargo', cantidad: '1.00', precioUnitario: '5.00', subtotal: '5.00' }),
+          ],
+        }),
+      ]),
+    );
+
+    expect(pagina?.boletas[0]?.renglones).toEqual([
+      { id: 'r1', momento: 'INGRESO', descripcion: 'Ropa por kilo', cantidad: 250, precioUnitario: 333, subtotal: 833 },
+      { id: 'r2', momento: 'ENTREGA', descripcion: 'Recargo', cantidad: 100, precioUnitario: 500, subtotal: 500 },
+    ]);
+  });
+
+  it('una boleta de antes, sin renglones, llega con la lista vacía', () => {
+    expect(leerPagina(paginaDeBoletas([boletaDePrueba()]))?.boletas[0]?.renglones).toEqual([]);
   });
 });

@@ -16,9 +16,11 @@ const RECURSOS: Record<string, string> = {
   ordenes: '/ordenes',
   pagos: '/pagos',
   entregas: '/entregas',
+  // Los renglones de la boleta (SPEC-KRILINXI-068). Solo se dan de alta: no están en EDITABLES.
+  orden_items: '/orden-items',
 };
 
-/** Las que admiten edición: pagos y entregas no se reescriben (SPEC-ALE186-005 y 006). */
+/** Las que admiten edición: pagos, entregas y renglones no se reescriben (SPEC-ALE186-005 y 006, SPEC-KRILINXI-068). */
 const EDITABLES = new Set(['clientes', 'ordenes']);
 
 /**

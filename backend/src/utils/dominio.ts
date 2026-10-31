@@ -17,11 +17,14 @@ export const ESTADOS_ORDEN = ['RECIBIDO', 'ENTREGADO', 'REEMBOLSADO', 'ANULADO']
 export const TIPOS_RETIRO = ['CON_BOLETA', 'SIN_BOLETA'] as const;
 export const TIPOS_PAGO = ['ADELANTO', 'PAGO_FINAL'] as const;
 export const METODOS_PAGO = ['EFECTIVO', 'QR', 'TARJETA'] as const;
+/** Cuándo se agregó un renglón de la boleta: al registrarla o, como cargo, al entregarla — SPEC-KRILINXI-068. */
+export const MOMENTOS_ITEM = ['INGRESO', 'ENTREGA'] as const;
 
 export type EstadoOrden = (typeof ESTADOS_ORDEN)[number];
 export type TipoRetiro = (typeof TIPOS_RETIRO)[number];
 export type TipoPago = (typeof TIPOS_PAGO)[number];
 export type MetodoPago = (typeof METODOS_PAGO)[number];
+export type MomentoItem = (typeof MOMENTOS_ITEM)[number];
 
 /**
  * Qué se anota en `auditoria` — SPEC-ALE186-010.
@@ -43,6 +46,7 @@ export const esEstadoOrden = crearValidador(ESTADOS_ORDEN);
 export const esTipoRetiro = crearValidador(TIPOS_RETIRO);
 export const esTipoPago = crearValidador(TIPOS_PAGO);
 export const esMetodoPago = crearValidador(METODOS_PAGO);
+export const esMomentoItem = crearValidador(MOMENTOS_ITEM);
 /** Para el filtro `?accion=` de la consulta de la auditoría — SPEC-ALE186-012. */
 export const esAccionAuditoria = crearValidador(ACCIONES_AUDITORIA);
 
@@ -61,6 +65,16 @@ export const esAccionAuditoria = crearValidador(ACCIONES_AUDITORIA);
 
 /** Los estados de los que ya no se sale. */
 export const ESTADOS_CERRADOS: readonly EstadoOrden[] = ['ENTREGADO', 'REEMBOLSADO', 'ANULADO'];
+
+/**
+ * Los estados en los que la ropa sigue en el local: todos los que no están cerrados. Hoy, solo RECIBIDO.
+ *
+ * Una orden abierta se puede entregar y admite renglones nuevos (SPEC-KRILINXI-068). Vive acá, y no en un model, para
+ * que el de entregas y el de renglones la compartan sin importarse entre sí.
+ */
+export const ESTADOS_ABIERTOS: readonly EstadoOrden[] = ESTADOS_ORDEN.filter(
+  (estado) => !ESTADOS_CERRADOS.includes(estado),
+);
 
 /**
  * Desde qué estados se puede llegar a cada uno.

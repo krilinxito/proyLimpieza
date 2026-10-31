@@ -80,10 +80,11 @@ describe('Sync rules: el ADMIN baja la ropa de la sucursal donde atiende — SPE
     expect(parametros(bucket('atencion_admin'))).toMatch(/AND request\.parameters\(\) ->> 'sucursal_id' IS NOT NULL\b/);
   });
 
-  it('baja lo mismo que el bucket de la sucursal de un empleado: la ropa, las entregas y los pagos', () => {
+  it('baja lo mismo que el bucket de la sucursal de un empleado: la ropa, las entregas, los pagos y los renglones', () => {
     const datos = consultasData(bucket('atencion_admin'));
     expect(datos).toEqual(consultasData(bucket('sucursal')));
-    expect(datos).toHaveLength(3);
+    // Cuatro desde SPEC-KRILINXI-068: los renglones de la boleta.
+    expect(datos).toHaveLength(4);
   });
 
   it('no apaga las advertencias de PowerSync: sin accept_potentially_dangerous_queries en ningún bucket', () => {
@@ -97,5 +98,34 @@ describe('Sync rules: el ADMIN baja la ropa de la sucursal donde atiende — SPE
     const consulta = parametros(bucket('sucursal'));
     expect(consulta).toMatch(/^SELECT sucursal_id FROM usuarios\b/);
     expect(consulta).not.toMatch(/request\.parameters/);
+  });
+});
+
+describe('Sync rules: los renglones de la boleta — SPEC-KRILINXI-068', () => {
+  const RENGLONES =
+    'SELECT id, orden_id, sucursal_id, momento, posicion, descripcion, cantidad, precio_unitario FROM orden_items ' +
+    'WHERE sucursal_id = bucket.sucursal_id';
+
+  it('un EMPLEADO baja los renglones solo de su sucursal, con lista explícita de columnas', () => {
+    // El bucket `sucursal` se arma con la sucursal de la fila del empleado en la base, nunca con la que diga la tablet.
+    expect(consultasData(bucket('sucursal'))).toContain(RENGLONES);
+  });
+
+  it('el ADMIN que atiende los baja de la sucursal donde atiende; sin el parámetro, el bucket no existe', () => {
+    expect(consultasData(bucket('atencion_admin'))).toContain(RENGLONES);
+    expect(parametros(bucket('atencion_admin'))).toMatch(/AND request\.parameters\(\) ->> 'sucursal_id' IS NOT NULL/);
+  });
+
+  it('los renglones no bajan en el bucket global: no son un catálogo', () => {
+    expect(consultasData(bucket('global')).join(' ')).not.toMatch(/orden_items/);
+  });
+
+  it('ninguna consulta de renglones usa SELECT * ni JOIN', () => {
+    const deRenglones = consultasData(SYNC_RULES).filter((consulta) => /FROM orden_items/.test(consulta));
+    expect(deRenglones).toHaveLength(2);
+    for (const consulta of deRenglones) {
+      expect(consulta).not.toMatch(/SELECT \*/);
+      expect(consulta).not.toMatch(/\bJOIN\b/);
+    }
   });
 });

@@ -11,6 +11,7 @@ import {
   pagoDePrueba,
   SUCURSAL_DE_PRUEBA,
 } from '../../../test/filasDePrueba';
+import { MENSAJES_RENGLON, type RenglonEscrito } from '../../ordenes/renglones';
 import type { DatosEntrega } from '../types';
 import { MENSAJES_ENTREGA, prepararEntrega, registrarEntrega } from './entregasLocal';
 
@@ -26,11 +27,16 @@ function datosEntrega(cambios: Partial<DatosEntrega> = {}): DatosEntrega {
     traeBoleta: true,
     retiradoPorNombre: '',
     retiradoPorCarnet: '',
-    precioFinal: '50.00',
+    cargos: [],
     pagoFinal: '30',
     metodoPago: 'EFECTIVO',
     ...cambios,
   };
+}
+
+/** Un cargo al entregar (SPEC-KRILINXI-068): un recargo de Bs 15,50, salvo lo que el test cambie. */
+function cargo(campos: Partial<RenglonEscrito> = {}): RenglonEscrito {
+  return { clave: randomUUID(), descripcion: 'Recargo por almacenamiento', cantidad: '1', precioUnitario: '15,50', ...campos };
 }
 
 /** Una orden LISTO de Bs 50 con Bs 20 de adelanto, más una anulada y una ya entregada. */
@@ -102,28 +108,21 @@ describe('Entregar: lo que se guarda — SPEC-KRILINXI-009', () => {
     });
   });
 
-  it('el precio final puede cambiar (recargo), pero hay que cobrarlo en el mismo acto', async () => {
+  it('un recargo sube el precio final, pero hay que cobrarlo en el mismo acto (SPEC-KRILINXI-068)', async () => {
     const { control, lista } = await preparar();
     // Con el recargo la boleta sube a 65,50: lo cobrado (20) más lo que se paga ahora (45,50) la deja pagada.
     const resultado = await prepararEntrega(
       control.base,
       SUCURSAL_DE_PRUEBA,
       lista.id,
-      datosEntrega({ precioFinal: '65,50', pagoFinal: '45,50' }),
+      datosEntrega({ cargos: [cargo()], pagoFinal: '45,50' }),
     );
     expect(resultado).toMatchObject({ tipo: 'lista', entrega: { precioFinal: 6550, pagoFinal: 4550 } });
     // Cobrando solo los 30 de antes, faltan 15,50 del recargo.
-    expect(await prepararEntrega(control.base, SUCURSAL_DE_PRUEBA, lista.id, datosEntrega({ precioFinal: '65,50' }))).toEqual({
+    expect(await prepararEntrega(control.base, SUCURSAL_DE_PRUEBA, lista.id, datosEntrega({ cargos: [cargo()] }))).toEqual({
       tipo: 'invalida',
       errores: { pagoFinal: MENSAJES_ENTREGA.faltaCobrar(1550) },
     });
-  });
-
-  it('un precio final de cero también vale (se perdonó el cobro)', async () => {
-    const { control, lista } = await preparar();
-    expect(
-      await prepararEntrega(control.base, SUCURSAL_DE_PRUEBA, lista.id, datosEntrega({ precioFinal: '0', pagoFinal: '', metodoPago: null })),
-    ).toMatchObject({ tipo: 'lista', entrega: { precioFinal: 0, pagoFinal: 0 } });
   });
 
   it('no se entrega con saldo pendiente: dice cuánto falta cobrar y no escribe nada — SPEC-KRILINXI-056', async () => {
@@ -182,8 +181,6 @@ describe('Entregar: lo que no se guarda — SPEC-KRILINXI-009', () => {
       { traeBoleta: false, retiradoPorNombre: 'Juan', retiradoPorCarnet: '1'.repeat(31) },
       { retiradoPorCarnet: MENSAJES_ENTREGA.carnetLargo },
     ],
-    ['con un precio final que no es un número', { precioFinal: 'cincuenta' }, { precioFinal: MENSAJES_ENTREGA.precioFinal }],
-    ['con un precio final negativo', { precioFinal: '-1' }, { precioFinal: MENSAJES_ENTREGA.precioFinal }],
     ['con un pago de cero', { pagoFinal: '0', metodoPago: 'EFECTIVO' }, { pagoFinal: MENSAJES_ENTREGA.pago }],
     ['con un pago mayor que lo que falta', { pagoFinal: '30,01', metodoPago: 'EFECTIVO' }, { pagoFinal: MENSAJES_ENTREGA.pagoMayor }],
     ['con un pago sin método', { pagoFinal: '30', metodoPago: null }, { metodoPago: MENSAJES_ENTREGA.sinMetodo }],
@@ -259,5 +256,70 @@ describe('Entregar con la hora del servidor — SPEC-KRILINXI-012', () => {
     expect(
       await control.base.consultar("SELECT fecha_pago FROM pagos WHERE orden_id = ? AND tipo = 'PAGO_FINAL'", [lista.id]),
     ).toEqual([{ fecha_pago: HORA_DEL_SERVIDOR_ISO }]);
+  });
+});
+
+describe('Entregar con cargos — SPEC-KRILINXI-068', () => {
+  it('guarda los cargos, el pago y la entrega, en ese orden, con el precio final calculado', async () => {
+    const { control, lista, cola } = await preparar();
+    const resultado = await registrarEntrega(
+      control.base,
+      QUIEN,
+      lista.id,
+      datosEntrega({
+        cargos: [cargo({ clave: 'c1' }), cargo({ clave: 'c2', descripcion: 'Planchado extra', cantidad: '2', precioUnitario: '5' })],
+        // 50 + 15,50 + 2 × 5 = 75,50; ya pagó 20.
+        pagoFinal: '55,50',
+      }),
+    );
+
+    expect(resultado).toMatchObject({ tipo: 'lista', entrega: { precioFinal: 7550, pagoFinal: 5550 } });
+    const operaciones = await cola();
+    expect(operaciones.map(([op, tabla]) => [op, tabla])).toEqual([
+      ['PUT', 'orden_items'],
+      ['PUT', 'orden_items'],
+      ['PUT', 'pagos'],
+      ['PUT', 'entregas'],
+    ]);
+    expect(operaciones[0]?.[2]).toEqual({
+      orden_id: lista.id,
+      sucursal_id: SUCURSAL_DE_PRUEBA,
+      momento: 'ENTREGA',
+      posicion: 0,
+      descripcion: 'Recargo por almacenamiento',
+      cantidad: '1.00',
+      precio_unitario: '15.50',
+    });
+    expect(operaciones[1]?.[2]).toMatchObject({ posicion: 1, cantidad: '2.00', precio_unitario: '5.00' });
+    expect(operaciones[3]?.[2]).toMatchObject({ precio_final: '75.50' });
+  });
+
+  it('sin cargos, el precio final es el de la boleta', async () => {
+    const { control, lista, cola } = await preparar();
+    await registrarEntrega(control.base, QUIEN, lista.id, datosEntrega());
+    const entrega = (await cola()).find(([, tabla]) => tabla === 'entregas');
+    expect(entrega?.[2]).toMatchObject({ precio_final: '50.00' });
+  });
+
+  it('la orden con sus cargos ya guardados los muestra como renglones de ENTREGA, y suman al precio final', async () => {
+    const { control, lista } = await preparar();
+    await registrarEntrega(control.base, QUIEN, lista.id, datosEntrega({ cargos: [cargo()], pagoFinal: '45,50' }));
+
+    const orden = await obtenerOrden(control.base, SUCURSAL_DE_PRUEBA, lista.id);
+    expect(orden?.renglones).toEqual([
+      expect.objectContaining({ momento: 'ENTREGA', descripcion: 'Recargo por almacenamiento', subtotal: 1550 }),
+    ]);
+    expect(orden?.precioFinal).toBe(6550);
+  });
+
+  it.each<[string, Partial<RenglonEscrito>, string, string]>([
+    ['sin descripción', { descripcion: '' }, 'descripcion', MENSAJES_RENGLON.sinDescripcion],
+    ['con cantidad cero', { cantidad: '0' }, 'cantidad', MENSAJES_RENGLON.cantidad],
+    ['con un precio que no es un número', { precioUnitario: 'quince' }, 'precioUnitario', MENSAJES_RENGLON.precio],
+  ])('un cargo %s no deja entregar, y no escribe nada', async (_caso, cambios, campo, mensaje) => {
+    const { control, lista, cola } = await preparar();
+    const resultado = await registrarEntrega(control.base, QUIEN, lista.id, datosEntrega({ cargos: [cargo({ clave: 'c1', ...cambios })] }));
+    expect(resultado).toMatchObject({ tipo: 'invalida', errores: { [`renglon:c1:${campo}`]: mensaje } });
+    expect(await cola()).toEqual([]);
   });
 });

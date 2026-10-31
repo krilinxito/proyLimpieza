@@ -111,13 +111,13 @@ describe('Entregas model: crear — SPEC-ALE186-006', () => {
     expect(llamada()[1]).toContainEqual(['RECIBIDO']);
   });
 
-  it('sin precio final, deja que Postgres use el precio_total de la orden', async () => {
+  it('guarda el precio final que calculó el UPDATE, no uno que venga de afuera (SPEC-KRILINXI-068)', async () => {
     laBaseDevuelve([FILA_ENTREGA]);
 
     await entregas.crear(NUEVA, SIN_RESTRICCION);
 
     const [sql, valores] = llamada();
-    expect(sql).toContain('COALESCE($7::numeric, orden.precio_total)');
+    expect(sql).toMatch(/SELECT \$1, orden\.id, orden\.sucursal_id, \$3, \$4, \$5, \$6,\s+orden\.precio_final,/);
     expect(valores[6]).toBeNull();
   });
 
@@ -213,8 +213,8 @@ describe('Entregas model: solo con la boleta pagada — SPEC-KRILINXI-056', () =
     const [sql] = llamada(0);
     // Del UPDATE de la orden hasta su RETURNING: ahí, y no en otra parte, tiene que estar la condición.
     const update = /UPDATE ordenes[\s\S]*?RETURNING/.exec(sql)?.[0] ?? '';
-    expect(update.replace(/\s+/g, ' ')).toContain(
-      'AND COALESCE($7::numeric, precio_total) <= COALESCE((SELECT SUM(p.monto) FROM pagos p WHERE p.orden_id = ordenes.id), 0)',
+    expect(update.replace(/\s+/g, ' ')).toMatch(
+      /AND \(ordenes\.precio_total \+ .*\) <= COALESCE\(\(SELECT SUM\(p\.monto\) FROM pagos p WHERE p\.orden_id = ordenes\.id\), 0\)/,
     );
   });
 
@@ -228,18 +228,69 @@ describe('Entregas model: solo con la boleta pagada — SPEC-KRILINXI-056', () =
     });
   });
 
-  it('para calcular lo que falta usa el precio final que vino, no solo el de la boleta', async () => {
-    laBaseDevuelve([], [], [FILA_ORDEN], [{ saldo: '4.50' }]);
+  it('para calcular lo que falta usa el precio con los cargos, no el que vino (SPEC-KRILINXI-068)', async () => {
+    laBaseDevuelve([], [], [FILA_ORDEN], [{ precio_final: '50.00', saldo: '4.50' }]);
 
-    await entregas.crear({ ...NUEVA, precioFinal: 5000 }, SIN_RESTRICCION);
-
-    const [, valores] = llamada(3);
-    expect(valores).toEqual([IDS.orden, '50.00']);
+    expect(await entregas.crear({ ...NUEVA, precioFinal: 5000 }, SIN_RESTRICCION)).toMatchObject({
+      tipo: 'saldo-pendiente',
+      saldo: '4.50',
+    });
+    const [sql, valores] = llamada(3);
+    expect(sql).toContain("i.momento = 'ENTREGA'");
+    expect(valores).toEqual([IDS.orden]);
   });
 
   it('una anulada o ya entregada se explica por eso, no por el saldo', async () => {
     laBaseDevuelve([], [], [{ ...FILA_ORDEN, estado: 'ANULADO' }]);
     expect(await entregas.crear(NUEVA, SIN_RESTRICCION)).toMatchObject({ tipo: 'orden-anulada' });
     expect(query).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe('Entregas model: el precio final son el total y los cargos — SPEC-KRILINXI-068', () => {
+  it('el UPDATE calcula el precio final con los renglones de ENTREGA y lo devuelve para el INSERT', async () => {
+    laBaseDevuelve([FILA_ENTREGA]);
+
+    await entregas.crear(NUEVA, SIN_RESTRICCION);
+
+    const update = (/UPDATE ordenes[\s\S]*?\)\s*,\s*escrita/.exec(llamada()[0])?.[0] ?? '').replace(/\s+/g, ' ');
+    expect(update).toContain("FROM orden_items i WHERE i.orden_id = ordenes.id AND i.momento = 'ENTREGA'");
+    expect(update).toContain('round(i.cantidad * i.precio_unitario, 2)');
+    expect(update).toMatch(/RETURNING id, sucursal_id, \(ordenes\.precio_total \+ .*\) AS precio_final/);
+  });
+
+  it('si la tablet manda un precio final, es una condición más: tiene que ser el calculado', async () => {
+    laBaseDevuelve([FILA_ENTREGA]);
+
+    await entregas.crear({ ...NUEVA, precioFinal: 6050 }, SIN_RESTRICCION);
+
+    const [sql, valores] = llamada();
+    expect(sql.replace(/\s+/g, ' ')).toMatch(/AND \(\$7::numeric IS NULL OR \$7::numeric = \(ordenes\.precio_total \+/);
+    // Como decimal exacto, nunca como float.
+    expect(valores[6]).toBe('60.50');
+  });
+
+  it('si el precio que vino no es el calculado, devuelve precio-distinto con el que corresponde', async () => {
+    laBaseDevuelve([], [], [FILA_ORDEN], [{ precio_final: '60.50', saldo: '15.00' }]);
+
+    expect(await entregas.crear({ ...NUEVA, precioFinal: 4550 }, SIN_RESTRICCION)).toMatchObject({
+      tipo: 'precio-distinto',
+      precioFinal: '60.50',
+      orden: { numeroBoleta: '001234' },
+    });
+  });
+
+  it('el precio distinto se explica antes que el saldo: lo que "falta" depende del precio', async () => {
+    laBaseDevuelve([], [], [FILA_ORDEN], [{ precio_final: '60.50', saldo: '0.00' }]);
+
+    expect(await entregas.crear({ ...NUEVA, precioFinal: 6000 }, SIN_RESTRICCION)).toMatchObject({
+      tipo: 'precio-distinto',
+    });
+  });
+
+  it('sin precio de la tablet no hay nada que comparar: solo cuenta el saldo', async () => {
+    laBaseDevuelve([], [], [FILA_ORDEN], [{ precio_final: '60.50', saldo: '15.00' }]);
+
+    expect(await entregas.crear(NUEVA, SIN_RESTRICCION)).toMatchObject({ tipo: 'saldo-pendiente', saldo: '15.00' });
   });
 });

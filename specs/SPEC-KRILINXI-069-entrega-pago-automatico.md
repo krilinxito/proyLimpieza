@@ -28,6 +28,8 @@ Al entregar una boleta con saldo pendiente, el empleado tiene que escribir cuán
 
 ## Notas
 
+- **Aviso de SPEC-KRILINXI-068 (2026-10-30):** el campo libre "Precio final" del formulario de entrega desaparece. En su lugar, "Agregar un cargo" suma renglones de `ENTREGA` (por ejemplo un recargo por almacenamiento) y el precio final es `precio_total` + esos cargos, calculado también en el servidor. Al entregar solo se puede sumar, nunca bajar. El segundo criterio de esta spec debería leerse como "si el empleado agrega o quita un cargo, 'Cuánto paga ahora' sigue al nuevo saldo mientras no lo haya tocado". Si la 068 se implementa antes, ajusta el texto al aprobar.
+
 <!--
 Convención de trazabilidad: todo test relacionado con esta spec debe llevar su id
 en el nombre del describe/bloque, por ejemplo:

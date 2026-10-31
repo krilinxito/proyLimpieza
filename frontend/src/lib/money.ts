@@ -70,6 +70,45 @@ export function desdeDecimal(texto: string): Centavos {
   return Number(enteros) * 100 + Number(decimales.padEnd(2, '0'));
 }
 
+/** La cantidad más alta de un renglón de la boleta, en centésimas: 999,99 — la misma que el servidor (SPEC-KRILINXI-068). */
+export const CANTIDAD_MAXIMA = 99_999;
+
+/**
+ * Lo que escribió el empleado como cantidad de un renglón, en centésimas: "2" → 200, "2,5" → 250 — SPEC-KRILINXI-068.
+ *
+ * Una cantidad tiene la misma forma que un monto (enteros y hasta dos decimales, con coma o punto), así que se lee igual,
+ * con `parsearMonto`. Se guarda en centésimas por lo mismo que el dinero en centavos: para no tocar floats.
+ */
+export function parsearCantidad(texto: string): number {
+  return parsearMonto(texto);
+}
+
+/**
+ * El subtotal de un renglón: cantidad por precio unitario, redondeado al centavo — SPEC-KRILINXI-068.
+ *
+ * La cantidad tiene dos decimales (2,5 kilos), así que el producto puede tener cuatro (2,5 × 3,33 = 8,325), y un renglón
+ * se cobra en centavos: se redondea la mitad hacia arriba (8,33). Es la misma cuenta que hace el servidor
+ * (`round(cantidad * precio_unitario, 2)` en Postgres y `subtotal` de `backend/src/utils/money.ts`): si no dieran lo mismo,
+ * la suma de los renglones no cuadraría con el total de la boleta. Todo en enteros: con la cantidad acotada a
+ * `CANTIDAD_MAXIMA`, el producto no pasa de 10^15 y es exacto.
+ */
+export function subtotal(cantidadEnCentesimas: number, precioUnitario: Centavos): Centavos {
+  if (!Number.isInteger(cantidadEnCentesimas) || !Number.isInteger(precioUnitario)) {
+    throw new Error('La cantidad y el precio unitario tienen que ser enteros (centésimas y centavos).');
+  }
+  return Math.floor((cantidadEnCentesimas * precioUnitario + 50) / 100);
+}
+
+/**
+ * Una cantidad para la pantalla, sin ceros de más: 200 → "2", 250 → "2,5", 225 → "2,25" — SPEC-KRILINXI-068. Es la que se
+ * lee en la boleta ("2 Camisa"), no un monto: por eso no lleva siempre dos decimales.
+ */
+export function formatearCantidad(centesimas: number): string {
+  const enteros = Math.trunc(centesimas / 100);
+  const decimales = String(centesimas % 100).padStart(2, '0').replace(/0+$/, '');
+  return decimales === '' ? String(enteros) : `${enteros},${decimales}`;
+}
+
 /** Suma montos. Enteros con enteros: exacto por construcción. */
 export function sumar(...montos: Centavos[]): Centavos {
   return montos.reduce((total, monto) => total + monto, 0);

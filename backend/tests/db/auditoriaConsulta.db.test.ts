@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { testApi } from '../helpers/api.js';
 import {
@@ -13,7 +12,7 @@ import {
   escenario,
 } from '../helpers/baseReal.js';
 import { cuerpoDeAlta } from '../helpers/clientes.js';
-import { cuerpoDeOrden } from '../helpers/ordenes.js';
+import { boletaAlAzar, cuerpoDeOrden } from '../helpers/ordenes.js';
 import { comoAdmin, conSesion } from '../helpers/usuarios.js';
 
 // Contra Postgres real (sección 4). La consulta calcula la sucursal de cada
@@ -40,12 +39,12 @@ describe('Auditoría por sucursal: sale del registro, no de la persona — SPEC-
     const esc = await escenario(); // sucursal A, empleado en A, un cliente
     const sucursalB = await crearSucursal();
 
-    const enA = cuerpoDeOrden({ cliente_id: esc.clienteId, numero_boleta: `A-${randomUUID().slice(0, 6)}` });
+    const enA = cuerpoDeOrden({ cliente_id: esc.clienteId, numero_boleta: boletaAlAzar('A') });
     await testApi().post('/api/ordenes').set(conSesion({ id: esc.usuarioId, sucursalId: esc.sucursalId })).send(enA);
 
     await testApi().patch(`/api/usuarios/${esc.usuarioId}`).set(admin).send({ sucursal_id: sucursalB });
 
-    const enB = cuerpoDeOrden({ cliente_id: esc.clienteId, numero_boleta: `B-${randomUUID().slice(0, 6)}` });
+    const enB = cuerpoDeOrden({ cliente_id: esc.clienteId, numero_boleta: boletaAlAzar('B') });
     await testApi().post('/api/ordenes').set(conSesion({ id: esc.usuarioId, sucursalId: sucursalB })).send(enB);
 
     const deA = await consultar({ usuario_id: esc.usuarioId, sucursal_id: esc.sucursalId }, admin);

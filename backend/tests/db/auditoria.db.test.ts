@@ -17,7 +17,7 @@ import {
 } from '../helpers/baseReal.js';
 import { cuerpoDeAlta } from '../helpers/clientes.js';
 import { cuerpoDeEntrega } from '../helpers/entregas.js';
-import { cuerpoDeOrden } from '../helpers/ordenes.js';
+import { boletaAlAzar, cuerpoDeOrden } from '../helpers/ordenes.js';
 import { cuerpoDePago } from '../helpers/pagos.js';
 import { comoAdmin, conSesion, cuerpoDeAltaUsuario } from '../helpers/usuarios.js';
 
@@ -55,7 +55,7 @@ describe('Auditoría de las altas — SPEC-ALE186-010', () => {
 
   it('el alta de una orden anota CREAR a nombre de quien la recibió', async () => {
     const esc = await escenario();
-    const cuerpo = cuerpoDeOrden({ cliente_id: esc.clienteId, numero_boleta: `A-${randomUUID().slice(0, 6)}` });
+    const cuerpo = cuerpoDeOrden({ cliente_id: esc.clienteId, numero_boleta: boletaAlAzar('A') });
 
     expect((await testApi().post('/api/ordenes').set(sesionDe(esc)).send(cuerpo)).status).toBe(201);
 
@@ -175,7 +175,9 @@ describe('Auditoría de las ediciones — SPEC-ALE186-010', () => {
     const esc = await escenario();
     const orden = await crearOrden(esc, { precioTotal: '45.50' });
 
-    await testApi().patch(`/api/ordenes/${orden.id}`).set(sesionDe(esc)).send({ precio_total: '60.00' });
+    // Lo cambia el ADMIN: desde SPEC-KRILINXI-068 el mostrador no edita el precio.
+    const adminId = await crearUsuario({ sucursalId: null, rol: 'ADMIN' });
+    await testApi().patch(`/api/ordenes/${orden.id}`).set(comoAdmin(adminId)).send({ precio_total: '60.00' });
 
     expect((await auditoriaDe(orden.id))[0]?.valoresAnteriores).toEqual({ precio_total: '45.50' });
   });

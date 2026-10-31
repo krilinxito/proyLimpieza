@@ -9,6 +9,7 @@ import { accionesPrincipales, usoDe } from '../../../test/jerarquia';
 import { sinJerga } from '../../../test/jerga';
 import { renderEnRuta } from '../../../test/render';
 import { sesionDePrueba } from '../../../test/sesion';
+import { escribirPrenda } from '../../../test/renglones';
 
 /**
  * El Mostrador sobre la App entera, con la base local de verdad y el servidor "sin internet": lo
@@ -581,8 +582,7 @@ describe('Mostrador: "Nueva boleta de este cliente" dentro de una boleta — SPE
     expect(screen.queryByRole('combobox', { name: /Buscar cliente/ })).not.toBeInTheDocument();
 
     escribir('Número de la boleta', '000050');
-    escribir('Qué deja', '1 camisa');
-    escribir('Precio (Bs)', '12');
+    escribirPrenda(1, { que: '1 camisa', precio: '12' });
     fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
     fireEvent.click(await screen.findByRole('button', { name: 'Ver la boleta en la ficha de Rosa Quispe' }));
@@ -764,5 +764,44 @@ describe('Mostrador: lo que deja el cliente en varias líneas — SPEC-KRILINXI-
     fireEvent.click(tarjeta);
     const detalle = await screen.findByRole('region', { name: 'Boleta 000030' });
     expect(within(detalle).getByText(/2 camisas/).closest('dd')).toHaveClass('whitespace-pre-line');
+  });
+});
+
+describe('Mostrador: los renglones en el detalle de la boleta — SPEC-KRILINXI-068', () => {
+  it('lista lo que dejó y aparte los cargos; una boleta de antes, sin renglones, muestra su descripción', async () => {
+    simularApi(() => 'sin-conexion');
+    const prueba = await baseLocalDePrueba();
+    const CON_RENGLONES = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000040', descripcion: '2 Camisa' });
+    const DE_ANTES = ordenDePrueba({ cliente_id: ROSA.id, numero_boleta: '000041', descripcion: '1 terno' });
+    await prueba.sembrar('clientes', [ROSA]);
+    await prueba.sembrar('ordenes', [CON_RENGLONES, DE_ANTES]);
+    const renglon = (momento: string, descripcion: string, cantidad: string, precio_unitario: string) => ({
+      id: crypto.randomUUID(),
+      orden_id: CON_RENGLONES.id,
+      momento,
+      posicion: 0,
+      descripcion,
+      cantidad,
+      precio_unitario,
+    });
+    await prueba.sembrar('orden_items', [
+      renglon('INGRESO', 'Camisa', '2.00', '15.00'),
+      renglon('ENTREGA', 'Recargo', '1.00', '5.00'),
+    ]);
+    renderEnRuta(<App />, '/mostrador', { baseLocal: prueba.control });
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Boleta 000040, Rosa Quispe' }));
+    const detalle = await screen.findByRole('region', { name: 'Boleta 000040' });
+    const dejo = await within(detalle).findByRole('list', { name: 'Lo que dejó' });
+    const textos = (lista: HTMLElement) => within(lista).getAllByRole('listitem').map((li) => li.textContent);
+    expect(textos(dejo)).toEqual(['2 CamisaBs 15,00 cada unaBs 30,00']);
+    const cargos = within(detalle).getByRole('list', { name: 'Cargos al entregar' });
+    expect(textos(cargos)).toEqual(['1 RecargoBs 5,00 cada unaBs 5,00']);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Volver al mostrador' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Boleta 000041, Rosa Quispe' }));
+    const antes = await screen.findByRole('region', { name: 'Boleta 000041' });
+    expect(within(antes).getByText('1 terno')).toBeInTheDocument();
+    expect(within(antes).queryByRole('list', { name: 'Lo que dejó' })).not.toBeInTheDocument();
   });
 });

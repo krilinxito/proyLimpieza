@@ -290,3 +290,20 @@ describe('/api/entregas sin edición ni borrado — SPEC-ALE186-006', () => {
     expect(crear).not.toHaveBeenCalled();
   });
 });
+
+describe('POST /api/entregas: el precio final son el total y los cargos — SPEC-KRILINXI-068', () => {
+  it('responde 409 PRECIO_FINAL_DISTINTO con el precio que corresponde y qué hacer', async () => {
+    crear.mockResolvedValue({ tipo: 'precio-distinto', orden: ordenDePrueba(), precioFinal: '60.50' });
+
+    const res = await retiro(cuerpoDeEntrega({ precio_final: '45.50' }));
+
+    expectApiError(res, { status: 409, codigo: 'PRECIO_FINAL_DISTINTO' });
+    expect(res.body.error.mensaje).toMatch(/001234 con sus cargos es Bs 60\.50[\s\S]*Revisa los cargos/);
+  });
+
+  it('el precio que manda la tablet llega al model para compararlo, en centavos', async () => {
+    await retiro(cuerpoDeEntrega({ precio_final: '60.50' }));
+
+    expect(loQueSeCreo()?.precioFinal).toBe(6050);
+  });
+});

@@ -14,11 +14,17 @@
  *
  * Va en dos pasos: `prepararEntrega` valida sin escribir (y pide cobrar todo lo que falta, SPEC-KRILINXI-056),
  * y `registrarEntrega` vuelve a validar y escribe.
+ *
+ * Desde SPEC-KRILINXI-068 el precio final no se escribe: es el precio de la boleta más sus cargos al entregar, que son
+ * renglones (`orden_items` con momento ENTREGA). Los cargos van primero en la transacción, después el pago y al final la
+ * entrega: el servidor calcula el precio final con los cargos que ya tiene, y rechaza la entrega si no da lo mismo.
  */
 import type { BaseLocal, Sentencia } from '../../../lib/powersync';
 import { aDecimal, formatearBs, parsearMonto, sumar, type Centavos } from '../../../lib/money';
 import { horaOficial } from '../../../lib/reloj';
+import { sentenciaRenglon } from '../../ordenes/api/renglonesLocal';
 import { obtenerOrden } from '../../ordenes/api/ropaLocal';
+import { claveCampo, sumaDeCargos, totalDe, validarRenglon, type RenglonValido } from '../../ordenes/renglones';
 import type { QuienRegistra } from '../../ordenes/types';
 import { sentenciaPago } from '../../pagos/api/pagosLocal';
 import { calcularSaldo } from '../../pagos/saldo';
@@ -37,7 +43,7 @@ export const MENSAJES_ENTREGA = {
   sinCarnet: 'Si no trae la boleta, escribe el carnet de quien retira la ropa.',
   nombreLargo: 'El nombre de quien retira es demasiado largo.',
   carnetLargo: 'El carnet de quien retira es demasiado largo. Revísalo y vuelve a escribirlo.',
-  precioFinal: 'Escribe el precio final con números, por ejemplo 45 o 45,50.',
+  precioFinal: 'Con esos cargos, el precio final es demasiado alto. Revisa las cantidades y los precios.',
   pago: 'Escribe cuánto paga el cliente, con números mayores que cero, por ejemplo 20 o 20,50.',
   pagoMayor: 'El cobro no puede ser mayor que lo que falta pagar.',
   /** Falta cobrar: la ropa no sale hasta que la boleta esté pagada por completo (SPEC-KRILINXI-056). */
@@ -79,8 +85,24 @@ export async function prepararEntrega(
     else if (carnet.length > LARGO_MAXIMO_CARNET) errores.retiradoPorCarnet = MENSAJES_ENTREGA.carnetLargo;
   }
 
-  const precioFinal = leerMonto(datos.precioFinal);
-  if (precioFinal === null || precioFinal > MONTO_MAXIMO) errores.precioFinal = MENSAJES_ENTREGA.precioFinal;
+  // Los cargos al entregar (SPEC-KRILINXI-068): cada uno con las reglas de un renglón, y el precio final, el de la boleta
+  // más los que ya tenga y los nuevos. Si alguno está mal no hay precio final que calcular.
+  const cargos: RenglonValido[] = [];
+  for (const cargo of datos.cargos) {
+    const { errores: suyos, valido } = validarRenglon(cargo);
+    if (suyos.descripcion) errores[claveCampo(cargo.clave, 'descripcion')] = suyos.descripcion;
+    if (suyos.cantidad) errores[claveCampo(cargo.clave, 'cantidad')] = suyos.cantidad;
+    if (suyos.precioUnitario) errores[claveCampo(cargo.clave, 'precioUnitario')] = suyos.precioUnitario;
+    if (valido) cargos.push(valido);
+  }
+  let precioFinal: Centavos | null = null;
+  if (cargos.length === datos.cargos.length) {
+    precioFinal = orden.precioTotal + sumaDeCargos(orden.renglones) + totalDe(cargos).total;
+    if (precioFinal > MONTO_MAXIMO) {
+      errores.cargos = MENSAJES_ENTREGA.precioFinal;
+      precioFinal = null;
+    }
+  }
 
   const pagado = sumar(...orden.pagos.map((p) => p.monto));
   const hayPago = datos.pagoFinal.trim() !== '';
@@ -112,6 +134,7 @@ export async function prepararEntrega(
       retiradoPorNombre: datos.traeBoleta ? null : nombre,
       retiradoPorCarnet: datos.traeBoleta ? null : carnet,
       precioFinal,
+      cargos,
       pagoFinal,
       metodoPago: hayPago ? datos.metodoPago : null,
     },
@@ -120,8 +143,9 @@ export async function prepararEntrega(
 
 /**
  * Vuelve a validar (pudo cambiar algo entre la confirmación y el toque) y escribe, en una sola
- * transacción: primero el pago final, después la entrega. Ese orden es el que sube la cola, y el
- * servidor mira lo cobrado al recibir la entrega (SPEC-KRILINXI-056). Si algo no valida, no escribe nada.
+ * transacción: primero los cargos (SPEC-KRILINXI-068), después el pago final y al final la entrega. Ese
+ * orden es el que sube la cola, y el servidor mira los cargos y lo cobrado al recibir la entrega
+ * (SPEC-KRILINXI-056). Si algo no valida, no escribe nada.
  */
 export async function registrarEntrega(
   base: BaseLocal,
@@ -136,8 +160,13 @@ export async function registrarEntrega(
   // que exige el backend (SPEC-KRILINXI-012).
   const ahora = horaOficial();
 
-  const sentencias: Sentencia[] = [];
-  // Primero el pago: la cola sube en este orden, y el servidor cuenta lo ya cobrado al recibir la entrega.
+  // Los cargos van después de los que la boleta ya tuviera: su posición sigue la cuenta.
+  const orden = await obtenerOrden(base, quien.sucursalId, ordenId);
+  const yaHay = orden?.renglones.filter((r) => r.momento === 'ENTREGA').length ?? 0;
+  const sentencias: Sentencia[] = entrega.cargos.map((renglon, i) =>
+    sentenciaRenglon({ renglon, ordenId, sucursalId: quien.sucursalId, momento: 'ENTREGA', posicion: yaHay + i }),
+  );
+  // Después el pago: la cola sube en este orden, y el servidor cuenta lo ya cobrado al recibir la entrega.
   if (entrega.pagoFinal > 0 && entrega.metodoPago) {
     sentencias.push(
       sentenciaPago(crypto.randomUUID(), {

@@ -75,6 +75,18 @@ export const TABLAS = {
     fecha_pago: text,
     usuario_id: text,
   }),
+
+  // Los renglones de la boleta — SPEC-KRILINXI-068. `momento` es INGRESO (de la boleta) o ENTREGA (un cargo al
+  // entregar); `posicion`, su lugar en la boleta. La cantidad es texto como los montos ("2.50"): tiene dos decimales.
+  orden_items: new Table({
+    orden_id: text,
+    sucursal_id: text,
+    momento: text,
+    posicion: integer,
+    descripcion: text,
+    cantidad: text,
+    precio_unitario: text,
+  }),
 };
 
 /**
@@ -91,7 +103,7 @@ export const TABLAS_SOLO_LOCALES = {
    */
   para_corregir: new Table(
     {
-      /** La tabla de la fila rechazada: clientes, ordenes, pagos o entregas. */
+      /** La tabla de la fila rechazada: clientes, ordenes, pagos, entregas u orden_items. */
       tabla: text,
       registro_id: text,
       /** PUT, PATCH o DELETE, como lo anotó la cola. */

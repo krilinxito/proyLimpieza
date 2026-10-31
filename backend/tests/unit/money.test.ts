@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatear, parse, restar, sumar } from '../../src/utils/money.js';
+import { formatear, parse, restar, subtotal, sumar } from '../../src/utils/money.js';
 
 describe('money — SPEC-ALE186-001', () => {
   describe('parse', () => {
@@ -80,5 +80,23 @@ describe('money — SPEC-ALE186-001', () => {
     it('rechaza centavos que no son enteros', () => {
       expect(() => formatear(12.5)).toThrow(/entero/);
     });
+  });
+});
+
+describe('money: el subtotal de un renglón de la boleta — SPEC-KRILINXI-068', () => {
+  // Los mismos casos que `frontend/src/lib/money.test.ts`, y los que Postgres da con round(cantidad * precio, 2).
+  it.each([
+    [200, 1500, 3000],
+    [250, 333, 833], // 8,325 → 8,33: la mitad, hacia arriba
+    [150, 333, 500], // 4,995 → 5,00
+    [133, 101, 134], // 1,3433 → 1,34
+    [100, 0, 0],
+    [99_999, 9_999_999_999, 9_999_899_999_000],
+  ])('%i centésimas × %i centavos = %i centavos', (cantidad, precio, esperado) => {
+    expect(subtotal(cantidad, precio)).toBe(esperado);
+  });
+
+  it('se niega a operar con algo que no sea entero', () => {
+    expect(() => subtotal(2.5, 100)).toThrow();
   });
 });

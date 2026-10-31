@@ -1,10 +1,14 @@
 /**
- * Registrar ropa en la base local: la orden y, si lo hay, su adelanto — SPEC-KRILINXI-006.
+ * Registrar ropa en la base local: la orden, sus renglones y, si lo hay, su adelanto — SPEC-KRILINXI-006 y 068.
  *
  * Mismo patrón que `features/clientes/api/clientesLocal.ts` (SPEC-KRILINXI-005): la base
  * llega como argumento, todo es SQL sobre SQLite y nada habla con la API. Lo escrito queda
- * en la cola: la orden sube como `POST /api/ordenes` y el adelanto como `POST /api/pagos`,
- * en ese orden, porque la cola respeta el orden en que se escribió.
+ * en la cola: la orden sube como `POST /api/ordenes`, cada renglón como `POST /api/orden-items`
+ * y el adelanto como `POST /api/pagos`, en ese orden, porque la cola respeta el orden en que se escribió.
+ *
+ * Desde SPEC-KRILINXI-068 la boleta se escribe renglón por renglón (qué prenda, cuántas, a qué precio cada una), y el
+ * total y la descripción salen de ahí: `precio_total` es la suma de los renglones y `descripcion`, su resumen ("2 Camisa,
+ * 1 Edredón"). El servidor comprueba que los renglones no sumen más que el total.
  *
  * Las validaciones repiten las del backend (SPEC-ALE186-004 y 005), con sus mismos textos.
  * Aquí son cortesía: el empleado se entera al momento, con o sin internet. La garantía
@@ -18,10 +22,11 @@ import { clienteNuevo, sentenciaAltaCliente, validarCliente } from '../../client
 import type { Cliente, ClienteElegido } from '../../clientes/types';
 import { sentenciaPago } from '../../pagos/api/pagosLocal';
 import { calcularSaldo } from '../../pagos/saldo';
+import { claveCampo, describirRenglones, totalDe, validarRenglon, type RenglonValido } from '../renglones';
 import type { DatosRopa, ErroresRopa, QuienRegistra, ResultadoRegistro, RevisionDeRopa } from '../types';
+import { sentenciaRenglon } from './renglonesLocal';
 
 const LARGO_MAXIMO_BOLETA = 30; // VARCHAR(30) en el schema
-const MONTO_MAXIMO: Centavos = 9_999_999_999; // NUMERIC(10,2)
 
 export const MENSAJES = {
   sinCliente: 'Falta elegir el cliente que deja la ropa.',
@@ -32,10 +37,10 @@ export const MENSAJES = {
     'El número de boleta solo puede llevar letras, números y guion, y al menos un número. Revisa el papel y vuelve a escribirlo.',
   boletaOcupada: 'Ese número de boleta ya está usado en esta sucursal. Revisa el papel y vuelve a escribirlo.',
   sinDescripcion: 'Escribe qué ropa deja el cliente.',
-  precio: 'Escribe el precio con números, por ejemplo 25 o 25,50.',
+  sinRenglones: 'Escribe al menos una prenda: qué es, cuántas y el precio de cada una.',
   fecha: 'La fecha de entrega estimada no es válida.',
   adelanto: 'Escribe cuánto deja de adelanto, con números mayores que cero, por ejemplo 20 o 20,50.',
-  adelantoMayor: 'El adelanto no puede ser mayor que el precio.',
+  adelantoMayor: 'El adelanto no puede ser mayor que el total.',
   sinMetodo: 'Elige cómo paga el adelanto: efectivo, QR o tarjeta.',
 } as const;
 
@@ -77,38 +82,33 @@ async function boletaOcupada(
   return filas.length > 0;
 }
 
-/** Lo que el empleado escribe de la ropa, sin el cliente ni el adelanto. */
-export type DatosDeLaRopa = Pick<DatosRopa, 'numeroBoleta' | 'descripcion' | 'precio' | 'fechaEstimada'>;
+/** Lo que el empleado escribe de la boleta en sí, sin el cliente, lo que deja ni el adelanto. */
+export type DatosDeLaBoleta = Pick<DatosRopa, 'numeroBoleta' | 'fechaEstimada'>;
 
-export type RopaValidada = {
-  errores: ErroresRopa;
-  /** Los valores ya limpios. `precio` es null si no es un monto (y entonces hay error). */
-  valores: { numeroBoleta: string; descripcion: string; precio: Centavos | null; fechaEstimada: string | null };
+export type BoletaValidada = {
+  errores: Pick<ErroresRopa, 'numeroBoleta' | 'fechaEstimada'>;
+  /** Los valores ya limpios. */
+  valores: { numeroBoleta: string; fechaEstimada: string | null };
 };
 
 /**
- * Las validaciones de la ropa, en un solo lugar: las usan registrar ropa y la corrección de
- * lo que el servidor rechazó (SPEC-KRILINXI-013), así el empleado lee el mismo mensaje en
- * las dos pantallas.
+ * Las validaciones del número de boleta y la fecha, en un solo lugar: las usan registrar ropa y la corrección de lo que el
+ * servidor rechazó (SPEC-KRILINXI-013), así el empleado lee el mismo mensaje en las dos pantallas. Lo que deja (los
+ * renglones, SPEC-KRILINXI-068) se valida aparte, con `validarRenglon`.
  */
-export async function validarRopa(
+export async function validarBoleta(
   base: BaseLocal,
   sucursalId: string,
-  datos: DatosDeLaRopa,
+  datos: DatosDeLaBoleta,
   excluirOrdenId: string | null = null,
-): Promise<RopaValidada> {
+): Promise<BoletaValidada> {
   const numeroBoleta = datos.numeroBoleta.trim();
-  const descripcion = datos.descripcion.trim();
   const fechaEstimada = datos.fechaEstimada.trim();
 
-  const errores: ErroresRopa = {};
+  const errores: BoletaValidada['errores'] = {};
   if (numeroBoleta === '') errores.numeroBoleta = MENSAJES.sinBoleta;
   else if (numeroBoleta.length > LARGO_MAXIMO_BOLETA) errores.numeroBoleta = MENSAJES.boletaLarga;
   else if (!esNumeroDeBoleta(numeroBoleta)) errores.numeroBoleta = MENSAJES.boletaInvalida;
-  if (descripcion === '') errores.descripcion = MENSAJES.sinDescripcion;
-
-  const precio = leerMonto(datos.precio);
-  if (precio === null || precio > MONTO_MAXIMO) errores.precio = MENSAJES.precio;
 
   if (fechaEstimada !== '' && !esFechaValida(fechaEstimada)) errores.fechaEstimada = MENSAJES.fecha;
 
@@ -118,7 +118,28 @@ export async function validarRopa(
     errores.numeroBoleta = MENSAJES.boletaOcupada;
   }
 
-  return { errores, valores: { numeroBoleta, descripcion, precio, fechaEstimada: fechaEstimada === '' ? null : fechaEstimada } };
+  return { errores, valores: { numeroBoleta, fechaEstimada: fechaEstimada === '' ? null : fechaEstimada } };
+}
+
+/**
+ * Los renglones de la boleta, validados — SPEC-KRILINXI-068: el error de cada campo de cada renglón (por su clave, como
+ * los muestra el formulario), los renglones limpios y el total. `total` es null si alguno está mal.
+ */
+function validarRenglones(datos: DatosRopa): { errores: ErroresRopa; validos: RenglonValido[]; total: Centavos | null } {
+  const errores: ErroresRopa = {};
+  if (datos.renglones.length === 0) errores.renglones = MENSAJES.sinRenglones;
+  const validos: RenglonValido[] = [];
+  for (const renglon of datos.renglones) {
+    const { errores: suyos, valido } = validarRenglon(renglon);
+    if (suyos.descripcion) errores[claveCampo(renglon.clave, 'descripcion')] = suyos.descripcion;
+    if (suyos.cantidad) errores[claveCampo(renglon.clave, 'cantidad')] = suyos.cantidad;
+    if (suyos.precioUnitario) errores[claveCampo(renglon.clave, 'precioUnitario')] = suyos.precioUnitario;
+    if (valido) validos.push(valido);
+  }
+  if (validos.length === 0 || validos.length !== datos.renglones.length) return { errores, validos, total: null };
+  const { total, error } = totalDe(validos);
+  if (error) errores.renglones = error;
+  return { errores, validos, total: error ? null : total };
 }
 
 type ClienteValidadoDeLaRopa =
@@ -153,26 +174,31 @@ function soloErrores(errores: ErroresRopa): ErroresRopa {
 }
 
 /**
- * Todo lo que se puede decir de lo escrito sin escribir nada: los errores de cada campo, el cliente ya preparado y el
- * adelanto leído. Es el trozo de `registrarRopa` que mira, separado para que `revisarRopa` (el visto del formulario,
- * SPEC-KRILINXI-058) y el guardado digan siempre lo mismo.
+ * Todo lo que se puede decir de lo escrito sin escribir nada: los errores de cada campo, el cliente ya preparado, los
+ * renglones validados y el adelanto leído. Es el trozo de `registrarRopa` que mira, separado para que `revisarRopa` (el
+ * visto del formulario, SPEC-KRILINXI-058) y el guardado digan siempre lo mismo.
  */
 async function revisar(base: BaseLocal, quien: QuienRegistra, datos: DatosRopa) {
   const hayAdelanto = datos.adelanto.trim() !== '';
   const [validada, elCliente] = await Promise.all([
-    validarRopa(base, quien.sucursalId, datos),
+    validarBoleta(base, quien.sucursalId, datos),
     prepararCliente(base, datos.cliente),
   ]);
-  const errores: ErroresRopa = { ...validada.errores, ...(elCliente.tipo === 'invalido' ? elCliente.errores : {}) };
+  const renglones = validarRenglones(datos);
+  const errores: ErroresRopa = {
+    ...validada.errores,
+    ...renglones.errores,
+    ...(elCliente.tipo === 'invalido' ? elCliente.errores : {}),
+  };
 
   const adelanto = hayAdelanto ? leerMonto(datos.adelanto) : 0;
-  const { precio } = validada.valores;
+  const { total } = renglones;
   if (hayAdelanto) {
     if (adelanto === null || adelanto <= 0) errores.adelanto = MENSAJES.adelanto;
-    else if (precio !== null && adelanto > precio) errores.adelanto = MENSAJES.adelantoMayor;
+    else if (total !== null && adelanto > total) errores.adelanto = MENSAJES.adelantoMayor;
     if (!datos.metodoAdelanto) errores.metodoAdelanto = MENSAJES.sinMetodo;
   }
-  return { validada, elCliente, adelanto, hayAdelanto, errores: soloErrores(errores) };
+  return { validada, renglones, elCliente, adelanto, hayAdelanto, errores: soloErrores(errores) };
 }
 
 /**
@@ -186,14 +212,16 @@ export async function revisarRopa(base: BaseLocal, quien: QuienRegistra, datos: 
 
 /**
  * Valida todo y, solo si todo está bien, escribe. Desde SPEC-KRILINXI-034, en una sola transacción
- * (`ejecutarJuntas`): el alta del cliente si es nuevo, la orden y el adelanto. O se guarda todo o
- * nada: si el adelanto está mal no se guarda ni la orden, y nunca queda un cliente nuevo sin la ropa
- * que vino a dejar. La cola sube en ese mismo orden, así la orden llega después de su cliente.
+ * (`ejecutarJuntas`): el alta del cliente si es nuevo, la orden, sus renglones (SPEC-KRILINXI-068) y el
+ * adelanto. O se guarda todo o nada: si el adelanto está mal no se guarda ni la orden, y nunca queda un
+ * cliente nuevo sin la ropa que vino a dejar. La cola sube en ese mismo orden, así la orden llega después
+ * de su cliente y antes que sus renglones.
  */
 export async function registrarRopa(base: BaseLocal, quien: QuienRegistra, datos: DatosRopa): Promise<ResultadoRegistro> {
-  const { validada, elCliente, adelanto, hayAdelanto, errores: limpios } = await revisar(base, quien, datos);
+  const { validada, renglones, elCliente, adelanto, hayAdelanto, errores: limpios } = await revisar(base, quien, datos);
   if (elCliente.tipo === 'telefono-ocupado') return elCliente;
-  const { numeroBoleta, descripcion, precio, fechaEstimada } = validada.valores;
+  const { numeroBoleta, fechaEstimada } = validada.valores;
+  const precio = renglones.total;
 
   // Los `=== null` repiten lo que ya dicen los errores, pero así TypeScript sabe que de aquí
   // en adelante cliente, precio y adelanto existen.
@@ -201,6 +229,8 @@ export async function registrarRopa(base: BaseLocal, quien: QuienRegistra, datos
     return { tipo: 'invalida', errores: limpios };
   }
   const { cliente, alta } = elCliente;
+  // La descripción de la boleta es el resumen de sus renglones: así el buscador y el historial la siguen leyendo.
+  const descripcion = describirRenglones(renglones.validos);
 
   const ordenId = crypto.randomUUID();
   // La hora del servidor aunque el reloj de la tablet esté mal, en el formato ISO 8601 con zona
@@ -225,6 +255,10 @@ export async function registrarRopa(base: BaseLocal, quien: QuienRegistra, datos
         aDecimal(precio),
       ],
     },
+    // Después de la orden: la cola sube en este orden, y el servidor necesita la orden para aceptar sus renglones.
+    ...renglones.validos.map((renglon, posicion) =>
+      sentenciaRenglon({ renglon, ordenId, sucursalId: quien.sucursalId, momento: 'INGRESO', posicion }),
+    ),
   ];
   if (hayAdelanto && datos.metodoAdelanto) {
     sentencias.push(

@@ -28,6 +28,17 @@ const BOLETA = {
   retiro: { tipo: 'SIN_BOLETA' as const, nombre: 'Luis Mamani', carnet: '1234567 LP' },
   pagado: '20.00',
   saldo: '30.00',
+  // SPEC-KRILINXI-068: los renglones de la boleta, con los números como texto.
+  renglones: [
+    {
+      id: '88888888-8888-8888-8888-888888888888',
+      momento: 'INGRESO' as const,
+      descripcion: 'Camisa',
+      cantidad: '2.00',
+      precioUnitario: '22.75',
+      subtotal: '45.50',
+    },
+  ],
 };
 
 const SIN_FILTROS = {

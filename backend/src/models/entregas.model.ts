@@ -9,15 +9,20 @@
 // orden ya tiene) tiene que cubrir el precio final. Como el pago final y la entrega suben como dos pedidos, el
 // dispositivo manda primero el pago y después la entrega (ver `registrarEntrega` en el frontend).
 //
+// Desde SPEC-KRILINXI-068 el precio final ya no lo escribe nadie a mano: es el `precio_total` de la boleta más sus cargos
+// al entregar (los renglones de `orden_items` con `momento = 'ENTREGA'`), y lo calcula esta sentencia. La tablet lo manda
+// igual, y si no coincide se rechaza: así una entrega cuyo cargo no llegó (o una de una versión anterior, con un precio
+// libre) no se guarda con un precio que nadie eligió. Los cargos suben antes que la entrega, como el pago final.
+//
 // Lo nuevo es que registrar una entrega escribe en DOS tablas: la entrega, y la
 // orden, que pasa a ENTREGADO. Tienen que ocurrir las dos o ninguna — ver `crear`.
 import pg from 'pg';
 import { pool } from '../db/pool.js';
-import { ESTADOS_CERRADOS, ESTADOS_ORDEN, type TipoRetiro } from '../utils/dominio.js';
+import { ESTADOS_ABIERTOS, type TipoRetiro } from '../utils/dominio.js';
 import { formatear, type Centavos } from '../utils/money.js';
 import { conAuditoria, type Revision } from './auditoria.model.js';
 import * as ordenes from './ordenes.model.js';
-import type { Orden } from './ordenes.model.js';
+import { SUBTOTAL_SQL, type Orden } from './ordenes.model.js';
 
 export interface Entrega {
   id: string;
@@ -69,7 +74,7 @@ const COLUMNAS =
  * un estado fijo: si algún día vuelve a haber pasos intermedios, rechazar una entrega
  * porque nadie los marcó perdería el registro de algo que ya pasó en el mostrador.
  */
-export const ESTADOS_ENTREGABLES = ESTADOS_ORDEN.filter((estado) => !ESTADOS_CERRADOS.includes(estado));
+export const ESTADOS_ENTREGABLES = ESTADOS_ABIERTOS;
 
 // Nombres de las restricciones del schema (sin nombre explícito, así que son los
 // que les pone Postgres). 23505 = unique_violation.
@@ -87,18 +92,29 @@ export async function buscarPorId(id: string): Promise<Entrega | null> {
 }
 
 /**
- * Lo que faltaría cobrar si se entregara con ese precio final (`null` = el de la boleta): el precio menos todo lo cobrado,
- * como texto de Postgres. Solo sirve para armar el mensaje cuando la sentencia de `crear` no insertó nada.
+ * El precio final de una orden en SQL: su `precio_total` más los cargos al entregar — SPEC-KRILINXI-068. `alias` es
+ * la tabla `ordenes` de la consulta que lo usa. Una boleta sin cargos (o de antes de los renglones) da su total.
  */
-async function saldoAlEntregar(ordenId: string, precioFinal: Centavos | null): Promise<string | null> {
-  const { rows } = await pool.query<{ saldo: string }>(
-    `SELECT (COALESCE($2::numeric, o.precio_total)
+function precioFinalSql(alias: string): string {
+  return `(${alias}.precio_total + COALESCE((SELECT SUM(${SUBTOTAL_SQL('i')}) FROM orden_items i
+                                           WHERE i.orden_id = ${alias}.id AND i.momento = 'ENTREGA'), 0))`;
+}
+
+/**
+ * El precio final que le corresponde a la orden y lo que faltaría cobrar con él, como texto de Postgres (`"25.50"`).
+ * Solo sirve para explicar por qué la sentencia de `crear` no insertó nada.
+ */
+async function cuentasAlEntregar(ordenId: string): Promise<{ precioFinal: string; saldo: string } | null> {
+  const { rows } = await pool.query<{ precio_final: string; saldo: string }>(
+    `SELECT ${precioFinalSql('o')}::text AS precio_final,
+            (${precioFinalSql('o')}
               - COALESCE((SELECT SUM(p.monto) FROM pagos p WHERE p.orden_id = o.id), 0))::text AS saldo
        FROM ordenes o
       WHERE o.id = $1`,
-    [ordenId, precioFinal === null ? null : formatear(precioFinal)],
+    [ordenId],
   );
-  return rows[0]?.saldo ?? null;
+  const fila = rows[0];
+  return fila === undefined ? null : { precioFinal: fila.precio_final, saldo: fila.saldo };
 }
 
 export interface EntregaNueva {
@@ -108,7 +124,10 @@ export interface EntregaNueva {
   retiradoPorNombre: string | null;
   retiradoPorCarnet: string | null;
   usuarioEntregaId: string;
-  /** `null` = el `precio_total` de la orden. */
+  /**
+   * El que calculó la tablet; `null` = no lo manda. No decide nada: el precio final lo calcula el servidor (el total
+   * más los cargos), y este solo se compara con él (SPEC-KRILINXI-068).
+   */
   precioFinal: Centavos | null;
   /** ISO 8601 con zona, tal como lo manda el dispositivo; `null` = ahora. */
   fechaEntrega: string | null;
@@ -130,7 +149,9 @@ export type ResultadoCrear =
   /** La orden ya tiene una entrega, con otro id. */
   | { tipo: 'orden-ya-entregada'; orden: Orden }
   /** La ropa se puede entregar, pero lo cobrado no cubre el precio final. `saldo` es lo que falta, como lo da Postgres (`"25.50"`). */
-  | { tipo: 'saldo-pendiente'; orden: Orden; saldo: string };
+  | { tipo: 'saldo-pendiente'; orden: Orden; saldo: string }
+  /** El precio final que mandó la tablet no es el total más los cargos que tiene la orden (SPEC-KRILINXI-068). */
+  | { tipo: 'precio-distinto'; orden: Orden; precioFinal: string };
 
 /**
  * Registra la entrega y pasa la orden a ENTREGADO, o devuelve la que ya existe.
@@ -147,8 +168,11 @@ export type ResultadoCrear =
  * condición se vuelve a evaluar sobre la fila ya anulada.
  *
  * La regla del saldo (SPEC-KRILINXI-056) es una condición más del mismo `UPDATE`: la orden solo pasa a ENTREGADO si lo cobrado
- * cubre el precio final (el que viene, o el de la boleta). Si no, el UPDATE no devuelve nada, el INSERT no inserta nada y no
+ * cubre el precio final. Si no, el UPDATE no devuelve nada, el INSERT no inserta nada y no
  * se escribe ni la entrega ni la auditoría. Un pago nunca se borra, así que una carrera con otro cobro solo puede ayudar.
+ *
+ * El precio final (SPEC-KRILINXI-068) también sale de ahí: el `UPDATE` lo calcula (`precioFinalSql`) y lo devuelve, y el
+ * INSERT lo guarda. Si la tablet mandó uno y no es ese, es otra condición que no se cumple, y no se escribe nada.
  *
  * A diferencia de pagos, NO hay `ON CONFLICT (id) DO NOTHING`. Ese DO NOTHING
  * solo afecta al INSERT: si el id chocara, el UPDATE ya habría marcado la orden
@@ -174,14 +198,15 @@ export async function crear(
             WHERE id = $2
               AND estado = ANY($9::estado_orden[])
               AND ($10::uuid IS NULL OR sucursal_id = $10)
-              AND COALESCE($7::numeric, precio_total)
+              AND ($7::numeric IS NULL OR $7::numeric = ${precioFinalSql('ordenes')})
+              AND ${precioFinalSql('ordenes')}
                   <= COALESCE((SELECT SUM(p.monto) FROM pagos p WHERE p.orden_id = ordenes.id), 0)
-           RETURNING id, sucursal_id, precio_total
+           RETURNING id, sucursal_id, ${precioFinalSql('ordenes')} AS precio_final
          )`,
         sql: `INSERT INTO entregas (id, orden_id, sucursal_id, tipo_retiro, retirado_por_nombre,
                                     retirado_por_carnet, usuario_entrega_id, precio_final, fecha_entrega)
               SELECT $1, orden.id, orden.sucursal_id, $3, $4, $5, $6,
-                     COALESCE($7::numeric, orden.precio_total),
+                     orden.precio_final,
                      COALESCE($8::timestamptz::timestamp, LOCALTIMESTAMP)
                 FROM orden
               RETURNING ${COLUMNAS}`,
@@ -231,9 +256,16 @@ export async function crear(
     return { tipo: 'orden-ya-entregada', orden };
   }
 
-  // Entregable y sin choques: queda la regla del saldo (SPEC-KRILINXI-056).
-  const saldo = await saldoAlEntregar(entrega.ordenId, entrega.precioFinal);
-  if (saldo !== null && !saldo.startsWith('-') && saldo !== '0.00') return { tipo: 'saldo-pendiente', orden, saldo };
+  // Entregable y sin choques: queda el precio (SPEC-KRILINXI-068) y la regla del saldo (SPEC-KRILINXI-056). El precio
+  // va primero: si la tablet calculó con otros cargos, lo que "falta" según ella no es lo que falta de verdad.
+  const cuentas = await cuentasAlEntregar(entrega.ordenId);
+  if (cuentas !== null) {
+    if (entrega.precioFinal !== null && formatear(entrega.precioFinal) !== cuentas.precioFinal) {
+      return { tipo: 'precio-distinto', orden, precioFinal: cuentas.precioFinal };
+    }
+    const { saldo } = cuentas;
+    if (!saldo.startsWith('-') && saldo !== '0.00') return { tipo: 'saldo-pendiente', orden, saldo };
+  }
 
   // Existe, es visible, está en un estado entregable y no chocó con nada, pero
   // no se insertó: no debería pasar. Mejor enterarse que inventar un motivo.
