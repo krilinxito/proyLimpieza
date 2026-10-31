@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-068
 name: Precio unitario por renglón en la boleta
 slug: precio-unitario-boleta
-status: in-progress
+status: finished
 owner: ale186
 created: 2026-10-30
 scope:
@@ -26,7 +26,36 @@ scope:
   - frontend/src/features/pendientes/**
 priority: high
 depends_on: []
-tests: []
+tests:
+  - backend\tests\db\auditoria.db.test.ts
+  - backend\tests\db\entregas.db.test.ts
+  - backend\tests\db\ordenItems.db.test.ts
+  - backend\tests\http\entregas.test.ts
+  - backend\tests\http\ordenItems.test.ts
+  - backend\tests\http\ordenes.test.ts
+  - backend\tests\http\ordenesHistorial.test.ts
+  - backend\tests\unit\dominio.test.ts
+  - backend\tests\unit\entregas.model.test.ts
+  - backend\tests\unit\money.test.ts
+  - backend\tests\unit\ordenItems.model.test.ts
+  - backend\tests\unit\syncRules.test.ts
+  - frontend\src\features\auditoria\describir.test.ts
+  - frontend\src\features\entregas\api\entregasLocal.test.ts
+  - frontend\src\features\historial\api\historialApi.test.ts
+  - frontend\src\features\historial\components\PantallaHistorial.test.tsx
+  - frontend\src\features\mostrador\components\EntregarEnMostrador.test.tsx
+  - frontend\src\features\mostrador\components\PantallaMostrador.test.tsx
+  - frontend\src\features\mostrador\components\RegistrarEnMostrador.test.tsx
+  - frontend\src\features\ordenes\api\ordenesLocal.test.ts
+  - frontend\src\features\ordenes\components\ListaDeRenglones.test.tsx
+  - frontend\src\features\ordenes\renglones.test.ts
+  - frontend\src\features\pendientes\api\corregirLocal.test.ts
+  - frontend\src\features\pendientes\components\PantallaParaCorregir.test.tsx
+  - frontend\src\lib\dominio.test.ts
+  - frontend\src\lib\money.test.ts
+  - frontend\src\lib\powersync\conector.test.ts
+  - frontend\src\lib\powersync\schema.test.ts
+  - frontend\src\test\arquitectura.test.ts
 ---
 
 ## Descripción
