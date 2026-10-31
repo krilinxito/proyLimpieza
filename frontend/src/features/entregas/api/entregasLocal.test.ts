@@ -12,8 +12,8 @@ import {
   SUCURSAL_DE_PRUEBA,
 } from '../../../test/filasDePrueba';
 import { MENSAJES_RENGLON, type RenglonEscrito } from '../../ordenes/renglones';
-import type { DatosEntrega } from '../types';
-import { MENSAJES_ENTREGA, prepararEntrega, registrarEntrega } from './entregasLocal';
+import type { DatosEntrega, DatosReembolso } from '../types';
+import { MENSAJES_ENTREGA, prepararEntrega, prepararReembolso, registrarEntrega, registrarReembolso } from './entregasLocal';
 
 const ROSA = clienteDePrueba();
 const QUIEN = { usuarioId: randomUUID(), sucursalId: SUCURSAL_DE_PRUEBA };
@@ -321,5 +321,158 @@ describe('Entregar con cargos — SPEC-KRILINXI-068', () => {
     const resultado = await registrarEntrega(control.base, QUIEN, lista.id, datosEntrega({ cargos: [cargo({ clave: 'c1', ...cambios })] }));
     expect(resultado).toMatchObject({ tipo: 'invalida', errores: { [`renglon:c1:${campo}`]: mensaje } });
     expect(await cola()).toEqual([]);
+  });
+});
+
+describe('Entregar sin cobrar: lo que se valida y se guarda — SPEC-KRILINXI-070', () => {
+  const MOTIVO = 'El cliente reclamó por una mancha.';
+  const datosReembolso = (cambios: Partial<DatosReembolso> = {}): DatosReembolso => ({
+    traeBoleta: true,
+    retiradoPorNombre: '',
+    retiradoPorCarnet: '',
+    motivoReembolso: MOTIVO,
+    ...cambios,
+  });
+
+  it('prepara la entrega con lo ya cobrado como precio final y dice cuánto no se cobra', async () => {
+    const { control, lista } = await preparar();
+
+    const resultado = await prepararReembolso(control.base, SUCURSAL_DE_PRUEBA, lista.id, datosReembolso());
+
+    expect(resultado).toEqual({
+      tipo: 'lista',
+      entrega: expect.objectContaining({
+        numeroBoleta: '001234',
+        precioFinal: 2000,
+        pagoFinal: 0,
+        metodoPago: null,
+        cargos: [],
+        reembolso: { motivo: MOTIVO, noCobrado: 3000 },
+      }),
+    });
+  });
+
+  it('guarda UNA fila: la entrega con su motivo y lo ya cobrado; sin pago, sin cargo y sin tocar la orden', async () => {
+    const { control, lista, cola } = await preparar();
+
+    const resultado = await registrarReembolso(control.base, QUIEN, lista.id, datosReembolso({ motivoReembolso: `  ${MOTIVO}  ` }));
+
+    expect(resultado.tipo).toBe('lista');
+    expect(await cola()).toEqual([
+      [
+        'PUT',
+        'entregas',
+        expect.objectContaining({
+          orden_id: lista.id,
+          sucursal_id: SUCURSAL_DE_PRUEBA,
+          tipo_retiro: 'CON_BOLETA',
+          usuario_entrega_id: QUIEN.usuarioId,
+          precio_final: '20.00',
+          motivo_reembolso: MOTIVO,
+        }),
+      ],
+    ]);
+    // La tablet nunca escribe el estado: eso es del servidor (la boleta figura REEMBOLSADO por estadoEfectivo).
+    expect(await control.base.consultar('SELECT estado FROM ordenes WHERE id = ?', [lista.id])).toEqual([{ estado: 'LISTO' }]);
+    expect((await obtenerOrden(control.base, SUCURSAL_DE_PRUEBA, lista.id))?.estado).toBe('REEMBOLSADO');
+  });
+
+  it('el saldo queda en 0 y la boleta con su reembolso: motivo, quién y cuándo', async () => {
+    const { control, lista } = await preparar();
+    await registrarReembolso(control.base, QUIEN, lista.id, datosReembolso());
+
+    const orden = await obtenerOrden(control.base, SUCURSAL_DE_PRUEBA, lista.id);
+
+    expect(orden).toMatchObject({ saldo: 0, precioFinal: 2000, reembolso: { motivo: MOTIVO } });
+    expect(orden?.reembolso?.fecha).toMatch(/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/);
+  });
+
+  it('el motivo es obligatorio: en blanco, o de más de 300 letras, no se escribe nada', async () => {
+    const { control, lista, cola } = await preparar();
+
+    expect(await registrarReembolso(control.base, QUIEN, lista.id, datosReembolso({ motivoReembolso: '   ' }))).toEqual({
+      tipo: 'invalida',
+      errores: { motivoReembolso: MENSAJES_ENTREGA.sinMotivo },
+    });
+    expect(
+      await registrarReembolso(control.base, QUIEN, lista.id, datosReembolso({ motivoReembolso: 'a'.repeat(301) })),
+    ).toEqual({ tipo: 'invalida', errores: { motivoReembolso: MENSAJES_ENTREGA.motivoLargo } });
+    expect(await cola()).toEqual([]);
+  });
+
+  it('300 letras justas valen', async () => {
+    const { control, lista } = await preparar();
+
+    const resultado = await prepararReembolso(control.base, SUCURSAL_DE_PRUEBA, lista.id, datosReembolso({ motivoReembolso: 'a'.repeat(300) }));
+
+    expect(resultado.tipo).toBe('lista');
+  });
+
+  it('quien retira se pide como siempre: elegir si trae la boleta y, sin ella, nombre y carnet', async () => {
+    const { control, lista } = await preparar();
+
+    expect(await prepararReembolso(control.base, SUCURSAL_DE_PRUEBA, lista.id, datosReembolso({ traeBoleta: null }))).toEqual({
+      tipo: 'invalida',
+      errores: { traeBoleta: MENSAJES_ENTREGA.sinBoletaElegida },
+    });
+    expect(await prepararReembolso(control.base, SUCURSAL_DE_PRUEBA, lista.id, datosReembolso({ traeBoleta: false }))).toEqual({
+      tipo: 'invalida',
+      errores: { retiradoPorNombre: MENSAJES_ENTREGA.sinNombre, retiradoPorCarnet: MENSAJES_ENTREGA.sinCarnet },
+    });
+    const sinBoleta = await prepararReembolso(
+      control.base,
+      SUCURSAL_DE_PRUEBA,
+      lista.id,
+      datosReembolso({ traeBoleta: false, retiradoPorNombre: ' Luis Mamani ', retiradoPorCarnet: ' 1234567 ' }),
+    );
+    expect(sinBoleta).toMatchObject({
+      tipo: 'lista',
+      entrega: { tipoRetiro: 'SIN_BOLETA', retiradoPorNombre: 'Luis Mamani', retiradoPorCarnet: '1234567' },
+    });
+  });
+
+  it('una boleta anulada, ya entregada o ya reembolsada no se entrega sin cobrar, y no escribe nada', async () => {
+    const { control, anulada, entregada, lista, cola } = await preparar();
+    await registrarReembolso(control.base, QUIEN, lista.id, datosReembolso());
+    const antes = await cola();
+
+    expect(await registrarReembolso(control.base, QUIEN, anulada.id, datosReembolso())).toEqual({
+      tipo: 'no-se-puede',
+      mensaje: MENSAJES_ENTREGA.anulada,
+    });
+    expect(await registrarReembolso(control.base, QUIEN, entregada.id, datosReembolso())).toEqual({
+      tipo: 'no-se-puede',
+      mensaje: MENSAJES_ENTREGA.yaEntregada,
+    });
+    // La que acaba de reembolsarse: ya figura REEMBOLSADO, y tampoco se puede entregar de nuevo.
+    expect(await registrarReembolso(control.base, QUIEN, lista.id, datosReembolso())).toEqual({
+      tipo: 'no-se-puede',
+      mensaje: MENSAJES_ENTREGA.yaEntregada,
+    });
+    expect(await prepararEntrega(control.base, SUCURSAL_DE_PRUEBA, lista.id, datosEntrega())).toEqual({
+      tipo: 'no-se-puede',
+      mensaje: MENSAJES_ENTREGA.yaEntregada,
+    });
+    expect(await cola()).toEqual(antes);
+  });
+
+  it('una boleta ya pagada no tiene nada que perdonar: se entrega de la forma de siempre', async () => {
+    const { control, lista, sembrar, cola } = await preparar();
+    await sembrar('pagos', [pagoDePrueba({ orden_id: lista.id, monto: '30.00', tipo: 'PAGO_FINAL' })]);
+
+    expect(await registrarReembolso(control.base, QUIEN, lista.id, datosReembolso())).toEqual({
+      tipo: 'no-se-puede',
+      mensaje: MENSAJES_ENTREGA.sinDeuda,
+    });
+    expect(await cola()).toEqual([]);
+  });
+
+  it('no encuentra la boleta de otra sucursal', async () => {
+    const { control, lista } = await preparar();
+
+    expect(await prepararReembolso(control.base, 'otra-sucursal', lista.id, datosReembolso())).toEqual({
+      tipo: 'no-se-puede',
+      mensaje: MENSAJES_ENTREGA.noEncontrada,
+    });
   });
 });

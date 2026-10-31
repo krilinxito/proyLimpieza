@@ -367,4 +367,34 @@ describe('Corregir los renglones de la boleta — SPEC-KRILINXI-068', () => {
     const [pedido] = await subirAceptando(db);
     expect(pedido).toMatchObject({ ruta: '/entregas', cuerpo: { orden_id: orden.id, precio_final: '55.00' } });
   });
+
+  // SPEC-KRILINXI-070: una entrega sin cobrar rechazada (por ejemplo, la boleta ya se anuló en otra tablet) se corrige igual,
+  // pero no recalcula el precio final: es lo ya cobrado, y sigue siendo un reembolso con su motivo.
+  it('una entrega sin cobrar rechazada vuelve a subir como reembolso, con su motivo y sin recalcular el precio final', async () => {
+    const { control, db, sembrar } = await baseLocalDePrueba();
+    const orden = ordenDePrueba({ precio_total: '50.00' });
+    await sembrar('ordenes', [orden]);
+    await control.base.ejecutar(
+      `INSERT INTO entregas (id, orden_id, sucursal_id, tipo_retiro, precio_final, motivo_reembolso)
+       VALUES (uuid(), ?, ?, 'SIN_BOLETA', '20.00', 'Reclamó por una mancha')`,
+      [orden.id, SUCURSAL_DE_PRUEBA],
+    );
+    await subirRechazando(db, 400, 'VALIDACION', 'Escribe el nombre y el carnet de quien retira.');
+    const registro = await elRechazado(control.base);
+    const { valores } = prepararCorreccion(registro) as { valores: Record<string, string> };
+
+    expect(
+      await guardarCorreccion(control.base, SUCURSAL_DE_PRUEBA, registro, {
+        ...valores,
+        retirado_por_nombre: 'Luis Mamani',
+        retirado_por_carnet: '1234567',
+      }),
+    ).toEqual({ tipo: 'guardada' });
+
+    const [pedido] = await subirAceptando(db);
+    expect(pedido).toMatchObject({
+      ruta: '/entregas',
+      cuerpo: { orden_id: orden.id, precio_final: '20.00', motivo_reembolso: 'Reclamó por una mancha' },
+    });
+  });
 });

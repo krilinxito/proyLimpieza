@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { paginaDePrueba, registroDePrueba, ROSA_CLIENTE, SUCURSAL_CENTRO } from '../../test/auditoriaDePrueba';
 import { leerPagina } from './api/auditoriaApi';
-import { antes, cuando, queHizo, sobreQue, textoRevision } from './describir';
+import { antes, cuando, motivoDelReembolso, queHizo, sobreQue, textoRevision } from './describir';
 import { FILTRO_INICIAL, parametrosAuditoria } from './filtro';
 import { ACCIONES, TABLAS, type RegistroAuditoria } from './types';
 
@@ -136,5 +136,34 @@ describe('Auditoría: los renglones de la boleta — SPEC-KRILINXI-068', () => {
   it('con un cliente elegido en el filtro, el renglón también dice de quién es', () => {
     const conCliente = { ...NOMBRES, clienteDelFiltro: 'Rosa Quispe' };
     expect(sobreQue(registro({ accion: 'CREAR', tablaAfectada: 'orden_items' }), conCliente)).toBe('de Rosa Quispe');
+  });
+});
+
+describe('Auditoría: la entrega sin cobrar — SPEC-KRILINXI-070', () => {
+  const REEMBOLSO = { accion: 'ENTREGAR', tablaAfectada: 'entregas', revision: 'reembolso', motivoReembolso: 'Reclamó por una mancha' };
+
+  it('una entrega con motivo se dice "Entregó sin cobrar"; una común, "Entregó ropa"', () => {
+    expect(queHizo(registro(REEMBOLSO))).toBe('Entregó sin cobrar');
+    expect(queHizo(registro({ accion: 'ENTREGAR', tablaAfectada: 'entregas' }))).toBe('Entregó ropa');
+  });
+
+  it('la marca "reembolso" se explica en palabras', () => {
+    expect(textoRevision('reembolso')).toBe('Para revisar: se entregó la ropa sin cobrar.');
+  });
+
+  it('el motivo se lee del contrato; un servidor que no lo manda es como uno sin reembolsos', () => {
+    expect(registro(REEMBOLSO).motivoReembolso).toBe('Reclamó por una mancha');
+    expect(registro({ accion: 'ENTREGAR', tablaAfectada: 'entregas' }).motivoReembolso).toBeNull();
+
+    const sinElCampo = registroDePrueba();
+    Reflect.deleteProperty(sinElCampo, 'motivoReembolso');
+    expect(leerPagina(paginaDePrueba([sinElCampo]))?.registros[0]?.motivoReembolso).toBeNull();
+    // Y uno que no es texto no encaja con el contrato.
+    expect(leerPagina(paginaDePrueba([registroDePrueba({ motivoReembolso: 42 })]))).toBeNull();
+  });
+
+  it('el motivo se escribe en palabras; sin motivo no hay nada que mostrar', () => {
+    expect(motivoDelReembolso(registro(REEMBOLSO))).toBe('Motivo: Reclamó por una mancha');
+    expect(motivoDelReembolso(registro())).toBeNull();
   });
 });

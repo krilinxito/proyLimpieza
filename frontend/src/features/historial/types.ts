@@ -1,6 +1,6 @@
 import type { EstadoOrden } from '../../lib/dominio';
 import type { Centavos } from '../../lib/money';
-import type { Retiro } from '../ordenes/retiro';
+import type { Reembolso, Retiro } from '../ordenes/retiro';
 import type { RenglonVisto } from '../ordenes/types';
 
 /**
@@ -27,6 +27,8 @@ export type BoletaListada = {
   precioFinal: Centavos | null;
   /** Quién retiró la ropa (SPEC-KRILINXI-060); null si todavía no se entregó. */
   retiro: Retiro | null;
+  /** Si la ropa salió sin cobrar (SPEC-KRILINXI-070); null en cualquier otra boleta. */
+  reembolso: Reembolso | null;
   pagado: Centavos;
   saldo: Centavos;
   /** Sus renglones (SPEC-KRILINXI-068): los de la boleta y los cargos al entregar. Vacío en una boleta de antes. */

@@ -11,6 +11,7 @@ import type { OrdenVista } from '../../ordenes/types';
 import { calcularSaldo } from '../../pagos/saldo';
 import { useEntregar } from '../hooks/useEntregar';
 import type { DatosEntrega, EntregaLista, ErroresEntrega } from '../types';
+import { CamposDeRetiro } from './CamposDeRetiro';
 
 const NO_SE_GUARDO = 'No se pudo guardar la entrega. Prueba de nuevo y, si sigue pasando, avísale al encargado.';
 
@@ -153,55 +154,15 @@ export function FormularioEntrega({ orden, alEntregar, alCancelar }: Props) {
       aria-label="Entregar la ropa"
       className="mt-2 grid gap-2 rounded-2xl border-2 border-marca bg-superficie p-5 shadow-sm"
     >
-      <fieldset aria-describedby={errores.traeBoleta ? 'trae-boleta-error' : undefined}>
-        <legend className="text-xl font-semibold text-texto">¿El cliente trae la boleta?</legend>
-        <div className="mt-2 grid grid-cols-2 gap-3">
-          {[
-            { valor: true, texto: 'Trae la boleta' },
-            { valor: false, texto: 'No trae la boleta' },
-          ].map(({ valor, texto }) => (
-            <label
-              key={texto}
-              className={`flex min-h-14 items-center gap-3 rounded-lg border-2 px-4 text-xl ${
-                datos.traeBoleta === valor ? 'border-marca bg-marca-suave font-semibold' : 'border-borde bg-superficie'
-              }`}
-            >
-              <input
-                type="radio"
-                name="trae-boleta"
-                className="size-6"
-                checked={datos.traeBoleta === valor}
-                onChange={() => setDatos((d) => ({ ...d, traeBoleta: valor }))}
-              />
-              {texto}
-            </label>
-          ))}
-        </div>
-        {errores.traeBoleta && (
-          <p id="trae-boleta-error" className="mt-2 text-lg font-semibold text-peligro-texto">
-            {errores.traeBoleta}
-          </p>
-        )}
-      </fieldset>
-
-      {datos.traeBoleta === false && (
-        <>
-          <CampoTexto
-            etiqueta="Nombre de quien retira"
-            value={datos.retiradoPorNombre}
-            onChange={cambiar('retiradoPorNombre')}
-            error={errores.retiradoPorNombre}
-            autoComplete="off"
-          />
-          <CampoTexto
-            etiqueta="Carnet de quien retira"
-            value={datos.retiradoPorCarnet}
-            onChange={cambiar('retiradoPorCarnet')}
-            error={errores.retiradoPorCarnet}
-            autoComplete="off"
-          />
-        </>
-      )}
+      <CamposDeRetiro
+        traeBoleta={datos.traeBoleta}
+        nombre={datos.retiradoPorNombre}
+        carnet={datos.retiradoPorCarnet}
+        alElegirBoleta={(traeBoleta) => setDatos((d) => ({ ...d, traeBoleta }))}
+        alCambiarNombre={cambiar('retiradoPorNombre')}
+        alCambiarCarnet={cambiar('retiradoPorCarnet')}
+        errores={errores}
+      />
 
       {yaPagada ? (
         <div className="mt-2">

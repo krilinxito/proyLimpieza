@@ -18,6 +18,7 @@ import {
   type MetodoPago,
 } from '../../../lib/dominio';
 import { desdeDecimal, parsearMonto, sumar, type Centavos } from '../../../lib/money';
+import { fechaYHoraEnBolivia, instanteGuardado } from '../../../lib/diaDelNegocio';
 import { horaOficial } from '../../../lib/reloj';
 import { alcanzaParaBuscar, escaparLike, type ResultadosDeBusqueda } from '../../../lib/texto';
 import { condicionCliente } from '../../clientes/api/busqueda';
@@ -25,7 +26,7 @@ import { normalizarTelefono } from '../../clientes/telefono';
 import { insertarPago } from '../../pagos/api/pagosLocal';
 import { calcularSaldo } from '../../pagos/saldo';
 import { estaCerrada, estadoDeLaBase, estadoEfectivo, puedePasarA } from '../estado';
-import type { Retiro } from '../retiro';
+import type { Reembolso, Retiro } from '../retiro';
 import type { OrdenVista, PagoVisto, QuienRegistra, RenglonVisto, ResultadoAccion } from '../types';
 import { renglonesPorOrden } from './renglonesLocal';
 
@@ -44,10 +45,12 @@ export const SELECT_ORDENES = `
   SELECT o.id, o.numero_boleta, o.cliente_id, o.descripcion, o.estado, o.fecha_entrada, o.fecha_estimada_salida,
          o.precio_total, c.nombre AS cliente_nombre, c.telefono AS cliente_telefono,
          e.id AS entrega_id, e.precio_final,
-         e.tipo_retiro, e.retirado_por_nombre, e.retirado_por_carnet
+         e.tipo_retiro, e.retirado_por_nombre, e.retirado_por_carnet,
+         e.motivo_reembolso, e.fecha_entrega, ue.nombre_completo AS entrega_por
     FROM ordenes o
     LEFT JOIN clientes c ON c.id = o.cliente_id
     LEFT JOIN entregas e ON e.orden_id = o.id
+    LEFT JOIN usuarios ue ON ue.id = e.usuario_entrega_id
    WHERE o.sucursal_id = ?`;
 
 function texto(valor: unknown): string | null {
@@ -99,6 +102,15 @@ function aRetiro(fila: Fila): Retiro | null {
   };
 }
 
+/** El reembolso, de la fila de la entrega; null si no hay entrega o no tiene motivo (una entrega común). */
+function aReembolso(fila: Fila): Reembolso | null {
+  const motivo = texto(fila.motivo_reembolso);
+  if (typeof fila.entrega_id !== 'string' || motivo === null) return null;
+  const instante = texto(fila.fecha_entrega);
+  const ms = instante === null ? null : instanteGuardado(instante);
+  return { motivo, hechoPor: texto(fila.entrega_por), fecha: ms === null ? null : fechaYHoraEnBolivia(ms) };
+}
+
 /** Arma la vista de una orden. Una fila rota (sin estado que se conozca) no se muestra. */
 function aOrden(fila: Fila, pagos: PagoVisto[], renglones: RenglonVisto[]): OrdenVista | null {
   const { id, numero_boleta } = fila;
@@ -108,13 +120,14 @@ function aOrden(fila: Fila, pagos: PagoVisto[], renglones: RenglonVisto[]): Orde
   const precioTotal = monto(fila.precio_total);
   const tieneEntrega = typeof fila.entrega_id === 'string';
   const precioFinal = tieneEntrega ? monto(fila.precio_final) : null;
+  const reembolso = aReembolso(fila);
   const montos = pagos.map((p) => p.monto);
 
   return {
     id,
     numeroBoleta: numero_boleta,
     descripcion: texto(fila.descripcion) ?? '',
-    estado: estadoEfectivo(estado, tieneEntrega),
+    estado: estadoEfectivo(estado, tieneEntrega, reembolso !== null),
     clienteId: texto(fila.cliente_id),
     clienteNombre: texto(fila.cliente_nombre) ?? 'Cliente sin nombre',
     clienteTelefono: texto(fila.cliente_telefono) ?? '',
@@ -123,6 +136,7 @@ function aOrden(fila: Fila, pagos: PagoVisto[], renglones: RenglonVisto[]): Orde
     precioTotal,
     precioFinal,
     retiro: aRetiro(fila),
+    reembolso,
     pagado: sumar(...montos),
     saldo: calcularSaldo({ precioTotal, precioFinal, pagos: montos }),
     pagos,

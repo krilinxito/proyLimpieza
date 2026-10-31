@@ -7,7 +7,7 @@ import { formatearBs } from '../../../lib/money';
 import { fechaCorta } from '../../ordenes/components/fechas';
 import { ListaDeRenglones } from '../../ordenes/components/ListaDeRenglones';
 import { TONO_ESTADO } from '../../ordenes/estado';
-import { textoDelRetiro } from '../../ordenes/retiro';
+import { paresDelReembolso, textoDelRetiro } from '../../ordenes/retiro';
 import type { BoletaListada } from '../types';
 import { textoDelSaldo } from './FilaDeBoleta';
 
@@ -44,6 +44,7 @@ export function DetalleDeSoloLectura({ boleta, alVolver }: { boleta: BoletaLista
             ...(boleta.renglones.length > 0 ? [] : ([['Ropa', boleta.descripcion]] as [string, ReactNode][])),
             ['Entró', boleta.dia ? fechaCorta(boleta.dia) : 'Sin fecha'],
             ...(boleta.retiro ? ([['Retiró', textoDelRetiro(boleta.retiro)]] as [string, ReactNode][]) : []),
+            ...paresDelReembolso(boleta.reembolso),
             ['Precio', formatearBs(boleta.precioTotal)],
             ...(boleta.precioFinal === null ? [] : ([['Precio final', formatearBs(boleta.precioFinal)]] as [string, ReactNode][])),
             ['Pagado', formatearBs(boleta.pagado)],

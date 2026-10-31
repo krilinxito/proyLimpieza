@@ -21,6 +21,7 @@ export function registroDePrueba(cambios: Record<string, unknown> = {}) {
     sucursalId: SUCURSAL_CENTRO,
     fechaDelHecho: '2026-10-15 18:30:00',
     revision: null,
+    motivoReembolso: null,
     valoresAnteriores: null,
     usuario: ELENA,
     ...cambios,

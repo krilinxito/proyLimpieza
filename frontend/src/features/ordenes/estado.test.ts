@@ -107,3 +107,20 @@ describe('El tono de cada estado — SPEC-KRILINXI-025 y SPEC-KRILINXI-067', () 
     expect(TONO_ESTADO.ENTREGADO).toBe('neutro');
   });
 });
+
+describe('El estado que se muestra de una entrega sin cobrar — SPEC-KRILINXI-070', () => {
+  it('con entrega y motivo de reembolso figura REEMBOLSADO, aunque la columna todavía diga RECIBIDO', () => {
+    expect(estadoEfectivo('RECIBIDO', true, true)).toBe('REEMBOLSADO');
+  });
+
+  it('con entrega común sigue siendo ENTREGADO, y sin entrega el motivo no cuenta', () => {
+    expect(estadoEfectivo('RECIBIDO', true, false)).toBe('ENTREGADO');
+    expect(estadoEfectivo('RECIBIDO', false, true)).toBe('RECIBIDO');
+  });
+
+  it('REEMBOLSADO se pinta en rojo y está cerrado: no se cambia por un avance', () => {
+    expect(TONO_ESTADO.REEMBOLSADO).toBe('peligro');
+    expect(estaCerrada('REEMBOLSADO')).toBe(true);
+    expect(puedePasarA('RECIBIDO', 'REEMBOLSADO')).toBe(false);
+  });
+});

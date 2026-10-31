@@ -5,7 +5,7 @@ import { simularApi } from '../../../test/apiFalsa';
 import { baseLocalDePrueba } from '../../../test/baseLocalDePrueba';
 import { elegirEnBuscador } from '../../../test/buscador';
 import { clienteDePrueba, ordenDePrueba, pagoDePrueba } from '../../../test/filasDePrueba';
-import { accionesPrincipales } from '../../../test/jerarquia';
+import { accionesPrincipales, usoDe } from '../../../test/jerarquia';
 import { sinJerga } from '../../../test/jerga';
 import { subirRechazandoPorRuta } from '../../../test/rechazos';
 import { agregarCargo, renglon } from '../../../test/renglones';
@@ -62,7 +62,8 @@ async function pedirConfirmacion(formulario: HTMLElement) {
 }
 
 async function resumen() {
-  await screen.findByText(/^Ropa entregada: boleta/);
+  // También la que salió sin cobrar (SPEC-KRILINXI-070): "Ropa entregada sin cobrar: boleta …".
+  await screen.findByText(/^Ropa entregada( sin cobrar)?: boleta/);
   const terminos = screen.getAllByRole('term').map((t) => t.textContent);
   const valores = screen.getAllByRole('definition').map((d) => d.textContent);
   return Object.fromEntries(terminos.map((t, i) => [t, valores[i]]));
@@ -507,5 +508,168 @@ describe('Entregar: "Cuánto paga ahora" arranca con lo que falta — SPEC-KRILI
 
     expect(within(formulario).queryByLabelText(PAGO)).not.toBeInTheDocument();
     expect(within(formulario).queryByText('¿Cómo paga?')).not.toBeInTheDocument();
+  });
+});
+
+describe('Entregar sin cobrar (reembolso) — SPEC-KRILINXI-070', () => {
+  const MOTIVO = 'El cliente reclamó por una mancha y no quiso pagar el saldo.';
+  const MOTIVO_CAMPO = '¿Por qué se entrega sin cobrar?';
+
+  /** Abre el formulario de "Entregar sin cobrar" de la boleta de siempre (Bs 50, adelantó 20: faltan 30). */
+  async function abrirSinCobrar(boleta = '001234') {
+    const detalle = await buscarBoleta(boleta);
+    fireEvent.click(within(detalle).getByRole('button', { name: 'Entregar sin cobrar' }));
+    return within(detalle).getByRole('form', { name: 'Entregar sin cobrar' });
+  }
+
+  async function pedirConfirmacionSinCobrar(formulario: HTMLElement) {
+    fireEvent.click(within(formulario).getByRole('button', { name: 'Entregar sin cobrar' }));
+    return screen.findByRole('dialog', { name: '¿Entregar la ropa de la boleta 001234 sin cobrar?' });
+  }
+
+  it('con deuda hay un botón secundario "Entregar sin cobrar" y la acción principal sigue siendo una sola', async () => {
+    await abrir();
+    const detalle = await buscarBoleta('001234');
+
+    const boton = within(detalle).getByRole('button', { name: 'Entregar sin cobrar' });
+    expect(usoDe(boton)).toBe('secundario');
+    expect(accionesPrincipales()).toEqual(['Entregar la ropa']);
+  });
+
+  it('en una boleta ya pagada no se ofrece: no hay nada que perdonar', async () => {
+    await abrirConPagadas();
+    const detalle = await buscarBoleta('001240');
+
+    expect(within(detalle).queryByRole('button', { name: 'Entregar sin cobrar' })).not.toBeInTheDocument();
+  });
+
+  it('pide quién retira y el motivo: sin ellos no se entrega ni se confirma nada', async () => {
+    const { db } = await abrir();
+    const formulario = await abrirSinCobrar();
+    // No hay ningún campo de dinero: la ropa sale con lo que ya pagó.
+    expect(within(formulario).queryByLabelText('Cuánto paga ahora (Bs, si paga)')).not.toBeInTheDocument();
+    expect(within(formulario).queryByRole('button', { name: 'Agregar un cargo' })).not.toBeInTheDocument();
+
+    fireEvent.click(within(formulario).getByRole('button', { name: 'Entregar sin cobrar' }));
+
+    expect(await within(formulario).findByText('Elige si el cliente trae la boleta o no.')).toBeInTheDocument();
+    expect(within(formulario).getByText('Escribe por qué se entrega la ropa sin cobrar.')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(await db.getCrudBatch()).toBeNull();
+  });
+
+  it('un motivo en blanco o de más de 300 letras no vale', async () => {
+    await abrir();
+    const formulario = await abrirSinCobrar();
+    fireEvent.click(within(formulario).getByLabelText('Trae la boleta'));
+
+    escribir(formulario, MOTIVO_CAMPO, '     ');
+    fireEvent.click(within(formulario).getByRole('button', { name: 'Entregar sin cobrar' }));
+    expect(await within(formulario).findByText('Escribe por qué se entrega la ropa sin cobrar.')).toBeInTheDocument();
+
+    escribir(formulario, MOTIVO_CAMPO, 'a'.repeat(301));
+    fireEvent.click(within(formulario).getByRole('button', { name: 'Entregar sin cobrar' }));
+    expect(await within(formulario).findByText(/El motivo es demasiado largo/)).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('sin la boleta pide nombre y carnet de quien retira, como siempre', async () => {
+    await abrir();
+    const formulario = await abrirSinCobrar();
+    fireEvent.click(within(formulario).getByLabelText('No trae la boleta'));
+    escribir(formulario, MOTIVO_CAMPO, MOTIVO);
+    fireEvent.click(within(formulario).getByRole('button', { name: 'Entregar sin cobrar' }));
+
+    expect(await within(formulario).findByText(/escribe el nombre de quien retira/)).toBeInTheDocument();
+    expect(within(formulario).getByText(/escribe el carnet de quien retira/)).toBeInTheDocument();
+  });
+
+  it('la confirmación dice cuánto no se va a cobrar y que no se puede deshacer; cancelar no escribe nada', async () => {
+    const { db } = await abrir();
+    const formulario = await abrirSinCobrar();
+    fireEvent.click(within(formulario).getByLabelText('Trae la boleta'));
+    escribir(formulario, MOTIVO_CAMPO, MOTIVO);
+
+    const dialogo = await pedirConfirmacionSinCobrar(formulario);
+
+    expect(dialogo).toHaveTextContent('No se van a cobrar Bs 30,00.');
+    expect(dialogo).toHaveTextContent('Esta acción no se puede deshacer.');
+    sinJerga();
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Cancelar' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(await db.getCrudBatch()).toBeNull();
+  });
+
+  it('se guarda en una sola fila, sin pago: la entrega con lo ya cobrado y su motivo', async () => {
+    const { db, control, servidor } = await abrir();
+    const formulario = await abrirSinCobrar();
+    fireEvent.click(within(formulario).getByLabelText('Trae la boleta'));
+    escribir(formulario, MOTIVO_CAMPO, `  ${MOTIVO}  `);
+    await pedirConfirmacionSinCobrar(formulario);
+    fireEvent.click(screen.getByRole('button', { name: 'Sí, entregar sin cobrar' }));
+
+    expect(await resumen()).toEqual({
+      Boleta: '001234',
+      Retiró: 'Trajo la boleta',
+      'Ya había pagado': 'Bs 20,00',
+      'No se cobró': 'Bs 30,00',
+      Motivo: MOTIVO,
+    });
+    expect(await control.base.consultar('SELECT precio_final, motivo_reembolso, usuario_entrega_id FROM entregas')).toEqual([
+      { precio_final: '20.00', motivo_reembolso: MOTIVO, usuario_entrega_id: expect.any(String) },
+    ]);
+    // Solo la entrega sube: ningún pago, ningún cargo, y la tablet no toca el estado de la orden.
+    const operaciones = (await db.getCrudBatch(100))?.crud ?? [];
+    expect(operaciones.map((c) => [c.op, c.table])).toEqual([['PUT', 'entregas']]);
+    expect(operaciones[0]?.opData).toMatchObject({ precio_final: '20.00', motivo_reembolso: MOTIVO });
+    expect(await control.base.consultar('SELECT estado FROM ordenes WHERE numero_boleta = ?', ['001234'])).toEqual([
+      { estado: 'LISTO' },
+    ]);
+    expect(servidor.pedidos).toEqual([]);
+  });
+
+  it('sin sincronizar la boleta ya figura Reembolsado, con su motivo, quién y cuándo, y sin acciones', async () => {
+    await abrir();
+    const formulario = await abrirSinCobrar();
+    fireEvent.click(within(formulario).getByLabelText('Trae la boleta'));
+    escribir(formulario, MOTIVO_CAMPO, MOTIVO);
+    await pedirConfirmacionSinCobrar(formulario);
+    fireEvent.click(screen.getByRole('button', { name: 'Sí, entregar sin cobrar' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Entregar otra ropa' }));
+
+    const ficha = await screen.findByRole('region', { name: 'Ficha de Rosa Quispe' });
+    await waitFor(() =>
+      expect(within(ficha).getByRole('button', { name: 'Boleta 001234, Rosa Quispe' })).toHaveTextContent('Reembolsado'),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Volver al mostrador' }));
+    await screen.findByRole('heading', { name: 'Ropa en el local' });
+    // Ya no está en la ropa del local.
+    expect(screen.queryByRole('button', { name: 'Boleta 001234, Rosa Quispe' })).not.toBeInTheDocument();
+
+    const detalle = await buscarBoleta('001234');
+    expect(within(detalle).getByText('Esta ropa fue reembolsada: ya no se puede entregar ni cobrar.')).toBeInTheDocument();
+    const terminos = within(detalle).getAllByRole('term').map((t) => t.textContent);
+    const valores = within(detalle).getAllByRole('definition').map((d) => d.textContent);
+    const datos = Object.fromEntries(terminos.map((t, i) => [t, valores[i]]));
+    expect(datos).toMatchObject({ 'Cómo va': 'Reembolsado', Motivo: MOTIVO, 'Falta pagar': 'Bs 0,00' });
+    expect(datos['Lo registró']).toBeTruthy();
+    expect(datos['Cuándo']).toMatch(/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/);
+    expect(within(detalle).queryByRole('button', { name: 'Entregar la ropa' })).not.toBeInTheDocument();
+    expect(within(detalle).queryByRole('button', { name: 'Entregar sin cobrar' })).not.toBeInTheDocument();
+  });
+
+  it('la insignia de una boleta reembolsada es roja', async () => {
+    await abrir();
+    const formulario = await abrirSinCobrar();
+    fireEvent.click(within(formulario).getByLabelText('Trae la boleta'));
+    escribir(formulario, MOTIVO_CAMPO, MOTIVO);
+    await pedirConfirmacionSinCobrar(formulario);
+    fireEvent.click(screen.getByRole('button', { name: 'Sí, entregar sin cobrar' }));
+    await resumen();
+    fireEvent.click(screen.getByRole('button', { name: 'Entregar otra ropa' }));
+
+    const ficha = await screen.findByRole('region', { name: 'Ficha de Rosa Quispe' });
+    const insignia = await within(ficha).findByText('Reembolsado');
+    expect(insignia.className).toContain('peligro');
   });
 });

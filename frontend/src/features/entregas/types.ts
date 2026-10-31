@@ -35,7 +35,25 @@ export type EntregaLista = {
   /** 0 si no cobra nada al entregar. */
   pagoFinal: Centavos;
   metodoPago: MetodoPago | null;
+  /**
+   * Si la ropa sale sin cobrar (SPEC-KRILINXI-070): el motivo y cuánto no se cobró. `null` en una entrega común. En un
+   * reembolso, `precioFinal` es lo ya cobrado, igual que lo que guarda el servidor.
+   */
+  reembolso: { motivo: string; noCobrado: Centavos } | null;
 };
+
+/** Lo que escribe el empleado al entregar sin cobrar — SPEC-KRILINXI-070. El retiro es el de siempre, más el motivo. */
+export type DatosReembolso = Pick<DatosEntrega, 'traeBoleta' | 'retiradoPorNombre' | 'retiradoPorCarnet'> & {
+  motivoReembolso: string;
+};
+
+export type ErroresReembolso = Partial<Record<keyof DatosReembolso, string>>;
+
+export type ResultadoReembolso =
+  | { tipo: 'lista'; entrega: EntregaLista }
+  | { tipo: 'invalida'; errores: ErroresReembolso }
+  /** La orden en sí no se puede entregar sin cobrar: no existe, está cerrada o no debe nada. */
+  | { tipo: 'no-se-puede'; mensaje: string };
 
 export type ResultadoEntrega =
   | { tipo: 'lista'; entrega: EntregaLista }

@@ -13,7 +13,7 @@ import { esEstadoOrden, esMomentoItem, esTipoRetiro } from '../../../lib/dominio
 import { desdeDecimal } from '../../../lib/money';
 import type { RenglonVisto } from '../../ordenes/types';
 import { POR_PAGINA_ANCHA } from '../../../lib/tamanoDePagina';
-import type { Retiro } from '../../ordenes/retiro';
+import { fechaDelReembolsoDeLaApi, type Reembolso, type Retiro } from '../../ordenes/retiro';
 import type { ParametrosHistorial } from '../filtro';
 import type { BoletaListada, PaginaHistorial } from '../types';
 
@@ -41,6 +41,13 @@ function leerRetiro(r: unknown): Retiro | null | undefined {
   if (r === null) return null;
   if (!esObjeto(r) || !esTipoRetiro(r.tipo) || !textoONulo(r.nombre) || !textoONulo(r.carnet)) return undefined;
   return { tipo: r.tipo, nombre: r.nombre, carnet: r.carnet };
+}
+
+/** El reembolso de una boleta reembolsada; undefined si no encaja con el contrato (null = no es un reembolso). */
+function leerReembolso(r: unknown): Reembolso | null | undefined {
+  if (r === null) return null;
+  if (!esObjeto(r) || !esTexto(r.motivo) || !textoONulo(r.hechoPor) || !textoONulo(r.fecha)) return undefined;
+  return { motivo: r.motivo, hechoPor: r.hechoPor, fecha: r.fecha === null ? null : fechaDelReembolsoDeLaApi(r.fecha) };
 }
 
 /**
@@ -71,6 +78,8 @@ function leerBoleta(b: unknown): BoletaListada | null {
   if (b.precioFinal !== null && precioFinal === null) return null;
   const retiro = leerRetiro(b.retiro);
   if (retiro === undefined) return null;
+  const reembolso = leerReembolso(b.reembolso);
+  if (reembolso === undefined) return null;
   if (!Array.isArray(b.renglones)) return null;
   const renglones = b.renglones.map(leerRenglon);
   if (renglones.some((r) => r === null)) return null;
@@ -89,6 +98,7 @@ function leerBoleta(b: unknown): BoletaListada | null {
     precioTotal,
     precioFinal,
     retiro,
+    reembolso,
     pagado,
     saldo,
     renglones: renglones.filter((r): r is RenglonVisto => r !== null),

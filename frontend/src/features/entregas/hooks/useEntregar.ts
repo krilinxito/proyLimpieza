@@ -2,8 +2,8 @@ import { useMemo } from 'react';
 import { useSession } from '../../../hooks/useSession';
 import { useSucursalDeTrabajo } from '../../atencion/hooks/useSucursalDeTrabajo';
 import { useBaseLocal } from '../../../lib/powersync';
-import { prepararEntrega, registrarEntrega } from '../api/entregasLocal';
-import type { DatosEntrega, ResultadoEntrega } from '../types';
+import { prepararEntrega, prepararReembolso, registrarEntrega, registrarReembolso } from '../api/entregasLocal';
+import type { DatosEntrega, DatosReembolso, ResultadoEntrega, ResultadoReembolso } from '../types';
 
 export type Entregar =
   | { lista: false }
@@ -12,6 +12,9 @@ export type Entregar =
       /** Valida sin escribir: para armar la confirmación. */
       preparar: (ordenId: string, datos: DatosEntrega) => Promise<ResultadoEntrega>;
       registrar: (ordenId: string, datos: DatosEntrega) => Promise<ResultadoEntrega>;
+      /** Lo mismo para entregar sin cobrar (SPEC-KRILINXI-070). */
+      prepararSinCobrar: (ordenId: string, datos: DatosReembolso) => Promise<ResultadoReembolso>;
+      registrarSinCobrar: (ordenId: string, datos: DatosReembolso) => Promise<ResultadoReembolso>;
     };
 
 /**
@@ -30,6 +33,8 @@ export function useEntregar(): Entregar {
       lista: true,
       preparar: (ordenId, datos) => prepararEntrega(base, sucursalId, ordenId, datos),
       registrar: (ordenId, datos) => registrarEntrega(base, { usuarioId, sucursalId }, ordenId, datos),
+      prepararSinCobrar: (ordenId, datos) => prepararReembolso(base, sucursalId, ordenId, datos),
+      registrarSinCobrar: (ordenId, datos) => registrarReembolso(base, { usuarioId, sucursalId }, ordenId, datos),
     };
   }, [base, usuarioId, sucursalId]);
 }
