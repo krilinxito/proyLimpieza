@@ -47,7 +47,7 @@ function leerPosicion(valor: unknown): number {
   return valor;
 }
 
-function leerDescripcion(valor: unknown): string {
+export function leerDescripcion(valor: unknown): string {
   const descripcion = textoConContenido(valor);
   if (descripcion === null) throw invalido('Escribe qué es cada renglón, por ejemplo "Camisa" o "Edredón".');
   if (descripcion.length > LARGO_MAXIMO_DESCRIPCION) {
@@ -57,7 +57,7 @@ function leerDescripcion(valor: unknown): string {
 }
 
 /** En centésimas: `"2.5"` son 250. Se lee como un monto porque tiene la misma forma (hasta dos decimales). */
-function leerCantidad(valor: unknown): number {
+export function leerCantidad(valor: unknown): number {
   const cantidad = montoEnCentavos(valor);
   if (cantidad === null || cantidad <= 0 || cantidad > CANTIDAD_MAXIMA) {
     throw invalido('Escribe la cantidad con números mayores que cero, por ejemplo 2 o 2.5.');
@@ -65,7 +65,7 @@ function leerCantidad(valor: unknown): number {
   return cantidad;
 }
 
-function leerPrecioUnitario(valor: unknown): Centavos {
+export function leerPrecioUnitario(valor: unknown): Centavos {
   const precio = montoEnCentavos(valor);
   // Puede ser cero (una prenda de cortesía), pero nunca negativo (CLAUDE.md, sección 3).
   if (precio === null || precio < 0 || precio > MONTO_MAXIMO) {

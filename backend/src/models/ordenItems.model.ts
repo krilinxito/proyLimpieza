@@ -5,11 +5,12 @@
 // total: los renglones de INGRESO de una orden no pueden sumar más que su `precio_total`. Los de ENTREGA (los
 // cargos al entregar) se suman encima, sin tope: forman el precio final de la entrega (ver `entregas.model.ts`).
 //
-// Un renglón no se edita ni se borra desde el mostrador: corregirlo es del admin (SPEC-KRILINXI-071).
+// Un renglón no se edita ni se borra desde el mostrador: corregirlo es del admin (SPEC-KRILINXI-071, `reemplazarIngreso`).
 import { pool } from '../db/pool.js';
+import type { Ejecutor } from '../db/transaccion.js';
 import { ESTADOS_ABIERTOS, type MomentoItem } from '../utils/dominio.js';
-import { formatear, type Centavos } from '../utils/money.js';
-import { conAuditoria, type Revision } from './auditoria.model.js';
+import { formatear, parse, type Centavos } from '../utils/money.js';
+import { conAuditoria, updateConAntes, type Revision } from './auditoria.model.js';
 import * as ordenes from './ordenes.model.js';
 import { SUBTOTAL_SQL, type Orden } from './ordenes.model.js';
 
@@ -184,4 +185,126 @@ export async function crear(
 
   // Abierta, visible y es un cargo (que no tiene tope), pero no se insertó: no debería pasar.
   throw new Error(`El renglón ${item.id} no se insertó y no se encuentra el motivo.`);
+}
+
+// ------------------------------------------------------------------
+//  Corrección del admin — SPEC-KRILINXI-071
+// ------------------------------------------------------------------
+
+/** Los renglones con estos ids, de cualquier orden: para saber si un id que manda el admin ya es de otro. */
+export async function buscarVarios(conexion: Ejecutor, ids: readonly string[]): Promise<OrdenItem[]> {
+  if (ids.length === 0) return [];
+  const { rows } = await conexion.query<FilaItem>(`SELECT ${COLUMNAS} FROM orden_items WHERE id = ANY($1::uuid[])`, [
+    ids,
+  ]);
+  return rows.map(aItem);
+}
+
+/** Los renglones de un momento de la orden, con cantidad y precio en enteros (centésimas y centavos), para sumarlos. */
+export async function deLaOrden(conexion: Ejecutor, ordenId: string, momento: MomentoItem): Promise<RenglonCorregido[]> {
+  const { rows } = await conexion.query<FilaItem>(
+    `SELECT ${COLUMNAS} FROM orden_items WHERE orden_id = $1 AND momento = $2 ORDER BY posicion, id`,
+    [ordenId, momento],
+  );
+  return rows.map((fila) => ({
+    id: fila.id,
+    descripcion: fila.descripcion,
+    cantidad: parse(fila.cantidad),
+    precioUnitario: parse(fila.precio_unitario),
+  }));
+}
+
+/** Un renglón de la boleta como lo deja el admin. El id es el de un renglón que ya existe, o uno nuevo. */
+export interface RenglonCorregido {
+  id: string;
+  descripcion: string;
+  /** En centésimas, como en `ItemNuevo`. */
+  cantidad: number;
+  precioUnitario: Centavos;
+}
+
+// Lo que había en un renglón que se quita, entero: es la única baja del sistema, y la auditoría es lo único que queda.
+// Los números van como texto, por lo mismo que los montos: dentro de un JSON, un NUMERIC se leería como float.
+const LO_QUE_HABIA = `jsonb_build_object(
+    'orden_id', orden_id, 'momento', momento, 'posicion', posicion, 'descripcion', descripcion,
+    'cantidad', cantidad::text, 'precio_unitario', precio_unitario::text)`;
+
+/**
+ * Deja los renglones de INGRESO de la orden exactamente como `renglones`: quita los que no están, cambia los que
+ * cambiaron y agrega los nuevos. Cada uno deja su fila de auditoría en la misma sentencia (ELIMINAR con todo lo que
+ * había, EDITAR con lo que cambió de verdad, CREAR), y un renglón que llega igual que estaba no escribe ni anota nada.
+ *
+ * Los cargos al entregar (ENTREGA) no se tocan: el servicio ya rechazó cualquier id que sea de uno.
+ *
+ * El lugar de cada renglón (`posicion`) no se renumera: los que siguen conservan el suyo y los nuevos van después del
+ * último. Renumerar haría que quitar la prenda 1 anotara una "edición" en todas las demás.
+ *
+ * Va dentro de la transacción de la corrección, con la orden ya bloqueada y, si se movió, ya en su sucursal nueva: los
+ * renglones nuevos copian `sucursal_id` de la orden en el mismo `INSERT … SELECT`, como en `crear`.
+ */
+export async function reemplazarIngreso(
+  conexion: Ejecutor,
+  datos: { ordenId: string; renglones: readonly RenglonCorregido[]; autorId: string; revision: Revision | null },
+): Promise<void> {
+  const { rows: existentes } = await conexion.query<FilaItem>(
+    `SELECT ${COLUMNAS} FROM orden_items WHERE orden_id = $1 AND momento = 'INGRESO' ORDER BY posicion, id`,
+    [datos.ordenId],
+  );
+  const quedan = new Set(datos.renglones.map((r) => r.id));
+  const yaEstaban = new Set(existentes.map((r) => r.id));
+  const registro = { usuarioId: datos.autorId, tabla: 'orden_items', revision: datos.revision } as const;
+
+  for (const fila of existentes.filter((r) => !quedan.has(r.id))) {
+    const { sql, valores } = conAuditoria(
+      {
+        sql: `DELETE FROM orden_items WHERE id = $1 AND orden_id = $2 AND momento = 'INGRESO'
+              RETURNING ${COLUMNAS}, ${LO_QUE_HABIA} AS valores_anteriores`,
+        valores: [fila.id, datos.ordenId],
+        columnas: COLUMNAS,
+      },
+      { ...registro, accion: 'ELIMINAR', conValoresAnteriores: true },
+    );
+    await conexion.query(sql, valores);
+  }
+
+  let siguiente = existentes.reduce((max, r) => Math.max(max, r.posicion + 1), 0);
+  for (const renglon of datos.renglones) {
+    const valores = [renglon.id, renglon.descripcion, formatear(renglon.cantidad), formatear(renglon.precioUnitario)];
+    if (yaEstaban.has(renglon.id)) {
+      const { sql, valores: todos } = conAuditoria(
+        {
+          sql: updateConAntes({
+            tabla: 'orden_items',
+            asignaciones: ['descripcion = $2', 'cantidad = $3::numeric', 'precio_unitario = $4::numeric'],
+            condiciones: `id = $1 AND orden_id = $5 AND momento = 'INGRESO'`,
+            columnas: COLUMNAS,
+            auditadas: [
+              { columna: 'descripcion' },
+              { columna: 'cantidad', comoTexto: true },
+              { columna: 'precio_unitario', comoTexto: true },
+            ],
+          }),
+          valores: [...valores, datos.ordenId],
+          columnas: COLUMNAS,
+        },
+        { ...registro, accion: 'EDITAR', conValoresAnteriores: true },
+      );
+      await conexion.query(sql, todos);
+    } else {
+      const { sql, valores: todos } = conAuditoria(
+        {
+          sql: `INSERT INTO orden_items (id, orden_id, sucursal_id, momento, posicion, descripcion, cantidad,
+                                         precio_unitario)
+                SELECT $1, o.id, o.sucursal_id, 'INGRESO', $6, $2, $3::numeric, $4::numeric
+                  FROM ordenes o WHERE o.id = $5
+                RETURNING ${COLUMNAS}`,
+          valores: [...valores, datos.ordenId, siguiente],
+          columnas: COLUMNAS,
+        },
+        { ...registro, accion: 'CREAR' },
+      );
+      siguiente += 1;
+      await conexion.query(sql, todos);
+    }
+  }
 }

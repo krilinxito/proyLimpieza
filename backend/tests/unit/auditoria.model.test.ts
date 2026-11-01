@@ -405,3 +405,16 @@ describe('Auditoría: la marca de revisión — SPEC-ALE186-018', () => {
     expect(sql).toContain("WHERE escrita.valores_anteriores <> '{}'::jsonb");
   });
 });
+
+describe('Auditoría: una columna que anota también su valor nuevo — SPEC-KRILINXI-071', () => {
+  it('con conNuevo, guarda lo de antes y lo nuevo como <columna>_nueva, solo si cambió', () => {
+    const expresion = auditoria.valoresAnteriores([{ columna: 'sucursal_id', conNuevo: true }]);
+
+    expect(expresion).toContain("jsonb_build_object('sucursal_id', antes.sucursal_id, 'sucursal_id_nueva', c.sucursal_id)");
+    expect(expresion).toContain('antes.sucursal_id IS DISTINCT FROM c.sucursal_id');
+  });
+
+  it('sin conNuevo, sigue guardando solo lo de antes', () => {
+    expect(auditoria.valoresAnteriores([{ columna: 'descripcion' }])).not.toContain('_nueva');
+  });
+});

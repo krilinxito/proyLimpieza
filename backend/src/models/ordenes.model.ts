@@ -7,8 +7,9 @@
 // que la aplica, no en una consulta aparte (ver `actualizar`).
 import pg from 'pg';
 import { pool } from '../db/pool.js';
+import type { Ejecutor } from '../db/transaccion.js';
 import type { EstadoOrden, MomentoItem } from '../utils/dominio.js';
-import { formatear, type Centavos } from '../utils/money.js';
+import { formatear, parse, type Centavos } from '../utils/money.js';
 import { salteo, type Paginacion } from '../utils/paginacion.js';
 import { ZONA_NEGOCIO, enElPeriodo, horaDelNegocio } from '../utils/periodo.js';
 import {
@@ -105,7 +106,7 @@ function violoRestriccion(error: unknown, codigo: string, restriccion: string): 
 }
 
 async function traducirErrores<T>(
-  datos: { numeroBoleta?: string; clienteId?: string },
+  datos: { numeroBoleta?: string | undefined; clienteId?: string },
   operacion: () => Promise<T>,
 ): Promise<T> {
   try {
@@ -622,4 +623,174 @@ export async function actualizar(
   const visible =
     actual !== null && (restricciones.sucursalId === null || actual.sucursalId === restricciones.sucursalId);
   return visible ? { tipo: 'estado-no-admitido', orden: actual } : { tipo: 'no-encontrada' };
+}
+
+// ------------------------------------------------------------------
+//  Corrección del admin — SPEC-KRILINXI-071
+// ------------------------------------------------------------------
+//
+// El admin corrige una boleta ya registrada, en el estado que esté. Son varias escrituras (la orden, sus renglones y,
+// si cambia de sucursal, sus pagos y su entrega) y decisiones entre ellas, así que no cabe en una sentencia: lo arma
+// `services/correccionOrden.ts` en una transacción. Las piezas de acá reciben la conexión de esa transacción
+// (`Ejecutor`) y no deciden nada por su cuenta.
+
+/** Cómo está la boleta al empezar a corregirla. */
+export interface OrdenParaCorregir {
+  orden: Orden;
+  /** Si ya salió (ENTREGADO o REEMBOLSADO): desde ahí el saldo se mide con el precio final, no con el total. */
+  tieneEntrega: boolean;
+  /** Lo cobrado hasta ahora, en centavos. */
+  pagado: Centavos;
+}
+
+/**
+ * Lee la orden y la BLOQUEA hasta que termine la transacción (`FOR UPDATE`), o `null` si no existe.
+ *
+ * El bloqueo es lo que hace confiables las decisiones de después: mientras dure, nadie más puede cambiarla, entregarla
+ * ni agregarle un renglón (los dos también la bloquean o la actualizan, y esperan). Lo cobrado se lee aparte porque
+ * Postgres no deja `FOR UPDATE` en una consulta con `SUM`.
+ */
+export async function leerParaCorregir(conexion: Ejecutor, id: string): Promise<OrdenParaCorregir | null> {
+  const { rows } = await conexion.query<FilaOrden>(`SELECT ${COLUMNAS} FROM ordenes WHERE id = $1 FOR UPDATE`, [id]);
+  const fila = rows[0];
+  if (fila === undefined) return null;
+
+  const { rows: cuentas } = await conexion.query<{ tiene_entrega: boolean; pagado: string }>(
+    `SELECT EXISTS (SELECT 1 FROM entregas WHERE orden_id = $1) AS tiene_entrega,
+            COALESCE((SELECT SUM(monto) FROM pagos WHERE orden_id = $1), 0)::numeric(14,2)::text AS pagado`,
+    [id],
+  );
+  return {
+    orden: aOrden(fila),
+    tieneEntrega: cuentas[0]?.tiene_entrega ?? false,
+    pagado: parse(cuentas[0]?.pagado ?? '0'),
+  };
+}
+
+/**
+ * Si la sucursal adonde se mueve una boleta existe y está abierta.
+ *
+ * `FOR SHARE` la deja leer a otros pero no cambiarla hasta que termine la transacción: si el admin la está cerrando a
+ * la vez (`PATCH /api/sucursales`, que mira en la misma sentencia que no tenga ropa adentro), el cierre espera a que
+ * la boleta termine de llegar, y entonces ve la ropa y no cierra. Sin el bloqueo, la boleta podría entrar a una
+ * sucursal que se cerró un instante antes.
+ */
+export async function estadoDeLaSucursal(conexion: Ejecutor, id: string): Promise<'abierta' | 'cerrada' | 'no-existe'> {
+  const { rows } = await conexion.query<{ activa: boolean }>('SELECT activa FROM sucursales WHERE id = $1 FOR SHARE', [
+    id,
+  ]);
+  const fila = rows[0];
+  if (fila === undefined) return 'no-existe';
+  return fila.activa ? 'abierta' : 'cerrada';
+}
+
+/** Si `fechaEntrada` (ISO con zona) cae más de `MARGEN_FECHA_FUTURA` adelante de la hora del servidor. */
+export async function esFechaFutura(conexion: Ejecutor, fechaEntrada: string): Promise<boolean> {
+  const { rows } = await conexion.query<{ futura: boolean }>(
+    'SELECT $1::timestamptz > now() + $2::interval AS futura',
+    [fechaEntrada, MARGEN_FECHA_FUTURA],
+  );
+  return rows[0]?.futura === true;
+}
+
+/** Lo que el admin puede corregir de la orden misma. Los renglones van aparte (`ordenItems.reemplazarIngreso`). */
+export interface CambiosCorreccion {
+  numeroBoleta?: string;
+  descripcion?: string;
+  precioTotal?: Centavos;
+  /** ISO 8601 con zona, como lo manda la tablet. */
+  fechaEntrada?: string;
+  fechaEstimadaSalida?: string | null;
+  sucursalId?: string;
+}
+
+// Campo → columna, y cómo entra su valor en el SET. Igual que `COLUMNA_EDITABLE`: las columnas salen de acá, nunca del
+// cuerpo de la petición.
+const CORREGIBLE: Record<keyof CambiosCorreccion, { columna: string; valor: (n: number) => string }> = {
+  numeroBoleta: { columna: 'numero_boleta', valor: (n) => `$${n}` },
+  descripcion: { columna: 'descripcion', valor: (n) => `$${n}` },
+  precioTotal: { columna: 'precio_total', valor: (n) => `$${n}::numeric` },
+  // Pasa por `timestamptz`, como en el alta: el instante de la tablet se guarda en la zona de la sesión de Postgres.
+  fechaEntrada: { columna: 'fecha_entrada', valor: (n) => `$${n}::timestamptz::timestamp` },
+  fechaEstimadaSalida: { columna: 'fecha_estimada_salida', valor: (n) => `$${n}::date` },
+  sucursalId: { columna: 'sucursal_id', valor: (n) => `$${n}::uuid` },
+};
+
+function auditadaDeCorreccion(campo: keyof CambiosCorreccion): ColumnaAuditada {
+  const columna = CORREGIBLE[campo].columna;
+  if (campo === 'sucursalId') return { columna, conNuevo: true };
+  return { columna, comoTexto: campo === 'precioTotal' || campo === 'fechaEntrada' };
+}
+
+/**
+ * Escribe los cambios de la orden y su fila de auditoría (EDITAR, con lo que había antes de lo que cambió de verdad),
+ * en una sentencia. Sin condición de estado: el admin corrige en cualquiera. Lanza `BoletaOcupadaError` si el número
+ * ya existe en la sucursal donde queda la boleta (la de siempre o la nueva).
+ */
+export async function aplicarCorreccion(
+  conexion: Ejecutor,
+  id: string,
+  cambios: CambiosCorreccion,
+  autorId: string,
+  revision: Revision | null = null,
+): Promise<Orden> {
+  const campos = (Object.keys(CORREGIBLE) as (keyof CambiosCorreccion)[]).filter((campo) => cambios[campo] !== undefined);
+  if (campos.length === 0) {
+    const { rows } = await conexion.query<FilaOrden>(`SELECT ${COLUMNAS} FROM ordenes WHERE id = $1`, [id]);
+    const fila = rows[0];
+    if (fila === undefined) throw new Error(`La orden ${id} no existe.`);
+    return aOrden(fila);
+  }
+
+  const valores: unknown[] = [id];
+  const asignaciones = campos.map((campo) => {
+    const valor = cambios[campo];
+    valores.push(campo === 'precioTotal' && typeof valor === 'number' ? formatear(valor) : valor);
+    return `${CORREGIBLE[campo].columna} = ${CORREGIBLE[campo].valor(valores.length)}`;
+  });
+
+  const consulta = conAuditoria(
+    {
+      sql: updateConAntes({
+        tabla: 'ordenes',
+        asignaciones,
+        condiciones: 'id = $1',
+        columnas: COLUMNAS,
+        auditadas: campos.map(auditadaDeCorreccion),
+      }),
+      valores,
+      columnas: COLUMNAS,
+    },
+    { usuarioId: autorId, accion: 'EDITAR', tabla: 'ordenes', conValoresAnteriores: true, revision },
+  );
+  const { rows } = await traducirErrores(cambios, () => conexion.query<FilaOrden>(consulta.sql, consulta.valores));
+  const fila = rows[0];
+  if (fila === undefined) throw new Error(`La orden ${id} no se pudo corregir.`);
+  return aOrden(fila);
+}
+
+/**
+ * Lleva a la sucursal de la orden el `sucursal_id` duplicado de sus pagos, su entrega y sus renglones, en una
+ * sentencia (cada `UPDATE` es un CTE).
+ *
+ * Esa copia existe porque las sync rules no admiten JOIN (CLAUDE.md §7): cada tabla se reparte a las tablets por su
+ * propia columna. Si la orden cambiara de sucursal y sus pagos no, la boleta llegaría a la tablet nueva sin sus cobros,
+ * y los cobros se quedarían en la vieja. Va DESPUÉS de `aplicarCorreccion`, en la misma transacción: se copia de la orden
+ * ya movida, así no hay dos valores que puedan no coincidir.
+ *
+ * No deja filas de auditoría propias: el cambio es uno solo, el de la orden, y ya quedó anotado con su sucursal
+ * anterior y la nueva.
+ */
+export async function moverRegistrosDeLaOrden(conexion: Ejecutor, id: string): Promise<void> {
+  await conexion.query(
+    `WITH orden AS (SELECT id, sucursal_id FROM ordenes WHERE id = $1),
+          p AS (UPDATE pagos SET sucursal_id = orden.sucursal_id FROM orden
+                 WHERE pagos.orden_id = orden.id AND pagos.sucursal_id <> orden.sucursal_id RETURNING 1),
+          e AS (UPDATE entregas SET sucursal_id = orden.sucursal_id FROM orden
+                 WHERE entregas.orden_id = orden.id AND entregas.sucursal_id <> orden.sucursal_id RETURNING 1),
+          i AS (UPDATE orden_items SET sucursal_id = orden.sucursal_id FROM orden
+                 WHERE orden_items.orden_id = orden.id AND orden_items.sucursal_id <> orden.sucursal_id RETURNING 1)
+     SELECT (SELECT count(*) FROM p) + (SELECT count(*) FROM e) + (SELECT count(*) FROM i) AS movidos`,
+    [id],
+  );
 }
