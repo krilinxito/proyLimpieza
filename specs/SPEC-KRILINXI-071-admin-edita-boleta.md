@@ -2,7 +2,7 @@
 id: SPEC-KRILINXI-071
 name: El admin corrige una boleta registrada
 slug: admin-edita-boleta
-status: in-progress
+status: finished
 owner: ale186
 created: 2026-10-30
 scope:
@@ -17,7 +17,12 @@ scope:
 priority: high
 depends_on:
   - SPEC-KRILINXI-068
-tests: []
+tests:
+  - backend\tests\db\correccionOrden.db.test.ts
+  - backend\tests\http\ordenes.test.ts
+  - backend\tests\unit\auditoria.model.test.ts
+  - frontend\src\features\historial\components\CorregirBoleta.test.tsx
+  - frontend\src\features\historial\correccion.test.ts
 ---
 
 ## Descripción
