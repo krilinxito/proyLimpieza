@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Aviso } from '../../../components/Aviso';
+import { AvisoResultado, TEXTOS_ADMIN } from '../../../components/AvisosAdmin';
 import { Boton } from '../../../components/Boton';
 import { Paginas } from '../../../components/Paginas';
 import { fechaParaLeer } from '../../estadisticas/periodo';
@@ -7,6 +8,7 @@ import { useSucursales } from '../../sucursales/hooks/useSucursales';
 import { FILTRO_INICIAL, hayFiltros, type FiltroHistorial } from '../filtro';
 import { useHistorialCompleto, useHistorialDeLaSucursal, useModoDelHistorial } from '../hooks/useHistorial';
 import type { BoletaListada } from '../types';
+import { CorregirBoleta } from './CorregirBoleta';
 import { DetalleDeSoloLectura } from './DetalleDeSoloLectura';
 import { FilaDeBoleta } from './FilaDeBoleta';
 import { FiltroDelHistorial } from './FiltroDelHistorial';
@@ -100,8 +102,38 @@ function Completo({ filtro, alCambiar, alLimpiar }: Pantalla) {
   const { estado, recargar, pagina, irAPagina } = useHistorialCompleto(filtro);
   const sucursales = (useSucursales() ?? []).map((s) => ({ id: s.id, nombre: s.nombre }));
   const [abierta, setAbierta] = useState<BoletaListada | null>(null);
+  // SPEC-KRILINXI-071: corrigiendo la boleta abierta, y cómo terminó la última corrección.
+  const [corrigiendo, setCorrigiendo] = useState(false);
+  const [aviso, setAviso] = useState<{ tipo: 'bien' | 'mal'; texto: string } | null>(null);
 
-  if (abierta) return <DetalleDeSoloLectura boleta={abierta} alVolver={() => setAbierta(null)} />;
+  if (abierta && corrigiendo && abierta.origen) {
+    return (
+      <CorregirBoleta
+        boleta={abierta}
+        origen={abierta.origen}
+        alCancelar={() => setCorrigiendo(false)}
+        alGuardar={() => {
+          // De vuelta a la lista, pedida de nuevo: la boleta que estaba abierta ya no es la que quedó guardada.
+          setCorrigiendo(false);
+          setAbierta(null);
+          setAviso({ tipo: 'bien', texto: TEXTOS_ADMIN.guardado });
+          recargar();
+        }}
+      />
+    );
+  }
+  if (abierta) {
+    return (
+      <DetalleDeSoloLectura
+        boleta={abierta}
+        alVolver={() => setAbierta(null)}
+        alCorregir={() => {
+          setAviso(null);
+          setCorrigiendo(true);
+        }}
+      />
+    );
+  }
 
   let contenido: ReactNode = null;
   if (estado.tipo === 'cargando') contenido = <p className="mt-8 text-xl text-texto-suave">Buscando…</p>;
@@ -143,6 +175,7 @@ function Completo({ filtro, alCambiar, alLimpiar }: Pantalla) {
   return (
     <>
       <FiltroDelHistorial filtro={filtro} sucursales={sucursales} alCambiar={alCambiar} alLimpiar={alLimpiar} />
+      <AvisoResultado aviso={aviso} />
       {contenido}
     </>
   );
