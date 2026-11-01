@@ -33,6 +33,20 @@ export type BoletaListada = {
   saldo: Centavos;
   /** Sus renglones (SPEC-KRILINXI-068): los de la boleta y los cargos al entregar. Vacío en una boleta de antes. */
   renglones: RenglonVisto[];
+  /**
+   * Lo que hace falta para que el admin la corrija (SPEC-KRILINXI-071). Solo lo trae la API: en la base local es null,
+   * porque desde ahí no se corrige nada.
+   */
+  origen: OrigenDeLaBoleta | null;
+};
+
+/** Los datos de una boleta del historial completo que no se muestran en la lista pero sí se corrigen. */
+export type OrigenDeLaBoleta = {
+  sucursalId: string;
+  /** Cuándo entró, en la hora de Bolivia: `YYYY-MM-DD HH:MM:SS`. */
+  fechaEntrada: string;
+  /** `YYYY-MM-DD`, o null si no se dijo para cuándo estaría. */
+  fechaEstimadaSalida: string | null;
 };
 
 /** Una página de la lista completa del admin — `GET /api/ordenes` (SPEC-KRILINXI-040). */

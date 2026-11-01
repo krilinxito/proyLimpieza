@@ -28,12 +28,19 @@ vi.mock('../../src/models/ordenes.model.js', async (importOriginal) => ({
   buscarPorId: vi.fn(),
 }));
 vi.mock('../../src/models/sucursales.model.js', () => ({ buscarPorId: vi.fn() }));
+// La corrección del admin (SPEC-KRILINXI-071) decide y escribe en una transacción: eso se prueba contra la base real
+// (tests/db/correccionOrden.db.test.ts). Acá solo importa qué le llega y qué responde el controller a cada resultado.
+vi.mock('../../src/services/correccionOrden.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../src/services/correccionOrden.js')>()),
+  corregirOrden: vi.fn(),
+}));
 
 const modelo = await import('../../src/models/ordenes.model.js');
 const crear = vi.mocked(modelo.crear);
 const actualizar = vi.mocked(modelo.actualizar);
 const { BoletaOcupadaError, ClienteInexistenteError } = modelo;
 const buscarSucursal = vi.mocked((await import('../../src/models/sucursales.model.js')).buscarPorId);
+const corregirOrden = vi.mocked((await import('../../src/services/correccionOrden.js')).corregirOrden);
 
 const ADMIN = conSesion({ rol: 'ADMIN', sucursalId: null });
 
@@ -54,6 +61,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   crear.mockResolvedValue({ orden: ordenDePrueba(), creada: true });
   actualizar.mockResolvedValue({ tipo: 'actualizada', orden: ordenDePrueba() });
+  corregirOrden.mockResolvedValue({ tipo: 'corregida', orden: ordenDePrueba() });
   buscarSucursal.mockResolvedValue({
     id: IDS.otraSucursal,
     nombre: 'Sucursal Centro',
@@ -275,11 +283,10 @@ describe('PATCH /api/ordenes/:id — SPEC-ALE186-004', () => {
       precio_total: '60',
       fecha_estimada_salida: null,
       estado: 'ANULADO',
-      // Nada de esto se puede cambiar por PATCH:
+      // Nada de esto se puede cambiar por PATCH. La sucursal y la fecha de ingreso también se ignoraban; desde
+      // SPEC-KRILINXI-071 las corrige el admin, sin un estado al lado (ver ese bloque).
       cliente_id: IDS.cliente,
-      sucursal_id: IDS.otraSucursal,
       usuario_recepcion_id: IDS.cliente,
-      fecha_entrada: '2020-01-01T00:00:00Z',
     }, ADMIN);
 
     expect(res.status).toBe(200);
@@ -453,10 +460,204 @@ describe('PATCH /api/ordenes/:id: el precio sale de los renglones — SPEC-KRILI
     expect(actualizar).toHaveBeenCalledTimes(1);
   });
 
-  it('el ADMIN sí cambia el precio_total', async () => {
+  it('el ADMIN sí cambia el precio_total (desde SPEC-KRILINXI-071, por la corrección)', async () => {
     const res = await edicion({ precio_total: '60' }, ADMIN);
 
     expect(res.status).toBe(200);
-    expect(actualizar.mock.calls[0]?.[1]).toEqual({ precioTotal: 6000 });
+    expect(corregirOrden.mock.calls[0]?.[1]).toEqual({ precioTotal: 6000 });
+    expect(actualizar).not.toHaveBeenCalled();
+  });
+});
+
+describe('PATCH /api/ordenes/:id: el admin corrige una boleta — SPEC-KRILINXI-071', () => {
+  const PRENDA = '66666666-6666-6666-6666-666666666666';
+  const OTRA_PRENDA = '77777777-7777-7777-7777-777777777777';
+
+  /** Lo que recibió el servicio en la última corrección. */
+  function loQueSeCorrigio() {
+    return corregirOrden.mock.calls.at(-1)?.[1];
+  }
+
+  it('el ADMIN corrige cualquier campo, en cualquier estado: todo va al servicio, y responde la orden', async () => {
+    const res = await edicion(
+      {
+        numero_boleta: 'B-0099',
+        descripcion: '1 Saco',
+        fecha_entrada: '2026-10-20T09:30:00-04:00',
+        fecha_estimada_salida: '2026-10-25',
+        sucursal_id: IDS.otraSucursal,
+      },
+      ADMIN,
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ numeroBoleta: '001234' });
+    expect(loQueSeCorrigio()).toEqual({
+      numeroBoleta: 'B-0099',
+      descripcion: '1 Saco',
+      fechaEntrada: '2026-10-20T09:30:00-04:00',
+      fechaEstimadaSalida: '2026-10-25',
+      sucursalId: IDS.otraSucursal,
+    });
+    // No pasa por la tabla de transiciones: la corrección no depende del estado.
+    expect(actualizar).not.toHaveBeenCalled();
+  });
+
+  it('quien corrige es el de la sesión', async () => {
+    await edicion({ descripcion: '1 Saco' }, conSesion({ rol: 'ADMIN', sucursalId: null, id: IDS.otraSucursal }));
+
+    expect(corregirOrden.mock.calls[0]?.[2]).toBe(IDS.otraSucursal);
+  });
+
+  it('las prendas llegan enteras, en enteros (centésimas y centavos)', async () => {
+    await edicion(
+      {
+        renglones: [
+          { id: PRENDA, descripcion: ' Camisa ', cantidad: '2', precio_unitario: '10.50' },
+          { id: OTRA_PRENDA, descripcion: 'Edredón', cantidad: '1', precio_unitario: '40' },
+        ],
+      },
+      ADMIN,
+    );
+
+    expect(loQueSeCorrigio()).toEqual({
+      renglones: [
+        { id: PRENDA, descripcion: 'Camisa', cantidad: 200, precioUnitario: 1050 },
+        { id: OTRA_PRENDA, descripcion: 'Edredón', cantidad: 100, precioUnitario: 4000 },
+      ],
+    });
+  });
+
+  it('con prendas, un total escrito que no es su suma se rechaza con 400 y dice cuánto suman', async () => {
+    const res = await edicion(
+      { precio_total: '50', renglones: [{ id: PRENDA, descripcion: 'Camisa', cantidad: '2', precio_unitario: '10' }] },
+      ADMIN,
+    );
+
+    expectApiError(res, { status: 400, codigo: 'VALIDACION' });
+    expect(res.body.error.mensaje).toContain('Bs 20.00');
+    expect(corregirOrden).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['no es una lista', { renglones: 'Camisa' }],
+    ['una prenda sin id', { renglones: [{ descripcion: 'Camisa', cantidad: '1', precio_unitario: '10' }] }],
+    [
+      'dos prendas con el mismo id',
+      {
+        renglones: [
+          { id: PRENDA, descripcion: 'Camisa', cantidad: '1', precio_unitario: '10' },
+          { id: PRENDA, descripcion: 'Saco', cantidad: '1', precio_unitario: '10' },
+        ],
+      },
+    ],
+    ['una cantidad en cero', { renglones: [{ id: PRENDA, descripcion: 'Camisa', cantidad: '0', precio_unitario: '10' }] }],
+    ['un precio negativo', { renglones: [{ id: PRENDA, descripcion: 'Camisa', cantidad: '1', precio_unitario: '-1' }] }],
+    ['una prenda sin descripción', { renglones: [{ id: PRENDA, descripcion: ' ', cantidad: '1', precio_unitario: '1' }] }],
+    ['una sucursal que no es un UUID', { sucursal_id: 'Centro' }],
+    ['una fecha de ingreso sin zona', { fecha_entrada: '2026-10-20 09:30' }],
+    ['una fecha de ingreso vacía', { fecha_entrada: null }],
+  ])('responde 400 sin llegar al servicio cuando llega %s', async (_caso, cuerpo) => {
+    const res = await edicion(cuerpo, ADMIN);
+
+    expectApiError(res, { status: 400, codigo: 'VALIDACION' });
+    expect(corregirOrden).not.toHaveBeenCalled();
+  });
+
+  it('no deja pasar más de 100 prendas', async () => {
+    const renglones = Array.from({ length: 101 }, (_, i) => ({
+      id: `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`,
+      descripcion: 'Camisa',
+      cantidad: '1',
+      precio_unitario: '1',
+    }));
+
+    expectApiError(await edicion({ renglones }, ADMIN), { status: 400, codigo: 'VALIDACION' });
+  });
+
+  it.each([
+    ['sucursal_id', { sucursal_id: IDS.otraSucursal }],
+    ['fecha_entrada', { fecha_entrada: '2026-10-20T09:30:00-04:00' }],
+    ['renglones', { renglones: [] }],
+  ])('un EMPLEADO no manda %s: 403, sin tocar nada', async (_campo, cuerpo) => {
+    const res = await edicion({ descripcion: '1 Saco', ...cuerpo });
+
+    expectApiError(res, { status: 403, codigo: 'SIN_PERMISO' });
+    expect(corregirOrden).not.toHaveBeenCalled();
+    expect(actualizar).not.toHaveBeenCalled();
+  });
+
+  it('un EMPLEADO sigue sin poder editar una boleta cerrada: el camino de siempre, con su 409', async () => {
+    actualizar.mockResolvedValue({ tipo: 'estado-no-admitido', orden: ordenDePrueba({ estado: 'ENTREGADO' }) });
+
+    const res = await edicion({ descripcion: '1 Saco' });
+
+    expectApiError(res, { status: 409, codigo: 'TRANSICION_INVALIDA' });
+    expect(corregirOrden).not.toHaveBeenCalled();
+  });
+
+  it('el ADMIN que anula sigue la tabla de transiciones de siempre', async () => {
+    await edicion({ estado: 'ANULADO' }, ADMIN);
+
+    expect(actualizar).toHaveBeenCalledTimes(1);
+    expect(corregirOrden).not.toHaveBeenCalled();
+  });
+
+  it('el estado no se mezcla con lo que solo el admin corrige', async () => {
+    const res = await edicion({ estado: 'ANULADO', sucursal_id: IDS.otraSucursal }, ADMIN);
+
+    expectApiError(res, { status: 400, codigo: 'VALIDACION' });
+    expect(actualizar).not.toHaveBeenCalled();
+    expect(corregirOrden).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [{ tipo: 'no-encontrada' }, 404, 'NO_ENCONTRADO', 'Vuelve al historial'],
+    [{ tipo: 'sucursal-no-existe' }, 400, 'VALIDACION', 'no existe'],
+    [{ tipo: 'sucursal-cerrada' }, 409, 'SUCURSAL_CERRADA', 'Elige otra'],
+    [{ tipo: 'fecha-futura' }, 400, 'FECHA_FUTURA', 'en el futuro'],
+    [
+      { tipo: 'total-menor-que-cobrado', orden: ordenDePrueba(), pagado: '30.00' },
+      409,
+      'TOTAL_MENOR_QUE_COBRADO',
+      'Ya se cobraron Bs 30.00 de la boleta 001234',
+    ],
+    [
+      { tipo: 'total-distinto-de-renglones', orden: ordenDePrueba(), suma: '20.00' },
+      409,
+      'TOTAL_DISTINTO_DE_RENGLONES',
+      'suman Bs 20.00',
+    ],
+    [
+      { tipo: 'renglon-ajeno', orden: ordenDePrueba(), renglonId: PRENDA, esCargo: true },
+      400,
+      'VALIDACION',
+      'Los cargos que se sumaron al entregar no se cambian aquí',
+    ],
+    [
+      { tipo: 'renglon-ajeno', orden: ordenDePrueba(), renglonId: PRENDA, esCargo: false },
+      400,
+      'VALIDACION',
+      'no es de esta boleta',
+    ],
+  ] as const)('el resultado %o responde %i %s, diciendo qué hacer', async (resultado, status, codigo, texto) => {
+    corregirOrden.mockResolvedValue(resultado);
+
+    const res = await edicion({ descripcion: '1 Saco' }, ADMIN);
+
+    expectApiError(res, { status, codigo });
+    expect(res.body.error.mensaje).toContain(texto);
+  });
+
+  it('una boleta repetida responde 409 BOLETA_DUPLICADA, y si se movía, habla de la sucursal elegida', async () => {
+    corregirOrden.mockRejectedValue(new BoletaOcupadaError('001234'));
+
+    const enLaMisma = await edicion({ numero_boleta: '001234' }, ADMIN);
+    const alMover = await edicion({ sucursal_id: IDS.otraSucursal }, ADMIN);
+
+    expectApiError(enLaMisma, { status: 409, codigo: 'BOLETA_DUPLICADA' });
+    expect(enLaMisma.body.error.mensaje).toContain('en esta sucursal');
+    expectApiError(alMover, { status: 409, codigo: 'BOLETA_DUPLICADA' });
+    expect(alMover.body.error.mensaje).toContain('En la sucursal elegida ya hay una boleta con ese número');
   });
 });

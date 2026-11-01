@@ -102,6 +102,7 @@ function leerBoleta(b: unknown): BoletaListada | null {
     pagado,
     saldo,
     renglones: renglones.filter((r): r is RenglonVisto => r !== null),
+    origen: { sucursalId: sucursal.id, fechaEntrada: b.fechaEntrada, fechaEstimadaSalida: b.fechaEstimadaSalida },
   };
 }
 

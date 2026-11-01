@@ -121,6 +121,20 @@ Un **EMPLEADO ya no cambia `precio_total`** por `PATCH /api/ordenes` (403): eso 
 `round(cantidad * precio_unitario, 2)` (`SUBTOTAL_SQL` en `ordenes.model.ts`, `subtotal` en `utils/money.ts` y en `lib/money`, las
 tres con la misma tabla de casos) y no se guarda. `GET /api/ordenes` trae los `renglones` de cada boleta en la misma consulta, y la
 auditoría ubica un renglón en la sucursal de su orden. `ESTADOS_ABIERTOS` (las boletas que no están cerradas: su ropa sigue en el local) vive en `utils/dominio.ts`, y la usan entregas, renglones y el cierre de una sucursal.
+SPEC-KRILINXI-071 dejó que **el admin corrija una boleta registrada**, en cualquier estado: `PATCH /api/ordenes/:id` de un ADMIN **sin `estado`** va a
+`services/correccionOrden.ts` (con `estado`, el camino de siempre; mezclarlo con lo de abajo, 400). Corrige número, descripción, `precio_total`,
+`fecha_entrada`, `fecha_estimada_salida`, `sucursal_id` y `renglones`: **la lista entera de las prendas (INGRESO) como tienen que quedar**, cada una con su
+id (las que faltan se borran, ELIMINAR en la auditoría con todo lo que tenían; las conocidas se editan; las nuevas se agregan). Con prendas, **el total es su
+suma** (lo calcula el servidor; un `precio_total` escrito que no cuadra, 400; cambiar el total a mano en una boleta con prendas, 409
+`TOTAL_DISTINTO_DE_RENGLONES`). **Los cargos al entregar (ENTREGA) no se tocan** (400): van con el cobro y la entrega, en `admin-corrige-pagos-entregas`. Con la
+ropa en el local, el total no baja de lo cobrado (409 `TOTAL_MENOR_QUE_COBRADO`); ya entregada, no se compara y **`precio_final` no cambia**. Mover de sucursal lleva
+la copia de `sucursal_id` de pagos, entrega y renglones (`moverRegistrosDeLaOrden`), a una sucursal abierta (cerrada, 409 `SUCURSAL_CERRADA`; con ese número de boleta,
+409 `BOLETA_DUPLICADA`), y la auditoría anota la anterior y la nueva (`conNuevo`: `sucursal_id_nueva`). Todo va en **una transacción** (`db/transaccion.ts`,
+`enTransaccion`): se bloquea la orden, **se decide todo antes de la primera escritura** y recién después se escribe; las piezas de los models reciben la conexión
+(`Ejecutor`). Un EMPLEADO que manda `sucursal_id`, `fecha_entrada` o `renglones` recibe 403 (antes, los dos primeros se ignoraban). Del lado de la tablet, el detalle
+del historial completo tiene **"Corregir esta boleta"** (`features/historial/components/CorregirBoleta.tsx`): guarda con `enviar()` (no por la cola), manda solo lo
+que cambió (`correccion.ts`, `revisarCorreccion`) y sin internet el botón se apaga con `AvisoSinRed`. Para eso `BoletaListada` suma `origen` (sucursal, fecha de
+ingreso en Bolivia y fecha estimada), que solo llena la API.
 
 `frontend/` tiene el scaffolding de SPEC-KRILINXI-001: Vite, Tailwind, rutas y su suite de
 tests. SPEC-KRILINXI-002 añadió las piezas que reutilizan todas las pantallas: `Boton`,

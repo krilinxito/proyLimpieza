@@ -20,10 +20,22 @@ import {
   type Orden,
 } from '../models/ordenes.model.js';
 import * as sucursales from '../models/sucursales.model.js';
+import {
+  corregirOrden,
+  sumaDeRenglones,
+  type Correccion,
+  type RenglonCorregido,
+  type ResultadoCorreccion,
+} from '../services/correccionOrden.js';
 import { ApiError, CODIGOS_ERROR } from '../utils/ApiError.js';
 import { ESTADOS_CERRADOS, esEstadoOrden, estadosDeOrigen, type EstadoOrden } from '../utils/dominio.js';
 import { esNumeroDeBoleta } from '../utils/formatos.js';
-import type { Centavos } from '../utils/money.js';
+import { formatear, subtotal, type Centavos } from '../utils/money.js';
+import {
+  leerCantidad,
+  leerDescripcion as leerDescripcionDeRenglon,
+  leerPrecioUnitario,
+} from './ordenItems.controller.js';
 import { leerPaginacion } from '../utils/paginacion.js';
 import type { Sesion } from '../utils/jwt.js';
 import {
@@ -211,6 +223,143 @@ function transicionInvalida(actual: Orden, pedido: EstadoOrden | undefined): Api
   return new ApiError(409, CODIGOS_ERROR.TRANSICION_INVALIDA, mensaje);
 }
 
+// ------------------------------------------------------------------
+//  Corrección del admin — SPEC-KRILINXI-071
+// ------------------------------------------------------------------
+
+/** Lo que solo el admin corrige, y nunca se cambia desde el mostrador. */
+const CAMPOS_DEL_ADMIN = ['sucursal_id', 'fecha_entrada', 'renglones'] as const;
+
+/** Más prendas que esto en una boleta no las escribe nadie: el tope evita un pedido enorme. */
+export const RENGLONES_MAXIMOS = 100;
+
+function leerFechaEntradaCorregida(valor: unknown): string {
+  if (!esInstanteConZona(valor)) throw invalido('La fecha de ingreso de la ropa no es válida.');
+  return valor;
+}
+
+function leerSucursalNueva(valor: unknown): string {
+  if (!esUuid(valor)) throw invalido('La sucursal elegida no es válida. Vuelve a elegirla de la lista.');
+  return valor;
+}
+
+/** La lista entera de prendas, como tiene que quedar. Cada una con las mismas reglas que al registrarla. */
+function leerRenglones(valor: unknown): RenglonCorregido[] {
+  if (!Array.isArray(valor)) throw invalido('Las prendas de la boleta no llegaron bien. Vuelve a intentarlo.');
+  if (valor.length > RENGLONES_MAXIMOS) {
+    throw invalido(`Una boleta puede tener hasta ${RENGLONES_MAXIMOS} prendas. Junta las que sean iguales.`);
+  }
+  const vistos = new Set<string>();
+  return valor.map((item: unknown) => {
+    const renglon = comoObjeto(item);
+    if (!esUuid(renglon.id) || vistos.has(renglon.id)) {
+      throw invalido('Las prendas de la boleta no llegaron bien. Vuelve a intentarlo.');
+    }
+    vistos.add(renglon.id);
+    const cantidad = leerCantidad(renglon.cantidad);
+    const precioUnitario = leerPrecioUnitario(renglon.precio_unitario);
+    if (subtotal(cantidad, precioUnitario) > PRECIO_MAXIMO) {
+      throw invalido('El subtotal de una prenda es demasiado alto. Revisa la cantidad y el precio.');
+    }
+    return { id: renglon.id, descripcion: leerDescripcionDeRenglon(renglon.descripcion), cantidad, precioUnitario };
+  });
+}
+
+function leerCorreccion(cuerpo: Record<string, unknown>): Correccion {
+  const correccion: Correccion = {};
+  if ('numero_boleta' in cuerpo) correccion.numeroBoleta = leerBoleta(cuerpo.numero_boleta);
+  if ('descripcion' in cuerpo) correccion.descripcion = leerDescripcion(cuerpo.descripcion);
+  if ('precio_total' in cuerpo) correccion.precioTotal = leerPrecio(cuerpo.precio_total);
+  if ('fecha_entrada' in cuerpo) correccion.fechaEntrada = leerFechaEntradaCorregida(cuerpo.fecha_entrada);
+  if ('fecha_estimada_salida' in cuerpo) {
+    correccion.fechaEstimadaSalida = leerFechaEstimada(cuerpo.fecha_estimada_salida);
+  }
+  if ('sucursal_id' in cuerpo) correccion.sucursalId = leerSucursalNueva(cuerpo.sucursal_id);
+  if ('renglones' in cuerpo) {
+    const renglones = leerRenglones(cuerpo.renglones);
+    if (renglones.length > 0) {
+      const suma = sumaDeRenglones(renglones);
+      if (suma > PRECIO_MAXIMO) throw invalido('El total de la boleta es demasiado alto. Revisa las prendas.');
+      // Con prendas, el total es su suma. Si además viene escrito y no coincide, alguna de las dos cosas está mal.
+      if (correccion.precioTotal !== undefined && correccion.precioTotal !== suma) {
+        throw invalido(
+          `El total tiene que ser lo que suman las prendas (Bs ${formatear(suma)}). Revisa las prendas o el total.`,
+        );
+      }
+    }
+    correccion.renglones = renglones;
+  }
+  return correccion;
+}
+
+/**
+ * La corrección del admin: cualquier campo de la boleta, en cualquier estado, también las prendas y la sucursal. Lo
+ * decide y lo escribe `services/correccionOrden.ts`, en una transacción; acá se valida la entrada y se traduce lo que
+ * responde.
+ */
+async function corregir(req: Request, res: Response, id: string): Promise<void> {
+  const sesion = sesionDe(req);
+  const correccion = leerCorreccion(comoObjeto(req.body));
+
+  let resultado: ResultadoCorreccion;
+  try {
+    resultado = await corregirOrden(id, correccion, sesion.id, revisionDe(req));
+  } catch (error) {
+    if (error instanceof BoletaOcupadaError) {
+      throw new ApiError(
+        409,
+        CODIGOS_ERROR.BOLETA_DUPLICADA,
+        correccion.sucursalId === undefined
+          ? 'Ese número de boleta ya está usado en esta sucursal. Revisa el papel y vuelve a escribirlo.'
+          : 'En la sucursal elegida ya hay una boleta con ese número. Revisa el papel o elige otra sucursal.',
+      );
+    }
+    throw error;
+  }
+
+  switch (resultado.tipo) {
+    case 'corregida':
+      res.json(resultado.orden);
+      return;
+    case 'no-encontrada':
+      throw new ApiError(404, CODIGOS_ERROR.NO_ENCONTRADO, 'Esa boleta no existe. Vuelve al historial y búscala de nuevo.');
+    case 'sucursal-no-existe':
+      throw invalido('La sucursal elegida no existe. Vuelve a elegirla de la lista.');
+    case 'sucursal-cerrada':
+      throw new ApiError(
+        409,
+        CODIGOS_ERROR.SUCURSAL_CERRADA,
+        'La sucursal elegida está cerrada y no recibe boletas. Elige otra, o vuelve a abrirla desde Sucursales.',
+      );
+    case 'fecha-futura':
+      throw new ApiError(
+        400,
+        CODIGOS_ERROR.FECHA_FUTURA,
+        'La fecha de ingreso de la ropa está en el futuro. Revisa la fecha y la hora, y vuelve a guardar.',
+      );
+    case 'total-menor-que-cobrado':
+      throw new ApiError(
+        409,
+        CODIGOS_ERROR.TOTAL_MENOR_QUE_COBRADO,
+        `Ya se cobraron Bs ${resultado.pagado} de la boleta ${resultado.orden.numeroBoleta}, y el total no puede quedar ` +
+          'por debajo de eso. Revisa las prendas y los precios.',
+      );
+    case 'total-distinto-de-renglones':
+      throw new ApiError(
+        409,
+        CODIGOS_ERROR.TOTAL_DISTINTO_DE_RENGLONES,
+        `El total de la boleta ${resultado.orden.numeroBoleta} sale de sus prendas, que suman Bs ${resultado.suma}. ` +
+          'Para cambiarlo, cambia las prendas.',
+      );
+    case 'renglon-ajeno':
+      throw invalido(
+        resultado.esCargo
+          ? 'Los cargos que se sumaron al entregar no se cambian aquí: se corrigen junto con el cobro y la entrega.'
+          : 'Una de las prendas no es de esta boleta. Vuelve al historial y abre la boleta de nuevo.',
+      );
+  }
+}
+
 /** PATCH /api/ordenes/:id */
 export async function patchOrden(req: Request, res: Response): Promise<void> {
   const sesion = sesionDe(req);
@@ -220,8 +369,31 @@ export async function patchOrden(req: Request, res: Response): Promise<void> {
 
   const cuerpo = comoObjeto(req.body);
 
-  // Solo estos cinco. Cualquier otro campo —cliente, sucursal, quién recibió,
-  // fecha de entrada— se ignora: no se lee, así que no puede aplicarse.
+  // SPEC-KRILINXI-071. La sucursal, la fecha de ingreso y las prendas solo las corrige el admin.
+  const delAdmin = CAMPOS_DEL_ADMIN.filter((campo) => campo in cuerpo);
+  if (delAdmin.length > 0 && sesion.rol !== 'ADMIN') {
+    throw new ApiError(
+      403,
+      CODIGOS_ERROR.SIN_PERMISO,
+      'La sucursal, la fecha de ingreso y las prendas de una boleta no se cambian desde el mostrador. ' +
+        'Si hay que corregirlas, avísale al administrador.',
+    );
+  }
+  // El admin corrige por su camino, en cualquier estado. Un cambio de estado (anular) sigue el de siempre, con su
+  // tabla de transiciones: corregir una boleta no es una forma de saltársela.
+  if (sesion.rol === 'ADMIN') {
+    if (!('estado' in cuerpo)) {
+      await corregir(req, res, id);
+      return;
+    }
+    if (delAdmin.length > 0) {
+      throw invalido('Cambia el estado de la boleta por separado de sus datos: primero uno y después el otro.');
+    }
+  }
+
+  // Solo estos cinco. Cualquier otro campo —cliente, quién recibió— se ignora: no se lee, así que no puede
+  // aplicarse. La sucursal y la fecha de ingreso, que también se ignoraban, desde SPEC-KRILINXI-071 son del admin
+  // (arriba: 403 para el mostrador).
   const cambios: CambiosOrden = {};
   if ('numero_boleta' in cuerpo) cambios.numeroBoleta = leerBoleta(cuerpo.numero_boleta);
   if ('descripcion' in cuerpo) cambios.descripcion = leerDescripcion(cuerpo.descripcion);

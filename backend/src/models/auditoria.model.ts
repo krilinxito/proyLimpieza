@@ -120,6 +120,12 @@ export interface ColumnaAuditada {
    * el model, y no repite el nombre de la columna a propósito.
    */
   soloMarca?: string;
+  /**
+   * Además del valor de antes, guarda el nuevo, como `<columna>_nueva` — SPEC-KRILINXI-071. Para `sucursal_id` de una
+   * orden: después de moverla, la orden ya no dice de dónde vino ni adónde fue en ese momento (puede volver a moverse),
+   * así que la fila de la auditoría tiene que decir las dos cosas por sí sola.
+   */
+  conNuevo?: boolean;
 }
 
 /**
@@ -138,13 +144,18 @@ export interface ColumnaAuditada {
 export function valoresAnteriores(columnas: readonly ColumnaAuditada[]): string {
   if (columnas.length === 0) return `'{}'::jsonb`;
 
-  const partes = columnas.map(({ columna, comoTexto, soloMarca }) => {
+  const partes = columnas.map(({ columna, comoTexto, soloMarca, conNuevo }) => {
     // Un hash nuevo es siempre distinto del anterior (lleva sal), así que una
     // contraseña que se mandó es siempre una contraseña que cambió.
     if (soloMarca !== undefined) return `jsonb_build_object('${soloMarca}', true)`;
     const valor = comoTexto === true ? `antes.${columna}::text` : `antes.${columna}`;
+    const nuevo = comoTexto === true ? `c.${columna}::text` : `c.${columna}`;
+    const objeto =
+      conNuevo === true
+        ? `jsonb_build_object('${columna}', ${valor}, '${columna}_nueva', ${nuevo})`
+        : `jsonb_build_object('${columna}', ${valor})`;
     return `CASE WHEN antes.${columna} IS DISTINCT FROM c.${columna}
-               THEN jsonb_build_object('${columna}', ${valor}) ELSE '{}'::jsonb END`;
+               THEN ${objeto} ELSE '{}'::jsonb END`;
   });
   return `(${partes.join(' || ')})`;
 }
@@ -280,7 +291,12 @@ const SUCURSAL_DE_LA_ACCION = `CASE a.tabla_afectada
     WHEN 'ordenes'  THEN (SELECT o.sucursal_id FROM ordenes  o WHERE o.id = a.registro_id)
     WHEN 'pagos'    THEN (SELECT p.sucursal_id FROM pagos    p WHERE p.id = a.registro_id)
     WHEN 'entregas' THEN (SELECT e.sucursal_id FROM entregas e WHERE e.id = a.registro_id)
-    WHEN 'orden_items' THEN (SELECT i.sucursal_id FROM orden_items i WHERE i.id = a.registro_id)
+    WHEN 'orden_items' THEN CASE WHEN a.accion = 'ELIMINAR'
+                                 -- Un renglón quitado (SPEC-KRILINXI-071) ya no tiene fila: su orden queda anotada en lo que había.
+                                 THEN (SELECT o.sucursal_id FROM ordenes o
+                                        WHERE o.id = (a.valores_anteriores ->> 'orden_id')::uuid)
+                                 ELSE (SELECT i.sucursal_id FROM orden_items i WHERE i.id = a.registro_id)
+                            END
     WHEN 'clientes' THEN CASE WHEN a.accion = 'CREAR'
                               THEN (SELECT c.sucursal_registro_id FROM clientes c WHERE c.id = a.registro_id)
                          END
